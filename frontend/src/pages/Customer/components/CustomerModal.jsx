@@ -202,7 +202,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
             {/* Body */}
             <div className={styles.body}>
                 {apiError && (
-                    <div style={{ padding: '10px 14px', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #fca5a5' }}>
+                    <div style={{ padding: '10px 14px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #fca5a5' }}>
                         <i className="bi bi-exclamation-triangle" style={{ fontSize: '15px' }}></i>
                         <span>{apiError}</span>
                     </div>
@@ -215,9 +215,9 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                         onClick={() => handleSelectType('INDIVIDUAL')}
                         style={{
                             flex: 1, padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                            border: !isCompany ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                            border: !isCompany ? '2px solid var(--color-info-hover)' : '1px solid var(--wms-border-strong)',
                             background: !isCompany ? '#f0f9ff' : '#fff',
-                            color: !isCompany ? '#0369a1' : '#64748b',
+                            color: !isCompany ? '#0369a1' : 'var(--wms-text-muted)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                         }}
                     >
@@ -229,9 +229,9 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                         onClick={() => handleSelectType('COMPANY')}
                         style={{
                             flex: 1, padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                            border: isCompany ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                            border: isCompany ? '2px solid var(--color-info-hover)' : '1px solid var(--wms-border-strong)',
                             background: isCompany ? '#f0f9ff' : '#fff',
-                            color: isCompany ? '#0369a1' : '#64748b',
+                            color: isCompany ? '#0369a1' : 'var(--wms-text-muted)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                         }}
                     >
@@ -277,7 +277,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                                     disabled={lookingUpTax || !form.taxCode?.trim()}
                                     style={{
                                         padding: '0 14px',
-                                        background: '#0284c7',
+                                        background: 'var(--color-info-hover)',
                                         color: '#fff',
                                         border: 'none',
                                         borderRadius: '4px',
@@ -297,9 +297,9 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                             {taxLookupMsg.text && (
                                 <div style={{
                                     marginTop: '6px', fontSize: '12px',
-                                    color: taxLookupMsg.type === 'success' ? '#166534' : '#dc2626',
-                                    background: taxLookupMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
-                                    padding: '6px 10px', borderRadius: '4px', border: `1px solid ${taxLookupMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+                                    color: taxLookupMsg.type === 'success' ? '#166534' : 'var(--wms-danger)',
+                                    background: taxLookupMsg.type === 'success' ? 'var(--color-success-bg-soft)' : '#fef2f2',
+                                    padding: '6px 10px', borderRadius: '4px', border: `1px solid ${taxLookupMsg.type === 'success' ? 'var(--wms-success-border)' : '#fecaca'}`
                                 }}>
                                     {taxLookupMsg.text}
                                 </div>

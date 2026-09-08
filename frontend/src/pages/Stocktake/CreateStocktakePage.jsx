@@ -730,7 +730,7 @@ function CreateStocktakePage() {
                         <td style={{ textAlign: 'center' }}>
                           <button
                             type="button"
-                            style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                            style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
                             onClick={() => setParticipants(participants.filter((_, i) => i !== idx))}
                           >
                             <i className="bi bi-trash"></i>
@@ -741,7 +741,7 @@ function CreateStocktakePage() {
                   ))}
                   {participants.length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: '#64748b' }}>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: 'var(--wms-text-muted)' }}>
                         Chưa có thành viên nào tham gia
                       </td>
                     </tr>
@@ -771,10 +771,10 @@ function CreateStocktakePage() {
         {/* Details Section */}
         <div className={styles.detailSection}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ fontWeight: 600, color: '#334155', fontSize: '15px' }}>
+            <div style={{ fontWeight: 600, color: 'var(--wms-text-body)', fontSize: '15px' }}>
               Danh sách Vật tư, hàng hóa kiểm kê
             </div>
-            {loadingStock && <span style={{ fontSize: '13px', color: '#0284c7' }}>Đang tải số tồn kho...</span>}
+            {loadingStock && <span style={{ fontSize: '13px', color: 'var(--color-info-hover)' }}>Đang tải số tồn kho...</span>}
           </div>
 
           {!isSaved && (
@@ -830,7 +830,7 @@ function CreateStocktakePage() {
                 {lines.map((line, idx) => (
                   <tr key={line.id || idx}>
                     <td>{line.itemCode}</td>
-                    <td style={{ fontWeight: 600, color: '#0284c7' }}>{line.sku}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--color-info-hover)' }}>{line.sku}</td>
                     <td>
                       {line.isNew && !isSaved ? (
                         <Select
@@ -879,9 +879,9 @@ function CreateStocktakePage() {
                           type="number"
                           style={{
                             fontWeight: 600,
-                            color: '#1e293b',
-                            background: '#f8fafc',
-                            border: '1px solid #cbd5e1',
+                            color: 'var(--wms-text-strong)',
+                            background: 'var(--wms-bg-soft)',
+                            border: '1px solid var(--wms-border-strong)',
                             borderRadius: '3px',
                             padding: '4px 6px'
                           }}
@@ -893,7 +893,7 @@ function CreateStocktakePage() {
 
                     <td className={styles.numberCol} style={{
                       fontWeight: 700,
-                      color: Number(line.diffQty) > 0 ? '#16a34a' : Number(line.diffQty) < 0 ? '#dc2626' : '#64748b'
+                      color: Number(line.diffQty) > 0 ? '#16a34a' : Number(line.diffQty) < 0 ? 'var(--wms-danger)' : 'var(--wms-text-muted)'
                     }}>
                       {Number(line.diffQty) > 0 ? `+${line.diffQty}` : line.diffQty}
                     </td>
@@ -929,7 +929,7 @@ function CreateStocktakePage() {
                         <SearchableSelect
                           value={line.action}
                           onChange={(e) => handleActionChange(idx, e.target.value)}
-                          style={{ border: '1px solid #cbd5e1', borderRadius: '3px', padding: '2px 4px' }}
+                          style={{ border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '2px 4px' }}
                         >
                           <option value="Không xử lý">Không xử lý</option>
                           <option value="Xử lý chênh lệch">Xử lý chênh lệch</option>
@@ -940,7 +940,7 @@ function CreateStocktakePage() {
                       <td style={{ textAlign: 'center' }}>
                         <button
                           type="button"
-                          style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                          style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
                           onClick={() => handleRemoveLine(idx)}
                           title="Xóa dòng"
                         >
@@ -952,17 +952,17 @@ function CreateStocktakePage() {
                 ))}
                 {lines.length === 0 && (
                   <tr>
-                    <td colSpan={12} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                    <td colSpan={12} style={{ textAlign: 'center', padding: '24px', color: 'var(--wms-text-subtle)' }}>
                       Chưa có dữ liệu hàng hóa. Vui lòng bấm "Lấy lại số tồn" hoặc "Thêm dòng".
                     </td>
                   </tr>
                 )}
                 {/* Dynamic Summary Total Row */}
-                <tr style={{ fontWeight: 700, backgroundColor: '#f1f5f9', borderTop: '2px solid #cbd5e1' }}>
+                <tr style={{ fontWeight: 700, backgroundColor: 'var(--wms-bg-hover)', borderTop: '2px solid var(--wms-border-strong)' }}>
                   <td colSpan={4} style={{ textAlign: 'right' }}>TỔNG CỘNG:</td>
                   <td className={styles.numberCol}>{totalBookQty}</td>
                   <td className={styles.numberCol}>{totalCountQty}</td>
-                  <td className={styles.numberCol} style={{ color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? '#dc2626' : 'inherit' }}>
+                  <td className={styles.numberCol} style={{ color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
                     {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
                   </td>
                   <td className={styles.numberCol}>{totalGood100}</td>
@@ -975,7 +975,7 @@ function CreateStocktakePage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span style={{ fontSize: '13px', color: '#64748b' }}>Tổng số: <strong>{lines.length}</strong> dòng sản phẩm</span>
+            <span style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Tổng số: <strong>{lines.length}</strong> dòng sản phẩm</span>
           </div>
 
           {!isSaved && (
@@ -1076,7 +1076,7 @@ function CreateStocktakePage() {
             <div className={styles.serialModalCard}>
               <div className={styles.modalHeader}>
                 <h3>
-                  <i className="bi bi-upc-scan" style={{ marginRight: '8px', color: '#0284c7' }}></i>
+                  <i className="bi bi-upc-scan" style={{ marginRight: '8px', color: 'var(--color-info-hover)' }}></i>
                   Kiểm kê Serial - {lines[serialModal.lineIndex]?.itemName} (SKU: {lines[serialModal.lineIndex]?.sku})
                 </h3>
                 <button className={styles.modalCloseBtn} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
@@ -1130,7 +1130,7 @@ function CreateStocktakePage() {
                   </div>
                 </div>
 
-                <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--wms-border-base)', borderRadius: '4px' }}>
                   <table className={styles.table} style={{ margin: 0 }}>
                     <thead>
                       <tr>
@@ -1147,7 +1147,7 @@ function CreateStocktakePage() {
                           <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.serialNumber}</td>
                           <td style={{ textAlign: 'center' }}>
                             {s.scanStatus === 'MATCHED' && <span style={{ color: '#16a34a', fontWeight: 600 }}><i className="bi bi-check-circle-fill"></i> Khớp</span>}
-                            {s.scanStatus === 'MISSING' && <span style={{ color: '#dc2626', fontWeight: 600 }}><i className="bi bi-x-circle-fill"></i> Thiếu (Chưa quét)</span>}
+                            {s.scanStatus === 'MISSING' && <span style={{ color: 'var(--wms-danger)', fontWeight: 600 }}><i className="bi bi-x-circle-fill"></i> Thiếu (Chưa quét)</span>}
                             {s.scanStatus === 'UNEXPECTED' && <span style={{ color: '#d97706', fontWeight: 600 }}><i className="bi bi-exclamation-triangle-fill"></i> Thừa / Lạ</span>}
                           </td>
                           {!isSaved && (
@@ -1155,7 +1155,7 @@ function CreateStocktakePage() {
                               {s.scanStatus !== 'MISSING' && (
                                 <button
                                   type="button"
-                                  style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                                  style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
                                   onClick={() => handleRemoveScannedSerial(s.serialNumber)}
                                   title="Hủy quét Serial này"
                                 >
@@ -1168,7 +1168,7 @@ function CreateStocktakePage() {
                       ))}
                       {displaySerials.length === 0 && (
                         <tr>
-                          <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>
+                          <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--wms-text-muted)' }}>
                             Không có Serial nào thuộc mục đã chọn.
                           </td>
                         </tr>

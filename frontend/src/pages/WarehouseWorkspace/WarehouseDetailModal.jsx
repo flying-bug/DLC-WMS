@@ -30,7 +30,7 @@ export default function WarehouseDetailModal({
         {/* HEADER */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitle}>
-            <i className="fas fa-file-alt" style={{ color: '#2563eb' }}></i>
+            <i className="fas fa-file-alt" style={{ color: 'var(--wms-primary)' }}></i>
             Chi tiết chứng từ kho: {slip.docCode}
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
@@ -46,39 +46,39 @@ export default function WarehouseDetailModal({
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '12px',
-              background: '#f8fafc',
+              background: 'var(--wms-bg-soft)',
               padding: '14px 16px',
               borderRadius: '10px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--wms-border-base)',
               fontSize: '0.875rem'
             }}
           >
             <div>
-              <span style={{ color: '#64748b' }}>Số phiếu: </span>
-              <strong style={{ color: '#2563eb' }}>{slip.docCode}</strong>
+              <span style={{ color: 'var(--wms-text-muted)' }}>Số phiếu: </span>
+              <strong style={{ color: 'var(--wms-primary)' }}>{slip.docCode}</strong>
             </div>
             <div>
-              <span style={{ color: '#64748b' }}>Ngày lập: </span>
+              <span style={{ color: 'var(--wms-text-muted)' }}>Ngày lập: </span>
               <strong>{slip.docDate || '-'}</strong>
             </div>
             <div>
-              <span style={{ color: '#64748b' }}>Loại nghiệp vụ: </span>
+              <span style={{ color: 'var(--wms-text-muted)' }}>Loại nghiệp vụ: </span>
               <strong>{slip.issuePurpose || 'Nghiệp vụ kho'}</strong>
             </div>
             <div>
-              <span style={{ color: '#64748b' }}>Đối tác: </span>
+              <span style={{ color: 'var(--wms-text-muted)' }}>Đối tác: </span>
               <strong>{slip.partnerName || 'Nội bộ'}</strong>
             </div>
             <div>
-              <span style={{ color: '#64748b' }}>Kho thực hiện: </span>
+              <span style={{ color: 'var(--wms-text-muted)' }}>Kho thực hiện: </span>
               <strong>{slip.warehouseName || 'Kho chính'}</strong>
             </div>
             <div>
-              <span style={{ color: '#64748b' }}>Trạng thái: </span>
+              <span style={{ color: 'var(--wms-text-muted)' }}>Trạng thái: </span>
               <span
                 style={{
                   fontWeight: 'bold',
-                  color: isPosted ? '#16a34a' : slip.status === 'UNPOSTED' ? '#dc2626' : '#d97706'
+                  color: isPosted ? '#16a34a' : slip.status === 'UNPOSTED' ? 'var(--wms-danger)' : '#d97706'
                 }}
               >
                 {isPosted ? 'ĐÃ GHI SỔ KHO' : slip.status === 'UNPOSTED' ? 'ĐÃ BỎ GHI SỔ' : 'CHỜ GHI SỔ'}
@@ -87,14 +87,14 @@ export default function WarehouseDetailModal({
           </div>
 
           {slip.note && (
-            <div style={{ fontSize: '0.875rem', color: '#475569', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--wms-text-muted)', fontStyle: 'italic' }}>
               <strong>Ghi chú: </strong> {slip.note}
             </div>
           )}
 
           {/* TABLE OF ITEMS */}
           <div>
-            <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '8px', color: '#0f172a' }}>
+            <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '8px', color: 'var(--wms-text-title)' }}>
               Danh sách vật tư hàng hóa & Serial ({lines.length} mặt hàng):
             </div>
             <table className={styles.itemTable}>
@@ -112,7 +112,7 @@ export default function WarehouseDetailModal({
               <tbody>
                 {lines.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: 'var(--wms-text-subtle)' }}>
                       Không có dòng mặt hàng nào.
                     </td>
                   </tr>
@@ -133,7 +133,7 @@ export default function WarehouseDetailModal({
                         <td>{l.locationCode || l.warehouseName || '-'}</td>
                         <td>
                           {sns.length === 0 ? (
-                            <span style={{ color: '#94a3b8' }}>-</span>
+                            <span style={{ color: 'var(--wms-text-subtle)' }}>-</span>
                           ) : (
                             <div className={styles.serialBadgeList}>
                               {sns.map((sn, sIdx) => (
@@ -181,7 +181,7 @@ export default function WarehouseDetailModal({
               <button
                 type="button"
                 className={styles.btnCancel}
-                style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                style={{ color: 'var(--wms-danger)', borderColor: '#fca5a5' }}
                 onClick={() => {
                   onClose();
                   if (onOpenUnpost) onOpenUnpost(slip);

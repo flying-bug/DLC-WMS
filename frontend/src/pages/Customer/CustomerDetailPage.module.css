@@ -768,7 +768,7 @@
 
 .pageNumber.active:focus {
   background-color: var(--color-white);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text, var(--wms-text-strong));
   border: 1px solid var(--color-primary);
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
@@ -800,7 +800,7 @@
   visibility: hidden;
   width: max-content;
   max-width: 300px;
-  background-color: #1e293b;
+  background-color: var(--wms-text-strong);
   color: #fff;
   text-align: center;
   border-radius: 6px;
@@ -826,7 +826,7 @@
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
-  border-color: #1e293b transparent transparent transparent;
+  border-color: var(--wms-text-strong) transparent transparent transparent;
 }
 
 /* â”€â”€ Settings Column Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */

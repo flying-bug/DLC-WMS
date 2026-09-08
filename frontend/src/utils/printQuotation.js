@@ -74,7 +74,7 @@ export function printQuotation(orderOrOrders, options = {}) {
           <td style="text-align: center;">${index + 1}</td>
           <td>
             <strong>${escapeHtml(name)}</strong>
-            ${sku ? `<span style="font-size: 11px; color: #64748b;"> (${escapeHtml(sku)})</span>` : ''}
+            ${sku ? `<span style="font-size: 11px; color: var(--wms-text-muted);"> (${escapeHtml(sku)})</span>` : ''}
           </td>
           <td style="text-align: center;">${escapeHtml(unit)}</td>
           <td style="text-align: center;">${escapeHtml(warrantyText || '—')}</td>
@@ -128,7 +128,7 @@ export function printQuotation(orderOrOrders, options = {}) {
             </td>
             <td style="width: 40%; text-align: right;">
               <strong>Ngày báo giá:</strong> ${escapeHtml(docDateStr)}<br/>
-              <strong>Số báo giá:</strong> <span style="font-weight: 700; font-size: 14px; color: #0284c7;">${escapeHtml(order.soCode || order.docCode || '')}</span><br/>
+              <strong>Số báo giá:</strong> <span style="font-weight: 700; font-size: 14px; color: var(--color-info-hover);">${escapeHtml(order.soCode || order.docCode || '')}</span><br/>
               <strong>Loại tiền:</strong> VND<br/>
               ${currentWarehouseName ? `<strong>Kho xuất:</strong> ${escapeHtml(currentWarehouseName)}` : ''}
             </td>
@@ -167,9 +167,9 @@ export function printQuotation(orderOrOrders, options = {}) {
               <td style="text-align: right;">${taxTotal.toLocaleString('vi-VN')}</td>
             </tr>
             ` : ''}
-            <tr class="summary-row" style="background-color: #f1f5f9; font-size: 13px;">
+            <tr class="summary-row" style="background-color: var(--wms-bg-hover); font-size: 13px;">
               <td colspan="7" style="text-align: right; font-weight: 700;">Tổng cộng thanh toán (VNĐ)</td>
-              <td style="text-align: right; font-weight: 800; color: #0284c7;">${grandTotal.toLocaleString('vi-VN')} ₫</td>
+              <td style="text-align: right; font-weight: 800; color: var(--color-info-hover);">${grandTotal.toLocaleString('vi-VN')} ₫</td>
             </tr>
           </tbody>
         </table>
@@ -229,7 +229,7 @@ export function printQuotation(orderOrOrders, options = {}) {
           }
           body {
             font-family: 'Segoe UI', Arial, Roboto, sans-serif;
-            color: #1e293b;
+            color: var(--wms-text-strong);
             margin: 0;
             padding: 0;
             font-size: 13px;
@@ -243,17 +243,17 @@ export function printQuotation(orderOrOrders, options = {}) {
           .header-logo {
             font-size: 24px;
             font-weight: 900;
-            color: #0f172a;
+            color: var(--wms-text-title);
             letter-spacing: -0.5px;
           }
           .header-subtitle {
             font-size: 11px;
-            color: #64748b;
+            color: var(--wms-text-muted);
             font-style: italic;
           }
           .company-info {
             font-size: 11.5px;
-            color: #334155;
+            color: var(--wms-text-body);
             line-height: 1.35;
           }
           .title-container {
@@ -263,14 +263,14 @@ export function printQuotation(orderOrOrders, options = {}) {
           .doc-title {
             font-size: 22px;
             font-weight: 800;
-            color: #0f172a;
+            color: var(--wms-text-title);
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
           .doc-subtitle {
             font-size: 12px;
             font-style: italic;
-            color: #475569;
+            color: var(--wms-text-muted);
             margin-top: 2px;
           }
           .info-grid {
@@ -293,7 +293,7 @@ export function printQuotation(orderOrOrders, options = {}) {
             padding: 6px 8px;
             font-size: 12px;
             font-weight: 700;
-            background-color: #f8fafc;
+            background-color: var(--wms-bg-soft);
             text-align: center;
           }
           .main-table td {
@@ -315,9 +315,9 @@ export function printQuotation(orderOrOrders, options = {}) {
           .terms-section {
             margin-top: 18px;
             padding-top: 10px;
-            border-top: 1px dashed #cbd5e1;
+            border-top: 1px dashed var(--wms-border-strong);
             font-size: 11.5px;
-            color: #1e293b;
+            color: var(--wms-text-strong);
             line-height: 1.45;
           }
           .terms-title {
@@ -325,7 +325,7 @@ export function printQuotation(orderOrOrders, options = {}) {
             font-size: 12px;
             margin-bottom: 5px;
             text-transform: uppercase;
-            color: #0f172a;
+            color: var(--wms-text-title);
           }
           .terms-list {
             margin: 0;
@@ -350,7 +350,7 @@ export function printQuotation(orderOrOrders, options = {}) {
           .sign-note {
             font-size: 10.5px;
             font-style: italic;
-            color: #64748b;
+            color: var(--wms-text-muted);
           }
           .sign-space {
             height: 65px;

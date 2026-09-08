@@ -48,10 +48,10 @@ const customSelectStyles = {
     minHeight: '32px',
     height: '32px',
     fontSize: '13px',
-    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #2563eb' : 'none',
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    boxShadow: state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
     '&:hover': {
-      borderColor: state.isFocused ? '#2563eb' : '#9ca3af'
+      borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-text-placeholder)'
     }
   }),
   valueContainer: (base) => ({
@@ -809,7 +809,7 @@ function UpdateExportSlipPage() {
                 onClick={() => setShowPreviewModal(true)}
                 style={{
                   padding: '6px 14px', borderRadius: 6,
-                  border: '1px solid #16a34a', color: '#16a34a', background: '#f0fdf4',
+                  border: '1px solid #16a34a', color: '#16a34a', background: 'var(--color-success-bg-soft)',
                   fontWeight: 600, fontSize: 13, cursor: 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: 6
                 }}
@@ -822,12 +822,12 @@ function UpdateExportSlipPage() {
                 <span
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe',
+                    background: 'var(--color-primary-soft)', color: 'var(--color-primary-link)', border: '1px solid var(--color-info-border-soft)',
                     padding: '6px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600
                   }}
                   title="Đơn bán hàng gốc đã xuất HĐĐT gộp toàn bộ đơn"
                 >
-                  <i className="bi bi-file-earmark-lock-fill" style={{ color: '#2563eb' }} />
+                  <i className="bi bi-file-earmark-lock-fill" style={{ color: 'var(--wms-primary)' }} />
                   Đã xuất HĐĐT theo đơn hàng {form.referenceCode || ''} ({soInvoice.invoiceNumber || 'Đã cấp'})
                 </span>
                 <button
@@ -838,7 +838,7 @@ function UpdateExportSlipPage() {
                   }}
                   style={{
                     padding: '6px 12px', borderRadius: 6,
-                    border: '1px solid #2563eb', color: '#2563eb', background: '#fff',
+                    border: '1px solid var(--wms-primary)', color: 'var(--wms-primary)', background: '#fff',
                     fontWeight: 600, fontSize: 13, cursor: 'pointer',
                     display: 'inline-flex', alignItems: 'center', gap: 6
                   }}
@@ -852,7 +852,7 @@ function UpdateExportSlipPage() {
                 onClick={() => setShowIssueModal(true)}
                 style={{
                   padding: '6px 14px', borderRadius: 6,
-                  background: '#059669', color: '#fff', border: 'none',
+                  background: 'var(--wms-success)', color: '#fff', border: 'none',
                   fontWeight: 600, fontSize: 13, cursor: 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
@@ -902,7 +902,7 @@ function UpdateExportSlipPage() {
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
                       <label className="misa-label">Tên khách hàng</label>
-                      <input type="text" className="misa-input" readOnly value={form.partnerId ? (customers.find(s => String(s.id) === String(form.partnerId))?.name || '') : ''} style={{ backgroundColor: '#f9fafb' }} placeholder="Tên khách hàng" />
+                      <input type="text" className="misa-input" readOnly value={form.partnerId ? (customers.find(s => String(s.id) === String(form.partnerId))?.name || '') : ''} style={{ backgroundColor: 'var(--color-bg-elevated)' }} placeholder="Tên khách hàng" />
                     </div>
                   </div>
 
@@ -935,7 +935,7 @@ function UpdateExportSlipPage() {
                         className="misa-input"
                         value={users.find(u => String(u.id) === String(form.salespersonId)) ? (users.find(u => String(u.id) === String(form.salespersonId)).fullName || users.find(u => String(u.id) === String(form.salespersonId)).username) : 'Đang tải...'}
                         readOnly
-                        style={{ backgroundColor: '#f3f4f6' }}
+                        style={{ backgroundColor: 'var(--color-bg)' }}
                       />
                     </div>
                   </div>
@@ -1123,17 +1123,17 @@ function UpdateExportSlipPage() {
                           </td>
                           <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
                           <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
                           <td align="center">
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               {product?.trackSerial && (
                                 <button
                                   type="button"
                                   style={{
-                                    background: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#dcfce7' : '#fef9c3',
+                                    background: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? 'var(--color-success-bg)' : '#fef9c3',
                                     color: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#166534' : '#854d0e',
-                                    border: `1px solid ${(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#bbf7d0' : '#fef08a'}`,
+                                    border: `1px solid ${(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? 'var(--wms-success-border)' : '#fef08a'}`,
                                     borderRadius: '4px',
                                     padding: '2px 8px',
                                     fontSize: '12px',

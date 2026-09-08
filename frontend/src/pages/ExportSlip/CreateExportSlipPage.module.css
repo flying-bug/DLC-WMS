@@ -42,8 +42,8 @@
   border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-strong, #1e293b);
-  background-color: #ffffff;
+  color: var(--color-text-strong, var(--wms-text-strong));
+  background-color: var(--color-white);
   outline: none;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -257,7 +257,7 @@
 
 .scanInputWrap {
   align-items: center;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--wms-border-strong);
   border-radius: 4px;
   color: #0075c0;
   display: flex;
@@ -466,11 +466,11 @@
 }
 
 .btnDraft {
-  background: #e2e8f0;
-  border: 1px solid #cbd5e1;
+  background: var(--wms-border-base);
+  border: 1px solid var(--wms-border-strong);
   padding: 10px 20px;
   border-radius: 4px;
-  color: #334155;
+  color: var(--wms-text-body);
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -479,8 +479,8 @@
 }
 
 .btnSave {
-  background: #3b82f6;
-  border: 1px solid #2563eb;
+  background: var(--color-primary-bright);
+  border: 1px solid var(--wms-primary);
   padding: 10px 24px;
   border-radius: 4px;
   color: white;
@@ -492,8 +492,8 @@
 }
 
 .btnSavePrint {
-  background: #2563eb;
-  border: 1px solid #1d4ed8;
+  background: var(--wms-primary);
+  border: 1px solid var(--wms-primary-hover);
   padding: 10px 24px;
   border-radius: 4px;
   color: white;
@@ -574,7 +574,7 @@
 }
 
 .actionLink {
-  color: #3b82f6;
+  color: var(--color-primary-bright);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -590,7 +590,7 @@
 }
 
 .actionLink:hover {
-  background-color: #eff6ff;
+  background-color: var(--color-primary-soft);
   text-decoration: none;
 }
 
@@ -598,7 +598,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
 }
 
 .textRight {

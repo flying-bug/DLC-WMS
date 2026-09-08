@@ -313,7 +313,7 @@ function AssemblyOrderListPage() {
                                 <tr>
                                     <td colSpan={Object.values(columns).filter(Boolean).length + 1} className={styles.textCenter} style={{ padding: '40px' }}>
                                         <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`} style={{ fontSize: '32px', color: '#9ca3af', marginBottom: '12px' }}></i>
+                                            <i className={`bi bi-inbox ${styles.emptyIcon}`} style={{ fontSize: '32px', color: 'var(--color-text-placeholder)', marginBottom: '12px' }}></i>
                                             <div className={styles.emptyText} style={{ color: '#6b7280', fontSize: '14px' }}>Không tìm thấy lệnh nào</div>
                                         </div>
                                     </td>
@@ -339,7 +339,7 @@ function AssemblyOrderListPage() {
                                             <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
                                                 <i
                                                     className="bi bi-printer"
-                                                    style={{ cursor: 'pointer', color: '#0284c7', fontSize: '16px', marginRight: '12px' }}
+                                                    style={{ cursor: 'pointer', color: 'var(--color-info-hover)', fontSize: '16px', marginRight: '12px' }}
                                                     title="In phiếu lệnh"
                                                     onClick={(e) => handlePrintOrder(item, e)}
                                                 ></i>

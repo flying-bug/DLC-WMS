@@ -18,7 +18,7 @@
 }
 
 .modal {
-    background-color: var(--color-canvas, #ffffff);
+    background-color: var(--color-canvas, var(--color-white));
     width: 900px;
     max-width: 95vw;
     max-height: 90vh;
@@ -40,20 +40,20 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 24px;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    border-bottom: 1px solid var(--color-border, var(--wms-border-base));
 }
 
 .headerTitle {
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    color: var(--color-text-strong, #1e293b);
+    color: var(--color-text-strong, var(--wms-text-strong));
 }
 
 .closeBtn {
     background: none;
     border: none;
-    color: var(--color-text-light, #94a3b8);
+    color: var(--color-text-light, var(--wms-text-subtle));
     font-size: 20px;
     cursor: pointer;
 }
@@ -71,10 +71,10 @@
     display: flex;
     gap: 16px;
     align-items: flex-end;
-    background: #f8fafc;
+    background: var(--wms-bg-soft);
     padding: 12px;
     border-radius: 8px;
-    border: 1px solid var(--color-border, #e2e8f0);
+    border: 1px solid var(--color-border, var(--wms-border-base));
 }
 
 .filterGroup {
@@ -86,41 +86,41 @@
 .filterGroup label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--color-text, #475569);
+    color: var(--color-text, var(--wms-text-muted));
 }
 
 .filterInput {
     height: 36px;
     padding: 0 12px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--wms-border-strong);
     border-radius: 6px;
     font-size: 14px;
     outline: none;
 }
 
 .filterInput:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 1px #2563eb;
+    border-color: var(--wms-primary);
+    box-shadow: 0 0 0 1px var(--wms-primary);
 }
 
 .btnFetch {
     height: 36px;
     padding: 0 16px;
-    background-color: #f1f5f9;
-    border: 1px solid #cbd5e1;
+    background-color: var(--wms-bg-hover);
+    border: 1px solid var(--wms-border-strong);
     border-radius: 6px;
     font-weight: 600;
-    color: #475569;
+    color: var(--wms-text-muted);
     cursor: pointer;
     white-space: nowrap;
 }
 
 .btnFetch:hover {
-    background-color: #e2e8f0;
+    background-color: var(--wms-border-base);
 }
 
 .tableWrapper {
-    border: 1px solid var(--color-border, #e2e8f0);
+    border: 1px solid var(--color-border, var(--wms-border-base));
     border-radius: 8px;
     overflow: hidden;
 }
@@ -132,27 +132,27 @@
 }
 
 .table th {
-    background-color: #f8fafc;
-    color: #475569;
+    background-color: var(--wms-bg-soft);
+    color: var(--wms-text-muted);
     font-weight: 600;
     text-align: left;
     padding: 12px 16px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--wms-border-base);
 }
 
 .table td {
     padding: 12px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #1e293b;
+    border-bottom: 1px solid var(--wms-bg-hover);
+    color: var(--wms-text-strong);
     vertical-align: middle;
 }
 
 .table tr.selected {
-    background-color: #eff6ff;
+    background-color: var(--color-primary-soft);
 }
 
 .table tr:hover:not(.selected) {
-    background-color: #f8fafc;
+    background-color: var(--wms-bg-soft);
     cursor: pointer;
 }
 
@@ -165,7 +165,7 @@
     cursor: pointer;
     width: 16px;
     height: 16px;
-    accent-color: #2563eb;
+    accent-color: var(--wms-primary);
 }
 
 .footer {
@@ -173,13 +173,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 24px;
-    border-top: 1px solid var(--color-border, #e2e8f0);
-    background-color: #f8fafc;
+    border-top: 1px solid var(--color-border, var(--wms-border-base));
+    background-color: var(--wms-bg-soft);
 }
 
 .recordCount {
     font-size: 13px;
-    color: #64748b;
+    color: var(--wms-text-muted);
 }
 
 .footerActions {
@@ -190,20 +190,20 @@
 .btnCancel {
     padding: 8px 16px;
     background-color: white;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--wms-border-strong);
     border-radius: 6px;
     font-weight: 600;
-    color: #475569;
+    color: var(--wms-text-muted);
     cursor: pointer;
 }
 
 .btnCancel:hover {
-    background-color: #f8fafc;
+    background-color: var(--wms-bg-soft);
 }
 
 .btnConfirm {
     padding: 8px 24px;
-    background-color: #2563eb;
+    background-color: var(--wms-primary);
     border: none;
     border-radius: 6px;
     font-weight: 600;
@@ -212,16 +212,16 @@
 }
 
 .btnConfirm:hover {
-    background-color: #1d4ed8;
+    background-color: var(--wms-primary-hover);
 }
 
 .btnConfirm:disabled {
-    background-color: #94a3b8;
+    background-color: var(--wms-text-subtle);
     cursor: not-allowed;
 }
 
 .emptyState {
     text-align: center;
     padding: 40px;
-    color: #94a3b8;
+    color: var(--wms-text-subtle);
 }

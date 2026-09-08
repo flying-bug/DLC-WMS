@@ -47,7 +47,7 @@
 /* Variants */
 .primary {
     background-color: var(--wms-primary, var(--color-primary));
-    color: #ffffff;
+    color: var(--color-white);
     border-color: var(--wms-primary, var(--color-primary));
 }
 
@@ -58,7 +58,7 @@
 
 /* WMS Voucher Draft Button */
 .draft {
-    background-color: var(--color-surface, #ffffff);
+    background-color: var(--color-surface, var(--color-white));
     color: var(--wms-primary, var(--color-primary));
     border-color: var(--wms-primary, var(--color-primary));
 }
@@ -70,20 +70,20 @@
 /* WMS Voucher Post / Ghi Sổ Button */
 .post,
 .success {
-    background-color: var(--wms-success, var(--color-success-action, #059669));
-    color: #ffffff;
-    border-color: var(--wms-success, var(--color-success-action, #059669));
+    background-color: var(--wms-success, var(--color-success-action, var(--wms-success)));
+    color: var(--color-white);
+    border-color: var(--wms-success, var(--color-success-action, var(--wms-success)));
 }
 
 .post:hover:not(:disabled),
 .success:hover:not(:disabled) {
-    background-color: var(--wms-success-hover, #047857);
-    border-color: var(--wms-success-hover, #047857);
+    background-color: var(--wms-success-hover, var(--wms-success-hover));
+    border-color: var(--wms-success-hover, var(--wms-success-hover));
 }
 
 .excel {
     background-color: var(--color-excel, #107c41);
-    color: #ffffff;
+    color: var(--color-white);
     border-color: var(--color-excel, #107c41);
 }
 
@@ -93,14 +93,14 @@
 }
 
 .secondary {
-    background-color: var(--color-bg-soft, #f8fafc);
-    color: var(--color-text-strong, #1e293b);
-    border-color: var(--color-border, #e2e8f0);
+    background-color: var(--color-bg-soft, var(--wms-bg-soft));
+    color: var(--color-text-strong, var(--wms-text-strong));
+    border-color: var(--color-border, var(--wms-border-base));
 }
 
 .secondary:hover:not(:disabled) {
-    background-color: var(--color-bg-control-hover, #f1f5f9);
-    border-color: var(--color-border-strong, #cbd5e1);
+    background-color: var(--color-bg-control-hover, var(--wms-bg-hover));
+    border-color: var(--color-border-strong, var(--wms-border-strong));
 }
 
 .outline {
@@ -114,24 +114,24 @@
 }
 
 .danger {
-    background-color: var(--wms-danger, var(--color-danger, #ef4444));
-    color: #ffffff;
-    border-color: var(--wms-danger, var(--color-danger, #ef4444));
+    background-color: var(--wms-danger, var(--color-danger, var(--wms-danger)));
+    color: var(--color-white);
+    border-color: var(--wms-danger, var(--color-danger, var(--wms-danger)));
 }
 
 .danger:hover:not(:disabled) {
-    background-color: var(--wms-danger-hover, #dc2626);
-    border-color: var(--wms-danger-hover, #dc2626);
+    background-color: var(--wms-danger-hover, var(--wms-danger));
+    border-color: var(--wms-danger-hover, var(--wms-danger));
 }
 
 .ghost {
     background-color: transparent;
-    color: var(--color-text-body, #334155);
+    color: var(--color-text-body, var(--wms-text-body));
     box-shadow: none;
 }
 
 .ghost:hover:not(:disabled) {
-    background-color: var(--color-bg-hover, #f8fafc);
+    background-color: var(--color-bg-hover, var(--wms-bg-soft));
     color: var(--wms-primary, var(--color-primary));
 }
 

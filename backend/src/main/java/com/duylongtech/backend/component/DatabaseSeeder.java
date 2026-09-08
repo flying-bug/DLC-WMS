@@ -289,7 +289,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     whPerms.add(perm);
                 } else if (Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
                     whPerms.add(perm);
-                } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer").contains(mod)) {
+                } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_summary").contains(mod)) {
                     whPerms.add(perm);
                 }
             }
@@ -325,7 +325,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                     accPerms.add(perm);
                 } else if (Arrays.asList("report_debt", "report_sales", "report_summary").contains(mod)) {
                     accPerms.add(perm);
-                } else if (Arrays.asList("payment", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                } else if ("payment".equals(mod)) {
+                    accPerms.add(perm);
+                } else if (Arrays.asList("export", "ai_chat").contains(mod) && code.endsWith(":view")) {
                     accPerms.add(perm);
                 }
             }
@@ -342,6 +344,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                 if ("payment".equals(mod)) {
                     cashierPerms.add(perm);
                 } else if (Arrays.asList("sales_order", "customer", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    cashierPerms.add(perm);
+                } else if (Arrays.asList("report_debt").contains(mod)) {
                     cashierPerms.add(perm);
                 }
             }

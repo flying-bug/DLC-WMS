@@ -88,7 +88,7 @@
 }
 
 .btnDanger:hover {
-  background-color: #dc2626;
+  background-color: var(--wms-danger);
 }
 
 .btnOutline {
@@ -102,5 +102,5 @@
 }
 
 .btnOutline:hover {
-  background-color: #e2e8f0 !important;
+  background-color: var(--wms-border-base) !important;
 }

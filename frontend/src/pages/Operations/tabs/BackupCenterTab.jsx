@@ -13,10 +13,10 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 
 
 const STATUS_CONFIG = {
-    LOCAL:     { label: 'Chỉ Local (Unpushed)', color: '#f59e0b', icon: 'bi bi-hdd-fill' },
-    DRIVE:     { label: 'Chỉ Drive (Remote)',   color: '#6366f1', icon: 'bi bi-cloud-fill' },
-    BOTH:      { label: 'Đã đồng bộ (Both)',    color: '#10b981', icon: 'bi bi-check2-circle' },
-    FAILED:    { label: 'Thất bại',             color: '#ef4444', icon: 'bi bi-x-circle-fill' },
+    LOCAL:     { label: 'Chỉ Local (Unpushed)', color: 'var(--color-warning)', icon: 'bi bi-hdd-fill' },
+    DRIVE:     { label: 'Chỉ Drive (Remote)',   color: 'var(--wms-primary)', icon: 'bi bi-cloud-fill' },
+    BOTH:      { label: 'Đã đồng bộ (Both)',    color: 'var(--color-success-alt)', icon: 'bi bi-check2-circle' },
+    FAILED:    { label: 'Thất bại',             color: 'var(--wms-danger)', icon: 'bi bi-x-circle-fill' },
     RESTORING: { label: 'Đang restore',         color: '#06b6d4', icon: 'bi bi-arrow-repeat' },
 };
 
@@ -32,25 +32,25 @@ function RestoreConfirmModal({ record, onConfirm, onCancel, loading }) {
         <div className={styles.overlay} onClick={onCancel}>
             <div className={styles.modal} onClick={e => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
-                    <i className="bi bi-exclamation-triangle-fill" style={{ color: '#ef4444' }} />
+                    <i className="bi bi-exclamation-triangle-fill" style={{ color: 'var(--wms-danger)' }} />
                     <h2>Xác nhận Restore Database</h2>
                 </div>
                 <div className={styles.modalBody}>
                     <div className={styles.dangerBox}>
                         <strong>⚠️ CẢNH BÁO:</strong> Thao tác này sẽ khôi phục dữ liệu bằng bản sao lưu <strong>{record?.filename}</strong>.
                         {record?.status === 'DRIVE' && (
-                            <div style={{ marginTop: '8px', color: '#2563eb', fontWeight: 600 }}>
+                            <div style={{ marginTop: '8px', color: 'var(--wms-primary)', fontWeight: 600 }}>
                                 ☁️ File hiện chỉ có trên Google Drive. Hệ thống sẽ tự động Pull về máy trước khi nạp dữ liệu.
                             </div>
                         )}
-                        <div style={{ marginTop: '8px', padding: '6px 10px', background: '#ecfdf5', borderRadius: '6px', color: '#065f46', fontSize: '12px', border: '1px solid #a7f3d0' }}>
+                        <div style={{ marginTop: '8px', padding: '6px 10px', background: 'var(--wms-success-soft)', borderRadius: '6px', color: '#065f46', fontSize: '12px', border: '1px solid var(--wms-success-border)' }}>
                             🛡️ <strong>Safety Snapshot:</strong> Hệ thống sẽ tự động chụp lại 1 bản sao lưu dữ liệu hiện tại trước khi khôi phục, giúp bạn có thể hoàn tác bất cứ lúc nào.
                         </div>
                     </div>
 
                     {isEncrypted && (
                         <div style={{ marginBottom: '16px' }}>
-                            <p className={styles.confirmLabel} style={{ color: '#f59e0b', fontWeight: 600 }}>
+                            <p className={styles.confirmLabel} style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
                                 🔑 Bản sao lưu này được mã hóa (AES-256). Nhập khoá mã hóa (Encryption Key):
                             </p>
                             <input
@@ -59,7 +59,7 @@ function RestoreConfirmModal({ record, onConfirm, onCancel, loading }) {
                                 value={encryptionKey}
                                 onChange={e => setEncryptionKey(e.target.value)}
                                 placeholder="Nhập khoá mã hóa (Encryption Key)..."
-                                style={{ borderColor: '#f59e0b' }}
+                                style={{ borderColor: 'var(--color-warning)' }}
                             />
                         </div>
                     )}
@@ -387,7 +387,7 @@ function BackupCenterTab() {
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className={styles.actionBtn}
-                                                            style={{ background: 'rgba(99,102,241,0.12)', color: '#6366f1', textDecoration: 'none' }}
+                                                            style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--wms-primary)', textDecoration: 'none' }}
                                                             title="Mở trên Google Drive"
                                                         >
                                                             <i className="bi bi-box-arrow-up-right" />

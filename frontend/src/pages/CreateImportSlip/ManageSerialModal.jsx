@@ -198,8 +198,8 @@ export default function ManageSerialModal({
 
           {/* HINT & RULES */}
           <div className={styles.scanHintCard}>
-            <div style={{ fontWeight: '700', marginBottom: '6px', color: '#1e293b' }}>
-              <i className="fas fa-shield-alt" style={{ color: '#2563eb', marginRight: '6px' }}></i>
+            <div style={{ fontWeight: '700', marginBottom: '6px', color: 'var(--wms-text-strong)' }}>
+              <i className="fas fa-shield-alt" style={{ color: 'var(--wms-primary)', marginRight: '6px' }}></i>
               Nguyên tắc kiểm đếm Zero-Trust:
             </div>
             <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -221,7 +221,7 @@ export default function ManageSerialModal({
           {/* PROGRESS */}
           <div className={styles.progressRow}>
             <div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--wms-text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
                 Tiến độ quét thực tế
               </div>
               <div className={styles.progressText}>
@@ -257,7 +257,7 @@ export default function ManageSerialModal({
           <div className={styles.serialList}>
             {activeSubTab === 'verified' ? (
               verifiedSerials.length === 0 ? (
-                <div style={{ color: '#94a3b8', fontSize: '0.8125rem', textAlign: 'center', padding: '32px' }}>
+                <div style={{ color: 'var(--wms-text-subtle)', fontSize: '0.8125rem', textAlign: 'center', padding: '32px' }}>
                   <i className="fas fa-barcode" style={{ fontSize: '1.5rem', marginBottom: '8px', display: 'block' }}></i>
                   Chưa quét chiếc nào. Hãy dùng máy quét bắn mã trên vỏ hộp!
                 </div>
@@ -292,7 +292,7 @@ export default function ManageSerialModal({
               expectedSerials.map((sn, idx) => {
                 const isScanned = verifiedSerials.includes(sn);
                 return (
-                  <div key={idx} className={styles.serialItem} style={{ background: isScanned ? '#f0fdf4' : '#ffffff' }}>
+                  <div key={idx} className={styles.serialItem} style={{ background: isScanned ? 'var(--color-success-bg-soft)' : 'var(--color-white)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span className={styles.serialIndex}>{idx + 1}.</span>
                       <span className={styles.serialValue}>{sn}</span>
@@ -311,7 +311,7 @@ export default function ManageSerialModal({
       {/* FOOTER */}
       <div className={styles.footer}>
         <div className={styles.footerSummary}>
-          Đã quét thực tế: <strong style={{ color: '#2563eb' }}>{verifiedSerials.length}</strong> / {targetQuantity} Serial{' '}
+          Đã quét thực tế: <strong style={{ color: 'var(--wms-primary)' }}>{verifiedSerials.length}</strong> / {targetQuantity} Serial{' '}
           {verifiedSerials.length < targetQuantity && (
             <span style={{ color: '#c2410c' }}>(Còn thiếu {targetQuantity - verifiedSerials.length} chiếc)</span>
           )}
@@ -322,7 +322,7 @@ export default function ManageSerialModal({
             <button
               type="button"
               className={styles.btnCancel}
-              style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+              style={{ color: 'var(--wms-danger)', borderColor: '#fca5a5' }}
               onClick={handleClearAll}
             >
               Xóa quét lại

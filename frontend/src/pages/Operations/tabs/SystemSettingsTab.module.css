@@ -140,14 +140,14 @@
     animation: fadeIn 0.3s ease;
 }
 .testStatusSuccess {
-    background: var(--color-success-bg, #ecfdf5);
-    border: 1px solid var(--color-success-border, #a7f3d0);
-    color: var(--color-success, #059669);
+    background: var(--color-success-bg, var(--wms-success-soft));
+    border: 1px solid var(--color-success-border, var(--wms-success-border));
+    color: var(--color-success, var(--wms-success));
 }
 .testStatusError {
     background: var(--color-danger-bg, #fef2f2);
     border: 1px solid var(--color-danger-border, #fecaca);
-    color: var(--color-danger, #dc2626);
+    color: var(--color-danger, var(--wms-danger));
 }
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-4px); }

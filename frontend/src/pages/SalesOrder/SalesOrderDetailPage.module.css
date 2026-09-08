@@ -7,13 +7,13 @@
 /* ── Breadcrumb ── */
 .breadcrumb {
   font-size: 13px;
-  color: #64748b;
+  color: var(--wms-text-muted);
   margin-bottom: 14px;
   display: flex;
   align-items: center;
 }
 .breadcrumbLink {
-  color: #2563eb;
+  color: var(--wms-primary);
   cursor: pointer;
 }
 .breadcrumbLink:hover { text-decoration: underline; }
@@ -37,7 +37,7 @@
 .docCode {
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--wms-text-strong);
   letter-spacing: 0.3px;
 }
 
@@ -132,10 +132,10 @@
 .btnSecondary {
   padding: 7px 12px;
   background: #fff;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 7px;
   font-size: 13px;
-  color: #374151;
+  color: var(--color-text-heading);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -151,7 +151,7 @@
 /* ── Card ── */
 .card {
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wms-border-base);
   border-radius: 10px;
   padding: 18px 20px;
   margin-bottom: 16px;
@@ -160,7 +160,7 @@
 .cardTitle {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--wms-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 14px;
@@ -180,22 +180,22 @@
 
 .infoLabel {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--wms-text-subtle);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .infoValue {
   font-size: 13px;
-  color: #374151;
+  color: var(--color-text-heading);
   text-align: right;
   word-break: break-word;
 }
 
-.highlight { color: #1d4ed8; font-weight: 600; }
+.highlight { color: var(--wms-primary-hover); font-weight: 600; }
 
 .totalRow {
-  border-top: 1px dashed #e2e8f0;
+  border-top: 1px dashed var(--wms-border-base);
   padding-top: 8px;
   margin-top: 4px;
 }
@@ -203,7 +203,7 @@
 .totalValue {
   font-size: 16px;
   font-weight: 700;
-  color: #1d4ed8;
+  color: var(--wms-primary-hover);
 }
 
 /* ── Table ── */
@@ -213,36 +213,36 @@
   font-size: 13px;
 }
 
-.table thead tr { background: #f8fafc; }
+.table thead tr { background: var(--wms-bg-soft); }
 
 .table th {
   padding: 9px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--wms-border-base);
   font-weight: 600;
-  color: #475569;
+  color: var(--wms-text-muted);
   text-align: left;
   white-space: nowrap;
 }
 
 .table td {
   padding: 9px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #374151;
+  border-bottom: 1px solid var(--wms-bg-hover);
+  color: var(--color-text-heading);
 }
 
-.table tbody tr:hover { background: #f8fafc; }
+.table tbody tr:hover { background: var(--wms-bg-soft); }
 
 .table tfoot td {
   background: #fafbfc;
-  border-top: 2px solid #e2e8f0;
+  border-top: 2px solid var(--wms-border-base);
   border-bottom: none;
 }
 
 .skuBadge {
   display: inline-block;
   padding: 2px 8px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-primary-soft);
+  color: var(--wms-primary-hover);
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;

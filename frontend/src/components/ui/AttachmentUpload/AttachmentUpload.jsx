@@ -153,7 +153,7 @@ const AttachmentUpload = ({
       )}
 
       {errorMessage && (
-        <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '2px' }}>
+        <div style={{ color: 'var(--wms-danger)', fontSize: '12px', marginTop: '2px' }}>
           <i className="bi bi-exclamation-circle" style={{ marginRight: '4px' }}></i>
           {errorMessage}
         </div>

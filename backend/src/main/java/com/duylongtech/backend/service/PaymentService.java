@@ -17,6 +17,8 @@ public interface PaymentService {
 
     PaymentResponse postPayment(Long id);
 
+    PaymentResponse unpostPayment(Long id, String reason);
+
     void deletePayment(Long id);
 
     BigDecimal getPartnerDebtBalance(Long partnerId);

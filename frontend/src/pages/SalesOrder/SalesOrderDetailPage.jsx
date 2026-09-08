@@ -27,23 +27,23 @@ const fmtDate = (v) => (v ? formatDateOnly(v) : '—');
 const fmtDateTime = (v) => (v ? formatDateTime(v) : '—');
 
 const STATUS_CONFIG = {
-  DRAFT: { label: 'Nháp', bg: '#f1f5f9', color: '#64748b', icon: 'bi-pencil-square' },
-  APPROVED: { label: 'Đã duyệt', bg: '#dcfce7', color: '#16a34a', icon: 'bi-check-circle-fill' },
+  DRAFT: { label: 'Nháp', bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', icon: 'bi-pencil-square' },
+  APPROVED: { label: 'Đã duyệt', bg: 'var(--color-success-bg)', color: '#16a34a', icon: 'bi-check-circle-fill' },
   POSTED: { label: 'Ghi sổ', bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
-  CANCELLED: { label: 'Đã hủy', bg: '#fef2f2', color: '#dc2626', icon: 'bi-x-circle-fill' },
+  CANCELLED: { label: 'Đã hủy', bg: '#fef2f2', color: 'var(--wms-danger)', icon: 'bi-x-circle-fill' },
 };
 
 const PAYMENT_STATUS_CONFIG = {
   UNPAID: { label: 'Chưa thanh toán', bg: '#fee2e2', color: '#991b1b', icon: 'bi-dash-circle' },
   PARTIAL: { label: 'Trả một phần', bg: '#fef08a', color: '#854d0e', icon: 'bi-pie-chart-fill' },
-  PAID: { label: 'Đã thanh toán', bg: '#dcfce7', color: '#166534', icon: 'bi-check-circle-fill' },
+  PAID: { label: 'Đã thanh toán', bg: 'var(--color-success-bg)', color: '#166534', icon: 'bi-check-circle-fill' },
 };
 
 const RES_STATUS_CONFIG = {
   HOLDING: { label: 'Đang giữ', bg: '#fef9c3', color: '#ca8a04' },
-  BACKORDERED: { label: 'Chờ nhập', bg: '#fee2e2', color: '#dc2626' },
-  FULFILLED: { label: 'Đã xuất kho', bg: '#dcfce7', color: '#16a34a' },
-  RELEASED: { label: 'Đã hủy', bg: '#f1f5f9', color: '#64748b' },
+  BACKORDERED: { label: 'Chờ nhập', bg: '#fee2e2', color: 'var(--wms-danger)' },
+  FULFILLED: { label: 'Đã xuất kho', bg: 'var(--color-success-bg)', color: '#16a34a' },
+  RELEASED: { label: 'Đã hủy', bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)' },
 };
 
 function SalesOrderDetailPage() {
@@ -302,7 +302,7 @@ function SalesOrderDetailPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Đang tải...</div>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--wms-text-muted)' }}>Đang tải...</div>
       </AdminLayout>
     );
   }
@@ -318,7 +318,7 @@ function SalesOrderDetailPage() {
     );
   }
 
-  const statusCfg = STATUS_CONFIG[so.status] || { label: so.status, bg: '#f1f5f9', color: '#64748b', icon: 'bi-circle' };
+  const statusCfg = STATUS_CONFIG[so.status] || { label: so.status, bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', icon: 'bi-circle' };
   const subTotalAmount = so.subTotalAmount || (so.lines || []).reduce((s, l) => s + Number(l.lineAmount || 0), 0);
   const taxAmount = so.taxAmount || 0;
   const totalAmount = so.totalAmount || (subTotalAmount + taxAmount);
@@ -352,8 +352,8 @@ function SalesOrderDetailPage() {
               <span
                 className={styles.statusBadge}
                 style={{
-                  background: PAYMENT_STATUS_CONFIG[so.paymentStatus]?.bg || '#f1f5f9',
-                  color: PAYMENT_STATUS_CONFIG[so.paymentStatus]?.color || '#64748b'
+                  background: PAYMENT_STATUS_CONFIG[so.paymentStatus]?.bg || 'var(--wms-bg-hover)',
+                  color: PAYMENT_STATUS_CONFIG[so.paymentStatus]?.color || 'var(--wms-text-muted)'
                 }}
               >
                 <i className={`bi ${PAYMENT_STATUS_CONFIG[so.paymentStatus]?.icon || 'bi-circle'}`} style={{ marginRight: 5 }} />
@@ -369,7 +369,7 @@ function SalesOrderDetailPage() {
                   <span
                     className={styles.statusBadge}
                     style={{
-                      background: isCanceled ? '#fff1f2' : '#dcfce7',
+                      background: isCanceled ? '#fff1f2' : 'var(--color-success-bg)',
                       color: isCanceled ? '#9f1239' : '#166534',
                       cursor: 'pointer',
                       border: `1px solid ${isCanceled ? '#fecdd3' : '#86efac'}`
@@ -388,7 +388,7 @@ function SalesOrderDetailPage() {
                   type="button"
                   className={styles.statusBadge}
                   style={{
-                    background: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#dcfce7' : '#fff1f2',
+                    background: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'var(--color-success-bg)' : '#fff1f2',
                     color: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#166534' : '#9f1239',
                     cursor: 'pointer',
                     border: `1px solid ${activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#86efac' : '#fecdd3'}`,
@@ -421,9 +421,9 @@ function SalesOrderDetailPage() {
                       position: 'absolute',
                       top: 'calc(100% + 6px)',
                       left: 0,
-                      background: '#ffffff',
+                      background: 'var(--color-white)',
                       borderRadius: 8,
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid var(--wms-border-base)',
                       boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
                       zIndex: 100,
                       minWidth: 330,
@@ -431,10 +431,10 @@ function SalesOrderDetailPage() {
                       overflow: 'hidden'
                     }}
                   >
-                    <div style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--wms-text-muted)', borderBottom: '1px solid var(--wms-bg-hover)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>Hóa đơn điện tử ({einvoices.length})</span>
                       <span
-                        style={{ color: '#0284c7', cursor: 'pointer', textTransform: 'none', fontWeight: 500 }}
+                        style={{ color: 'var(--color-info-hover)', cursor: 'pointer', textTransform: 'none', fontWeight: 500 }}
                         onClick={() => {
                           const el = document.getElementById('einvoice-history-section');
                           if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -456,10 +456,10 @@ function SalesOrderDetailPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            borderBottom: '1px solid #f8fafc',
+                            borderBottom: '1px solid var(--wms-bg-soft)',
                             transition: 'background 0.15s'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--wms-bg-soft)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                           onClick={() => {
                             handleOpenEInvoicePreview(inv);
@@ -468,19 +468,19 @@ function SalesOrderDetailPage() {
                         >
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 13, color: isCanceled ? '#991b1b' : '#0284c7' }}>
+                              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 13, color: isCanceled ? '#991b1b' : 'var(--color-info-hover)' }}>
                                 #{inv.invoiceNumber || 'Chưa cấp số'}
                               </span>
-                              <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>
+                              <span style={{ fontSize: 11, color: 'var(--wms-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
                                 ({inv.invoiceSeries})
                               </span>
                               {inv.inventoryDocumentId && (
-                                <span style={{ fontSize: 10, background: '#f1f5f9', padding: '1px 4px', borderRadius: 3, color: '#475569' }}>
+                                <span style={{ fontSize: 10, background: 'var(--wms-bg-hover)', padding: '1px 4px', borderRadius: 3, color: 'var(--wms-text-muted)' }}>
                                   Đợt {inv.exportDocCode || `#${inv.inventoryDocumentId}`}
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: 11, color: isCanceled ? '#dc2626' : '#64748b', marginTop: 2 }}>
+                            <div style={{ fontSize: 11, color: isCanceled ? 'var(--wms-danger)' : 'var(--wms-text-muted)', marginTop: 2 }}>
                               {isCanceled ? `Đã hủy: ${inv.cancelReason || '—'}` : `${inv.invoiceDate} • ${money(inv.totalAmount)}`}
                             </div>
                           </div>
@@ -492,13 +492,13 @@ function SalesOrderDetailPage() {
                                 fontWeight: 600,
                                 padding: '2px 8px',
                                 borderRadius: 12,
-                                background: isCanceled ? '#fee2e2' : '#ecfdf5',
+                                background: isCanceled ? '#fee2e2' : 'var(--wms-success-soft)',
                                 color: isCanceled ? '#991b1b' : '#065f46'
                               }}
                             >
                               {isCanceled ? 'Đã hủy' : 'Hiệu lực'}
                             </span>
-                            <i className="bi bi-chevron-right" style={{ fontSize: 11, color: '#94a3b8' }} />
+                            <i className="bi bi-chevron-right" style={{ fontSize: 11, color: 'var(--wms-text-subtle)' }} />
                           </div>
                         </div>
                       );
@@ -514,7 +514,7 @@ function SalesOrderDetailPage() {
               <button
                 className={styles.btnPrimary}
                 onClick={() => setIssueModalTarget({ so, exportDoc: null })}
-                style={{ backgroundColor: '#059669', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                style={{ backgroundColor: 'var(--wms-success)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
                 <i className="bi bi-file-earmark-text" /> {canceledSoLevelInvoice ? 'Xuất lại HĐĐT mới' : 'Xuất Hóa Đơn Điện Tử'}
               </button>
@@ -527,7 +527,7 @@ function SalesOrderDetailPage() {
                     <button className={styles.btnPrimary} onClick={handlePrintInvoice}>
                       <i className="bi bi-printer" /> In Hóa đơn
                     </button>
-                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
+                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: 'var(--color-info-hover)' }}>
                       <i className="bi bi-envelope" /> Gửi Email Hóa đơn
                     </button>
                   </>
@@ -536,7 +536,7 @@ function SalesOrderDetailPage() {
                     <button className={styles.btnPrimary} onClick={handlePrintQuote}>
                       <i className="bi bi-printer" /> In Báo giá
                     </button>
-                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
+                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: 'var(--color-info-hover)' }}>
                       <i className="bi bi-envelope" /> Gửi Email Báo giá
                     </button>
                   </>
@@ -629,7 +629,7 @@ function SalesOrderDetailPage() {
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Thuế VAT:</span>
-                <span className={styles.infoValue} style={{ fontWeight: 600, color: '#dc2626' }}>{money(taxAmount)}</span>
+                <span className={styles.infoValue} style={{ fontWeight: 600, color: 'var(--wms-danger)' }}>{money(taxAmount)}</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Tổng cộng:</span>
@@ -641,7 +641,7 @@ function SalesOrderDetailPage() {
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Còn nợ:</span>
-                <span className={styles.infoValue} style={{ color: '#dc2626', fontWeight: 600 }}>
+                <span className={styles.infoValue} style={{ color: 'var(--wms-danger)', fontWeight: 600 }}>
                   {money(totalAmount - (so.paidAmount || 0))}
                 </span>
               </div>
@@ -675,25 +675,25 @@ function SalesOrderDetailPage() {
                     <td>{idx + 1}</td>
                     <td><span className={styles.skuBadge}>{line.sku || `#${line.variantId}`}</span></td>
                     <td>{line.variantName || '—'}</td>
-                    <td style={{ color: '#1e40af', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? `Kho #${line.warehouseId}` : '—')}</td>
-                    <td style={{ textAlign: 'center', color: '#475569' }}>{line.unitName || '—'}</td>
+                    <td style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? `Kho #${line.warehouseId}` : '—')}</td>
+                    <td style={{ textAlign: 'center', color: 'var(--wms-text-muted)' }}>{line.unitName || '—'}</td>
                     <td style={{ textAlign: 'center' }}>{Number(line.quantity).toLocaleString('vi-VN')}</td>
                     <td style={{ textAlign: 'center' }}>{line.warrantyMonths || 0}</td>
                     <td style={{ textAlign: 'right' }}>{money(line.unitPrice)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: '#1d4ed8' }}>{money(line.lineAmount)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--wms-primary-hover)' }}>{money(line.lineAmount)}</td>
                     <td style={{ textAlign: 'center' }}>{line.vatRate || 0}</td>
-                    <td style={{ color: '#64748b' }}>{line.note || '—'}</td>
+                    <td style={{ color: 'var(--wms-text-muted)' }}>{line.note || '—'}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
                   <td colSpan={9} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tiền hàng:</td>
-                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#1d4ed8', fontSize: 15 }}>{money(subTotalAmount)}</td>
+                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: 'var(--wms-primary-hover)', fontSize: 15 }}>{money(subTotalAmount)}</td>
                 </tr>
                 <tr>
                   <td colSpan={9} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Thuế VAT:</td>
-                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#dc2626', fontSize: 15 }}>{money(taxAmount)}</td>
+                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: 'var(--wms-danger)', fontSize: 15 }}>{money(taxAmount)}</td>
                 </tr>
                 <tr>
                   <td colSpan={9} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tổng thanh toán:</td>
@@ -714,7 +714,7 @@ function SalesOrderDetailPage() {
                 <i className="bi bi-paperclip" /> Ghi chú &amp; Tệp đính kèm
               </div>
               {cleanNote && (
-                <div style={{ marginBottom: (soAttachments && soAttachments.length > 0) ? 14 : 0, fontSize: 13.5, color: '#334155', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: 6, border: '1px solid #e2e8f0', lineHeight: 1.6 }}>
+                <div style={{ marginBottom: (soAttachments && soAttachments.length > 0) ? 14 : 0, fontSize: 13.5, color: 'var(--wms-text-body)', backgroundColor: 'var(--wms-bg-soft)', padding: '10px 14px', borderRadius: 6, border: '1px solid var(--wms-border-base)', lineHeight: 1.6 }}>
                   <strong>Ghi chú:</strong> {cleanNote}
                 </div>
               )}
@@ -748,7 +748,7 @@ function SalesOrderDetailPage() {
                 </thead>
                 <tbody>
                   {so.reservations.map((r, idx) => {
-                    const rCfg = RES_STATUS_CONFIG[r.status] || { label: r.status, bg: '#f1f5f9', color: '#64748b' };
+                    const rCfg = RES_STATUS_CONFIG[r.status] || { label: r.status, bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)' };
                     const expiredSoon = r.status === 'HOLDING' && new Date(r.expiresAt) < new Date(now + 6 * 3600000);
                     return (
                       <tr key={r.id || idx}>
@@ -761,9 +761,9 @@ function SalesOrderDetailPage() {
                             {rCfg.label}
                           </span>
                         </td>
-                        <td style={{ color: expiredSoon ? '#ef4444' : '#374151' }}>
+                        <td style={{ color: expiredSoon ? 'var(--wms-danger)' : 'var(--color-text-heading)' }}>
                           {fmtDateTime(r.expiresAt)}
-                          {expiredSoon && <i className="bi bi-exclamation-triangle-fill" style={{ marginLeft: 5, color: '#ef4444' }} />}
+                          {expiredSoon && <i className="bi bi-exclamation-triangle-fill" style={{ marginLeft: 5, color: 'var(--wms-danger)' }} />}
                         </td>
                       </tr>
                     );
@@ -778,7 +778,7 @@ function SalesOrderDetailPage() {
         <div className={styles.card} style={{ marginTop: 20 }}>
           <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="bi bi-truck" style={{ color: '#0284c7' }} /> Các đợt giao hàng & Hóa đơn điện tử tương ứng (Nghị định 123/2020/NĐ-CP)
+              <i className="bi bi-truck" style={{ color: 'var(--color-info-hover)' }} /> Các đợt giao hàng & Hóa đơn điện tử tương ứng (Nghị định 123/2020/NĐ-CP)
             </div>
             {so.status === 'APPROVED' && (
               <button
@@ -814,9 +814,9 @@ function SalesOrderDetailPage() {
                     const qtyTotal = doc.lines?.reduce((s, l) => s + (Number(l.quantityOut ?? l.quantity ?? 0)), 0) || doc.totalQuantity || 0;
                     return (
                       <tr key={doc.id || idx}>
-                        <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)' }}>{idx + 1}</td>
                         <td>
-                          <strong style={{ color: '#0284c7', cursor: 'pointer' }} onClick={() => navigate(`/exports/edit/${doc.id}`)}>
+                          <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/exports/edit/${doc.id}`)}>
                             {doc.docCode}
                           </strong>
                         </td>
@@ -824,7 +824,7 @@ function SalesOrderDetailPage() {
                         <td>{doc.warehouseName || (doc.warehouseId ? `Kho #${doc.warehouseId}` : '—')}</td>
                         <td style={{ textAlign: 'center', fontWeight: 600 }}>{Number(qtyTotal).toLocaleString('vi-VN')}</td>
                         <td>
-                          <span className={styles.statusBadge} style={{ background: isPosted ? '#dcfce7' : '#fef3c7', color: isPosted ? '#166534' : '#92400e' }}>
+                          <span className={styles.statusBadge} style={{ background: isPosted ? 'var(--color-success-bg)' : '#fef3c7', color: isPosted ? '#166534' : '#92400e' }}>
                             {isPosted ? 'Đã ghi sổ' : (doc.status === 'SUBMITTED' ? 'Chờ duyệt' : 'Bản nháp')}
                           </span>
                         </td>
@@ -834,18 +834,18 @@ function SalesOrderDetailPage() {
                               <span
                                 style={{
                                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                                  background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0',
+                                  background: 'var(--wms-success-soft)', color: '#065f46', border: '1px solid var(--wms-success-border)',
                                   padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600
                                 }}
                               >
-                                <i className="bi bi-file-earmark-check-fill" style={{ color: '#059669' }} />
+                                <i className="bi bi-file-earmark-check-fill" style={{ color: 'var(--wms-success)' }} />
                                 HĐ: {activeDocInv.invoiceNumber || 'Đã cấp'} ({activeDocInv.invoiceSeries})
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleOpenEInvoicePreview(activeDocInv)}
                                 style={{
-                                  background: 'none', border: 'none', color: '#0284c7',
+                                  background: 'none', border: 'none', color: 'var(--color-info-hover)',
                                   cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
                                 }}
                               >
@@ -857,19 +857,19 @@ function SalesOrderDetailPage() {
                               <span
                                 style={{
                                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                                  background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe',
+                                  background: 'var(--color-primary-soft)', color: 'var(--color-primary-link)', border: '1px solid var(--color-info-border-soft)',
                                   padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600
                                 }}
                                 title="Đơn hàng đã được xuất HĐĐT gộp toàn bộ đơn"
                               >
-                                <i className="bi bi-file-earmark-lock-fill" style={{ color: '#2563eb' }} />
+                                <i className="bi bi-file-earmark-lock-fill" style={{ color: 'var(--wms-primary)' }} />
                                 Đã xuất theo HĐ đơn hàng ({activeSoLevelInvoice.invoiceNumber})
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleOpenEInvoicePreview(activeSoLevelInvoice)}
                                 style={{
-                                  background: 'none', border: 'none', color: '#0284c7',
+                                  background: 'none', border: 'none', color: 'var(--color-info-hover)',
                                   cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
                                 }}
                               >
@@ -881,7 +881,7 @@ function SalesOrderDetailPage() {
                               {canceledDocInv && (
                                 <span
                                   style={{
-                                    fontSize: 11, color: '#dc2626', background: '#fee2e2',
+                                    fontSize: 11, color: 'var(--wms-danger)', background: '#fee2e2',
                                     padding: '2px 6px', borderRadius: 4, border: '1px solid #fecaca', cursor: 'pointer'
                                   }}
                                   onClick={() => handleOpenEInvoicePreview(canceledDocInv)}
@@ -895,7 +895,7 @@ function SalesOrderDetailPage() {
                                 className={styles.btnPrimary}
                                 onClick={() => setIssueModalTarget({ so, exportDoc: doc })}
                                 style={{
-                                  backgroundColor: '#059669', fontSize: 12, padding: '3px 10px',
+                                  backgroundColor: 'var(--wms-success)', fontSize: 12, padding: '3px 10px',
                                   display: 'inline-flex', alignItems: 'center', gap: 4
                                 }}
                               >
@@ -903,7 +903,7 @@ function SalesOrderDetailPage() {
                               </button>
                             </div>
                           ) : (
-                            <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>Chưa hoàn tất xuất kho</span>
+                            <span style={{ fontSize: 12, color: 'var(--wms-text-subtle)', fontStyle: 'italic' }}>Chưa hoàn tất xuất kho</span>
                           )}
                         </td>
                         <td style={{ textAlign: 'center' }}>
@@ -923,7 +923,7 @@ function SalesOrderDetailPage() {
               </table>
             </div>
           ) : (
-            <div style={{ padding: '16px 0', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+            <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--wms-text-muted)', fontSize: 13 }}>
               Chưa có phiếu xuất kho nào cho đơn hàng này.
             </div>
           )}
@@ -934,7 +934,7 @@ function SalesOrderDetailPage() {
           <div className={styles.card} style={{ marginTop: 20 }}>
             <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <i className="bi bi-file-earmark-ruled" style={{ color: '#059669' }} /> Lịch sử Hóa đơn điện tử của đơn hàng ({einvoices.length} bản ghi)
+                <i className="bi bi-file-earmark-ruled" style={{ color: 'var(--wms-success)' }} /> Lịch sử Hóa đơn điện tử của đơn hàng ({einvoices.length} bản ghi)
               </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -958,40 +958,40 @@ function SalesOrderDetailPage() {
                     const isCanceled = inv.status === 'CANCELED';
                     return (
                       <tr key={inv.id || idx}>
-                        <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)' }}>{idx + 1}</td>
                         <td>
                           <span
-                            style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#0284c7', cursor: 'pointer' }}
+                            style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--color-info-hover)', cursor: 'pointer' }}
                             onClick={() => handleOpenEInvoicePreview(inv)}
                             title="Nhấn để xem bản thể hiện HĐĐT"
                           >
                             {inv.invoiceNumber || 'Chưa cấp'}
                           </span>
                         </td>
-                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: '#475569' }}>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: 'var(--wms-text-muted)' }}>
                           {inv.invoiceSeries}
                         </td>
                         <td style={{ fontFamily: 'JetBrains Mono, monospace' }}>{inv.invoiceDate}</td>
                         <td>
                           {inv.inventoryDocumentId ? (
-                            <span style={{ fontSize: 12, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: 4, border: '1px solid #a7f3d0' }}>
+                            <span style={{ fontSize: 12, color: 'var(--wms-success)', background: 'var(--wms-success-soft)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--wms-success-border)' }}>
                               Đợt xuất: {inv.exportDocCode || `PXK #${inv.inventoryDocumentId}`}
                             </span>
                           ) : (
-                            <span style={{ fontSize: 12, color: '#1e40af', background: '#eff6ff', padding: '2px 8px', borderRadius: 4, border: '1px solid #bfdbfe' }}>
+                            <span style={{ fontSize: 12, color: 'var(--color-primary-link)', background: 'var(--color-primary-soft)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--color-info-border-soft)' }}>
                               Toàn bộ đơn hàng
                             </span>
                           )}
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{inv.buyerLegalName || inv.buyerName || 'Khách lẻ'}</div>
-                          {inv.buyerTaxCode && <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>MST: {inv.buyerTaxCode}</div>}
+                          {inv.buyerTaxCode && <div style={{ fontSize: 11, color: 'var(--wms-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>MST: {inv.buyerTaxCode}</div>}
                         </td>
                         <td style={{ textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isCanceled ? '#9f1239' : '#166534' }}>
                           {money(inv.totalAmount)}
                         </td>
                         <td>
-                          <span style={{ fontSize: 11, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 6px', borderRadius: 4 }}>
+                          <span style={{ fontSize: 11, color: 'var(--color-success-deep)', background: 'var(--color-success-bg-soft)', border: '1px solid var(--wms-success-border)', padding: '2px 6px', borderRadius: 4 }}>
                             <i className="bi bi-shield-check" /> {inv.cqtCode ? 'Đã cấp mã' : 'Hợp lệ'}
                           </span>
                         </td>
@@ -1004,11 +1004,11 @@ function SalesOrderDetailPage() {
                               <div style={{ fontSize: 11, color: '#9f1239', marginTop: 3 }}>
                                 <strong>Lý do:</strong> {inv.cancelReason || '—'}
                               </div>
-                              {inv.canceledByName && <div style={{ fontSize: 10, color: '#64748b' }}>Bởi: {inv.canceledByName}</div>}
+                              {inv.canceledByName && <div style={{ fontSize: 10, color: 'var(--wms-text-muted)' }}>Bởi: {inv.canceledByName}</div>}
                             </div>
                           ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 6px #10b981' }} /> Đã phát hành
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--wms-success-soft)', color: '#065f46', border: '1px solid var(--wms-success-border)', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-success-alt)', boxShadow: '0 0 6px var(--color-success-alt)' }} /> Đã phát hành
                             </span>
                           )}
                         </td>
@@ -1050,8 +1050,8 @@ function SalesOrderDetailPage() {
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ background: '#fff', borderRadius: 8, padding: 20, width: 400, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
               <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 18 }}>Ghi nhận thanh toán</h3>
-              <p style={{ marginBottom: 15, fontSize: 14, color: '#475569' }}>
-                Còn nợ: <b style={{ color: '#dc2626' }}>{money(totalAmount - (so.paidAmount || 0))}</b>
+              <p style={{ marginBottom: 15, fontSize: 14, color: 'var(--wms-text-muted)' }}>
+                Còn nợ: <b style={{ color: 'var(--wms-danger)' }}>{money(totalAmount - (so.paidAmount || 0))}</b>
               </p>
               <form onSubmit={handleRecordPayment}>
                 <div style={{ marginBottom: 20 }}>
@@ -1062,7 +1062,7 @@ function SalesOrderDetailPage() {
                     value={formatMoneyInput(paymentAmount)}
                     onChange={(e) => setPaymentAmount(digitsOnly(e.target.value))}
                     placeholder="Nhập số tiền..."
-                    style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 4 }}
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-border-muted)', borderRadius: 4 }}
                     autoFocus
                   />
                 </div>
@@ -1079,13 +1079,13 @@ function SalesOrderDetailPage() {
         {emailModalOpen && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: showEmailPreview ? 760 : 480, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', transition: 'all 0.3s ease' }}>
-              <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 18, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <i className="bi bi-envelope-paper" style={{ color: '#0284c7' }} /> Gửi Email Báo Giá
+              <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 18, color: 'var(--wms-text-title)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <i className="bi bi-envelope-paper" style={{ color: 'var(--color-info-hover)' }} /> Gửi Email Báo Giá
               </h3>
               <form onSubmit={handleSendEmail}>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 14, color: '#334155' }}>
-                    Email người nhận <span style={{ color: '#ef4444' }}>*</span>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 14, color: 'var(--wms-text-body)' }}>
+                    Email người nhận <span style={{ color: 'var(--wms-danger)' }}>*</span>
                   </label>
                   <input
                     type="email"
@@ -1093,12 +1093,12 @@ function SalesOrderDetailPage() {
                     value={emailTo}
                     onChange={(e) => setEmailTo(e.target.value)}
                     placeholder="khachhang@example.com"
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
                     autoFocus
                   />
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 14, color: '#334155' }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 14, color: 'var(--wms-text-body)' }}>
                     Lời nhắn đính kèm (Không bắt buộc)
                   </label>
                   <textarea
@@ -1106,32 +1106,32 @@ function SalesOrderDetailPage() {
                     value={emailMessage}
                     onChange={(e) => setEmailMessage(e.target.value)}
                     placeholder="Nhập lời nhắn kính gửi khách hàng..."
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: 6, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: 6, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' }}
                   />
                 </div>
 
                 {showEmailPreview && (
-                  <div style={{ marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, background: '#f8fafc', maxHeight: 320, overflowY: 'auto' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ marginBottom: 20, border: '1px solid var(--wms-border-base)', borderRadius: 8, padding: 16, background: 'var(--wms-bg-soft)', maxHeight: 320, overflowY: 'auto' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--wms-text-muted)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <i className="bi bi-eye" /> Xem trước nội dung Email
                     </div>
-                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, fontSize: 13, color: '#334155', fontFamily: 'Arial, sans-serif' }}>
-                      <div style={{ textAlign: 'center', marginBottom: 12, borderBottom: '2px solid #2563eb', paddingBottom: 10 }}>
-                        <h4 style={{ color: '#2563eb', margin: 0, fontSize: 16 }}>BẢNG BÁO GIÁ SẢN PHẨM</h4>
-                        <span style={{ color: '#64748b', fontSize: 12 }}>Mã báo giá: <strong>{so.soCode}</strong></span>
+                    <div style={{ background: 'var(--color-white)', border: '1px solid var(--wms-border-base)', borderRadius: 8, padding: 16, fontSize: 13, color: 'var(--wms-text-body)', fontFamily: 'Arial, sans-serif' }}>
+                      <div style={{ textAlign: 'center', marginBottom: 12, borderBottom: '2px solid var(--wms-primary)', paddingBottom: 10 }}>
+                        <h4 style={{ color: 'var(--wms-primary)', margin: 0, fontSize: 16 }}>BẢNG BÁO GIÁ SẢN PHẨM</h4>
+                        <span style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>Mã báo giá: <strong>{so.soCode}</strong></span>
                       </div>
                       <p style={{ margin: '0 0 8px 0' }}>Kính gửi Quý khách hàng <strong>{so.partnerName || 'Khách hàng'}</strong>,</p>
                       <p style={{ margin: '0 0 12px 0' }}>Chúng tôi xin gửi đến Quý khách chi tiết bảng báo giá đơn hàng với nội dung cụ thể như sau:</p>
 
                       {emailMessage && emailMessage.trim() && (
-                        <div style={{ background: '#f1f5f9', borderLeft: '4px solid #007bff', padding: '8px 12px', margin: '10px 0', fontStyle: 'italic', borderRadius: '0 4px 4px 0' }}>
+                        <div style={{ background: 'var(--wms-bg-hover)', borderLeft: '4px solid #007bff', padding: '8px 12px', margin: '10px 0', fontStyle: 'italic', borderRadius: '0 4px 4px 0' }}>
                           <strong>Lời nhắn:</strong> {emailMessage.trim()}
                         </div>
                       )}
 
                       <table style={{ width: '100%', borderCollapse: 'collapse', margin: '12px 0', fontSize: 12 }}>
                         <thead>
-                          <tr style={{ background: '#f1f5f9', color: '#1e293b' }}>
+                          <tr style={{ background: 'var(--wms-bg-hover)', color: 'var(--wms-text-strong)' }}>
                             <th style={{ padding: '6px 8px', textAlignment: 'center' }}>#</th>
                             <th style={{ padding: '6px 8px', textAlign: 'left' }}>Sản phẩm</th>
                             <th style={{ padding: '6px 8px', textAlign: 'center' }}>ĐVT</th>
@@ -1142,11 +1142,11 @@ function SalesOrderDetailPage() {
                         </thead>
                         <tbody>
                           {(so.lines || []).map((line, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--wms-bg-hover)' }}>
                               <td style={{ padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
                               <td style={{ padding: '6px 8px' }}>
                                 <strong>{line.variantName || line.sku || '-'}</strong>
-                                {line.sku && <div style={{ fontSize: 11, color: '#64748b' }}>SKU: {line.sku}</div>}
+                                {line.sku && <div style={{ fontSize: 11, color: 'var(--wms-text-muted)' }}>SKU: {line.sku}</div>}
                               </td>
                               <td style={{ padding: '6px 8px', textAlign: 'center' }}>{line.unitName || ''}</td>
                               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(line.quantity || 0).toLocaleString('vi-VN')}</td>
@@ -1160,7 +1160,7 @@ function SalesOrderDetailPage() {
                       <div style={{ textAlign: 'right', fontSize: 12, lineHeight: 1.6, marginTop: 10 }}>
                         <div>Tạm tính: <strong>{money(subTotalAmount)}</strong></div>
                         <div>Thuế VAT: <strong>{money(taxAmount)}</strong></div>
-                        <div style={{ fontSize: 15, color: '#dc2626', marginTop: 4 }}>Tổng cộng: <strong>{money(totalAmount)}</strong></div>
+                        <div style={{ fontSize: 15, color: 'var(--wms-danger)', marginTop: 4 }}>Tổng cộng: <strong>{money(totalAmount)}</strong></div>
                       </div>
                     </div>
                   </div>
@@ -1181,7 +1181,7 @@ function SalesOrderDetailPage() {
                     <button type="button" className={styles.btnSecondary} onClick={() => setEmailModalOpen(false)} disabled={sendingEmail}>
                       Hủy
                     </button>
-                    <button type="submit" className={styles.btnPrimary} style={{ backgroundColor: '#0284c7' }} disabled={sendingEmail}>
+                    <button type="submit" className={styles.btnPrimary} style={{ backgroundColor: 'var(--color-info-hover)' }} disabled={sendingEmail}>
                       {sendingEmail ? 'Đang gửi email...' : 'Gửi ngay'}
                     </button>
                   </div>

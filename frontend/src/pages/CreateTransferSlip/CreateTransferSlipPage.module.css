@@ -45,7 +45,7 @@
 .card {
   background: white;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   padding: 20px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 }
@@ -55,7 +55,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 20px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--color-bg);
   padding-bottom: 12px;
 }
 
@@ -99,22 +99,22 @@
 
 .input {
   flex: 1;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   padding: 8px 12px;
   font-size: 14px;
   outline: none;
   background-color: white;
-  color: #374151;
+  color: var(--color-text-heading);
 }
 
 .input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 1px var(--color-primary-bright);
 }
 
 .inputReadonly {
-  background-color: #f3f4f6;
+  background-color: var(--color-bg);
   color: #4b5563;
   border: none;
   padding: 10px 12px;
@@ -129,7 +129,7 @@
 }
 
 .btnAppend {
-  background-color: #3b82f6;
+  background-color: var(--color-primary-bright);
   color: white;
   border: none;
   width: 40px;
@@ -142,7 +142,7 @@
 }
 
 .btnAppend:hover {
-  background-color: #2563eb;
+  background-color: var(--wms-primary);
 }
 
 .inputWithAppend {
@@ -150,19 +150,19 @@
 }
 
 .textarea {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   padding: 8px 12px;
   font-size: 14px;
   outline: none;
   min-height: 80px;
   resize: vertical;
-  color: #374151;
+  color: var(--color-text-heading);
 }
 
 .linksBox {
-  background-color: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  background-color: var(--wms-bg-soft);
+  border: 1px dashed var(--wms-border-strong);
   border-radius: 4px;
   padding: 12px;
 }
@@ -172,7 +172,7 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #2563eb;
+  color: var(--wms-primary);
   margin-bottom: 8px;
   text-decoration: none;
   font-weight: 500;
@@ -183,7 +183,7 @@
 }
 
 .linkItemAdd {
-  color: #64748b;
+  color: var(--wms-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -192,13 +192,13 @@
 }
 
 .linkItemAdd:hover {
-  color: #475569;
+  color: var(--wms-text-muted);
 }
 
 .btnOutlineBlue {
   background: white;
-  border: 1px solid #3b82f6;
-  color: #3b82f6;
+  border: 1px solid var(--color-primary-bright);
+  color: var(--color-primary-bright);
   padding: 6px 12px;
   border-radius: 4px;
   font-size: 13px;
@@ -210,13 +210,13 @@
 }
 
 .btnOutlineBlue:hover {
-  background-color: #eff6ff;
+  background-color: var(--color-primary-soft);
 }
 
 .tableContainer {
   margin-top: 0;
   position: relative;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   overflow: visible;
 }
@@ -228,14 +228,14 @@
 }
 
 .table th {
-  background-color: #f9fafb;
+  background-color: var(--color-bg-elevated);
   padding: 6px 8px;
   text-align: left;
   font-size: 13px;
   font-weight: 600;
   color: #4b5563;
-  border-bottom: 1px solid #e5e7eb;
-  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 5;
@@ -248,10 +248,10 @@
 .table td {
   padding: 6px 8px;
   font-size: 13px;
-  border-bottom: 1px solid #e5e7eb;
-  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
   vertical-align: middle;
-  color: #374151;
+  color: var(--color-text-heading);
 }
 
 .table td:last-child {
@@ -259,7 +259,7 @@
 }
 
 .tableInput {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   padding: 6px 8px;
   width: 80px;
@@ -272,7 +272,7 @@
   width: 130px;
 }
 .tableSelect {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   padding: 6px 8px;
   width: 150px;
@@ -283,11 +283,11 @@
   background-color: white;
 }
 .tableSelect:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 1px var(--color-primary-bright);
 }
 .tableInput:focus {
-  border-color: #3b82f6;
+  border-color: var(--color-primary-bright);
   outline: none;
 }
 
@@ -302,9 +302,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background-color: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background-color: var(--wms-success-soft);
+  color: var(--wms-success);
+  border: 1px solid var(--wms-success-border);
   padding: 6px 12px;
   border-radius: 6px;
   font-weight: 600;
@@ -338,7 +338,7 @@
 
 .serialSubtext {
   font-size: 11px;
-  color: #64748b;
+  color: var(--wms-text-muted);
   margin-left: 2px;
   font-style: italic;
 }
@@ -349,11 +349,11 @@
 }
 
 .textBlue {
-  color: #1e40af;
+  color: var(--color-primary-link);
 }
 
 .iconBtnDanger {
-  color: #ef4444;
+  color: var(--wms-danger);
   background: none;
   border: none;
   cursor: pointer;
@@ -364,7 +364,7 @@
   margin: 0 auto;
 }
 .iconBtnDanger:hover {
-  color: #dc2626;
+  color: var(--wms-danger);
 }
 
 .tableFooter {
@@ -372,11 +372,11 @@
   justify-content: flex-end;
   align-items: center;
   padding: 16px;
-  background-color: #f9fafb;
+  background-color: var(--color-bg-elevated);
   font-weight: 600;
   font-size: 15px;
   gap: 60px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .tableActions {
@@ -387,7 +387,7 @@
 }
 
 .actionLink {
-  color: #3b82f6;
+  color: var(--color-primary-bright);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -402,12 +402,12 @@
   transition: background-color 0.2s;
 }
 .actionLink:hover {
-  background-color: #eff6ff;
+  background-color: var(--color-primary-soft);
   text-decoration: none;
 }
 
 .actionLinkGray {
-  color: #64748b;
+  color: var(--wms-text-muted);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -416,7 +416,7 @@
   align-items: center;
   gap: 6px;
 }
-.actionLinkGray:hover { color: #475569; }
+.actionLinkGray:hover { color: var(--wms-text-muted); }
 
 .fixedFooter {
   position: fixed;
@@ -443,7 +443,7 @@
 
 .btnDefault {
   background-color: white;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   padding: 8px 16px;
   border-radius: 4px;
   font-size: 14px;
@@ -451,12 +451,12 @@
   cursor: pointer;
   color: #4b5563;
 }
-.btnDefault:hover { background-color: #f9fafb; }
+.btnDefault:hover { background-color: var(--color-bg-elevated); }
 
 .btnTextBlue {
   background: none;
   border: none;
-  color: #3b82f6;
+  color: var(--color-primary-bright);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -468,18 +468,18 @@
 
 .btnOutlinePrimary {
   background-color: white;
-  border: 1px solid #3b82f6;
+  border: 1px solid var(--color-primary-bright);
   padding: 8px 16px;
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  color: #3b82f6;
+  color: var(--color-primary-bright);
 }
-.btnOutlinePrimary:hover { background-color: #eff6ff; }
+.btnOutlinePrimary:hover { background-color: var(--color-primary-soft); }
 
 .btnPrimary {
-  background-color: #1d4ed8;
+  background-color: var(--wms-primary-hover);
   color: white;
   border: none;
   padding: 8px 16px;
@@ -491,7 +491,7 @@
   align-items: center;
   gap: 6px;
 }
-.btnPrimary:hover { background-color: #1e40af; }
+.btnPrimary:hover { background-color: var(--color-primary-link); }
 
 .btnSuccess {
   background-color: #22c55e;
@@ -515,7 +515,7 @@
 }
 
 .miniBtnAppend {
-  background-color: #3b82f6;
+  background-color: var(--color-primary-bright);
   color: white;
   border: none;
   width: 24px;
@@ -526,4 +526,4 @@
   border-radius: 4px;
   cursor: pointer;
 }
-.miniBtnAppend:hover { background-color: #2563eb; }
+.miniBtnAppend:hover { background-color: var(--wms-primary); }

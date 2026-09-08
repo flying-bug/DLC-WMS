@@ -248,7 +248,7 @@ const WarehouseDetailPage = () => {
                                     <div className={styles.kpiIconWrapper} style={{ backgroundColor: '#fff7ed', color: '#ea580c' }}>
                                         <i className="fas fa-clipboard-list"></i>
                                     </div>
-                                    <span className={styles.kpiTrend} style={{ color: '#64748b' }}>Thực tế</span>
+                                    <span className={styles.kpiTrend} style={{ color: 'var(--wms-text-muted)' }}>Thực tế</span>
                                 </div>
                                 <div className={styles.kpiLabel}>Tổng tồn kho</div>
                                 <div className={styles.kpiValue}>

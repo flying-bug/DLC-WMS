@@ -136,9 +136,9 @@ function SystemSettingsTab() {
 
             <div className={styles.settingsGrid}>
                 {/* ── AI & Vision Integration (Trí Tuệ Nhân Tạo AI) ─────────────────────────── */}
-                <div className={styles.settingSection} style={{ borderLeft: '4px solid var(--color-primary, #059669)' }}>
+                <div className={styles.settingSection} style={{ borderLeft: '4px solid var(--color-primary, var(--wms-success))' }}>
                     <div className={styles.sectionHeader}>
-                        <i className="bi bi-robot" style={{ color: 'var(--color-primary, #059669)', fontSize: '18px' }} />
+                        <i className="bi bi-robot" style={{ color: 'var(--color-primary, var(--wms-success))', fontSize: '18px' }} />
                         <span style={{ fontWeight: 700 }}>Cấu hình Tính năng AI (AI &amp; Vision Integration)</span>
                         <span style={{
                             marginLeft: 'auto',
@@ -146,9 +146,9 @@ function SystemSettingsTab() {
                             borderRadius: '12px',
                             fontSize: '12px',
                             fontWeight: 600,
-                            backgroundColor: settings.aiEnabled ? '#ecfdf5' : '#fef2f2',
-                            color: settings.aiEnabled ? '#059669' : '#dc2626',
-                            border: `1px solid ${settings.aiEnabled ? '#a7f3d0' : '#fecaca'}`
+                            backgroundColor: settings.aiEnabled ? 'var(--wms-success-soft)' : '#fef2f2',
+                            color: settings.aiEnabled ? 'var(--wms-success)' : 'var(--wms-danger)',
+                            border: `1px solid ${settings.aiEnabled ? 'var(--wms-success-border)' : '#fecaca'}`
                         }}>
                             {settings.aiEnabled ? '🟢 Đang Bật' : '🔴 Đã Tắt'}
                         </span>
@@ -157,7 +157,7 @@ function SystemSettingsTab() {
                         <div className={styles.formGroup}>
                             <div className={styles.formRow}>
                                 <div style={{ flex: 1, paddingRight: '16px' }}>
-                                    <label className={styles.label} style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+                                    <label className={styles.label} style={{ fontSize: '14px', fontWeight: 600, color: 'var(--wms-text-strong)' }}>
                                         Cho phép sử dụng AI trên toàn hệ thống
                                     </label>
                                     <p className={styles.hint} style={{ marginTop: '4px', lineHeight: 1.5 }}>
@@ -256,7 +256,7 @@ function SystemSettingsTab() {
                 {/* ── Google Drive ───────────────────────────────────────────── */}
                 <div className={styles.settingSection}>
                     <div className={styles.sectionHeader}>
-                        <i className="bi bi-cloud-fill" style={{ color: '#6366f1' }} />
+                        <i className="bi bi-cloud-fill" style={{ color: 'var(--wms-primary)' }} />
                         <span>Google Drive Integration</span>
                         {settings.driveConfigured && (
                             <span className={styles.configuredBadge}>
@@ -348,7 +348,7 @@ function SystemSettingsTab() {
                 {/* ── Security ──────────────────────────────────────────────── */}
                 <div className={styles.settingSection}>
                     <div className={styles.sectionHeader}>
-                        <i className="bi bi-shield-lock-fill" style={{ color: '#f59e0b' }} />
+                        <i className="bi bi-shield-lock-fill" style={{ color: 'var(--color-warning)' }} />
                         <span>Security & Encryption</span>
                     </div>
                     <div className={styles.sectionBody}>
@@ -388,7 +388,7 @@ function SystemSettingsTab() {
                 {/* ── Notifications ─────────────────────────────────────────── */}
                 <div className={styles.settingSection}>
                     <div className={styles.sectionHeader}>
-                        <i className="bi bi-envelope-fill" style={{ color: '#10b981' }} />
+                        <i className="bi bi-envelope-fill" style={{ color: 'var(--color-success-alt)' }} />
                         <span>Email Notifications</span>
                     </div>
                     <div className={styles.sectionBody}>

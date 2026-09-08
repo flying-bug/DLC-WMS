@@ -256,7 +256,7 @@ const ProductGridSelect = ({
                             style={{
                               textAlign: 'right',
                               fontWeight: '500',
-                              color: stock <= 0 ? '#ef4444' : undefined,
+                              color: stock <= 0 ? 'var(--wms-danger)' : undefined,
                             }}
                           >
                             {stock.toLocaleString('vi-VN')}

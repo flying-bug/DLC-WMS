@@ -64,10 +64,10 @@ const customSelectStyles = {
     minHeight: '32px',
     height: '32px',
     fontSize: '13px',
-    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #2563eb' : 'none',
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    boxShadow: state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
     '&:hover': {
-      borderColor: state.isFocused ? '#2563eb' : '#9ca3af'
+      borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-text-placeholder)'
     }
   }),
   valueContainer: (base) => ({
@@ -840,7 +840,7 @@ function CreateImportSlipPage() {
             <i className="bi bi-arrow-left"></i> Quay lại
           </a>
           <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}</span>
-          <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
+          <span style={{ color: 'var(--color-border-muted)', fontSize: '20px' }}>|</span>
           <div style={{ width: '280px' }}>
             <Select
               value={[
@@ -885,7 +885,7 @@ function CreateImportSlipPage() {
             onClick={() => setShowOcrModal(true)}
             style={{
               padding: '7px 16px', borderRadius: '8px', border: 'none',
-              background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
+              background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, var(--wms-success)) 0%, var(--color-primary-accent, var(--color-success-alt)) 100%))',
               color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '6px',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
@@ -949,14 +949,14 @@ function CreateImportSlipPage() {
                         onChange={(e) => handleFormChange('partnerName', e.target.value)}
                         placeholder="Nhập tên nhà cung cấp..."
                         readOnly={!!form.partnerId}
-                        style={{ backgroundColor: form.partnerId ? '#f9fafb' : '#fff' }}
+                        style={{ backgroundColor: form.partnerId ? 'var(--color-bg-elevated)' : '#fff' }}
                       />
                     </div>
                   </div>
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '1' }}>
                       <label className="misa-label">Địa chỉ</label>
-                      <input type="text" className="misa-input" readOnly value={suppliers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                      <input type="text" className="misa-input" readOnly value={suppliers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: 'var(--color-bg)' }} />
                     </div>
                   </div>
                 </>
@@ -974,7 +974,7 @@ function CreateImportSlipPage() {
                         readOnly
                         value={assemblyOrders.find(o => String(o.id) === String(form.assemblyOrderId))?.orderCode || form.referenceCode || ''}
                         placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
-                        style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
+                        style={{ flex: 1, backgroundColor: 'var(--color-bg)', cursor: 'pointer' }}
                         onClick={() => setShowAssemblyOrderModal(true)}
                       />
                       <button
@@ -1024,14 +1024,14 @@ function CreateImportSlipPage() {
                         onChange={(e) => handleFormChange('customerName', e.target.value)}
                         placeholder="Nhập tên khách hàng..."
                         readOnly={!!form.customerId}
-                        style={{ backgroundColor: form.customerId ? '#f9fafb' : '#fff' }}
+                        style={{ backgroundColor: form.customerId ? 'var(--color-bg-elevated)' : '#fff' }}
                       />
                     </div>
                   </div>
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '1' }}>
                       <label className="misa-label">Địa chỉ</label>
-                      <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                      <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.address || ''} style={{ backgroundColor: 'var(--color-bg)' }} />
                     </div>
                   </div>
                 </>
@@ -1105,7 +1105,7 @@ function CreateImportSlipPage() {
                     className="misa-input"
                     value={currentUser ? (currentUser.fullName || currentUser.username) : 'Đang tải...'}
                     readOnly
-                    style={{ backgroundColor: '#f3f4f6' }}
+                    style={{ backgroundColor: 'var(--color-bg)' }}
                   />
                 </div>
               </div>
@@ -1291,8 +1291,8 @@ function CreateImportSlipPage() {
                       </td>
                       <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
                       <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                      <td style={{ textAlign: 'right', fontSize: '13px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                      <td style={{ textAlign: 'right', fontSize: '13px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
                       <td align="center">
                         <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
                           {product?.trackSerial && (
@@ -1335,7 +1335,7 @@ function CreateImportSlipPage() {
                 })}
               </tbody>
               <tfoot>
-                <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
+                <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
                   <td style={{ borderRight: 'none' }}></td>
                   <td style={{ borderRight: 'none' }}></td>
                   <td style={{ borderRight: 'none' }}></td>
@@ -1344,7 +1344,7 @@ function CreateImportSlipPage() {
                   <td style={{ borderRight: 'none' }}></td>
                   <td style={{ borderRight: 'none' }}></td>
                   <td style={{ borderRight: 'none' }}></td>
-                  <td style={{ textAlign: 'right', padding: '12px', color: '#059669' }}>
+                  <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
                     {Number(items.reduce((sum, it) => {
                       const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
                       const op = it.conversionOperator || 'MULTIPLY';
@@ -1363,14 +1363,14 @@ function CreateImportSlipPage() {
             </table>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 24px', backgroundColor: '#fff', borderTop: '1px solid #e5e7eb' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 24px', backgroundColor: '#fff', borderTop: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
               <div style={{ color: '#4b5563', fontSize: '13px' }}>
                 Tổng số: <strong>{items.length}</strong> bản ghi
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
-                <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
+                <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
               </div>
 
               <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
@@ -1384,7 +1384,7 @@ function CreateImportSlipPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                <SearchableSelect style={{ padding: '4px 8px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px' }}>
                   <option>5 bản ghi trên 1 trang</option>
                   <option>10 bản ghi trên 1 trang</option>
                   <option>20 bản ghi trên 1 trang</option>
@@ -1392,7 +1392,7 @@ function CreateImportSlipPage() {
                 </SearchableSelect>
                 <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <span style={{ cursor: 'pointer' }}>Trước</span>
-                  <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--color-text)' }}>1</span>
                   <span style={{ cursor: 'pointer' }}>Sau</span>
                 </div>
               </div>

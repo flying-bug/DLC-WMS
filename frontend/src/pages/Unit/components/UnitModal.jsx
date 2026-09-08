@@ -108,7 +108,7 @@ const UnitModal = ({ isOpen, onClose, onSaved, editData = null, onError }) => {
             {/* Body */}
             <div className={styles.body}>
                 {apiError && (
-                    <div style={{ padding: '10px 14px', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #fca5a5' }}>
+                    <div style={{ padding: '10px 14px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #fca5a5' }}>
                         <i className="bi bi-exclamation-triangle" style={{ fontSize: '15px' }}></i>
                         <span>{apiError}</span>
                     </div>

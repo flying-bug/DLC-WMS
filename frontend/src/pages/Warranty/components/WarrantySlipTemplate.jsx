@@ -66,11 +66,11 @@ const WarrantySlipTemplate = forwardRef(({ warranty }, ref) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
                 <thead>
                     <tr>
-                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f3f4f6', width: '5%' }}>STT</th>
-                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f3f4f6', width: '15%' }}>Mã SKU</th>
-                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f3f4f6', width: '40%', textAlign: 'left' }}>Sản phẩm</th>
-                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f3f4f6', width: '20%' }}>Serial</th>
-                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f3f4f6', width: '20%' }}>Hạn bảo hành</th>
+                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: 'var(--color-bg)', width: '5%' }}>STT</th>
+                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: 'var(--color-bg)', width: '15%' }}>Mã SKU</th>
+                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: 'var(--color-bg)', width: '40%', textAlign: 'left' }}>Sản phẩm</th>
+                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: 'var(--color-bg)', width: '20%' }}>Serial</th>
+                        <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: 'var(--color-bg)', width: '20%' }}>Hạn bảo hành</th>
                     </tr>
                 </thead>
                 <tbody>

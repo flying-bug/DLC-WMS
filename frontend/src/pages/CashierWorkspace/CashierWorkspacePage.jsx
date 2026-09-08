@@ -9,24 +9,35 @@ import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import * as paymentApi from '../../api/paymentApi';
 import styles from './CashierWorkspacePage.module.css';
 
-const TABS = [
-  { id: 'receipts', label: '1. Đề nghị thu tiền', icon: 'fas fa-arrow-down' },
-  { id: 'vouchers', label: '2. Đề nghị chi tiền', icon: 'fas fa-arrow-up' },
-  { id: 'cash-book', label: '3. Sổ quỹ tiền mặt', icon: 'fas fa-money-bill-wave' },
-  { id: 'bank', label: '4. Tiền gửi ngân hàng', icon: 'fas fa-university' },
-];
 
 export default function CashierWorkspacePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'receipts';
+  const activeTab = searchParams.get('tab') || 'requests';
+  const [requestFilterType, setRequestFilterType] = useState('ALL'); // 'ALL' | 'RECEIPT' | 'VOUCHER'
 
   // Master State
   const [rawList, setRawList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [loadingMaster, setLoadingMaster] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [periodPreset, setPeriodPreset] = useState('ALL');
+  const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
+  const [fromDate, setFromDate] = useState(() => getDateRangePreset('THIS_MONTH')?.fromDate || '');
+  const [toDate, setToDate] = useState(() => getDateRangePreset('THIS_MONTH')?.toDate || '');
+
+  const handlePeriodPresetChange = (val) => {
+    setPeriodPreset(val);
+    if (val === 'ALL') {
+      setFromDate('');
+      setToDate('');
+    } else if (val !== 'CUSTOM') {
+      const range = getDateRangePreset(val);
+      if (range) {
+        setFromDate(range.fromDate || '');
+        setToDate(range.toDate || '');
+      }
+    }
+  };
 
   // Detail State
   const [detailData, setDetailData] = useState([]);
@@ -39,6 +50,9 @@ export default function CashierWorkspacePage() {
   // Toast & Modal State
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmPostItem, setConfirmPostItem] = useState(null);
+  const [unpostItem, setUnpostItem] = useState(null);
+  const [unpostReason, setUnpostReason] = useState('');
+  const [submittingUnpost, setSubmittingUnpost] = useState(false);
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast((prev) => ({ ...prev, isVisible: false }));
@@ -66,38 +80,36 @@ export default function CashierWorkspacePage() {
     fetchMasterData();
   }, [fetchMasterData]);
 
-  // Tab change
-  const handleTabChange = (tabId) => {
-    setSearchParams({ tab: tabId });
+  // Reset page when activeTab changes
+  useEffect(() => {
     setPage(1);
-  };
+  }, [activeTab]);
 
-  // Filtered master list based on activeTab, searchTerm, and periodPreset
+  // Filtered master list based on activeTab, requestFilterType, searchTerm, and date range
   const filteredList = useMemo(() => {
     let list = [...rawList];
 
-    // 1. Filter by activeTab
-    if (activeTab === 'receipts') {
-      list = list.filter((p) => p.type === 'RECEIPT');
-    } else if (activeTab === 'vouchers') {
-      list = list.filter((p) => p.type === 'VOUCHER');
+    // 1. Filter by activeTab and requestFilterType (Thu / Chi / Tất cả)
+    if (activeTab === 'requests' || activeTab === 'receipts' || activeTab === 'vouchers') {
+      if (requestFilterType === 'RECEIPT') {
+        list = list.filter((p) => p.type === 'RECEIPT');
+      } else if (requestFilterType === 'VOUCHER') {
+        list = list.filter((p) => p.type === 'VOUCHER');
+      }
     } else if (activeTab === 'cash-book') {
       list = list.filter((p) => p.paymentMethod === 'CASH');
     } else if (activeTab === 'bank') {
       list = list.filter((p) => p.paymentMethod === 'BANK_TRANSFER');
     }
 
-    // 2. Filter by periodPreset
-    if (periodPreset !== 'ALL') {
-      const range = getDateRangePreset(periodPreset);
-      if (range?.fromDate) {
-        const from = new Date(range.fromDate).setHours(0, 0, 0, 0);
-        list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() >= from);
-      }
-      if (range?.toDate) {
-        const to = new Date(range.toDate).setHours(23, 59, 59, 999);
-        list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() <= to);
-      }
+    // 2. Filter by fromDate & toDate
+    if (fromDate) {
+      const from = new Date(fromDate).setHours(0, 0, 0, 0);
+      list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() >= from);
+    }
+    if (toDate) {
+      const to = new Date(toDate).setHours(23, 59, 59, 999);
+      list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() <= to);
     }
 
     // 3. Filter by searchTerm
@@ -112,7 +124,7 @@ export default function CashierWorkspacePage() {
     }
 
     return list;
-  }, [rawList, activeTab, periodPreset, searchTerm]);
+  }, [rawList, activeTab, requestFilterType, fromDate, toDate, searchTerm]);
 
   // Keep selectedItem in sync
   useEffect(() => {
@@ -126,15 +138,6 @@ export default function CashierWorkspacePage() {
     }
   }, [filteredList, selectedItem]);
 
-  // Tab Counts (from rawList)
-  const tabCounts = useMemo(() => {
-    return {
-      receipts: rawList.filter((p) => p.type === 'RECEIPT').length,
-      vouchers: rawList.filter((p) => p.type === 'VOUCHER').length,
-      cashBook: rawList.filter((p) => p.paymentMethod === 'CASH').length,
-      bank: rawList.filter((p) => p.paymentMethod === 'BANK_TRANSFER').length,
-    };
-  }, [rawList]);
 
   // KPI summary based on filtered list (or current period)
   const kpiStats = useMemo(() => {
@@ -188,6 +191,27 @@ export default function CashierWorkspacePage() {
       fetchMasterData();
     } catch (err) {
       showToast('danger', 'Lỗi ghi sổ quỹ: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Handle Unpost / Bỏ ghi sổ quỹ
+  const handleConfirmUnpost = async () => {
+    if (!unpostItem) return;
+    if (!unpostReason.trim()) {
+      showToast('warning', 'Vui lòng nhập lý do bỏ ghi sổ');
+      return;
+    }
+    setSubmittingUnpost(true);
+    try {
+      await paymentApi.unpostPayment(unpostItem.id, unpostReason.trim());
+      showToast('success', `Đã bỏ ghi sổ cho phiếu ${unpostItem.code || unpostItem.id}. Hoàn tác dòng tiền và trả về Chờ ghi sổ thành công.`);
+      setUnpostItem(null);
+      setUnpostReason('');
+      fetchMasterData();
+    } catch (err) {
+      showToast('danger', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmittingUnpost(false);
     }
   };
 
@@ -317,6 +341,53 @@ export default function CashierWorkspacePage() {
           </span>
         ),
       },
+      {
+        key: 'actions',
+        label: 'Thao tác',
+        width: '130px',
+        render: (_, row) => (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {row.status === 'DRAFT' && (
+              <button
+                type="button"
+                className={styles.btnRowActionPost}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmPostItem(row);
+                }}
+                title="Ghi sổ quỹ"
+              >
+                <i className="fas fa-check"></i> Ghi sổ
+              </button>
+            )}
+            {row.status === 'POSTED' && (
+              <button
+                type="button"
+                className={styles.btnRowActionUnpost}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUnpostItem(row);
+                  setUnpostReason('');
+                }}
+                title="Bỏ ghi sổ quỹ để hoàn tác"
+              >
+                <i className="fas fa-undo"></i> Bỏ ghi
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.btnRowActionPrint}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrint(row);
+              }}
+              title="In phiếu"
+            >
+              <i className="fas fa-print"></i>
+            </button>
+          </div>
+        ),
+      },
     ],
     []
   );
@@ -401,7 +472,13 @@ export default function CashierWorkspacePage() {
         {/* HEADER ROW: TITLE & ACTION BUTTONS */}
         <div className={styles.headerRow}>
           <div className={styles.titleGroup}>
-            <h1 className={styles.pageTitle}>Bàn làm việc Thủ quỹ</h1>
+            <h1 className={styles.pageTitle}>
+              {activeTab === 'cash-book'
+                ? 'Sổ quỹ tiền mặt'
+                : activeTab === 'bank'
+                ? 'Tiền gửi ngân hàng'
+                : 'Đề nghị thu, chi tiền'}
+            </h1>
             <span className={styles.personaBadge}>
               <i className="fas fa-cash-register"></i> Chế độ Thủ quỹ
             </span>
@@ -446,6 +523,20 @@ export default function CashierWorkspacePage() {
               </button>
             )}
 
+            {selectedItem && selectedItem.status === 'POSTED' && (
+              <button
+                type="button"
+                className={styles.btnUnpost}
+                onClick={() => {
+                  setUnpostItem(selectedItem);
+                  setUnpostReason('');
+                }}
+                title="Bỏ ghi sổ để hoàn tác dòng tiền và đưa về trạng thái Chờ ghi sổ"
+              >
+                <i className="fas fa-undo"></i> Bỏ ghi sổ
+              </button>
+            )}
+
             <button
               type="button"
               className={styles.btnSecondary}
@@ -460,38 +551,38 @@ export default function CashierWorkspacePage() {
         {/* KPI SUMMARY CARDS */}
         <div className={styles.kpiGrid}>
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: '#ecfdf5', color: '#059669' }}>
+            <div className={styles.kpiIconWrapper} style={{ background: 'var(--wms-success-soft)', color: 'var(--wms-success)' }}>
               <i className="fas fa-arrow-down"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Tổng thu trong kỳ</span>
-              <span className={styles.kpiValue} style={{ color: '#059669' }}>
+              <span className={styles.kpiValue} style={{ color: 'var(--wms-success)' }}>
                 {formatCurrency(kpiStats.totalReceipt)}
               </span>
             </div>
           </div>
 
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: '#fef2f2', color: '#dc2626' }}>
+            <div className={styles.kpiIconWrapper} style={{ background: '#fef2f2', color: 'var(--wms-danger)' }}>
               <i className="fas fa-arrow-up"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Tổng chi trong kỳ</span>
-              <span className={styles.kpiValue} style={{ color: '#dc2626' }}>
+              <span className={styles.kpiValue} style={{ color: 'var(--wms-danger)' }}>
                 {formatCurrency(kpiStats.totalVoucher)}
               </span>
             </div>
           </div>
 
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: '#eff6ff', color: '#2563eb' }}>
+            <div className={styles.kpiIconWrapper} style={{ background: 'var(--color-primary-soft)', color: 'var(--wms-primary)' }}>
               <i className="fas fa-wallet"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Dòng tiền ròng (Thu - Chi)</span>
               <span
                 className={styles.kpiValue}
-                style={{ color: kpiStats.netFlow >= 0 ? '#059669' : '#dc2626' }}
+                style={{ color: kpiStats.netFlow >= 0 ? 'var(--wms-success)' : 'var(--wms-danger)' }}
               >
                 {formatCurrency(kpiStats.netFlow)}
               </span>
@@ -499,7 +590,7 @@ export default function CashierWorkspacePage() {
           </div>
 
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: '#fffbeb', color: '#d97706' }}>
+            <div className={styles.kpiIconWrapper} style={{ background: 'var(--wms-warning-soft)', color: '#d97706' }}>
               <i className="fas fa-clock"></i>
             </div>
             <div className={styles.kpiContent}>
@@ -511,36 +602,88 @@ export default function CashierWorkspacePage() {
           </div>
         </div>
 
-        {/* SUB TABS NAVIGATION */}
-        <div className={styles.tabNavigation}>
-          {TABS.map((t) => {
-            const isActive = activeTab === t.id;
-            const count =
-              t.id === 'receipts'
-                ? tabCounts.receipts
-                : t.id === 'vouchers'
-                ? tabCounts.vouchers
-                : t.id === 'cash-book'
-                ? tabCounts.cashBook
-                : tabCounts.bank;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                className={`${styles.tabBtn} ${isActive ? styles.activeTab : ''}`}
-                onClick={() => handleTabChange(t.id)}
-              >
-                <i className={t.icon}></i>
-                <span>{t.label}</span>
-                <span className={styles.tabBadge}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* TOOLBAR: SEARCH & PERIOD FILTER */}
+        {/* TOOLBAR: PERIOD FILTER (3 time fields: Kỳ, Từ ngày, Đến ngày) & TOGGLE THU/CHI & SEARCH */}
         <div className={styles.toolbar}>
           <div className={styles.toolbarLeft}>
+            {/* Nút toggle lọc nhanh: Tất cả / Thu tiền / Chi tiền khi ở tab Đề nghị thu, chi */}
+            {(activeTab === 'requests' || activeTab === 'receipts' || activeTab === 'vouchers') && (
+              <div className={styles.segmentedFilter}>
+                <button
+                  type="button"
+                  className={`${styles.segmentBtn} ${requestFilterType === 'ALL' ? styles.activeSegment : ''}`}
+                  onClick={() => {
+                    setRequestFilterType('ALL');
+                    setPage(1);
+                  }}
+                >
+                  Tất cả
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.segmentBtn} ${requestFilterType === 'RECEIPT' ? styles.activeSegment : ''}`}
+                  onClick={() => {
+                    setRequestFilterType('RECEIPT');
+                    setPage(1);
+                  }}
+                >
+                  <i className="fas fa-arrow-down" style={{ color: 'var(--wms-success)', marginRight: 4 }}></i>
+                  Thu tiền
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.segmentBtn} ${requestFilterType === 'VOUCHER' ? styles.activeSegment : ''}`}
+                  onClick={() => {
+                    setRequestFilterType('VOUCHER');
+                    setPage(1);
+                  }}
+                >
+                  <i className="fas fa-arrow-up" style={{ color: 'var(--wms-danger)', marginRight: 4 }}></i>
+                  Chi tiền
+                </button>
+              </div>
+            )}
+
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>Kỳ:</span>
+              <select
+                className={styles.periodSelect}
+                value={periodPreset}
+                onChange={(e) => handlePeriodPresetChange(e.target.value)}
+              >
+                {DATE_PRESET_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>Từ:</span>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={fromDate}
+                onChange={(e) => {
+                  setPeriodPreset('CUSTOM');
+                  setFromDate(e.target.value);
+                }}
+              />
+            </div>
+
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>Đến:</span>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={toDate}
+                onChange={(e) => {
+                  setPeriodPreset('CUSTOM');
+                  setToDate(e.target.value);
+                }}
+              />
+            </div>
+
             <div className={styles.searchBox}>
               <i className={`fas fa-search ${styles.searchIcon}`}></i>
               <input
@@ -551,19 +694,6 @@ export default function CashierWorkspacePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-
-            <select
-              className={styles.periodSelect}
-              value={periodPreset}
-              onChange={(e) => setPeriodPreset(e.target.value)}
-            >
-              <option value="ALL">Kỳ: Toàn bộ thời gian</option>
-              {DATE_PRESET_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  Kỳ: {opt.label}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -600,6 +730,68 @@ export default function CashierWorkspacePage() {
           onConfirm={handleConfirmPost}
           onCancel={() => setConfirmPostItem(null)}
         />
+
+        {/* UNPOST MODAL */}
+        {unpostItem && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalCard}>
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle}>
+                  <i className="fas fa-undo" style={{ color: 'var(--wms-danger)', marginRight: 8 }}></i>
+                  Bỏ ghi sổ phiếu: {unpostItem.code}
+                </h3>
+                <button
+                  type="button"
+                  className={styles.closeBtn}
+                  onClick={() => {
+                    setUnpostItem(null);
+                    setUnpostReason('');
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+              <div className={styles.modalBody}>
+                <p style={{ color: '#4b5563', fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
+                  Phiếu này sẽ được <strong>hoàn tác dòng tiền và công nợ đối tác</strong> trên Sổ cái, đồng thời chuyển trạng thái về <strong>Chờ ghi sổ (DRAFT)</strong> để Kế toán chỉnh sửa hoặc xóa.
+                </p>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6, color: 'var(--color-text-heading)' }}>
+                    Lý do bỏ ghi sổ <span style={{ color: 'var(--wms-danger)' }}>*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    className={styles.modalTextarea}
+                    placeholder="Nhập lý do (VD: Sai số tiền, sai đối tác, chuyển khoản nhầm...)"
+                    value={unpostReason}
+                    onChange={(e) => setUnpostReason(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => {
+                    setUnpostItem(null);
+                    setUnpostReason('');
+                  }}
+                  disabled={submittingUnpost}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className={styles.btnDanger}
+                  onClick={handleConfirmUnpost}
+                  disabled={submittingUnpost || !unpostReason.trim()}
+                >
+                  {submittingUnpost ? 'Đang hoàn tác...' : 'Xác nhận Bỏ ghi sổ'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TOAST */}
         <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />

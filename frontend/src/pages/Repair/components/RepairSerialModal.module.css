@@ -46,7 +46,7 @@
   flex: 0 0 48%;
   padding: 24px;
   background-color: white;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--color-border);
 }
 
 .sectionTitle {
@@ -79,12 +79,12 @@
 
 .serialInput {
   width: 100%;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px 0 0 4px;
   padding: 10px 12px 10px 40px;
   font-size: 14px;
   outline: none;
-  color: #374151;
+  color: var(--color-text-heading);
 }
 
 .serialInput:focus {
@@ -106,8 +106,8 @@
 }
 
 .scanBox {
-  background-color: #f3f4f6;
-  border: 2px dashed #d1d5db;
+  background-color: var(--color-bg);
+  border: 2px dashed var(--color-border-muted);
   border-radius: 8px;
   height: 220px;
   display: flex;
@@ -120,14 +120,14 @@
 }
 
 .scanBox:hover {
-  border-color: #9ca3af;
-  background-color: #e5e7eb;
+  border-color: var(--color-text-placeholder);
+  background-color: var(--color-border);
 }
 
 .scanIcon {
   font-size: 56px;
   margin-bottom: 16px;
-  color: #9ca3af;
+  color: var(--color-text-placeholder);
 }
 
 .scanText {
@@ -137,14 +137,14 @@
 
 .rightCol {
   flex: 0 0 52%;
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
   padding: 24px;
 }
 
 .progressTitle {
   font-size: 12px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--wms-text-subtle);
   margin-bottom: 8px;
   text-transform: uppercase;
 }
@@ -158,7 +158,7 @@
 
 .progressText {
   font-size: 15px;
-  color: #64748b;
+  color: var(--wms-text-muted);
   font-weight: 600;
   display: flex;
   align-items: baseline;
@@ -174,14 +174,14 @@
 .progressBarContainer {
   width: 140px;
   height: 8px;
-  background-color: #e2e8f0;
+  background-color: var(--wms-border-base);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
-  background-color: #059669; /* emerald-600 */
+  background-color: var(--wms-success); /* emerald-600 */
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -199,13 +199,13 @@
   width: 6px;
 }
 .serialList::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
+  background-color: var(--wms-border-strong);
   border-radius: 6px;
 }
 
 .serialItem {
   background-color: white;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wms-border-base);
   border-radius: 4px;
   padding: 14px 16px;
   display: flex;
@@ -215,19 +215,19 @@
 }
 
 .serialIndex {
-  color: #94a3b8;
+  color: var(--wms-text-subtle);
   width: 28px;
   font-weight: 500;
   font-size: 13px;
 }
 
 .serialValue {
-  color: #334155;
+  color: var(--wms-text-body);
   font-weight: 500;
 }
 
 .footer {
-  background-color: #e2e8f0;
+  background-color: var(--wms-border-base);
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
@@ -254,8 +254,8 @@
 
 .btnCancel {
   background-color: transparent;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  border: 1px solid var(--wms-border-strong);
+  color: var(--wms-text-muted);
   padding: 10px 24px;
   border-radius: 4px;
   font-weight: 500;
@@ -263,7 +263,7 @@
   cursor: pointer;
 }
 .btnCancel:hover {
-  background-color: #f1f5f9;
+  background-color: var(--wms-bg-hover);
 }
 
 .btnConfirm {

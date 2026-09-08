@@ -135,7 +135,7 @@ export default function QuickProductModal({ isOpen, onClose, onSaved, fixedType 
 
                     <div className={styles.formGroup}>
                         <label>Loại <span className="text-danger">*</span></label>
-                        <input type="text" className="form-control" value={formData.productType} disabled style={{ backgroundColor: '#f3f4f6' }} />
+                        <input type="text" className="form-control" value={formData.productType} disabled style={{ backgroundColor: 'var(--color-bg)' }} />
                     </div>
                     
                     <div className={styles.formGroup}>

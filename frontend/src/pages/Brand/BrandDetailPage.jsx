@@ -61,7 +61,7 @@ const BrandDetailPage = () => {
         return (
             <AdminLayout>
                 <div className={styles.pageBody}>
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải thông tin...</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>Đang tải thông tin...</div>
                 </div>
             </AdminLayout>
         );
@@ -72,8 +72,8 @@ const BrandDetailPage = () => {
             <AdminLayout>
                 <div className={styles.pageBody}>
                     <div className={styles.emptyState} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px' }}>
-                        <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`} style={{ fontSize: '48px', color: '#cbd5e1', marginBottom: '16px' }}></i>
-                        <div className={styles.emptyText} style={{ color: '#64748b', marginBottom: '24px' }}>Không tìm thấy thương hiệu này</div>
+                        <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`} style={{ fontSize: '48px', color: 'var(--wms-border-strong)', marginBottom: '16px' }}></i>
+                        <div className={styles.emptyText} style={{ color: 'var(--wms-text-muted)', marginBottom: '24px' }}>Không tìm thấy thương hiệu này</div>
                         <button className={styles.btnPrimary} onClick={() => navigate('/brands')}>Quay lại danh sách</button>
                     </div>
                 </div>
@@ -126,18 +126,18 @@ const BrandDetailPage = () => {
                             </div>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Mô tả chi tiết</span>
-                                <span className={styles.detailValue}>{brand.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
+                                <span className={styles.detailValue}>{brand.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
                             </div>
                         </div>
 
                         <div className={styles.detailRight}>
                             <div className={styles.detailRightRow}>
                                 <span className={styles.detailRightLabel}>Điện thoại liên hệ</span>
-                                <span className={styles.detailRightValue}>{brand.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightValue}>{brand.hotline || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             <div className={styles.detailRightRow}>
                                 <span className={styles.detailRightLabel}>Email liên hệ</span>
-                                <span className={styles.detailRightValue}>{brand.contactEmail || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightValue}>{brand.contactEmail || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             {brand.createdAt && (
                                 <div className={styles.detailRightRow}>

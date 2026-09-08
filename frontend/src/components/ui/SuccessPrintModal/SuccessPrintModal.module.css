@@ -15,7 +15,7 @@
 }
 
 .modalContent {
-  background-color: #ffffff;
+  background-color: var(--color-white);
   border-radius: 12px;
   width: 100%;
   max-width: 480px;
@@ -29,7 +29,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background-color: #dcfce7;
+  background-color: var(--color-success-bg);
   color: #16a34a;
   display: flex;
   align-items: center;
@@ -41,14 +41,14 @@
 .modalTitle {
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--wms-text-title);
   margin: 0 0 8px 0;
 }
 
 .docCodeBadge {
   display: inline-block;
-  background-color: #f1f5f9;
-  color: #334155;
+  background-color: var(--wms-bg-hover);
+  color: var(--wms-text-body);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 14px;
@@ -57,7 +57,7 @@
 
 .modalMessage {
   font-size: 14px;
-  color: #64748b;
+  color: var(--wms-text-muted);
   margin: 0 0 20px 0;
   line-height: 1.5;
 }
@@ -76,8 +76,8 @@
 
 .btnPrint {
   flex: 1;
-  background-color: #1d4ed8;
-  color: #ffffff;
+  background-color: var(--wms-primary-hover);
+  color: var(--color-white);
   border: none;
   padding: 11px 14px;
   border-radius: 8px;
@@ -93,14 +93,14 @@
 }
 
 .btnPrint:hover {
-  background-color: #1e40af;
+  background-color: var(--color-primary-link);
   transform: translateY(-1px);
 }
 
 .btnPrintSplit {
   flex: 1;
-  background-color: #0284c7;
-  color: #ffffff;
+  background-color: var(--color-info-hover);
+  color: var(--color-white);
   border: none;
   padding: 11px 14px;
   border-radius: 8px;
@@ -122,9 +122,9 @@
 
 .btnList {
   width: 100%;
-  background-color: #ffffff;
-  color: #334155;
-  border: 1px solid #cbd5e1;
+  background-color: var(--color-white);
+  color: var(--wms-text-body);
+  border: 1px solid var(--wms-border-strong);
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -138,14 +138,14 @@
 }
 
 .btnList:hover {
-  background-color: #f8fafc;
-  border-color: #94a3b8;
+  background-color: var(--wms-bg-soft);
+  border-color: var(--wms-text-subtle);
 }
 
 .btnNew {
   width: 100%;
   background-color: transparent;
-  color: #2563eb;
+  color: var(--wms-primary);
   border: none;
   padding: 8px 16px;
   border-radius: 8px;
@@ -160,7 +160,7 @@
 }
 
 .btnNew:hover {
-  background-color: #eff6ff;
+  background-color: var(--color-primary-soft);
 }
 
 @keyframes fadeIn {

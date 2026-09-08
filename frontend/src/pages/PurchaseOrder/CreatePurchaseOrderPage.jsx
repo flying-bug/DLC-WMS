@@ -26,8 +26,8 @@ const money       = (v)   => Number(v || 0).toLocaleString('vi-VN');
 const customSelectStyles = {
   control: (base, state) => ({
     ...base, minHeight: 36, height: 36, fontSize: 13,
-    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
-    boxShadow:   state.isFocused ? '0 0 0 1px #2563eb' : 'none',
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    boxShadow:   state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
   }),
   valueContainer:       (base) => ({ ...base, height: 36, padding: '0 8px' }),
   input:                (base) => ({ ...base, margin: 0, padding: 0 }),
@@ -559,8 +559,8 @@ function CreatePurchaseOrderPage() {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '8px 16px',
-                background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
-                color: '#ffffff',
+                background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, var(--wms-success)) 0%, var(--color-primary-accent, var(--color-success-alt)) 100%))',
+                color: 'var(--color-white)',
                 border: 'none',
                 borderRadius: '8px',
                 fontWeight: 600,
@@ -585,7 +585,7 @@ function CreatePurchaseOrderPage() {
         </div>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--wms-text-muted)' }}>Đang tải dữ liệu...</div>
         ) : (
           <>
             {/* ── Form body ── */}
@@ -612,8 +612,8 @@ function CreatePurchaseOrderPage() {
                           menuPortalTarget={document.body}
                         />
                       </div>
-                      <button type="button" onClick={() => setShowSupplierModal(true)} style={{ width: '36px', height: '36px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Thêm nhanh nhà cung cấp">
-                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary, #059669)' }}></i>
+                      <button type="button" onClick={() => setShowSupplierModal(true)} style={{ width: '36px', height: '36px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Thêm nhanh nhà cung cấp">
+                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary, var(--wms-success))' }}></i>
                       </button>
                     </div>
                   </div>
@@ -625,7 +625,7 @@ function CreatePurchaseOrderPage() {
                       className={styles.input}
                       readOnly
                       value={suppliers.find(s => s.id === form.partnerId)?.address || ''}
-                      style={{ backgroundColor: '#f8fafc' }}
+                      style={{ backgroundColor: 'var(--wms-bg-soft)' }}
                       placeholder="Địa chỉ nhà cung cấp..."
                     />
                   </div>
@@ -706,8 +706,8 @@ function CreatePurchaseOrderPage() {
                 <span className={styles.sectionTitle} style={{ borderBottom: 'none', margin: 0, padding: 0 }}>
                   <i className="bi bi-list-ul" /> Danh sách hàng hóa cần mua
                 </span>
-                <span style={{ fontSize: '12.5px', color: '#64748b' }}>
-                  Tổng cộng: <strong style={{ color: '#1e293b' }}>{lines.length}</strong> dòng
+                <span style={{ fontSize: '12.5px', color: 'var(--wms-text-muted)' }}>
+                  Tổng cộng: <strong style={{ color: 'var(--wms-text-strong)' }}>{lines.length}</strong> dòng
                 </span>
               </div>
 
@@ -733,7 +733,7 @@ function CreatePurchaseOrderPage() {
                       const vatAmt    = lineTotal * Number(line.vatRate || 0) / 100;
                       return (
                         <tr key={idx}>
-                          <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{idx + 1}</td>
+                          <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)', fontSize: 13 }}>{idx + 1}</td>
                           <td>
                             <ProductGridSelect
                               id={`po-line-product-${idx}`}
@@ -759,7 +759,7 @@ function CreatePurchaseOrderPage() {
                               placeholder="Chọn kho"
                             />
                           </td>
-                          <td style={{ textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                          <td style={{ textAlign: 'center', color: 'var(--wms-text-muted)', fontSize: 13 }}>
                             {line.unitName || '—'}
                           </td>
                           <td>
@@ -815,7 +815,7 @@ function CreatePurchaseOrderPage() {
                               }}
                             />
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1e40af', fontSize: 13, whiteSpace: 'nowrap' }}>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary-link)', fontSize: 13, whiteSpace: 'nowrap' }}>
                             {money(lineTotal + vatAmt)} đ
                           </td>
                           <td>
@@ -849,7 +849,7 @@ function CreatePurchaseOrderPage() {
               <div className={styles.tableBottomBar}>
                 <div className={styles.tableBottomLeft}>
                   <div className={styles.tableCount}>
-                    Tổng số: <strong style={{ color: '#0f172a' }}>{lines.length}</strong> bản ghi
+                    Tổng số: <strong style={{ color: 'var(--wms-text-title)' }}>{lines.length}</strong> bản ghi
                   </div>
                   <div className={styles.tableActions}>
                     <button

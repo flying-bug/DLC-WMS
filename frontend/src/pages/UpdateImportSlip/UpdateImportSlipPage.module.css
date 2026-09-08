@@ -389,7 +389,7 @@ textarea.formInput {
 }
 
 .actionLink {
-  color: #3b82f6;
+  color: var(--color-primary-bright);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -405,7 +405,7 @@ textarea.formInput {
 }
 
 .actionLink:hover {
-  background-color: #eff6ff;
+  background-color: var(--color-primary-soft);
   text-decoration: none;
 }
 
@@ -509,9 +509,9 @@ textarea.formInput {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background-color: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background-color: var(--wms-success-soft);
+  color: var(--wms-success);
+  border: 1px solid var(--wms-success-border);
   padding: 6px 12px;
   border-radius: 6px;
   font-weight: 600;
@@ -547,7 +547,7 @@ textarea.formInput {
 
 .serialSubtext {
   font-size: 11px;
-  color: #64748b;
+  color: var(--wms-text-muted);
   margin-left: 2px;
   font-style: italic;
 }
@@ -556,7 +556,7 @@ textarea.formInput {
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
 }
 
 .textRight {

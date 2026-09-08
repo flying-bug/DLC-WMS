@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import { getWarehouses } from '../../api/warehouseApi';
+import { getAllPayments } from '../../api/paymentApi';
+import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeContext';
+import * as XLSX from 'xlsx';
 import {
     getInventoryBalanceReport,
     getStockLedgerReport,
@@ -14,54 +17,73 @@ import {
 } from '../../api/reportApi';
 import styles from './ReportListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
-import { getDateRangePreset } from '../../utils/datePresets';
+import { getDateRangePreset, DATE_PRESET_OPTIONS } from '../../utils/datePresets';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
 
+const REPORT_DOMAINS = [
+    { id: 'ALL', label: 'Tất cả báo cáo', icon: 'fas fa-th-large' },
+    { id: 'WAREHOUSE', label: 'Kho & Hàng hóa', icon: 'fas fa-boxes', role: 'Thủ kho' },
+    { id: 'CASHIER', label: 'Quỹ & Dòng tiền', icon: 'fas fa-cash-register', role: 'Thủ quỹ' },
+    { id: 'SALES', label: 'Kinh doanh & Bán hàng', icon: 'fas fa-chart-line', role: 'Kinh doanh' },
+];
 
 const MOCK_CATEGORIES = [
     {
         id: 'favorites',
         title: 'Báo cáo yêu thích',
         icon: 'fas fa-star',
+        domain: 'ALL',
         reports: [
-            { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', desc: 'Theo dõi chi tiết lượng nhập, xuất và tồn của vật tư hàng hóa trong kỳ.' },
-            { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa', desc: 'Xem chi tiết các chứng từ nhập xuất phát sinh của từng hàng hóa.' }
+            { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', desc: 'Theo dõi chi tiết lượng nhập, xuất và tồn của vật tư hàng hóa trong kỳ.', domain: 'WAREHOUSE' },
+            { id: 'cash-flow', name: 'Báo cáo Dòng tiền & Sổ quỹ (Thu - Chi - Tồn)', desc: 'Tổng hợp dòng tiền thu, chi và tồn quỹ theo kỳ, phân loại theo tiền mặt và ngân hàng.', domain: 'CASHIER' }
         ]
     },
+    // PHÂN HỆ THỦ KHO
     {
         id: 'inventory-reports',
         title: 'Báo cáo tổng hợp tồn kho',
         icon: 'fas fa-boxes-stacked',
+        domain: 'WAREHOUSE',
+        roleBadge: 'Thủ kho',
         reports: [
-            { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', desc: 'Theo dõi lượng nhập, xuất và số dư cuối kỳ theo kho hoặc toàn hệ thống.' },
-            { id: 'inventory-balance', name: 'Báo cáo tồn kho hiện tại', desc: 'Báo cáo số lượng và giá trị tồn kho hiện thời của vật tư.' }
+            { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', desc: 'Theo dõi lượng nhập, xuất và số dư cuối kỳ theo kho hoặc toàn hệ thống.', domain: 'WAREHOUSE' },
+            { id: 'inventory-balance', name: 'Báo cáo tồn kho hiện tại', desc: 'Báo cáo số lượng và giá trị tồn kho hiện thời của vật tư.', domain: 'WAREHOUSE' }
         ]
     },
     {
         id: 'detailed-reports',
-        title: 'Báo cáo chi tiết kho',
+        title: 'Báo cáo chi tiết kho & luân chuyển',
         icon: 'fas fa-list-ul',
+        domain: 'WAREHOUSE',
+        roleBadge: 'Thủ kho',
         reports: [
-            { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa', desc: 'Theo dõi lịch sử nhập xuất, số dư của từng mã hàng theo ngày.' },
-            { id: 'stock-transfers', name: 'Báo cáo chuyển kho nội bộ', desc: 'Tổng hợp danh sách các lần luân chuyển hàng hóa giữa các kho.' }
+            { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa', desc: 'Theo dõi lịch sử nhập xuất, số dư của từng mã hàng theo ngày.', domain: 'WAREHOUSE' },
+            { id: 'stock-transfers', name: 'Báo cáo chuyển kho nội bộ', desc: 'Tổng hợp danh sách các lần luân chuyển hàng hóa giữa các kho.', domain: 'WAREHOUSE' }
         ]
     },
+    // PHÂN HỆ THỦ QUỸ / TÀI CHÍNH
     {
-        id: 'debt-reports',
-        title: 'Báo cáo đối chiếu & công nợ',
-        icon: 'fas fa-file-invoice-dollar',
+        id: 'cash-flow-reports',
+        title: 'Báo cáo Quỹ, Thu chi & Dòng tiền',
+        icon: 'fas fa-cash-register',
+        domain: 'CASHIER',
+        roleBadge: 'Thủ quỹ',
         reports: [
-            { id: 'debt', name: 'Báo cáo công nợ đối tác (Khách hàng / Nhà cung cấp)', desc: 'Xem số dư nợ đầu kỳ, phát sinh tăng/giảm và nợ cuối kỳ của đối tác.' }
+            { id: 'cash-flow', name: 'Báo cáo Dòng tiền & Sổ quỹ (Thu - Chi - Tồn quỹ)', desc: 'Tổng hợp toàn bộ dòng tiền vào, dòng tiền ra, tồn quỹ tiền mặt và tài khoản ngân hàng theo kỳ.', domain: 'CASHIER' },
+            { id: 'debt', name: 'Báo cáo công nợ đối tác (Khách hàng / Nhà cung cấp)', desc: 'Xem số dư nợ đầu kỳ, phát sinh tăng/giảm và nợ cuối kỳ của từng đối tác.', domain: 'CASHIER' }
         ]
     },
+    // PHÂN HỆ KINH DOANH & LỢI NHUẬN
     {
         id: 'sales-reports',
-        title: 'Báo cáo kinh doanh',
+        title: 'Báo cáo Kinh doanh & Lợi nhuận',
         icon: 'fas fa-chart-line',
+        domain: 'SALES',
+        roleBadge: 'Kinh doanh',
         reports: [
-            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.' }
+            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.', domain: 'SALES' }
         ]
     }
 ];
@@ -77,6 +99,24 @@ const ReportListPage = () => {
     const [selectedLanguage, setSelectedLanguage] = useState('vi');
     const location = useLocation();
     const navigate = useNavigate();
+    const { workspaceMode } = useWorkspaceMode();
+
+    const [selectedDomain, setSelectedDomain] = useState(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const urlDomain = urlParams.get('domain')?.toUpperCase();
+        if (urlDomain && ['CASHIER', 'WAREHOUSE', 'SALES'].includes(urlDomain)) return urlDomain;
+        if (workspaceMode === WORKSPACE_MODES.CASHIER) return 'CASHIER';
+        if (workspaceMode === WORKSPACE_MODES.WAREHOUSE) return 'WAREHOUSE';
+        return 'ALL';
+    });
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const urlDomain = urlParams.get('domain')?.toUpperCase();
+        if (urlDomain && ['CASHIER', 'WAREHOUSE', 'SALES', 'ALL'].includes(urlDomain)) {
+            setSelectedDomain(urlDomain);
+        }
+    }, [location.search]);
 
     // Report selection and display states
     const [activeReport, setActiveReport] = useState(null); // The report definition currently selected
@@ -87,14 +127,41 @@ const ReportListPage = () => {
     const [pageSize, setPageSize] = useState(20);
 
     // Filter inputs
+    const [datePreset, setDatePreset] = useState('THIS_MONTH');
     const [filters, setFilters] = useState({
         warehouseId: '',
-        startDate: getDateRangePreset('THIS_MONTH').fromDate,
-        endDate: getDateRangePreset('THIS_MONTH').toDate,
+        startDate: getDateRangePreset('THIS_MONTH')?.fromDate || '',
+        endDate: getDateRangePreset('THIS_MONTH')?.toDate || '',
         search: '',
         partnerType: 'ALL', // ALL, CUSTOMER, SUPPLIER
         status: ''
     });
+
+    const handleDatePresetChange = (presetKey) => {
+        setDatePreset(presetKey);
+        if (presetKey === 'ALL') {
+            setFilters(prev => ({ ...prev, startDate: '', endDate: '' }));
+        } else if (presetKey !== 'CUSTOM') {
+            const range = getDateRangePreset(presetKey);
+            if (range) {
+                setFilters(prev => ({
+                    ...prev,
+                    startDate: range.fromDate || '',
+                    endDate: range.toDate || ''
+                }));
+            }
+        }
+    };
+
+    const handleStartDateChange = (val) => {
+        setDatePreset('CUSTOM');
+        setFilters(prev => ({ ...prev, startDate: val }));
+    };
+
+    const handleEndDateChange = (val) => {
+        setDatePreset('CUSTOM');
+        setFilters(prev => ({ ...prev, endDate: val }));
+    };
 
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -208,6 +275,30 @@ const ReportListPage = () => {
                 case 'sales-profit':
                     response = await getSalesProfitReport(params);
                     break;
+                case 'cash-flow': {
+                    const res = await getAllPayments();
+                    const data = res.data?.data || res.data || [];
+                    let list = Array.isArray(data) ? data : [];
+                    if (filters.startDate) {
+                        const from = new Date(filters.startDate).setHours(0, 0, 0, 0);
+                        list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() >= from);
+                    }
+                    if (filters.endDate) {
+                        const to = new Date(filters.endDate).setHours(23, 59, 59, 999);
+                        list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() <= to);
+                    }
+                    if (filters.search && filters.search.trim()) {
+                        const term = filters.search.trim().toLowerCase();
+                        list = list.filter(
+                            (p) =>
+                                (p.code && p.code.toLowerCase().includes(term)) ||
+                                (p.partnerName && p.partnerName.toLowerCase().includes(term)) ||
+                                (p.note && p.note.toLowerCase().includes(term))
+                        );
+                    }
+                    setReportData(list);
+                    return;
+                }
                 default:
                     throw new Error('Loại báo cáo không hợp lệ');
             }
@@ -279,6 +370,27 @@ const ReportListPage = () => {
                 params.endDate = `${filters.endDate}T23:59:59`;
             }
 
+            if (activeReport.id === 'cash-flow') {
+                const worksheetData = reportData.map((item, idx) => ({
+                    'STT': idx + 1,
+                    'Ngày chứng từ': formatDate(item.createdAt),
+                    'Số phiếu': item.code || '-',
+                    'Loại nghiệp vụ': item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi',
+                    'Hình thức': item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản',
+                    'Đối tác / Người nộp - nhận': item.partnerName || '-',
+                    'Thu vào (VNĐ)': item.type === 'RECEIPT' ? Number(item.amount || 0) : 0,
+                    'Chi ra (VNĐ)': item.type === 'VOUCHER' ? Number(item.amount || 0) : 0,
+                    'Trạng thái': item.status === 'POSTED' ? 'Đã ghi sổ' : 'Chờ ghi sổ',
+                    'Ghi chú': item.note || '-'
+                }));
+                const ws = XLSX.utils.json_to_sheet(worksheetData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'DongTien');
+                XLSX.writeFile(wb, `DLC_BaoCao_DongTien_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                showToast('success', 'Xuất Excel báo cáo dòng tiền thành công.');
+                return;
+            }
+
             if (activeReport.id === 'stock-transfers') {
                 params.status = filters.status || undefined;
             } else if (activeReport.id === 'debt') {
@@ -293,18 +405,24 @@ const ReportListPage = () => {
         }
     };
 
-    // Filter report categories by Search Term and Permissions
+    // Filter report categories by Domain and Search Term
     const availableCategories = canViewPricing() 
         ? MOCK_CATEGORIES 
-        : MOCK_CATEGORIES.filter(cat => cat.id !== 'debt-reports' && cat.id !== 'sales-reports');
+        : MOCK_CATEGORIES.filter(cat => cat.id !== 'cash-flow-reports' && cat.id !== 'sales-reports');
 
-    const filteredCategories = availableCategories.map((cat) => {
+    const domainCategories = selectedDomain === 'ALL'
+        ? availableCategories
+        : availableCategories.filter(cat => cat.domain === 'ALL' || cat.domain === selectedDomain);
+
+    const filteredCategories = domainCategories.map((cat) => {
         // Resolve actual reports for favorites category
         let reportsList = cat.reports;
         if (cat.id === 'favorites') {
             reportsList = availableCategories.flatMap((c) => c.reports).filter((rep) => favorites.includes(rep.id));
-            // De-duplicate just in case
             reportsList = reportsList.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i);
+            if (selectedDomain !== 'ALL') {
+                reportsList = reportsList.filter((r) => r.domain === selectedDomain);
+            }
         }
 
         const matchedReports = reportsList.filter(
@@ -338,6 +456,22 @@ const ReportListPage = () => {
 
                         </div>
 
+                        {/* Domain Segment Tabs */}
+                        <div className={styles.domainTabs}>
+                            {REPORT_DOMAINS.map((dom) => (
+                                <button
+                                    key={dom.id}
+                                    type="button"
+                                    className={`${styles.domainTabBtn} ${selectedDomain === dom.id ? styles.activeDomainTab : ''}`}
+                                    onClick={() => setSelectedDomain(dom.id)}
+                                >
+                                    <i className={dom.icon}></i>
+                                    <span>{dom.label}</span>
+                                    {dom.role && <span className={styles.domainBadge}>{dom.role}</span>}
+                                </button>
+                            ))}
+                        </div>
+
                         {/* Filter and search controls */}
                         <div className={styles.toolbar}>
                             <div className={styles.searchBox}>
@@ -367,6 +501,11 @@ const ReportListPage = () => {
                                         <div className={styles.categoryHeader}>
                                             <i className={`${category.icon} ${styles.categoryIcon}`}></i>
                                             <h3>{category.title}</h3>
+                                            {category.roleBadge && (
+                                                <span className={styles.categoryRoleBadge}>
+                                                    {category.roleBadge}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className={styles.reportsList}>
                                             {category.reports.map((report) => (
@@ -424,33 +563,30 @@ const ReportListPage = () => {
 
                             {/* In-page Filter Bar */}
                             <div className={styles.filterBar}>
-                                {/* Warehouse Filter */}
-                                {activeReport.id !== 'debt' && (
-                                    <div className={styles.filterGroup}>
-                                        <label>Kho chứa</label>
-                                        <SearchableSelect
-                                            className={styles.filterSelect}
-                                            value={filters.warehouseId}
-                                            onChange={(e) => setFilters({ ...filters, warehouseId: e.target.value })}
-                                        >
-                                            <option value="">Tất cả kho</option>
-                                            {warehouses.map((w) => (
-                                                <option key={w.id} value={w.id}>{w.warehouseCode} - {w.name}</option>
-                                            ))}
-                                        </SearchableSelect>
-                                    </div>
-                                )}
-
-                                {/* Date range filters */}
-                                {activeReport.id !== 'inventory-balance' && (
+                                {activeReport.id === 'cash-flow' ? (
+                                    /* Báo cáo Sổ quỹ & Dòng tiền: Chuẩn MISA tinh gọn với đúng 3 trường thời gian duy nhất */
                                     <>
+                                        <div className={styles.filterGroup}>
+                                            <label>Kỳ báo cáo</label>
+                                            <select
+                                                className={styles.filterSelect}
+                                                value={datePreset}
+                                                onChange={(e) => handleDatePresetChange(e.target.value)}
+                                            >
+                                                {DATE_PRESET_OPTIONS.map((opt) => (
+                                                    <option key={opt.id} value={opt.id}>
+                                                        {opt.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
                                         <div className={styles.filterGroup}>
                                             <label>Từ ngày</label>
                                             <input
                                                 type="date"
                                                 className={styles.filterInput}
                                                 value={filters.startDate}
-                                                onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                                                onChange={(e) => handleStartDateChange(e.target.value)}
                                             />
                                         </div>
                                         <div className={styles.filterGroup}>
@@ -459,68 +595,127 @@ const ReportListPage = () => {
                                                 type="date"
                                                 className={styles.filterInput}
                                                 value={filters.endDate}
-                                                onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                                                onChange={(e) => handleEndDateChange(e.target.value)}
                                             />
                                         </div>
                                     </>
-                                )}
+                                ) : (
+                                    <>
+                                        {/* Warehouse Filter */}
+                                        {activeReport.id !== 'debt' && (
+                                            <div className={styles.filterGroup}>
+                                                <label>Kho chứa</label>
+                                                <SearchableSelect
+                                                    className={styles.filterSelect}
+                                                    value={filters.warehouseId}
+                                                    onChange={(e) => setFilters({ ...filters, warehouseId: e.target.value })}
+                                                >
+                                                    <option value="">Tất cả kho</option>
+                                                    {warehouses.map((w) => (
+                                                        <option key={w.id} value={w.id}>{w.warehouseCode} - {w.name}</option>
+                                                    ))}
+                                                </SearchableSelect>
+                                            </div>
+                                        )}
 
-                                {/* Partner Type Filter */}
-                                {activeReport.id === 'debt' && (
-                                    <div className={styles.filterGroup}>
-                                        <label>Loại đối tác</label>
-                                        <SearchableSelect
-                                            className={styles.filterSelect}
-                                            value={filters.partnerType}
-                                            onChange={(e) => setFilters({ ...filters, partnerType: e.target.value })}
-                                        >
-                                            <option value="ALL">Tất cả đối tác</option>
-                                            <option value="CUSTOMER">Khách hàng</option>
-                                            <option value="SUPPLIER">Nhà cung cấp</option>
-                                        </SearchableSelect>
-                                    </div>
-                                )}
+                                        {/* Date range filters */}
+                                        {activeReport.id !== 'inventory-balance' && (
+                                            <>
+                                                <div className={styles.filterGroup}>
+                                                    <label>Kỳ báo cáo</label>
+                                                    <select
+                                                        className={styles.filterSelect}
+                                                        value={datePreset}
+                                                        onChange={(e) => handleDatePresetChange(e.target.value)}
+                                                    >
+                                                        {DATE_PRESET_OPTIONS.map((opt) => (
+                                                            <option key={opt.id} value={opt.id}>
+                                                                {opt.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className={styles.filterGroup}>
+                                                    <label>Từ ngày</label>
+                                                    <input
+                                                        type="date"
+                                                        className={styles.filterInput}
+                                                        value={filters.startDate}
+                                                        onChange={(e) => handleStartDateChange(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className={styles.filterGroup}>
+                                                    <label>Đến ngày</label>
+                                                    <input
+                                                        type="date"
+                                                        className={styles.filterInput}
+                                                        value={filters.endDate}
+                                                        onChange={(e) => handleEndDateChange(e.target.value)}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
 
-                                {/* Status Filter */}
-                                {activeReport.id === 'stock-transfers' && (
-                                    <div className={styles.filterGroup}>
-                                        <label>Trạng thái</label>
-                                        <SearchableSelect
-                                            className={styles.filterSelect}
-                                            value={filters.status}
-                                            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                                        >
-                                            <option value="">Tất cả</option>
-                                            <option value="COMPLETED">Hoàn thành</option>
-                                            <option value="PENDING">Chờ duyệt</option>
-                                            <option value="CANCELLED">Đã hủy</option>
-                                        </SearchableSelect>
-                                    </div>
-                                )}
+                                        {/* Partner Type Filter */}
+                                        {activeReport.id === 'debt' && (
+                                            <div className={styles.filterGroup}>
+                                                <label>Loại đối tác</label>
+                                                <SearchableSelect
+                                                    className={styles.filterSelect}
+                                                    value={filters.partnerType}
+                                                    onChange={(e) => setFilters({ ...filters, partnerType: e.target.value })}
+                                                >
+                                                    <option value="ALL">Tất cả đối tác</option>
+                                                    <option value="CUSTOMER">Khách hàng</option>
+                                                    <option value="SUPPLIER">Nhà cung cấp</option>
+                                                </SearchableSelect>
+                                            </div>
+                                        )}
 
-                                {/* Search keyword filter */}
-                                <div className={styles.filterGroup}>
-                                    <label>Tìm mặt hàng</label>
-                                    <input
-                                        type="text"
-                                        className={styles.filterInput}
-                                        placeholder="Nhập tên, mã..."
-                                        onKeyDown={(e) => { if (e.key === 'Enter') handleViewReport(); }}
-                                        value={filters.search}
-                                        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                                    />
-                                </div>
+                                        {/* Status Filter */}
+                                        {activeReport.id === 'stock-transfers' && (
+                                            <div className={styles.filterGroup}>
+                                                <label>Trạng thái</label>
+                                                <SearchableSelect
+                                                    className={styles.filterSelect}
+                                                    value={filters.status}
+                                                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                                                >
+                                                    <option value="">Tất cả</option>
+                                                    <option value="COMPLETED">Hoàn thành</option>
+                                                    <option value="PENDING">Chờ duyệt</option>
+                                                    <option value="CANCELLED">Đã hủy</option>
+                                                </SearchableSelect>
+                                            </div>
+                                        )}
+
+                                        {/* Search keyword filter */}
+                                        {activeReport.id !== 'debt' && (
+                                            <div className={styles.filterGroup}>
+                                                <label>Tìm mặt hàng</label>
+                                                <input
+                                                    type="text"
+                                                    className={styles.filterInput}
+                                                    placeholder="Nhập tên, mã..."
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleViewReport(); }}
+                                                    value={filters.search}
+                                                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
 
                                 {/* Actions */}
                                 <button className={styles.btnView} onClick={handleViewReport}>
                                     <i className="fas fa-sync-alt"></i> Xem báo cáo
                                 </button>
 
-                                <button className={styles.btnExport} onClick={handleExport}>
-                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i>
+                                <button className={styles.btnExport} onClick={handleExport} title="Xuất file Excel">
+                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i> Xuất khẩu
                                 </button>
 
-                                <button className={styles.btnPrint} onClick={() => window.print()}>
+                                <button className={styles.btnPrint} onClick={() => window.print()} title="In ấn báo cáo">
                                     <i className="bi bi-printer"></i> In ấn
                                 </button>
                             </div>
@@ -781,6 +976,126 @@ const ReportListPage = () => {
                                                                     ))}
                                                                 </tbody>
                                                             </table>
+                                                        )}
+
+                                                        {/* 7. CASH FLOW & CASH BOOK REPORT */}
+                                                        {activeReport.id === 'cash-flow' && (
+                                                            <>
+                                                                {/* Summary KPI Cards for Cash Flow */}
+                                                                <div className={styles.cashFlowKpiGrid}>
+                                                                    <div className={styles.kpiCard}>
+                                                                        <div className={styles.kpiIconBox} style={{ background: 'var(--wms-success-soft)', color: 'var(--wms-success)' }}>
+                                                                            <i className="fas fa-arrow-down"></i>
+                                                                        </div>
+                                                                        <div className={styles.kpiDetails}>
+                                                                            <span>Tổng thu trong kỳ</span>
+                                                                            <strong style={{ color: 'var(--wms-success)' }}>
+                                                                                {formatCurrency(
+                                                                                    reportData.reduce((acc, p) => p.type === 'RECEIPT' ? acc + Number(p.amount || 0) : acc, 0)
+                                                                                )}
+                                                                            </strong>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className={styles.kpiCard}>
+                                                                        <div className={styles.kpiIconBox} style={{ background: '#fef2f2', color: 'var(--wms-danger)' }}>
+                                                                            <i className="fas fa-arrow-up"></i>
+                                                                        </div>
+                                                                        <div className={styles.kpiDetails}>
+                                                                            <span>Tổng chi trong kỳ</span>
+                                                                            <strong style={{ color: 'var(--wms-danger)' }}>
+                                                                                {formatCurrency(
+                                                                                    reportData.reduce((acc, p) => p.type === 'VOUCHER' ? acc + Number(p.amount || 0) : acc, 0)
+                                                                                )}
+                                                                            </strong>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className={styles.kpiCard}>
+                                                                        <div className={styles.kpiIconBox} style={{ background: 'var(--color-primary-soft)', color: 'var(--wms-primary)' }}>
+                                                                            <i className="fas fa-wallet"></i>
+                                                                        </div>
+                                                                        <div className={styles.kpiDetails}>
+                                                                            <span>Dòng tiền ròng (Thu - Chi)</span>
+                                                                            {(() => {
+                                                                                const rec = reportData.reduce((acc, p) => p.type === 'RECEIPT' ? acc + Number(p.amount || 0) : acc, 0);
+                                                                                const vou = reportData.reduce((acc, p) => p.type === 'VOUCHER' ? acc + Number(p.amount || 0) : acc, 0);
+                                                                                const net = rec - vou;
+                                                                                return (
+                                                                                    <strong style={{ color: net >= 0 ? 'var(--wms-success)' : 'var(--wms-danger)' }}>
+                                                                                        {formatCurrency(net)}
+                                                                                    </strong>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className={styles.kpiCard}>
+                                                                        <div className={styles.kpiIconBox} style={{ background: 'var(--wms-warning-soft)', color: '#d97706' }}>
+                                                                            <i className="fas fa-university"></i>
+                                                                        </div>
+                                                                        <div className={styles.kpiDetails}>
+                                                                            <span>Tiền mặt & Ngân hàng</span>
+                                                                            <strong style={{ fontSize: '13px', color: 'var(--color-text-strong)' }}>
+                                                                                TM: {formatCurrency(reportData.reduce((acc, p) => p.paymentMethod === 'CASH' ? acc + Number(p.amount || 0) : acc, 0))}
+                                                                                <br />
+                                                                                NH: {formatCurrency(reportData.reduce((acc, p) => p.paymentMethod === 'BANK_TRANSFER' ? acc + Number(p.amount || 0) : acc, 0))}
+                                                                            </strong>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <table className={styles.reportTable}>
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th style={{ width: '50px' }}>STT</th>
+                                                                            <th style={{ width: '120px' }}>Ngày chứng từ</th>
+                                                                            <th style={{ width: '130px' }}>Số chứng từ</th>
+                                                                            <th style={{ width: '140px' }}>Loại nghiệp vụ</th>
+                                                                            <th>Đối tác / Người nộp - nhận</th>
+                                                                            <th style={{ width: '130px' }}>Hình thức</th>
+                                                                            <th className={styles.textRight} style={{ width: '140px' }}>Thu vào (VNĐ)</th>
+                                                                            <th className={styles.textRight} style={{ width: '140px' }}>Chi ra (VNĐ)</th>
+                                                                            <th style={{ width: '130px' }}>Trạng thái</th>
+                                                                            <th style={{ width: '200px' }}>Ghi chú</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {paginatedData.map((item, idx) => (
+                                                                            <tr key={idx}>
+                                                                                <td>{currentPage * pageSize + idx + 1}</td>
+                                                                                <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.createdAt)}</td>
+                                                                                <td className={styles.fontSemibold} style={{ color: 'var(--color-primary)' }}>{item.code || '-'}</td>
+                                                                                <td>
+                                                                                    <span style={{ fontWeight: 600, color: item.type === 'RECEIPT' ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                                                                                        {item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className={styles.fontSemibold}>{item.partnerName || '-'}</td>
+                                                                                <td>
+                                                                                    <span className={styles.badge} style={{ background: item.paymentMethod === 'CASH' ? 'var(--wms-success-soft)' : 'var(--color-primary-soft)', color: item.paymentMethod === 'CASH' ? 'var(--wms-success)' : 'var(--wms-primary)' }}>
+                                                                                        {item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className={`${styles.textRight} ${styles.textSuccess}`} style={{ fontWeight: 600 }}>
+                                                                                    {item.type === 'RECEIPT' ? formatCurrency(item.amount) : '-'}
+                                                                                </td>
+                                                                                <td className={`${styles.textRight} ${styles.textDanger}`} style={{ fontWeight: 600 }}>
+                                                                                    {item.type === 'VOUCHER' ? formatCurrency(item.amount) : '-'}
+                                                                                </td>
+                                                                                <td>
+                                                                                    <span className={`${styles.badge} ${item.status === 'POSTED' ? styles.badgeSuccess : styles.badgeWarning}`}>
+                                                                                        {item.status === 'POSTED' ? 'Đã ghi sổ' : 'Chờ ghi sổ'}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.note || '-'}>
+                                                                                    {item.note || '-'}
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </>
                                                         )}
                                                     </div>
 

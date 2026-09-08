@@ -133,13 +133,13 @@
 .orange .kpiTrend { color: #ea580c; }
 .orange:hover { border-color: #f97316; box-shadow: 0 12px 24px #ffedd5; }
 
-.green .kpiIconWrapper { background: #dcfce7; color: #16a34a; }
+.green .kpiIconWrapper { background: var(--color-success-bg); color: #16a34a; }
 .green .kpiTrend { color: #16a34a; }
-.green:hover { border-color: #22c55e; box-shadow: 0 12px 24px #dcfce7; }
+.green:hover { border-color: #22c55e; box-shadow: 0 12px 24px var(--color-success-bg); }
 
-.red .kpiIconWrapper { background: #fee2e2; color: #dc2626; }
-.red .kpiTrend { color: #dc2626; }
-.red:hover { border-color: #ef4444; box-shadow: 0 12px 24px #fee2e2; }
+.red .kpiIconWrapper { background: #fee2e2; color: var(--wms-danger); }
+.red .kpiTrend { color: var(--wms-danger); }
+.red:hover { border-color: var(--wms-danger); box-shadow: 0 12px 24px #fee2e2; }
 
 .purple .kpiIconWrapper { background: #f3e8ff; color: #9333ea; }
 .purple .kpiTrend { color: #9333ea; }
@@ -339,8 +339,8 @@
     font-size: 1rem;
 }
 
-.typeIn { background: #dcfce7; color: #16a34a; }
-.typeOut { background: #e0f2fe; color: #0284c7; }
+.typeIn { background: var(--color-success-bg); color: #16a34a; }
+.typeOut { background: #e0f2fe; color: var(--color-info-hover); }
 
 .txId {
     font-weight: 600;
@@ -426,11 +426,11 @@
 
 /* Background variants for progress bars */
 .bgPrimary { background-color: var(--color-primary); }
-.bgBlue { background-color: #3b82f6; }
-.bgGreen { background-color: #10b981; }
-.bgOrange { background-color: #f59e0b; }
+.bgBlue { background-color: var(--color-primary-bright); }
+.bgGreen { background-color: var(--color-success-alt); }
+.bgOrange { background-color: var(--color-warning); }
 .bgPurple { background-color: #8b5cf6; }
-.bgSlate { background-color: #64748b; }
+.bgSlate { background-color: var(--wms-text-muted); }
 
 /* Pending Tasks Styles */
 .pendingTasksCard {
@@ -481,7 +481,7 @@
 }
 
 .bgPrimarySoft { background-color: var(--color-primary-soft); color: var(--color-primary); }
-.bgRedSoft { background-color: #fee2e2; color: #dc2626; }
+.bgRedSoft { background-color: #fee2e2; color: var(--wms-danger); }
 .bgOrangeSoft { background-color: #ffedd5; color: #ea580c; }
 .bgBlueSoft { background-color: var(--color-primary-soft); color: var(--color-primary); }
 .bgPurpleSoft { background-color: #f3e8ff; color: #9333ea; }

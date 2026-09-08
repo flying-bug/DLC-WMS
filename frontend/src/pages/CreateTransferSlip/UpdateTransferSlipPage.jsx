@@ -29,10 +29,10 @@ const customSelectStyles = {
     minHeight: '32px',
     height: '32px',
     fontSize: '13px',
-    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #2563eb' : 'none',
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    boxShadow: state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
     '&:hover': {
-      borderColor: state.isFocused ? '#2563eb' : '#9ca3af'
+      borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-text-placeholder)'
     }
   }),
   valueContainer: (base) => ({
@@ -595,7 +595,7 @@ function UpdateTransferSlipPage() {
                           />
                         </td>
                         <td>{product?.unitName || ''}</td>
-                        <td align="right" style={{ fontWeight: '500', color: stock <= 0 ? '#ef4444' : '#475569' }}>
+                        <td align="right" style={{ fontWeight: '500', color: stock <= 0 ? 'var(--wms-danger)' : 'var(--wms-text-muted)' }}>
                           {stock.toLocaleString('vi-VN')}
                         </td>
                         <td align="right">
@@ -650,8 +650,8 @@ function UpdateTransferSlipPage() {
                 )}
               </div>
               <div className={styles.tableActions} style={{ display: 'flex', gap: '8px', padding: '16px' }}>
-                <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
-                <button type="button" onClick={() => setItems([emptyLine()])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
+                <button type="button" onClick={() => setItems([emptyLine()])} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
               </div>
             </div>
           </div>
@@ -664,7 +664,7 @@ function UpdateTransferSlipPage() {
             </button>
           </div>
           <div className={styles.footerRight}>
-            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint} disabled={items.length === 0 || !form.fromWarehouseId}>
+            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: 'var(--color-text)', border: '1px solid var(--color-border-muted)' }} onClick={handlePrint} disabled={items.length === 0 || !form.fromWarehouseId}>
               <i className="bi bi-printer"></i> In phiếu
             </button>
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>

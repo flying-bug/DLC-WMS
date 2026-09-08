@@ -150,7 +150,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                 onClick={handleOpen}
                 style={{
                     padding: '6px 8px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--color-border-muted)',
                     borderRadius: '4px',
                     fontSize: '13px',
                     cursor: 'text',
@@ -177,10 +177,10 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                             {selectedCat.description && <span style={{ fontSize: '11px', color: '#6b7280', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCat.description}</span>}
                         </div>
                     ) : (
-                        <span style={{ color: '#9ca3af' }}>Tìm kiếm danh mục</span>
+                        <span style={{ color: 'var(--color-text-placeholder)' }}>Tìm kiếm danh mục</span>
                     )
                 )}
-                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: '#9ca3af', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
+                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
             </div>
 
             {isOpen && rect && createPortal(
@@ -192,7 +192,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                     zIndex: 9999999,
                     transform: rect.openUpwards ? 'translateY(-100%)' : 'none',
                     backgroundColor: '#fff',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--color-border-muted)',
                     borderRadius: '4px',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     maxHeight: '200px',
@@ -209,13 +209,13 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                             style={{
                                 padding: '8px',
                                 cursor: 'pointer',
-                                borderBottom: '1px solid #f3f4f6',
-                                backgroundColor: String(cat.id) === String(value) ? '#eff6ff' : 'transparent'
+                                borderBottom: '1px solid var(--color-bg)',
+                                backgroundColor: String(cat.id) === String(value) ? 'var(--color-primary-soft)' : 'transparent'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = String(cat.id) === String(value) ? '#eff6ff' : 'transparent'}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = String(cat.id) === String(value) ? 'var(--color-primary-soft)' : 'transparent'}
                         >
-                            <div style={{ fontWeight: 500, fontSize: '13px', color: '#111827' }}>
+                            <div style={{ fontWeight: 500, fontSize: '13px', color: 'var(--color-text)' }}>
                                 {cat.name}
                             </div>
                             {cat.description && (
@@ -1464,10 +1464,10 @@ const ProductPage = () => {
                                 alignItems: 'center',
                                 gap: '6px',
                                 padding: '8px 14px',
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #cbd5e1',
+                                backgroundColor: 'var(--color-white)',
+                                border: '1px solid var(--wms-border-strong)',
                                 borderRadius: '6px',
-                                color: '#475569',
+                                color: 'var(--wms-text-muted)',
                                 fontSize: '13px',
                                 fontWeight: 500,
                                 cursor: 'pointer',
@@ -1486,10 +1486,10 @@ const ProductPage = () => {
                                 alignItems: 'center',
                                 gap: '6px',
                                 padding: '8px 14px',
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #cbd5e1',
+                                backgroundColor: 'var(--color-white)',
+                                border: '1px solid var(--wms-border-strong)',
                                 borderRadius: '6px',
-                                color: '#475569',
+                                color: 'var(--wms-text-muted)',
                                 fontSize: '13px',
                                 fontWeight: 500,
                                 cursor: importing ? 'not-allowed' : 'pointer',
@@ -1501,11 +1501,11 @@ const ProductPage = () => {
                         >
                             {importing ? (
                                 <>
-                                    <i className="fas fa-spinner fa-spin" style={{ color: '#2563eb' }}></i> Đang nhập...
+                                    <i className="fas fa-spinner fa-spin" style={{ color: 'var(--wms-primary)' }}></i> Đang nhập...
                                 </>
                             ) : (
                                 <>
-                                    <i className="bi bi-file-earmark-arrow-up" style={{ color: '#2563eb' }}></i> Nhập từ Excel
+                                    <i className="bi bi-file-earmark-arrow-up" style={{ color: 'var(--wms-primary)' }}></i> Nhập từ Excel
                                 </>
                             )}
                         </button>
@@ -1688,11 +1688,11 @@ const ProductPage = () => {
                                         </td>
                                         {columns.image && (
                                             <td style={{ textAlign: 'center' }}>
-                                                <div style={{ width: '64px', height: '64px', margin: '0 auto', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div style={{ width: '64px', height: '64px', margin: '0 auto', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     {item.imageUrl ? (
                                                         <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     ) : (
-                                                        <i className="bi bi-image" style={{ color: '#9ca3af', fontSize: '24px' }}></i>
+                                                        <i className="bi bi-image" style={{ color: 'var(--color-text-placeholder)', fontSize: '24px' }}></i>
                                                     )}
                                                 </div>
                                             </td>
@@ -1790,9 +1790,9 @@ const ProductPage = () => {
                         <div className="misa-modal" style={{ width: '750px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
                             {/* ── Modal Header ── */}
-                            <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+                            <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>Thông tin vật tư, hàng hóa, dịch vụ</span>
+                                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-heading)' }}>Thông tin vật tư, hàng hóa, dịch vụ</span>
                                     <div style={{ position: 'relative' }}>
                                         <span
                                             className={styles.productTypeBadge}
@@ -1838,8 +1838,8 @@ const ProductPage = () => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <i className="fas fa-question-circle" style={{ color: '#9ca3af', fontSize: '16px', cursor: 'pointer' }}></i>
-                                    <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: '#9ca3af' }}></i>
+                                    <i className="fas fa-question-circle" style={{ color: 'var(--color-text-placeholder)', fontSize: '16px', cursor: 'pointer' }}></i>
+                                    <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
                                 </div>
                             </div>
 
@@ -2382,7 +2382,7 @@ const ProductPage = () => {
                                                     />
                                                     <span>Quản lý theo Serial</span>
                                                     {formData.productType === 'Thành phẩm' && (
-                                                        <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 500, marginLeft: '4px' }}>(Bắt buộc cho Thành phẩm)</span>
+                                                        <span style={{ fontSize: '11px', color: 'var(--wms-danger)', fontWeight: 500, marginLeft: '4px' }}>(Bắt buộc cho Thành phẩm)</span>
                                                     )}
                                                 </label>
                                             </div>
@@ -2401,14 +2401,14 @@ const ProductPage = () => {
                                                     />
                                                 ) : (
                                                     <div className={styles.imageUploadPlaceholder}>
-                                                        <i className="fas fa-image" style={{ fontSize: '36px', color: '#d1d5db', marginBottom: '8px' }}></i>
+                                                        <i className="fas fa-image" style={{ fontSize: '36px', color: 'var(--color-border-muted)', marginBottom: '8px' }}></i>
                                                         <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500 }}>Tải ảnh lên</span>
-                                                        <span style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', marginTop: '4px', lineHeight: 1.4 }}>Dung lượng tối đa 2MB (JPG, PNG)</span>
+                                                        <span style={{ fontSize: '10px', color: 'var(--color-text-placeholder)', textAlign: 'center', marginTop: '4px', lineHeight: 1.4 }}>Dung lượng tối đa 2MB (JPG, PNG)</span>
                                                     </div>
                                                 )}
                                                 {uploadingImage && (
                                                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: '#3b82f6' }}></i>
+                                                        <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--color-primary-bright)' }}></i>
                                                     </div>
                                                 )}
                                             </div>
@@ -2431,7 +2431,7 @@ const ProductPage = () => {
                                                     style={{ display: 'none' }}
                                                 />
                                             </label>
-                                            <span style={{ color: '#d1d5db' }}>|</span>
+                                            <span style={{ color: 'var(--color-border-muted)' }}>|</span>
                                             <i
                                                 className="fas fa-trash-alt"
                                                 style={{ fontSize: '15px', color: '#6b7280', cursor: 'pointer' }}
@@ -2443,16 +2443,16 @@ const ProductPage = () => {
 
                                 {/* ─── Tabs Section (BOM & Unit Conversions) ─── */}
                                 {formData.productType !== 'Dịch vụ' && (
-                                    <div style={{ marginTop: '24px', border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden' }}>
-                                        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                                    <div style={{ marginTop: '24px', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-elevated)' }}>
                                             {formData.productType === 'Thành phẩm' && (
                                                 <button
                                                     type="button"
                                                     onClick={() => setActiveTab('bom')}
                                                     style={{
                                                         padding: '9px 18px', fontSize: '13px', border: 'none', cursor: 'pointer', background: 'transparent',
-                                                        borderBottom: activeTab === 'bom' ? '2px solid #2563eb' : '2px solid transparent',
-                                                        color: activeTab === 'bom' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'bom' ? 600 : 400
+                                                        borderBottom: activeTab === 'bom' ? '2px solid var(--wms-primary)' : '2px solid transparent',
+                                                        color: activeTab === 'bom' ? 'var(--wms-primary)' : '#6b7280', fontWeight: activeTab === 'bom' ? 600 : 400
                                                     }}
                                                 >
                                                     Định mức cấu hình (BOM)
@@ -2463,8 +2463,8 @@ const ProductPage = () => {
                                                 onClick={() => setActiveTab('units')}
                                                 style={{
                                                     padding: '9px 18px', fontSize: '13px', border: 'none', cursor: 'pointer', background: 'transparent',
-                                                    borderBottom: activeTab === 'units' ? '2px solid #2563eb' : '2px solid transparent',
-                                                    color: activeTab === 'units' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'units' ? 600 : 400
+                                                    borderBottom: activeTab === 'units' ? '2px solid var(--wms-primary)' : '2px solid transparent',
+                                                    color: activeTab === 'units' ? 'var(--wms-primary)' : '#6b7280', fontWeight: activeTab === 'units' ? 600 : 400
                                                 }}
                                             >
                                                 Đơn vị tính chuyển đổi {unitConversions.length > 0 ? `(${unitConversions.length})` : ''}
@@ -2477,17 +2477,17 @@ const ProductPage = () => {
                                                     {bomLines.map((line, idx) => (
                                                         <div key={idx} style={{
                                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                            padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb',
+                                                            padding: '8px 12px', background: '#fff', border: '1px solid var(--color-border)',
                                                             borderRadius: '8px', transition: 'all 0.2s ease',
                                                             boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                                                         }}
-                                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
-                                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
+                                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--wms-border-strong)'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
                                                         >
                                                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                                 <div style={{
                                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                    width: '28px', height: '28px', borderRadius: '50%', background: '#f3f4f6',
+                                                                    width: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-bg)',
                                                                     color: '#6b7280', fontSize: '12px', fontWeight: 600
                                                                 }}>
                                                                     {idx + 1}
@@ -2515,12 +2515,12 @@ const ProductPage = () => {
                                                                             setBomLines(a);
                                                                         }}
                                                                         style={{
-                                                                            width: '100%', border: 'none', borderBottom: '1px dashed #cbd5e1',
+                                                                            width: '100%', border: 'none', borderBottom: '1px dashed var(--wms-border-strong)',
                                                                             padding: '4px 6px', fontSize: '12px', outline: 'none',
                                                                             background: 'transparent', color: '#4b5563', transition: 'border-color 0.2s'
                                                                         }}
-                                                                        onFocus={(e) => { e.target.style.borderBottom = '1px solid #3b82f6'; e.target.style.color = '#111827'; }}
-                                                                        onBlur={(e) => { e.target.style.borderBottom = '1px dashed #cbd5e1'; e.target.style.color = '#4b5563'; }}
+                                                                        onFocus={(e) => { e.target.style.borderBottom = '1px solid var(--color-primary-bright)'; e.target.style.color = 'var(--color-text)'; }}
+                                                                        onBlur={(e) => { e.target.style.borderBottom = '1px dashed var(--wms-border-strong)'; e.target.style.color = '#4b5563'; }}
                                                                     />
                                                                 </div>
                                                             </div>
@@ -2529,11 +2529,11 @@ const ProductPage = () => {
                                                                 onClick={() => { const a = [...bomLines]; a.splice(idx, 1); setBomLines(a); }}
                                                                 style={{
                                                                     border: 'none', background: 'transparent', cursor: 'pointer',
-                                                                    color: '#9ca3af', fontSize: '15px', padding: '8px',
+                                                                    color: 'var(--color-text-placeholder)', fontSize: '15px', padding: '8px',
                                                                     borderRadius: '6px', transition: 'all 0.2s', marginLeft: '8px'
                                                                 }}
-                                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
-                                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'transparent'; }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--wms-danger)'; e.currentTarget.style.background = '#fee2e2'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-placeholder)'; e.currentTarget.style.background = 'transparent'; }}
                                                                 title="Xóa danh mục"
                                                             >
                                                                 <i className="bi bi-trash3"></i>
@@ -2545,14 +2545,14 @@ const ProductPage = () => {
                                                         type="button"
                                                         onClick={() => setBomLines([...bomLines, { componentVariantId: '', categoryId: '', quantity: '', note: '' }])}
                                                         style={{
-                                                            width: '100%', padding: '14px', border: '1px dashed #cbd5e1',
-                                                            borderRadius: '8px', background: '#f8fafc', color: '#3b82f6',
+                                                            width: '100%', padding: '14px', border: '1px dashed var(--wms-border-strong)',
+                                                            borderRadius: '8px', background: 'var(--wms-bg-soft)', color: 'var(--color-primary-bright)',
                                                             fontSize: '14px', fontWeight: 500, cursor: 'pointer',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                                                             transition: 'all 0.2s ease'
                                                         }}
-                                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; }}
-                                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary-bright)'; e.currentTarget.style.background = 'var(--color-primary-soft)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--wms-border-strong)'; e.currentTarget.style.background = 'var(--wms-bg-soft)'; }}
                                                     >
                                                         <i className="bi bi-plus-circle" style={{ fontSize: '16px' }}></i> Thêm danh mục yêu cầu
                                                     </button>
@@ -2562,17 +2562,17 @@ const ProductPage = () => {
                                             {activeTab === 'units' && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                                     {unitConversions.length === 0 ? (
-                                                        <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280', fontSize: '13px', background: '#f9fafb', borderRadius: '6px', border: '1px dashed #d1d5db' }}>
+                                                        <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280', fontSize: '13px', background: 'var(--color-bg-elevated)', borderRadius: '6px', border: '1px dashed var(--color-border-muted)' }}>
                                                             Chưa có đơn vị tính chuyển đổi nào. Nhấn nút bên dưới để thêm đơn vị phụ (VD: Thùng, Hộp, Lốc...).
                                                         </div>
                                                     ) : (
                                                         unitConversions.map((conv, idx) => (
                                                             <div key={idx} style={{
                                                                 display: 'flex', alignItems: 'center', gap: '10px',
-                                                                padding: '10px 14px', background: '#fff', border: '1px solid #e5e7eb',
+                                                                padding: '10px 14px', background: '#fff', border: '1px solid var(--color-border)',
                                                                 borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                                                             }}>
-                                                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#f3f4f6', color: '#6b7280', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-bg)', color: '#6b7280', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                                     {idx + 1}
                                                                 </div>
                                                                 <div style={{ flex: 2 }}>
@@ -2625,7 +2625,7 @@ const ProductPage = () => {
                                                                 </div>
                                                                 <div style={{ flex: 2.2 }}>
                                                                     <label style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '2px' }}>Diễn giải quy đổi</label>
-                                                                    <div style={{ fontSize: '12px', color: '#2563eb', fontWeight: 500, paddingTop: '6px' }}>
+                                                                    <div style={{ fontSize: '12px', color: 'var(--wms-primary)', fontWeight: 500, paddingTop: '6px' }}>
                                                                         {conv.unitId && conv.ratio && formData.unitId ? (
                                                                             `1 ${units.find(u => String(u.id) === String(conv.unitId))?.name || 'ĐVT'} = ${conv.operator === 'DIVIDE' ? `1/${conv.ratio}` : conv.ratio} ${units.find(u => String(u.id) === String(formData.unitId))?.name || 'ĐVC'}`
                                                                         ) : '-'}
@@ -2640,7 +2640,7 @@ const ProductPage = () => {
                                                                     }}
                                                                     style={{
                                                                         border: 'none', background: 'transparent', cursor: 'pointer',
-                                                                        color: '#9ca3af', fontSize: '15px', padding: '8px',
+                                                                        color: 'var(--color-text-placeholder)', fontSize: '15px', padding: '8px',
                                                                         borderRadius: '6px', marginTop: '16px'
                                                                     }}
                                                                     title="Xóa đơn vị chuyển đổi"
@@ -2655,8 +2655,8 @@ const ProductPage = () => {
                                                         type="button"
                                                         onClick={() => setUnitConversions([...unitConversions, { unitId: '', operator: 'MULTIPLY', ratio: '', note: '' }])}
                                                         style={{
-                                                            width: '100%', padding: '12px', border: '1px dashed #cbd5e1',
-                                                            borderRadius: '8px', background: '#f8fafc', color: '#3b82f6',
+                                                            width: '100%', padding: '12px', border: '1px dashed var(--wms-border-strong)',
+                                                            borderRadius: '8px', background: 'var(--wms-bg-soft)', color: 'var(--color-primary-bright)',
                                                             fontSize: '13px', fontWeight: 500, cursor: 'pointer',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                                                             marginTop: '6px'
@@ -2672,7 +2672,7 @@ const ProductPage = () => {
                             </div>
 
                             {/* ── Modal Footer ── */}
-                            <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
+                            <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
                                 <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <button className="btn-misa-draft" onClick={() => handleSave(false)}>
@@ -2690,7 +2690,7 @@ const ProductPage = () => {
                         <div className="misa-modal" style={{ width: '900px', maxWidth: '95vw', maxHeight: '90vh' }}>
                             <div className="misa-modal-header">
                                 <h3>Quản lý SKU - {selectedProduct.productCode}</h3>
-                                <i className="fas fa-times" onClick={() => setShowVariantModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
+                                <i className="fas fa-times" onClick={() => setShowVariantModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, var(--wms-text-subtle))' }}></i>
                             </div>
 
                             <div className="misa-modal-body">
@@ -2999,17 +2999,17 @@ const ProductPage = () => {
                         <i className="bi bi-x-lg"></i>
                     </button>
                 </div>
-                <div className={styles.settingsModalBody} style={{ padding: '24px', width: '100%', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
-                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '16px 20px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                <div className={styles.settingsModalBody} style={{ padding: '24px', width: '100%', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--wms-bg-soft)' }}>
+                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '16px 20px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--wms-border-base)' }}>
                         <div style={{ display: 'flex', gap: '24px', fontSize: '15px' }}>
-                            <span style={{ color: '#475569' }}>Tổng số: <strong style={{ color: '#0f172a', fontSize: '16px' }}>{excelPreviewData.length}</strong> dòng</span>
+                            <span style={{ color: 'var(--wms-text-muted)' }}>Tổng số: <strong style={{ color: 'var(--wms-text-title)', fontSize: '16px' }}>{excelPreviewData.length}</strong> dòng</span>
                             <span style={{ color: '#16a34a' }}><i className="bi bi-check-circle-fill"></i> Hợp lệ: <strong style={{ fontSize: '16px' }}>{excelPreviewData.filter(r => r.isValid).length}</strong></span>
-                            <span style={{ color: '#dc2626' }}><i className="bi bi-exclamation-circle-fill"></i> Lỗi: <strong style={{ fontSize: '16px' }}>{excelPreviewData.filter(r => !r.isValid).length}</strong></span>
+                            <span style={{ color: 'var(--wms-danger)' }}><i className="bi bi-exclamation-circle-fill"></i> Lỗi: <strong style={{ fontSize: '16px' }}>{excelPreviewData.filter(r => !r.isValid).length}</strong></span>
                         </div>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                             <SearchableSelect
                                 className={styles.inlineSelect}
-                                style={{ width: '160px', backgroundColor: '#f1f5f9', border: 'none', fontWeight: 500, padding: '8px 12px', cursor: 'pointer' }}
+                                style={{ width: '160px', backgroundColor: 'var(--wms-bg-hover)', border: 'none', fontWeight: 500, padding: '8px 12px', cursor: 'pointer' }}
                                 value={previewFilter}
                                 onChange={e => setPreviewFilter(e.target.value)}
                             >
@@ -3017,8 +3017,8 @@ const ProductPage = () => {
                                 <option value="VALID">Hiển thị: Hợp lệ</option>
                                 <option value="INVALID">Hiển thị: Bị lỗi</option>
                             </SearchableSelect>
-                            <div style={{ fontSize: '14px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '8px 16px', borderRadius: '20px' }}>
-                                <i className="bi bi-info-circle-fill" style={{ color: '#3b82f6', marginRight: '6px' }}></i>
+                            <div style={{ fontSize: '14px', color: 'var(--wms-text-muted)', backgroundColor: 'var(--wms-bg-hover)', padding: '8px 16px', borderRadius: '20px' }}>
+                                <i className="bi bi-info-circle-fill" style={{ color: 'var(--color-primary-bright)', marginRight: '6px' }}></i>
                                 Sửa các ô bị lỗi trực tiếp trên bảng dưới đây
                             </div>
                         </div>
@@ -3061,7 +3061,7 @@ const ProductPage = () => {
                                                         onChange={e => handlePreviewEdit(idx, 'productCode', e.target.value)}
                                                         disabled={isSavingExcel}
                                                     />
-                                                    {row.existingProduct && <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}><i className="bi bi-exclamation-triangle"></i> Sẽ ghi đè</div>}
+                                                    {row.existingProduct && <div style={{ fontSize: '11px', color: 'var(--color-warning)', marginTop: 4 }}><i className="bi bi-exclamation-triangle"></i> Sẽ ghi đè</div>}
                                                 </td>
                                                 <td>
                                                     <input
@@ -3070,10 +3070,10 @@ const ProductPage = () => {
                                                         value={row.productName}
                                                         onChange={e => handlePreviewEdit(idx, 'productName', e.target.value)}
                                                         disabled={isSavingExcel}
-                                                        style={{ borderColor: !row.productName ? '#ef4444' : '' }}
+                                                        style={{ borderColor: !row.productName ? 'var(--wms-danger)' : '' }}
                                                     />
                                                     {row.warnings && row.warnings.length > 0 && (
-                                                        <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}>
+                                                        <div style={{ fontSize: '11px', color: 'var(--color-warning)', marginTop: 4 }}>
                                                             {row.warnings.map((w, i) => <div key={i}><i className="bi bi-exclamation-triangle"></i> {w}</div>)}
                                                         </div>
                                                     )}
@@ -3096,7 +3096,7 @@ const ProductPage = () => {
                                                         value={row.categoryId || ''}
                                                         onChange={e => handlePreviewEdit(idx, 'categoryId', e.target.value)}
                                                         disabled={isSavingExcel || isServiceType(row.productType)}
-                                                        style={{ borderColor: (!isServiceType(row.productType) && !row.categoryId) ? '#ef4444' : '' }}
+                                                        style={{ borderColor: (!isServiceType(row.productType) && !row.categoryId) ? 'var(--wms-danger)' : '' }}
                                                     >
                                                         <option value="">-- Chọn --</option>
                                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -3108,7 +3108,7 @@ const ProductPage = () => {
                                                         value={row.brandId || ''}
                                                         onChange={e => handlePreviewEdit(idx, 'brandId', e.target.value)}
                                                         disabled={isSavingExcel || isServiceType(row.productType)}
-                                                        style={{ borderColor: (!isServiceType(row.productType) && !row.brandId) ? '#ef4444' : '' }}
+                                                        style={{ borderColor: (!isServiceType(row.productType) && !row.brandId) ? 'var(--wms-danger)' : '' }}
                                                     >
                                                         <option value="">-- Chọn --</option>
                                                         {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -3120,7 +3120,7 @@ const ProductPage = () => {
                                                         value={row.unitId || ''}
                                                         onChange={e => handlePreviewEdit(idx, 'unitId', e.target.value)}
                                                         disabled={isSavingExcel}
-                                                        style={{ borderColor: !row.unitId ? '#ef4444' : '' }}
+                                                        style={{ borderColor: !row.unitId ? 'var(--wms-danger)' : '' }}
                                                     >
                                                         <option value="">-- Chọn --</option>
                                                         {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}

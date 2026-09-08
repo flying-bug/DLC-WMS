@@ -73,7 +73,7 @@ const ReceiptsTab = ({ data, loading, page, setPage, formatDate, formatCurrency,
                                 {item.type === 'RECEIPT' ? (
                                     <span style={{ color: '#16a34a', fontWeight: 600 }}>Phiếu Thu</span>
                                 ) : (
-                                    <span style={{ color: '#dc2626', fontWeight: 600 }}>Phiếu Chi</span>
+                                    <span style={{ color: 'var(--wms-danger)', fontWeight: 600 }}>Phiếu Chi</span>
                                 )}
                             </td>
                             <td>{formatDate(item.createdAt)}</td>

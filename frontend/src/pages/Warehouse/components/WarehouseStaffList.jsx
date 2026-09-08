@@ -169,14 +169,14 @@ const WarehouseStaffList = ({ warehouseId }) => {
                         {loading ? (
                             <tr>
                                 <td colSpan="5" className={styles.emptyState}>
-                                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: '#9ca3af', marginBottom: '8px' }}></i>
+                                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--color-text-placeholder)', marginBottom: '8px' }}></i>
                                     <div className={styles.emptyText}>Đang tải dữ liệu...</div>
                                 </td>
                             </tr>
                         ) : staffs.length === 0 ? (
                             <tr>
                                 <td colSpan="5" className={styles.emptyState}>
-                                    <i className="fas fa-users-slash" style={{ fontSize: '48px', color: '#e2e8f0', marginBottom: '16px' }}></i>
+                                    <i className="fas fa-users-slash" style={{ fontSize: '48px', color: 'var(--wms-border-base)', marginBottom: '16px' }}></i>
                                     <div className={styles.emptyText}>Không có dữ liệu nhân sự phù hợp.</div>
                                 </td>
                             </tr>
@@ -184,13 +184,13 @@ const WarehouseStaffList = ({ warehouseId }) => {
                             staffs.map(staff => (
                                 <tr key={staff.userId} className={!staff.isActive ? styles.inactiveRow : ''}>
                                     <td>
-                                        <div style={{ fontWeight: 500, color: '#111827' }}>{staff.fullName}</div>
+                                        <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{staff.fullName}</div>
                                     </td>
                                     <td>{staff.email}</td>
                                     <td>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                             {staff.roles.map(r => (
-                                                <span key={r.id} className={styles.badge} style={{ backgroundColor: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd' }}>
+                                                <span key={r.id} className={styles.badge} style={{ backgroundColor: '#e0f2fe', color: 'var(--color-info-hover)', border: '1px solid #bae6fd' }}>
                                                     {r.name}
                                                 </span>
                                             ))}
@@ -228,12 +228,12 @@ const WarehouseStaffList = ({ warehouseId }) => {
 
             {/* Pagination */}
             {!loading && totalItems > 0 && (
-                <div className={styles.pagination} style={{ borderTop: '1px solid #e5e7eb' }}>
+                <div className={styles.pagination} style={{ borderTop: '1px solid var(--color-border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>Hiển thị</span>
                         <SearchableSelect 
                             className="misa-select" 
-                            style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d1d5db', borderRadius: '4px' }} 
+                            style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid var(--color-border-muted)', borderRadius: '4px' }} 
                             value={pageSize} 
                             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
                         >

@@ -86,8 +86,8 @@ const BarcodeLabel = ({
                         height={labelSize === '35x22' ? 25 : 35}
                         displayValue={false}
                         margin={6}
-                        background="#ffffff"
-                        lineColor="#000000"
+                        background="var(--color-white)"
+                        lineColor="var(--color-text-2)"
                     />
                 )}
             </div>

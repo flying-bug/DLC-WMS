@@ -120,9 +120,9 @@ function WarrantyDetailPage() {
             <h1 className={styles.pageTitle}>{warranty.warrantyCode || `Bảo hành #${id}`}</h1>
             <span className={styles.statusBadgeInline} style={{
               backgroundColor: statusInfo.code === 'success' ? 'rgba(34, 197, 94, 0.1)' : statusInfo.code === 'danger' ? 'rgba(239, 68, 68, 0.1)' : statusInfo.code === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-              color: statusInfo.code === 'success' ? '#15803d' : statusInfo.code === 'danger' ? '#dc2626' : statusInfo.code === 'warning' ? '#b45309' : '#1d4ed8'
+              color: statusInfo.code === 'success' ? 'var(--color-success-deep)' : statusInfo.code === 'danger' ? 'var(--wms-danger)' : statusInfo.code === 'warning' ? 'var(--wms-warning-hover)' : 'var(--wms-primary-hover)'
             }}>
-              <span className={styles.statusDot} style={{ backgroundColor: statusInfo.code === 'success' ? '#22c55e' : statusInfo.code === 'danger' ? '#ef4444' : statusInfo.code === 'warning' ? '#f59e0b' : '#3b82f6' }}></span>
+              <span className={styles.statusDot} style={{ backgroundColor: statusInfo.code === 'success' ? '#22c55e' : statusInfo.code === 'danger' ? 'var(--wms-danger)' : statusInfo.code === 'warning' ? 'var(--color-warning)' : 'var(--color-primary-bright)' }}></span>
               {statusInfo.label}
             </span>
           </div>
@@ -251,8 +251,8 @@ function WarrantyDetailPage() {
                               <td>
                                 <span style={{
                                   padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
-                                  backgroundColor: rStatus.code === 'success' ? '#dcfce7' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : '#dbeafe',
-                                  color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : '#1e40af'
+                                  backgroundColor: rStatus.code === 'success' ? 'var(--color-success-bg)' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : 'var(--color-primary-pale)',
+                                  color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : 'var(--color-primary-link)'
                                 }}>
                                   {rStatus.label}
                                 </span>
@@ -265,7 +265,7 @@ function WarrantyDetailPage() {
                         })
                       ) : (
                         <tr>
-                          <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                          <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>
                             Sản phẩm chưa từng được sửa chữa
                           </td>
                         </tr>
@@ -319,7 +319,7 @@ function WarrantyDetailPage() {
             <div>
               <p style={{ marginBottom: 12 }}>Bạn có chắc chắn muốn vô hiệu hóa phiếu bảo hành này không? Hành động này không thể hoàn tác.</p>
               <textarea
-                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid var(--color-border-muted)', fontSize: 14 }}
                 rows={3}
                 placeholder="Nhập lý do vô hiệu hóa (Bắt buộc)..."
                 value={voidReason}

@@ -72,7 +72,7 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
       totalVatAmount += vatAmount;
 
       const serials = line.serialNumbers && line.serialNumbers.length > 0 
-        ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(line.serialNumbers.join(', '))}</div>`
+        ? `<div style="font-size: 11px; color: var(--wms-text-muted); margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(line.serialNumbers.join(', '))}</div>`
         : '';
 
       rowsHtml += `
@@ -80,7 +80,7 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
           <td style="text-align: center;">${index + 1}</td>
           <td>
             <strong>${escapeHtml(name)}</strong>
-            ${sku ? `<span style="font-size: 11px; color: #64748b;"> (${escapeHtml(sku)})</span>` : ''}
+            ${sku ? `<span style="font-size: 11px; color: var(--wms-text-muted);"> (${escapeHtml(sku)})</span>` : ''}
             ${serials}
           </td>
           <td style="text-align: center;">${escapeHtml(unit)}</td>
@@ -172,7 +172,7 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
               <td style="text-align: right;">${totalVatAmount.toLocaleString('vi-VN')}</td>
             </tr>
             ` : ''}
-            <tr class="summary-row" style="background-color: #f1f5f9; font-size: 13px;">
+            <tr class="summary-row" style="background-color: var(--wms-bg-hover); font-size: 13px;">
               <td colspan="7" style="text-align: right; font-weight: 700;">Tổng tiền thanh toán</td>
               <td style="text-align: right; font-weight: 800; color: #000;">${grandTotal.toLocaleString('vi-VN')}</td>
             </tr>
@@ -252,7 +252,7 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
           }
           body {
             font-family: 'Segoe UI', Arial, Roboto, sans-serif;
-            color: #1e293b;
+            color: var(--wms-text-strong);
             margin: 0;
             padding: 0;
             font-size: 13px;
@@ -266,17 +266,17 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
           .header-logo {
             font-size: 24px;
             font-weight: 900;
-            color: #0f172a;
+            color: var(--wms-text-title);
             letter-spacing: -0.5px;
           }
           .header-subtitle {
             font-size: 11px;
-            color: #64748b;
+            color: var(--wms-text-muted);
             font-style: italic;
           }
           .company-info {
             font-size: 11.5px;
-            color: #334155;
+            color: var(--wms-text-body);
             line-height: 1.35;
           }
           .title-container {
@@ -286,14 +286,14 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
           .doc-title {
             font-size: 20px;
             font-weight: 800;
-            color: #0f172a;
+            color: var(--wms-text-title);
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
           .doc-subtitle {
             font-size: 12px;
             font-style: italic;
-            color: #475569;
+            color: var(--wms-text-muted);
             margin-top: 2px;
           }
           .info-grid {
@@ -316,7 +316,7 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
             padding: 6px 8px;
             font-size: 12px;
             font-weight: 700;
-            background-color: #f8fafc;
+            background-color: var(--wms-bg-soft);
             text-align: center;
           }
           .main-table td {
@@ -338,9 +338,9 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
           .policy-section {
             margin-top: 18px;
             padding-top: 10px;
-            border-top: 1px dashed #cbd5e1;
+            border-top: 1px dashed var(--wms-border-strong);
             font-size: 11px;
-            color: #1e293b;
+            color: var(--wms-text-strong);
             line-height: 1.35;
           }
           .policy-title {
@@ -373,7 +373,7 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
           .sign-note {
             font-size: 10.5px;
             font-style: italic;
-            color: #64748b;
+            color: var(--wms-text-muted);
           }
           .sign-space {
             height: 60px;

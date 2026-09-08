@@ -255,7 +255,7 @@ const UnitPage = () => {
                                     <tr key={item.id}>
                                         <td style={{ fontWeight: 600 }}>{item.name}</td>
                                         <td>
-                                            <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
+                                            <span className={styles.noteText}>{item.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
                                         </td>
                                         <td>
                                             <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>

@@ -534,7 +534,7 @@ export default function WarehouseWorkspacePage() {
           width: '110px',
           render: (_, r) => {
             const diff = Number(r.diffQty ?? r.diffQuantity ?? 0);
-            const color = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : 'inherit';
+            const color = diff > 0 ? '#16a34a' : diff < 0 ? 'var(--wms-danger)' : 'inherit';
             return (
               <span style={{ textAlign: 'right', display: 'block', fontWeight: '700', color }}>
                 {diff > 0 ? `+${diff.toLocaleString('vi-VN')}` : diff.toLocaleString('vi-VN')}

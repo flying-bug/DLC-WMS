@@ -567,7 +567,7 @@ function ExportSlipPage() {
                         }
                       }}></i>
                       {slip.status === 'POSTED' && (
-                        <i className="bi bi-arrow-counterclockwise" style={{ cursor: 'pointer', color: '#dc2626', fontSize: '16px' }} title="Bỏ ghi sổ kho an toàn" onClick={(event) => {
+                        <i className="bi bi-arrow-counterclockwise" style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: '16px' }} title="Bỏ ghi sổ kho an toàn" onClick={(event) => {
                           event.stopPropagation();
                           setUnpostTarget(slip);
                         }}></i>
@@ -597,14 +597,14 @@ function ExportSlipPage() {
                   <button 
                     className={styles.btnSecondary} 
                     onClick={() => setSelectedIds([])}
-                    style={{ backgroundColor: 'white', color: '#64748b', borderColor: '#e2e8f0' }}
+                    style={{ backgroundColor: 'white', color: 'var(--wms-text-muted)', borderColor: 'var(--wms-border-base)' }}
                   >
                     <i className="bi bi-x-circle"></i> Bỏ chọn
                   </button>
-                  <button className={styles.btnSecondary} onClick={handleBulkPrint} style={{ backgroundColor: 'white', color: '#475569', borderColor: '#cbd5e1' }}>
+                  <button className={styles.btnSecondary} onClick={handleBulkPrint} style={{ backgroundColor: 'white', color: 'var(--wms-text-muted)', borderColor: 'var(--wms-border-strong)' }}>
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
-                  <button className={styles.btnSecondary} onClick={handleExport} style={{ backgroundColor: 'white', color: '#16a34a', borderColor: '#bbf7d0' }}>
+                  <button className={styles.btnSecondary} onClick={handleExport} style={{ backgroundColor: 'white', color: '#16a34a', borderColor: 'var(--wms-success-border)' }}>
                     <i className="bi bi-file-earmark-excel"></i>
                   </button>
                 </div>
@@ -770,7 +770,7 @@ function ExportSlipPage() {
                           <span className={styles.infoLabel}>
                             <i className="bi bi-chat-text"></i> Lý do xuất
                           </span>
-                          <span className={styles.infoValue} style={{ color: cleanNote ? 'inherit' : '#9ca3af', fontStyle: cleanNote ? 'normal' : 'italic' }}>
+                          <span className={styles.infoValue} style={{ color: cleanNote ? 'inherit' : 'var(--color-text-placeholder)', fontStyle: cleanNote ? 'normal' : 'italic' }}>
                             {cleanNote || 'Không có ghi chú'}
                           </span>
                         </div>
@@ -854,19 +854,19 @@ function ExportSlipPage() {
                           <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
                           <td>{baseUnitName}</td>
                           <td className={styles.textCenter}>{ratio}</td>
-                          <td className={styles.textCenter} style={{ fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                          <td className={styles.textRight} style={{ fontWeight: '600', color: '#059669' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+                          <td className={styles.textCenter} style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                          <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
                           {showPricing && <td className={styles.textRight}>{money(line.unitPrice)}</td>}
                           {showPricing && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
                           {showPricing && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
                           {showPricing && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
                           <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
                             {line.serialNumbers && line.serialNumbers.length > 0 ? (
-                              <span style={{ fontSize: '13px', color: '#334155', fontWeight: '500' }}>
+                              <span style={{ fontSize: '13px', color: 'var(--wms-text-body)', fontWeight: '500' }}>
                                 {line.serialNumbers.join(', ')}
                               </span>
                             ) : (
-                              <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
+                              <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
                             )}
                           </td>
                         </tr>
@@ -879,7 +879,7 @@ function ExportSlipPage() {
                   const { attachments } = parseNoteAndAttachments(selectedSlip.note);
                   if (!attachments || attachments.length === 0) return null;
                   return (
-                    <div style={{ marginTop: '16px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ marginTop: '16px', padding: '12px 16px', backgroundColor: 'var(--wms-bg-soft)', borderRadius: '8px', border: '1px solid var(--wms-border-base)' }}>
                       <AttachmentUpload
                         files={attachments}
                         disabled={true}
@@ -896,8 +896,8 @@ function ExportSlipPage() {
                   <div style={{ flex: 1 }}></div>
                   {showPricing && (
                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
+                      <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
+                      <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
                       <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumAmount(selectedSlip.lines))}</strong></div>
                     </div>
                   )}

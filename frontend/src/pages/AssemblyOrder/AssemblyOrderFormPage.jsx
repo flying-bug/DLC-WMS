@@ -29,8 +29,8 @@ const STATUS_META = {
 };
 
 const COMPONENT_SERIAL_STATUS = {
-    ACTIVE: { label: 'Đang dùng', color: '#166534', bg: '#dcfce7', border: '#bbf7d0' },
-    REPLACED: { label: 'Đã thay thế', color: '#92400e', bg: '#fef3c7', border: '#fde68a' },
+    ACTIVE: { label: 'Đang dùng', color: '#166534', bg: 'var(--color-success-bg)', border: 'var(--wms-success-border)' },
+    REPLACED: { label: 'Đã thay thế', color: '#92400e', bg: '#fef3c7', border: 'var(--wms-warning-border)' },
     REMOVED: { label: 'Đã loại bỏ', color: '#991b1b', bg: '#fee2e2', border: '#fecaca' }
 };
 
@@ -726,7 +726,7 @@ function AssemblyOrderFormPage() {
                             <h2 className={styles.cardTitle}>Thông tin chung</h2>
 
                             {editing && (
-                                <div className={styles.detailGrid} style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <div className={styles.detailGrid} style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'var(--wms-bg-soft)', borderRadius: '8px', border: '1px solid var(--wms-border-base)' }}>
                                     <div className={styles.detailItem}><span>Trạng thái</span><strong><span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>{status.label}</span></strong></div>
                                     <div className={styles.detailItem}><span>Người tạo</span><strong>{orderDetail?.createdByName ? orderDetail.createdByName : (orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Hệ thống')}</strong></div>
                                     <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? formatDateTime(orderDetail.createdAt) : '---'}</strong></div>
@@ -845,7 +845,7 @@ function AssemblyOrderFormPage() {
 
                                 <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
                                     <span className={styles.summaryLabel}>Tiến độ xuất kho (Bị trừ):</span>
-                                    <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--wms-border-base)', borderRadius: '4px', overflow: 'hidden' }}>
                                         <div style={{
                                             height: '100%',
                                             backgroundColor: 'var(--color-warning)',
@@ -858,7 +858,7 @@ function AssemblyOrderFormPage() {
                                 </div>
                                 <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
                                     <span className={styles.summaryLabel}>Tiến độ nhập kho (Được cộng):</span>
-                                    <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--wms-border-base)', borderRadius: '4px', overflow: 'hidden' }}>
                                         <div style={{
                                             height: '100%',
                                             backgroundColor: 'var(--color-success)',
@@ -884,25 +884,25 @@ function AssemblyOrderFormPage() {
                         {orderSerialGroups.length > 0 ? (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                                 {orderSerialGroups.map(([targetSerial, components], index) => (
-                                    <div key={targetSerial} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                                        <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
+                                    <div key={targetSerial} style={{ border: '1px solid var(--wms-border-base)', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ backgroundColor: 'var(--wms-bg-soft)', padding: '12px 16px', borderBottom: '1px solid var(--wms-border-base)', display: 'flex', alignItems: 'center' }}>
                                             <div style={{ backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', marginRight: '12px', flexShrink: 0 }}>
                                                 {index + 1}
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{orderDetail?.orderType === 'DISASSEMBLY' ? 'Thành phẩm đã tháo:' : 'Thành phẩm đã lắp:'} {orderDetail.targetName}</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--wms-text-muted)', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{orderDetail?.orderType === 'DISASSEMBLY' ? 'Thành phẩm đã tháo:' : 'Thành phẩm đã lắp:'} {orderDetail.targetName}</div>
                                                 <div style={{ fontWeight: 600, color: 'var(--color-primary)', fontSize: '14px' }}>{targetSerial}</div>
                                             </div>
                                         </div>
                                         <div style={{ padding: '8px 0' }}>
                                             {components.map((comp, i) => (
-                                                <div key={comp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: i < components.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: '13px' }}>
+                                                <div key={comp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: i < components.length - 1 ? '1px solid var(--wms-bg-hover)' : 'none', fontSize: '13px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, paddingRight: '12px' }}>
                                                         <i className={orderDetail?.orderType === 'DISASSEMBLY' ? "bi bi-box-arrow-up-right" : "bi bi-arrow-return-right"} style={{ color: 'var(--color-primary)', opacity: 0.5, marginRight: '8px' }}></i>
-                                                        <span style={{ color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={comp.componentName}>{comp.componentName}</span>
+                                                        <span style={{ color: 'var(--wms-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={comp.componentName}>{comp.componentName}</span>
                                                     </div>
                                                     <SerialStatusBadge status={comp.status} />
-                                                    <span style={{ fontWeight: 500, color: '#0f172a', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>{comp.componentSerial}</span>
+                                                    <span style={{ fontWeight: 500, color: 'var(--wms-text-title)', backgroundColor: 'var(--wms-bg-hover)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--wms-border-base)' }}>{comp.componentSerial}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -910,7 +910,7 @@ function AssemblyOrderFormPage() {
                                 ))}
                             </div>
                         ) : (
-                            <div style={{ padding: '16px 20px', color: '#64748b', fontSize: '13px' }}>
+                            <div style={{ padding: '16px 20px', color: 'var(--wms-text-muted)', fontSize: '13px' }}>
                                 Chưa có serial thuộc phiếu này.
                             </div>
                         )}
@@ -927,7 +927,7 @@ function AssemblyOrderFormPage() {
                 {orderDetail?.status === 'APPROVED' && (
                     <div className={styles.actionButtons}>
                         {['ASSEMBLY', 'DISASSEMBLY'].includes(form.orderType) && (
-                            <button className="btn-misa-post" style={{ backgroundColor: '#10b981', marginRight: '8px' }} type="button" onClick={() => setShowExecutionModal(true)}>
+                            <button className="btn-misa-post" style={{ backgroundColor: 'var(--color-success-alt)', marginRight: '8px' }} type="button" onClick={() => setShowExecutionModal(true)}>
                                 <i className="bi bi-upc-scan"></i> {form.orderType === 'ASSEMBLY' ? 'Thực thi Lắp ráp' : 'Thực thi Tháo dỡ'}
                             </button>
                         )}
@@ -959,7 +959,7 @@ function AssemblyOrderFormPage() {
                 
                 {orderDetail && (
                     <div className={styles.actionButtons} style={{ marginBottom: '16px', justifyContent: 'flex-end' }}>
-                        <button className="btn-misa-draft" style={{ backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} type="button" onClick={() => {
+                        <button className="btn-misa-draft" style={{ backgroundColor: '#fff', color: 'var(--color-text)', border: '1px solid var(--color-border-muted)' }} type="button" onClick={() => {
                             printAssemblyOrder(orderDetail, {
                                 warehouseName: warehouses.find(w => String(w.id) === String(orderDetail.warehouseId))?.name || '',
                                 productById: new Map(products.map(p => [String(p.id), p])),
@@ -998,14 +998,14 @@ function AssemblyOrderFormPage() {
             >
                 {pickingLineIndex !== null ? (
                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '85vh' }}>
-                        <div className={bomStyles.modalHeader} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
-                            <button type="button" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }} style={{ background: '#f3f4f6', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4b5563', transition: 'all 0.2s' }} title="Quay lại danh sách cấu hình">
+                        <div className={bomStyles.modalHeader} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', background: '#fff' }}>
+                            <button type="button" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }} style={{ background: 'var(--color-bg)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4b5563', transition: 'all 0.2s' }} title="Quay lại danh sách cấu hình">
                                 <i className="bi bi-arrow-left" style={{ fontSize: '18px' }}></i>
                             </button>
                             <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tìm kiếm & Chọn linh kiện</h2>
                         </div>
                         <div className={bomStyles.modalBody} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                            <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', background: '#f8fafc', flexShrink: 0 }}>
+                            <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', background: 'var(--wms-bg-soft)', flexShrink: 0 }}>
                                 <input
                                     type="text"
                                     className="misa-input"
@@ -1047,7 +1047,7 @@ function AssemblyOrderFormPage() {
                                             <div className={bomStyles.bomItemMeta}>
                                                 <span>Mã SP: <strong>{variant.sku}</strong></span>
                                                 <span>Bảo hành: <strong>{variant.warrantyQty != null ? `${variant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
-                                                <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
+                                                <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
                                             </div>
                                             <div className={bomStyles.variantPickerPrice}>
                                                 {Number(variant.salePrice || 0).toLocaleString('vi-VN')} đ
@@ -1098,9 +1098,9 @@ function AssemblyOrderFormPage() {
                 ) : (
                     <>
                         {/* Custom Modal Header to match Image 1 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #e5e7eb' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--color-border)' }}>
                             <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tạo nhanh cấu hình</h2>
-                            <button type="button" onClick={() => setShowBomModal(false)} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
+                            <button type="button" onClick={() => setShowBomModal(false)} style={{ background: 'var(--color-bg)', border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
                                 <i className="bi bi-x-lg"></i>
                             </button>
                         </div>
@@ -1161,7 +1161,7 @@ function AssemblyOrderFormPage() {
                                                             {index + 1}. {line.componentRole || (selectedVariant ? selectedVariant.categoryName : 'Linh kiện tùy chọn')}
                                                         </span>
                                                         {line.templateNote && (
-                                                            <span style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 500, marginLeft: '6px', border: '1px dashed #f59e0b' }}>
+                                                            <span style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 500, marginLeft: '6px', border: '1px dashed var(--color-warning)' }}>
                                                                 <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
                                                                 Yêu cầu: {line.templateNote}
                                                             </span>
@@ -1174,7 +1174,7 @@ function AssemblyOrderFormPage() {
                                                             </div>
                                                         )}
                                                         {line.componentRole && (
-                                                            <span style={{ fontSize: '0.65rem', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                                            <span style={{ fontSize: '0.65rem', backgroundColor: '#fef2f2', color: 'var(--wms-danger)', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
                                                                 Bắt buộc
                                                             </span>
                                                         )}
@@ -1196,7 +1196,7 @@ function AssemblyOrderFormPage() {
                                                             </div>
                                                             <div className={bomStyles.bomItemMeta}>
                                                                 <span>Bảo hành: <strong>{selectedVariant.warrantyQty != null ? `${selectedVariant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
-                                                                <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
+                                                                <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                                 <span>Mã SP: <strong>{selectedVariant.sku}</strong></span>
                                                             </div>
                                                             <div className={bomStyles.bomExtraFields}>
@@ -1230,8 +1230,8 @@ function AssemblyOrderFormPage() {
                                                     <div className={bomStyles.bomEmptySlot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px' }}>
                                                         {line.componentRole && (
                                                             <div style={{ fontWeight: 600, color: '#4b5563', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <i className="bi bi-info-circle" style={{ color: '#3b82f6' }}></i>
-                                                                Cần chọn danh mục: <span style={{ color: '#1d4ed8' }}>{line.componentRole}</span>
+                                                                <i className="bi bi-info-circle" style={{ color: 'var(--color-primary-bright)' }}></i>
+                                                                Cần chọn danh mục: <span style={{ color: 'var(--wms-primary-hover)' }}>{line.componentRole}</span>
                                                                 {line.templateNote && (
                                                                     <span style={{ marginLeft: '8px', color: '#92400e', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.85rem' }}>
                                                                         <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
@@ -1248,7 +1248,7 @@ function AssemblyOrderFormPage() {
                                                             + Chọn linh kiện...
                                                         </button>
                                                         {!line.componentRole && (
-                                                            <button className={bomStyles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeBomLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                                                            <button className={bomStyles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeBomLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}>
                                                                 <i className="bi bi-trash"></i>
                                                             </button>
                                                         )}
@@ -1297,20 +1297,20 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
     const isLoss = tone === 'loss';
     return (
         <div style={{
-            border: `1px solid ${isLoss ? '#fecaca' : '#bbf7d0'}`,
+            border: `1px solid ${isLoss ? '#fecaca' : 'var(--wms-success-border)'}`,
             borderRadius: '8px',
             overflow: 'hidden',
-            backgroundColor: '#ffffff'
+            backgroundColor: 'var(--color-white)'
         }}>
             <div style={{
                 padding: '12px 16px',
-                backgroundColor: isLoss ? '#fef2f2' : '#f0fdf4',
+                backgroundColor: isLoss ? '#fef2f2' : 'var(--color-success-bg-soft)',
                 color: isLoss ? '#991b1b' : '#166534',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 fontWeight: 600,
-                borderBottom: `1px solid ${isLoss ? '#fecaca' : '#bbf7d0'}`
+                borderBottom: `1px solid ${isLoss ? '#fecaca' : 'var(--wms-success-border)'}`
             }}>
                 <i className={`bi ${icon}`}></i>
                 <span>{title}</span>
@@ -1322,7 +1322,7 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '12px 16px',
-                        borderBottom: index < items.length - 1 ? '1px solid #f1f5f9' : 'none'
+                        borderBottom: index < items.length - 1 ? '1px solid var(--wms-bg-hover)' : 'none'
                     }}>
                         <div style={{ flex: 1, minWidth: 0, paddingRight: '16px' }}>
                             <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px', wordBreak: 'break-word' }}>{item.name || 'Chưa có tên hàng'}</div>
@@ -1331,7 +1331,7 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
                         <div style={{
                             fontWeight: 600,
                             fontSize: '15px',
-                            color: isLoss ? '#dc2626' : '#16a34a',
+                            color: isLoss ? 'var(--wms-danger)' : '#16a34a',
                             whiteSpace: 'nowrap',
                             flexShrink: 0
                         }}>

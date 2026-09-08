@@ -67,7 +67,7 @@ export default function SearchableSelect({ children, value, onChange, name, clas
                 control: (base) => ({
                     ...base,
                     minHeight: '32px',
-                    borderColor: '#d1d5db',
+                    borderColor: 'var(--color-border-muted)',
                     flexWrap: 'nowrap',
                     minWidth: computedMinWidth,
                     ...cleanStyle

@@ -117,7 +117,7 @@
 .welcomeTitle {
     font-size: 30px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-white);
     margin: 0 0 12px;
     letter-spacing: -0.5px;
     line-height: 1.2;
@@ -197,7 +197,7 @@
 }
 
 .cardIconGreen {
-    background-color: var(--status-success-bg, #dcfce7);
+    background-color: var(--status-success-bg, var(--color-success-bg));
 }
 
 /* Card text */

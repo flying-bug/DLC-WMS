@@ -106,9 +106,9 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
       }}>
         {/* Modal Header */}
         <div style={{
-          padding: '12px 20px', borderBottom: '1px solid #e2e8f0',
+          padding: '12px 20px', borderBottom: '1px solid var(--wms-border-base)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: 'linear-gradient(to right, #1e40af, #2563eb)', color: '#fff'
+          background: 'linear-gradient(to right, var(--color-primary-link), var(--wms-primary))', color: '#fff'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <i className="bi bi-receipt" style={{ fontSize: '20px' }} />
@@ -141,7 +141,7 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
               onClick={handlePrint}
               title="In hoặc Lưu file PDF"
               style={{
-                background: '#10b981', border: 'none', color: '#fff',
+                background: 'var(--color-success-alt)', border: 'none', color: '#fff',
                 padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px',
                 fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px'
               }}
@@ -163,7 +163,7 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
         </div>
 
         {/* Modal Body: iframe / Loading / Error */}
-        <div style={{ flex: 1, backgroundColor: '#f1f5f9', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, backgroundColor: 'var(--wms-bg-hover)', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {invoice.status === 'CANCELED' && (
             <div style={{
               background: '#fef2f2', borderBottom: '1px solid #fecaca', color: '#991b1b',
@@ -171,9 +171,9 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
               fontSize: '13px', flexShrink: 0
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="bi bi-exclamation-octagon-fill" style={{ color: '#dc2626', fontSize: '18px' }} />
+                <i className="bi bi-exclamation-octagon-fill" style={{ color: 'var(--wms-danger)', fontSize: '18px' }} />
                 <div>
-                  <strong style={{ color: '#dc2626' }}>HÓA ĐƠN ĐÃ HỦY:</strong> {invoice.cancelReason || 'Không có lý do chi tiết'}
+                  <strong style={{ color: 'var(--wms-danger)' }}>HÓA ĐƠN ĐÃ HỦY:</strong> {invoice.cancelReason || 'Không có lý do chi tiết'}
                 </div>
               </div>
               <div style={{ fontSize: '12px', color: '#7f1d1d' }}>
@@ -184,7 +184,7 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
           {loading ? (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', height: '100%', color: '#64748b', gap: '12px'
+              justifyContent: 'center', height: '100%', color: 'var(--wms-text-muted)', gap: '12px'
             }}>
               <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
                 <span className="visually-hidden">Đang tải...</span>
@@ -194,7 +194,7 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
           ) : error ? (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', height: '100%', color: '#ef4444', gap: '10px', padding: '20px'
+              justifyContent: 'center', height: '100%', color: 'var(--wms-danger)', gap: '10px', padding: '20px'
             }}>
               <i className="bi bi-exclamation-triangle" style={{ fontSize: '36px' }} />
               <div style={{ fontSize: '15px', fontWeight: 600 }}>{error}</div>
@@ -204,7 +204,7 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
                   target="_blank"
                   rel="noreferrer"
                   style={{
-                    color: '#2563eb', fontSize: '13px', textDecoration: 'underline', marginTop: '6px'
+                    color: 'var(--wms-primary)', fontSize: '13px', textDecoration: 'underline', marginTop: '6px'
                   }}
                 >
                   Nhấn vào đây để thử mở trực tiếp bằng đường dẫn
@@ -226,7 +226,7 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
               style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#fff' }}
             />
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--wms-text-muted)' }}>
               Không có đường dẫn bản thể hiện hóa đơn
             </div>
           )}

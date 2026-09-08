@@ -39,32 +39,32 @@ export default function CancelInvoiceModal({ invoice, isOpen, onClose, onSuccess
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
       }}>
         <div style={{
-          padding: '16px 20px', borderBottom: '1px solid #e2e8f0',
+          padding: '16px 20px', borderBottom: '1px solid var(--wms-border-base)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
-          <h3 style={{ margin: 0, fontSize: '17px', color: '#dc2626', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '17px', color: 'var(--wms-danger)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <i className="bi bi-exclamation-triangle" /> Hủy Hóa Đơn Điện Tử
           </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--wms-text-subtle)' }}>&times;</button>
         </div>
 
         <form onSubmit={handleCancel} style={{ padding: '20px' }}>
           {error && (
-            <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: '13px', marginBottom: '14px' }}>
+            <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: 'var(--wms-danger)', fontSize: '13px', marginBottom: '14px' }}>
               {error}
             </div>
           )}
 
-          <div style={{ marginBottom: '16px', fontSize: '13px', color: '#475569', lineHeight: '1.6' }}>
-            <div>Số hóa đơn: <strong style={{ color: '#1e293b' }}>{invoice.invoiceNumber || 'Chưa cấp số'}</strong></div>
-            <div>Ký hiệu: <strong style={{ color: '#1e293b' }}>{invoice.invoiceSeries}</strong></div>
-            <div>Người mua: <strong style={{ color: '#1e293b' }}>{invoice.buyerLegalName || invoice.buyerName}</strong></div>
+          <div style={{ marginBottom: '16px', fontSize: '13px', color: 'var(--wms-text-muted)', lineHeight: '1.6' }}>
+            <div>Số hóa đơn: <strong style={{ color: 'var(--wms-text-strong)' }}>{invoice.invoiceNumber || 'Chưa cấp số'}</strong></div>
+            <div>Ký hiệu: <strong style={{ color: 'var(--wms-text-strong)' }}>{invoice.invoiceSeries}</strong></div>
+            <div>Người mua: <strong style={{ color: 'var(--wms-text-strong)' }}>{invoice.buyerLegalName || invoice.buyerName}</strong></div>
             <div>Tổng thanh toán: <strong style={{ color: '#16a34a' }}>{Number(invoice.totalAmount || 0).toLocaleString('vi-VN')} đ</strong></div>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Lý do hủy hóa đơn <span style={{ color: '#ef4444' }}>*</span>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '6px' }}>
+              Lý do hủy hóa đơn <span style={{ color: 'var(--wms-danger)' }}>*</span>
             </label>
             <textarea
               rows={3}
@@ -72,7 +72,7 @@ export default function CancelInvoiceModal({ invoice, isOpen, onClose, onSuccess
               onChange={(e) => setReason(e.target.value)}
               placeholder="Nhập lý do chi tiết (sai thông tin khách hàng, điều chỉnh giá, trả hàng...)"
               style={{
-                width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1',
+                width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)',
                 borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', outline: 'none'
               }}
             />
@@ -84,8 +84,8 @@ export default function CancelInvoiceModal({ invoice, isOpen, onClose, onSuccess
               onClick={onClose}
               disabled={loading}
               style={{
-                padding: '8px 16px', background: '#fff', border: '1px solid #cbd5e1',
-                borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#475569'
+                padding: '8px 16px', background: '#fff', border: '1px solid var(--wms-border-strong)',
+                borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--wms-text-muted)'
               }}
             >
               Đóng
@@ -94,7 +94,7 @@ export default function CancelInvoiceModal({ invoice, isOpen, onClose, onSuccess
               type="submit"
               disabled={loading}
               style={{
-                padding: '8px 18px', background: '#dc2626', border: 'none',
+                padding: '8px 18px', background: 'var(--wms-danger)', border: 'none',
                 borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#fff',
                 display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}

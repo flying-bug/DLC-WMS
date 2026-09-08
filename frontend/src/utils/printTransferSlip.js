@@ -57,12 +57,12 @@ export function printTransferSlip(slipOrSlips, options = {}) {
       totalAmount += amount;
 
       const serials = line.serialNumbers && line.serialNumbers.length > 0
-        ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(line.serialNumbers.join(', '))}</div>`
+        ? `<div style="font-size: 11px; color: var(--wms-text-muted); margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(line.serialNumbers.join(', '))}</div>`
         : '';
 
       let lineNote = '';
       if (line.note && line.note !== `Serial: ${line.serialNumbers?.join(', ')}`) {
-        lineNote = `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">${escapeHtml(line.note)}</div>`;
+        lineNote = `<div style="font-size: 11px; color: var(--wms-text-muted); margin-top: 2px;">${escapeHtml(line.note)}</div>`;
       }
 
       rowsHtml += `
@@ -70,7 +70,7 @@ export function printTransferSlip(slipOrSlips, options = {}) {
           <td style="text-align: center;">${index + 1}</td>
           <td>
             <strong>${escapeHtml(name)}</strong>
-            ${sku ? `<span style="font-size: 11px; color: #64748b;"> (${escapeHtml(sku)})</span>` : ''}
+            ${sku ? `<span style="font-size: 11px; color: var(--wms-text-muted);"> (${escapeHtml(sku)})</span>` : ''}
             ${serials}
             ${lineNote}
           </td>
@@ -202,7 +202,7 @@ export function printTransferSlip(slipOrSlips, options = {}) {
             font-family: 'Inter', sans-serif; 
             margin: 0; 
             padding: 0; 
-            color: #0f172a; 
+            color: var(--wms-text-title); 
             line-height: 1.5;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -224,10 +224,10 @@ export function printTransferSlip(slipOrSlips, options = {}) {
             pointer-events: none;
           }
 
-          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; border-bottom: 2px solid #0f172a; padding-bottom: 16px; }
+          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; border-bottom: 2px solid var(--wms-text-title); padding-bottom: 16px; }
           .header-logo { 
             display: inline-block;
-            background: #0f172a;
+            background: var(--wms-text-title);
             color: #fff;
             font-weight: 900;
             font-size: 24px;
@@ -236,26 +236,26 @@ export function printTransferSlip(slipOrSlips, options = {}) {
             margin-bottom: 4px;
             letter-spacing: 1px;
           }
-          .header-subtitle { font-size: 11px; font-style: italic; color: #475569; letter-spacing: 0.5px; }
-          .company-info { font-size: 12px; color: #334155; line-height: 1.6; }
+          .header-subtitle { font-size: 11px; font-style: italic; color: var(--wms-text-muted); letter-spacing: 0.5px; }
+          .company-info { font-size: 12px; color: var(--wms-text-body); line-height: 1.6; }
 
           .title-container { text-align: center; margin: 24px 0 32px 0; }
-          .doc-title { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #0f172a; margin-bottom: 4px; }
-          .doc-subtitle { font-size: 13px; font-style: italic; color: #64748b; }
+          .doc-title { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--wms-text-title); margin-bottom: 4px; }
+          .doc-subtitle { font-size: 13px; font-style: italic; color: var(--wms-text-muted); }
 
           .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
           .info-grid td { vertical-align: top; padding: 4px 8px; line-height: 1.6; }
 
           .main-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
-          .main-table th, .main-table td { border: 1px solid #cbd5e1; padding: 10px 8px; }
-          .main-table th { background-color: #f8fafc; font-weight: 600; text-align: center; color: #334155; text-transform: uppercase; font-size: 12px; border-bottom: 2px solid #94a3b8; }
-          .main-table tbody tr:nth-child(even) { background-color: #f8fafc; }
-          .main-table tfoot td { background-color: #f1f5f9; padding: 12px 8px; }
+          .main-table th, .main-table td { border: 1px solid var(--wms-border-strong); padding: 10px 8px; }
+          .main-table th { background-color: var(--wms-bg-soft); font-weight: 600; text-align: center; color: var(--wms-text-body); text-transform: uppercase; font-size: 12px; border-bottom: 2px solid var(--wms-text-subtle); }
+          .main-table tbody tr:nth-child(even) { background-color: var(--wms-bg-soft); }
+          .main-table tfoot td { background-color: var(--wms-bg-hover); padding: 12px 8px; }
 
           .signatures { width: 100%; margin-top: 40px; page-break-inside: avoid; }
           .signatures td { width: 25%; text-align: center; vertical-align: top; }
-          .signatures strong { font-size: 13px; color: #0f172a; display: block; margin-bottom: 4px; }
-          .sign-note { font-size: 12px; font-style: italic; color: #64748b; }
+          .signatures strong { font-size: 13px; color: var(--wms-text-title); display: block; margin-bottom: 4px; }
+          .sign-note { font-size: 12px; font-style: italic; color: var(--wms-text-muted); }
         </style>
       </head>
       <body>

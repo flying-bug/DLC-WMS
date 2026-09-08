@@ -186,7 +186,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                                     Bao gồm {tree.components.length} linh kiện
                                                 </span>
                                             ) : (
-                                                <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>
+                                                <span style={{ color: 'var(--wms-text-subtle)', fontStyle: 'italic', fontSize: '13px' }}>
                                                     Đơn chiếc
                                                 </span>
                                             )}
@@ -306,7 +306,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                             <td style={{ textAlign: 'right', fontWeight: '500' }}>
                                                 {formatNumber(item.quantityOnHand)}
                                             </td>
-                                            <td style={{ textAlign: 'right', color: '#64748b' }}>
+                                            <td style={{ textAlign: 'right', color: 'var(--wms-text-muted)' }}>
                                                 {formatNumber(item.quantityReserved)}
                                             </td>
                                             <td style={{ textAlign: 'right' }}>

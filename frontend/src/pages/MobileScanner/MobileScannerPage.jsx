@@ -47,7 +47,7 @@ export default function MobileScannerPage() {
   if (!sessionId) {
     return (
       <div className={styles.container} style={{ justifyContent: 'center', textAlign: 'center', padding: '20px' }}>
-        <h2 style={{ color: '#ef4444', marginBottom: '16px' }}>❌ Thiếu phiên kết nối</h2>
+        <h2 style={{ color: 'var(--wms-danger)', marginBottom: '16px' }}>❌ Thiếu phiên kết nối</h2>
         <p>Vui lòng mở tính năng <b>"Quét hóa đơn AI"</b> trên máy tính, sau đó dùng Zalo hoặc ứng dụng Camera quét mã QR hiển thị trên màn hình máy tính.</p>
       </div>
     );

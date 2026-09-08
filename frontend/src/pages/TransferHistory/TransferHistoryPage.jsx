@@ -492,7 +492,7 @@ function TransferHistoryPage() {
                       <span className={styles.infoLabel}>
                         <i className="bi bi-chat-text"></i> Ghi chú
                       </span>
-                      <span className={styles.infoValue} style={{ color: selectedSlip.note ? 'inherit' : '#9ca3af', fontStyle: selectedSlip.note ? 'normal' : 'italic' }}>
+                      <span className={styles.infoValue} style={{ color: selectedSlip.note ? 'inherit' : 'var(--color-text-placeholder)', fontStyle: selectedSlip.note ? 'normal' : 'italic' }}>
                         {selectedSlip.note || 'Không có ghi chú'}
                       </span>
                     </div>
@@ -549,7 +549,7 @@ function TransferHistoryPage() {
                             {line.note ? (
                               <span style={{ fontSize: '13px' }}>{line.note}</span>
                             ) : (
-                              <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
+                              <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
                             )}
                           </td>
                         </tr>

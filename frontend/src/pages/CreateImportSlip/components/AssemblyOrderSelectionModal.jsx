@@ -145,7 +145,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                                                     onChange={() => setSelectedOrderId(order.id)} 
                                                 />
                                             </td>
-                                            <td style={{ color: '#2563eb', fontWeight: 500 }}>{order.orderCode}</td>
+                                            <td style={{ color: 'var(--wms-primary)', fontWeight: 500 }}>{order.orderCode}</td>
                                             <td>{TYPE_META[order.orderType] || order.orderType}</td>
                                             <td>{order.bomCode || order.bomName || 'Chưa có'}</td>
                                             <td>{order.targetName || order.targetSku || 'Chưa có'}</td>

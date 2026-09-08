@@ -71,11 +71,11 @@ export function printStocktakeReport(options = {}) {
       : (Array.isArray(line.serialNumbers) ? line.serialNumbers : []);
 
     const serialText = serialList.length > 0
-      ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(serialList.join(', '))}</div>`
+      ? `<div style="font-size: 11px; color: var(--wms-text-muted); margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(serialList.join(', '))}</div>`
       : '';
 
     const diffText = diffQty > 0 ? `+${diffQty.toLocaleString('vi-VN')}` : diffQty.toLocaleString('vi-VN');
-    const diffColor = diffQty > 0 ? '#16a34a' : (diffQty < 0 ? '#dc2626' : '#334155');
+    const diffColor = diffQty > 0 ? '#16a34a' : (diffQty < 0 ? 'var(--wms-danger)' : 'var(--wms-text-body)');
 
     rowsHtml += `
       <tr>
@@ -85,7 +85,7 @@ export function printStocktakeReport(options = {}) {
         </td>
         <td>
           <strong>${escapeHtml(line.itemName || line.productName || '')}</strong>
-          ${line.sku && line.sku !== line.itemCode ? `<span style="font-size: 11px; color: #64748b;"> (${escapeHtml(line.sku)})</span>` : ''}
+          ${line.sku && line.sku !== line.itemCode ? `<span style="font-size: 11px; color: var(--wms-text-muted);"> (${escapeHtml(line.sku)})</span>` : ''}
           ${serialText}
         </td>
         <td style="text-align: center;">${escapeHtml(line.unit || line.unitName || 'Chiếc')}</td>
@@ -116,7 +116,7 @@ export function printStocktakeReport(options = {}) {
         body {
           font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
           font-size: 13px;
-          color: #1e293b;
+          color: var(--wms-text-strong);
           margin: 0;
           padding: 10px;
           background: #fff;
@@ -124,20 +124,20 @@ export function printStocktakeReport(options = {}) {
         .header {
           display: flex;
           justify-content: space-between;
-          border-bottom: 2px solid #0f172a;
+          border-bottom: 2px solid var(--wms-text-title);
           padding-bottom: 12px;
           margin-bottom: 16px;
         }
         .company-info h2 {
           margin: 0 0 4px 0;
           font-size: 16px;
-          color: #0f172a;
+          color: var(--wms-text-title);
           text-transform: uppercase;
         }
         .company-info p {
           margin: 2px 0;
           font-size: 12px;
-          color: #475569;
+          color: var(--wms-text-muted);
         }
         .doc-title {
           text-align: center;
@@ -146,24 +146,24 @@ export function printStocktakeReport(options = {}) {
         .doc-title h1 {
           margin: 0 0 6px 0;
           font-size: 20px;
-          color: #1e3a8a;
+          color: var(--color-primary-navy);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
         .doc-title p {
           margin: 2px 0;
           font-size: 13px;
-          color: #475569;
+          color: var(--wms-text-muted);
         }
         .meta-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 8px 16px;
           margin-bottom: 16px;
-          background: #f8fafc;
+          background: var(--wms-bg-soft);
           padding: 12px;
           border-radius: 4px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--wms-border-base);
           font-size: 13px;
         }
         table.report-table {
@@ -173,18 +173,18 @@ export function printStocktakeReport(options = {}) {
           font-size: 12px;
         }
         table.report-table th, table.report-table td {
-          border: 1px solid #cbd5e1;
+          border: 1px solid var(--wms-border-strong);
           padding: 6px 8px;
         }
         table.report-table th {
-          background-color: #f1f5f9;
-          color: #0f172a;
+          background-color: var(--wms-bg-hover);
+          color: var(--wms-text-title);
           font-weight: 600;
           text-transform: uppercase;
           font-size: 11px;
         }
         table.report-table tr:nth-child(even) {
-          background-color: #f8fafc;
+          background-color: var(--wms-bg-soft);
         }
         .summary-box {
           margin-top: 12px;
@@ -208,7 +208,7 @@ export function printStocktakeReport(options = {}) {
         }
         .sig-block span {
           font-size: 11px;
-          color: #64748b;
+          color: var(--wms-text-muted);
           font-style: italic;
         }
         .sig-space {
@@ -226,7 +226,7 @@ export function printStocktakeReport(options = {}) {
           <h2>CÔNG TY TNHH VẬT TƯ THIẾT BỊ DUY LONG</h2>
           <p>Hệ thống Quản lý Kho Hàng (DLC-WMS)</p>
         </div>
-        <div style="text-align: right; font-size: 12px; color: #64748b;">
+        <div style="text-align: right; font-size: 12px; color: var(--wms-text-muted);">
           <div>Mẫu số: 05-VT</div>
           <div>Ngày in: ${formatDateOnly(new Date())}</div>
         </div>
@@ -264,10 +264,10 @@ export function printStocktakeReport(options = {}) {
           </tr>
         </thead>
         <tbody>
-          ${rowsHtml || '<tr><td colspan="11" style="text-align: center; color: #64748b;">Không có dữ liệu hàng hóa</td></tr>'}
+          ${rowsHtml || '<tr><td colspan="11" style="text-align: center; color: var(--wms-text-muted);">Không có dữ liệu hàng hóa</td></tr>'}
         </tbody>
         <tfoot>
-          <tr style="font-weight: bold; background-color: #e2e8f0;">
+          <tr style="font-weight: bold; background-color: var(--wms-border-base);">
             <td colspan="4" style="text-align: right;">TỔNG CỘNG:</td>
             <td style="text-align: right;">${totalBook.toLocaleString('vi-VN')}</td>
             <td style="text-align: right;">${totalCount.toLocaleString('vi-VN')}</td>

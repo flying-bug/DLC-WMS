@@ -35,7 +35,7 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
 
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle}>
-            Kiểm kê vật tư hàng hóa <i className="bi bi-question-circle" style={{ fontSize: '15px', color: '#94a3b8' }}></i>
+            Kiểm kê vật tư hàng hóa <i className="bi bi-question-circle" style={{ fontSize: '15px', color: 'var(--wms-text-subtle)' }}></i>
           </h3>
           <i className={`bi bi-x-lg ${styles.closeIcon}`} onClick={onClose}></i>
         </div>

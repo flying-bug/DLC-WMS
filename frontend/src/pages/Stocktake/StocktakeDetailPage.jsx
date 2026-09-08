@@ -504,7 +504,7 @@ function StocktakeDetailPage() {
           {formData.isProcessed ? (
             <div className={styles.processedStamp}>Đã xử lý chênh lệch</div>
           ) : (
-            <div className={styles.processedStamp} style={{ backgroundColor: '#f59e0b', borderColor: '#d97706' }}>Chờ xử lý chênh lệch</div>
+            <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}>Chờ xử lý chênh lệch</div>
           )}
         </div>
 
@@ -609,7 +609,7 @@ function StocktakeDetailPage() {
                         <td style={{ textAlign: 'center' }}>
                           <button
                             type="button"
-                            style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                            style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
                             onClick={() => setParticipants(participants.filter((_, i) => i !== idx))}
                           >
                             <i className="bi bi-trash"></i>
@@ -627,7 +627,7 @@ function StocktakeDetailPage() {
         {/* Details Section */}
         <div className={styles.detailSection}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ fontWeight: 600, color: '#334155', fontSize: '15px' }}>
+            <div style={{ fontWeight: 600, color: 'var(--wms-text-body)', fontSize: '15px' }}>
               Chi tiết Vật tư, hàng hóa kiểm kê
             </div>
           </div>
@@ -678,7 +678,7 @@ function StocktakeDetailPage() {
                 {lines.map((line, idx) => (
                   <tr key={line.id || idx}>
                     <td>{line.itemCode}</td>
-                    <td style={{ fontWeight: 600, color: '#0284c7' }}>{line.sku}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--color-info-hover)' }}>{line.sku}</td>
                     <td>{line.itemName}</td>
                     <td>{line.unit}</td>
                     <td className={styles.numberCol}>{line.bookQty}</td>
@@ -690,9 +690,9 @@ function StocktakeDetailPage() {
                           type="number"
                           style={{
                             fontWeight: 600,
-                            color: '#1e293b',
-                            background: '#f8fafc',
-                            border: '1px solid #cbd5e1',
+                            color: 'var(--wms-text-strong)',
+                            background: 'var(--wms-bg-soft)',
+                            border: '1px solid var(--wms-border-strong)',
                             borderRadius: '3px',
                             padding: '4px 6px'
                           }}
@@ -703,7 +703,7 @@ function StocktakeDetailPage() {
                     </td>
                     <td className={styles.numberCol} style={{
                       fontWeight: 700,
-                      color: Number(line.diffQty) > 0 ? '#16a34a' : Number(line.diffQty) < 0 ? '#dc2626' : '#64748b'
+                      color: Number(line.diffQty) > 0 ? '#16a34a' : Number(line.diffQty) < 0 ? 'var(--wms-danger)' : 'var(--wms-text-muted)'
                     }}>
                       {Number(line.diffQty) > 0 ? `+${line.diffQty}` : line.diffQty}
                     </td>
@@ -739,7 +739,7 @@ function StocktakeDetailPage() {
                         <SearchableSelect
                           value={line.action}
                           onChange={(e) => handleActionChange(idx, e.target.value)}
-                          style={{ border: '1px solid #cbd5e1', borderRadius: '3px', padding: '2px 4px' }}
+                          style={{ border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '2px 4px' }}
                         >
                           <option value="Không xử lý">Không xử lý</option>
                           <option value="Xử lý chênh lệch">Xử lý chênh lệch</option>
@@ -750,7 +750,7 @@ function StocktakeDetailPage() {
                       <td style={{ textAlign: 'center' }}>
                         <button
                           type="button"
-                          style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                          style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
                           onClick={() => handleRemoveLine(idx)}
                           title="Xóa dòng"
                         >
@@ -761,11 +761,11 @@ function StocktakeDetailPage() {
                   </tr>
                 ))}
                 {/* Summary Row */}
-                <tr style={{ fontWeight: 700, backgroundColor: '#f1f5f9', borderTop: '2px solid #cbd5e1' }}>
+                <tr style={{ fontWeight: 700, backgroundColor: 'var(--wms-bg-hover)', borderTop: '2px solid var(--wms-border-strong)' }}>
                   <td colSpan={4} style={{ textAlign: 'right' }}>TỔNG CỘNG:</td>
                   <td className={styles.numberCol}>{totalBookQty}</td>
                   <td className={styles.numberCol}>{totalCountQty}</td>
-                  <td className={styles.numberCol} style={{ color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? '#dc2626' : 'inherit' }}>
+                  <td className={styles.numberCol} style={{ color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
                     {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
                   </td>
                   <td className={styles.numberCol}>{totalGood100}</td>
@@ -828,7 +828,7 @@ function StocktakeDetailPage() {
                   </button>
                 )}
                 {!lines.some(l => Number(l.diffQty || 0) !== 0) && (
-                  <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+                  <button className={styles.btnViewPrimary} style={{ backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }} onClick={handleComplete}>
                     <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
                   </button>
                 )}
@@ -854,7 +854,7 @@ function StocktakeDetailPage() {
               <i className="bi bi-box-arrow-right"></i> Lưu và Đóng
             </button>
             {!lines.some(l => Number(l.diffQty || 0) !== 0) && (
-              <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+              <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }} onClick={handleComplete}>
                 <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
               </button>
             )}
@@ -869,10 +869,10 @@ function StocktakeDetailPage() {
           onClose={() => setViewingDoc(null)}
           dialogStyle={{ maxWidth: '900px', width: '95%', padding: '0', borderRadius: '8px', overflow: 'hidden' }}
         >
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wms-border-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--wms-bg-soft)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <i className={`bi ${viewingDoc.type === 'EXPORT' ? 'bi-box-arrow-up' : 'bi-box-arrow-in-down'}`} style={{ fontSize: '20px', color: '#0070cc' }}></i>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#0f172a' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--wms-text-title)' }}>
                 {viewingDoc.type === 'EXPORT' ? 'Chi tiết phiếu xuất kho xử lý kiểm kê' : 'Chi tiết phiếu nhập kho xử lý kiểm kê'}: {viewingDoc.data.docCode}
               </h3>
               <span className={`${styles.badge} ${viewingDoc.data.status === 'POSTED' ? styles.badgeSuccess : styles.badgeInfo}`}>
@@ -882,13 +882,13 @@ function StocktakeDetailPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 onClick={handlePrintDoc}
-                style={{ padding: '6px 12px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}
+                style={{ padding: '6px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '4px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}
               >
                 <i className="bi bi-printer"></i> In phiếu
               </button>
               <button
                 onClick={() => setViewingDoc(null)}
-                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: 'var(--wms-text-muted)', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -897,50 +897,50 @@ function StocktakeDetailPage() {
 
           <div style={{ padding: '20px 24px', maxHeight: '70vh', overflowY: 'auto' }}>
             {/* Summary info grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: 'var(--wms-bg-soft)', padding: '16px', borderRadius: '6px', marginBottom: '20px', border: '1px solid var(--wms-bg-hover)' }}>
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Ngày chứng từ</span>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{formatDateOnly(viewingDoc.data.docDate)}</strong>
+                <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)', display: 'block' }}>Ngày chứng từ</span>
+                <strong style={{ fontSize: '14px', color: 'var(--wms-text-title)' }}>{formatDateOnly(viewingDoc.data.docDate)}</strong>
               </div>
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Kho hàng</span>
+                <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)', display: 'block' }}>Kho hàng</span>
                 <strong style={{ fontSize: '14px', color: '#0070cc' }}>
                   {warehouses.find(w => String(w.id) === String(viewingDoc.data.warehouseId))?.name || `Kho #${viewingDoc.data.warehouseId}`}
                 </strong>
               </div>
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Loại phiếu</span>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)', display: 'block' }}>Loại phiếu</span>
+                <strong style={{ fontSize: '14px', color: 'var(--wms-text-title)' }}>
                   {viewingDoc.type === 'EXPORT' ? 'Xuất điều chỉnh kiểm kê' : 'Nhập điều chỉnh kiểm kê'}
                 </strong>
               </div>
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Tham chiếu kiểm kê</span>
+                <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)', display: 'block' }}>Tham chiếu kiểm kê</span>
                 <strong style={{ fontSize: '14px', color: '#16a34a' }}>
                   {viewingDoc.data.referenceCode || formData.code}
                 </strong>
               </div>
               {viewingDoc.data.salespersonName && (
                 <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Người thực hiện</span>
-                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>{viewingDoc.data.salespersonName}</strong>
+                  <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)', display: 'block' }}>Người thực hiện</span>
+                  <strong style={{ fontSize: '14px', color: 'var(--wms-text-title)' }}>{viewingDoc.data.salespersonName}</strong>
                 </div>
               )}
               {viewingDoc.data.note && (
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Ghi chú</span>
-                  <span style={{ fontSize: '13px', color: '#334155' }}>{viewingDoc.data.note}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)', display: 'block' }}>Ghi chú</span>
+                  <span style={{ fontSize: '13px', color: 'var(--wms-text-body)' }}>{viewingDoc.data.note}</span>
                 </div>
               )}
             </div>
 
             {/* Line items table */}
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '600', color: '#1e293b' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '600', color: 'var(--wms-text-strong)' }}>
               Danh sách hàng hóa ({viewingDoc.data.lines?.length || 0})
             </h4>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
-                <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left', borderBottom: '2px solid #cbd5e1' }}>
+                <tr style={{ background: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', textAlign: 'left', borderBottom: '2px solid var(--wms-border-strong)' }}>
                   <th style={{ padding: '8px 12px', width: '50px', textAlign: 'center' }}>STT</th>
                   <th style={{ padding: '8px 12px', width: '140px' }}>Mã SKU</th>
                   <th style={{ padding: '8px 12px' }}>Tên hàng hóa</th>
@@ -953,7 +953,7 @@ function StocktakeDetailPage() {
                   const qty = viewingDoc.type === 'EXPORT' ? (line.quantityOut || line.quantity) : (line.quantityIn || line.quantity);
                   const matchedStocktakeLine = lines.find(sl => String(sl.variantId) === String(line.variantId));
                   return (
-                    <tr key={line.id || idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <tr key={line.id || idx} style={{ borderBottom: '1px solid var(--wms-border-base)' }}>
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>{idx + 1}</td>
                       <td style={{ padding: '8px 12px', fontWeight: '500', color: '#0070cc' }}>
                         {line.sku || matchedStocktakeLine?.sku || `SKU #${line.variantId}`}
@@ -961,10 +961,10 @@ function StocktakeDetailPage() {
                       <td style={{ padding: '8px 12px', fontWeight: '500' }}>
                         {line.productName || matchedStocktakeLine?.itemName || 'Sản phẩm'}
                       </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600', color: '#0f172a' }}>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600', color: 'var(--wms-text-title)' }}>
                         {Number(qty || 0).toLocaleString('vi-VN')}
                       </td>
-                      <td style={{ padding: '8px 12px', fontSize: '12px', color: '#475569' }}>
+                      <td style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--wms-text-muted)' }}>
                         {line.serialNumbers && line.serialNumbers.length > 0 ? (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                             {line.serialNumbers.map((s, si) => (
@@ -974,7 +974,7 @@ function StocktakeDetailPage() {
                             ))}
                           </div>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Không có serial</span>
+                          <span style={{ color: 'var(--wms-text-subtle)', fontStyle: 'italic' }}>Không có serial</span>
                         )}
                       </td>
                     </tr>
@@ -986,7 +986,7 @@ function StocktakeDetailPage() {
             {/* Total summary */}
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '24px', fontSize: '14px' }}>
               <div>
-                <span style={{ color: '#64748b' }}>Tổng số lượng: </span>
+                <span style={{ color: 'var(--wms-text-muted)' }}>Tổng số lượng: </span>
                 <strong style={{ color: '#0070cc', fontSize: '16px' }}>
                   {(viewingDoc.data.lines || []).reduce((sum, l) => sum + Number((viewingDoc.type === 'EXPORT' ? l.quantityOut : l.quantityIn) || l.quantity || 0), 0).toLocaleString('vi-VN')}
                 </strong>
@@ -994,10 +994,10 @@ function StocktakeDetailPage() {
             </div>
           </div>
 
-          <div style={{ padding: '12px 24px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ padding: '12px 24px', borderTop: '1px solid var(--wms-border-base)', background: 'var(--wms-bg-soft)', display: 'flex', justifyContent: 'flex-end' }}>
             <button
               onClick={() => setViewingDoc(null)}
-              style={{ padding: '8px 20px', background: '#e2e8f0', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', color: '#334155' }}
+              style={{ padding: '8px 20px', background: 'var(--wms-border-base)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', color: 'var(--wms-text-body)' }}
             >
               Đóng
             </button>

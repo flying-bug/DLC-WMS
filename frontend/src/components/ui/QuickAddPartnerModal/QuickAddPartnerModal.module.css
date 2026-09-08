@@ -45,8 +45,8 @@
 
 .btnCancel {
   background-color: transparent;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  border: 1px solid var(--wms-border-strong);
+  color: var(--wms-text-muted);
   padding: 10px 24px;
   border-radius: 4px;
   font-weight: 500;
@@ -55,7 +55,7 @@
 }
 
 .btnCancel:hover {
-  background-color: #f1f5f9;
+  background-color: var(--wms-bg-hover);
 }
 
 .btnConfirm {

@@ -247,7 +247,7 @@
 
 .starIcon {
     font-size: 16px;
-    color: #f59e0b;
+    color: var(--color-warning);
 }
 
 .chevronIcon {
@@ -354,30 +354,30 @@
 
 /* Group Border & Header Styling for Inventory Summary Report */
 .groupBorderLeft {
-    border-left: 2px solid #475569 !important;
+    border-left: 2px solid var(--wms-text-muted) !important;
 }
 
 .groupBorderRight {
-    border-right: 2px solid #475569 !important;
+    border-right: 2px solid var(--wms-text-muted) !important;
 }
 
 .summaryGroupHeader {
-    background-color: #cbd5e1 !important;
-    color: #0f172a !important;
+    background-color: var(--wms-border-strong) !important;
+    color: var(--wms-text-title) !important;
     font-weight: 700 !important;
     font-size: 13px !important;
-    border-top: 2px solid #475569 !important;
-    border-bottom: 2px solid #475569 !important;
-    border-left: 2px solid #475569 !important;
-    border-right: 2px solid #475569 !important;
+    border-top: 2px solid var(--wms-text-muted) !important;
+    border-bottom: 2px solid var(--wms-text-muted) !important;
+    border-left: 2px solid var(--wms-text-muted) !important;
+    border-right: 2px solid var(--wms-text-muted) !important;
 }
 
 .fixedHeaderBold {
-    background-color: #e2e8f0 !important;
-    color: #0f172a !important;
+    background-color: var(--wms-border-base) !important;
+    color: var(--wms-text-title) !important;
     font-weight: 700 !important;
     font-size: 13px !important;
-    border: 1px solid #94a3b8 !important;
+    border: 1px solid var(--wms-text-subtle) !important;
 }
 
 /* Column Specific Sizing & Wrapping */
@@ -465,7 +465,7 @@
 .badgeSupplier {
     background-color: #fef3c7;
     color: #d97706;
-    border: 1px solid #fde68a;
+    border: 1px solid var(--wms-warning-border);
 }
 
 .backHeader {
@@ -612,4 +612,118 @@
         border: 1px solid #000 !important;
         color: #000 !important;
     }
+}
+
+/* Domain Navigation Tabs */
+.domainTabs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--color-surface, var(--color-white));
+    padding: 6px 10px;
+    border-radius: var(--radius-card, 10px);
+    border: 1px solid var(--color-border-soft, var(--wms-border-base));
+    box-shadow: var(--shadow-card-subtle, 0 1px 2px rgba(0,0,0,0.04));
+    overflow-x: auto;
+}
+
+.domainTabBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-subtle, var(--wms-text-muted));
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.domainTabBtn:hover {
+    color: var(--color-text-strong, var(--wms-text-title));
+    background: var(--color-bg-hover, var(--wms-bg-hover));
+}
+
+.domainTabBtn.activeDomainTab {
+    background: var(--color-primary-subtle, #e0f2fe);
+    color: var(--color-primary, var(--color-info-hover));
+    border-color: var(--color-primary-border, #bae6fd);
+    font-weight: 600;
+}
+
+.domainBadge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.06);
+    color: inherit;
+}
+
+.domainTabBtn.activeDomainTab .domainBadge {
+    background: var(--color-primary, var(--color-info-hover));
+    color: var(--color-white);
+}
+
+.categoryRoleBadge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--color-bg-hover, var(--wms-bg-hover));
+    color: var(--color-text-subtle, var(--wms-text-muted));
+    border: 1px solid var(--color-border-soft, var(--wms-border-base));
+}
+
+/* Cash Flow Report KPI Cards */
+.cashFlowKpiGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.kpiCard {
+    background: var(--color-surface, var(--color-white));
+    border: 1px solid var(--color-border-soft, var(--wms-border-base));
+    border-radius: var(--radius-card, 10px);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--shadow-card-subtle, 0 1px 3px rgba(0,0,0,0.05));
+}
+
+.kpiIconBox {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.kpiDetails {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.kpiDetails span {
+    font-size: 12px;
+    color: var(--color-text-subtle, var(--wms-text-muted));
+    font-weight: 500;
+}
+
+.kpiDetails strong {
+    font-size: 16px;
+    color: var(--color-text-strong, var(--wms-text-title));
+    font-weight: 700;
 }

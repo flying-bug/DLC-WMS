@@ -105,7 +105,7 @@
     height: 56px;
     border-radius: 8px;
     object-fit: cover;
-    border: 2px solid #ffffff;
+    border: 2px solid var(--color-white);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 

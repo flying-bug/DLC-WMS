@@ -187,11 +187,11 @@
 
 .gridRow:hover, .selectedRow {
   background-color: var(--color-primary) !important;
-  color: #ffffff !important;
+  color: var(--color-white) !important;
 }
 
 .gridRow:hover td, .selectedRow td {
-  color: #ffffff !important;
+  color: var(--color-white) !important;
 }
 
 .codeCell {

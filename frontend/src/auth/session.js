@@ -54,6 +54,16 @@ export function canViewPricing() {
     return false;
 }
 
+export function canPostCashBook() {
+    const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
+    return roles.some(r =>
+        r.includes('CASHIER') ||
+        r.includes('SUPER_ADMIN') ||
+        r.includes('ADMIN') ||
+        r.includes('MANAGER')
+    );
+}
+
 export function getAuthUserId() {
     const rawUserId = sessionStorage.getItem('userId') || localStorage.getItem('userId');
     return rawUserId ? Number(rawUserId) : null;

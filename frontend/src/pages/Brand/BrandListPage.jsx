@@ -327,12 +327,12 @@ const BrandListPage = () => {
                                             </td>
                                         )}
                                         {columns.name && <td style={{ fontWeight: 600 }}>{item.name}</td>}
-                                        {columns.hotline && <td>{item.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
-                                        {columns.contactEmail && <td>{item.contactEmail || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
+                                        {columns.hotline && <td>{item.hotline || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
+                                        {columns.contactEmail && <td>{item.contactEmail || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
                                         {columns.description && (
                                             <td style={{ maxWidth: '180px' }}>
                                                 <div className={styles.tooltipContainer}>
-                                                    <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
+                                                    <span className={styles.noteText}>{item.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
                                                     {item.description && <span className={styles.tooltipText}>{item.description}</span>}
                                                 </div>
                                             </td>

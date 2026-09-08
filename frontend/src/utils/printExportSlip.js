@@ -103,7 +103,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
       totalVatAmount += vatAmount;
 
       const serials = line.serialNumbers && line.serialNumbers.length > 0 
-        ? `<div style="font-size: 11px; color: #475569; margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(line.serialNumbers.join(', '))}</div>`
+        ? `<div style="font-size: 11px; color: var(--wms-text-muted); margin-top: 2px;"><strong>Serial:</strong> ${escapeHtml(line.serialNumbers.join(', '))}</div>`
         : '';
 
       rowsHtml += `
@@ -111,17 +111,17 @@ export function printExportSlip(slipOrSlips, options = {}) {
           <td style="text-align: center;">${index + 1}</td>
           <td>
             <strong>${escapeHtml(name)}</strong>
-            ${sku ? `<span style="font-size: 11px; color: #64748b;"> (${escapeHtml(sku)})</span>` : ''}
+            ${sku ? `<span style="font-size: 11px; color: var(--wms-text-muted);"> (${escapeHtml(sku)})</span>` : ''}
             ${serials}
           </td>
-          ${!isSplit ? `<td style="text-align: center; font-size: 11px; color: #1e293b;">${escapeHtml(lineWh || '—')}</td>` : ''}
+          ${!isSplit ? `<td style="text-align: center; font-size: 11px; color: var(--wms-text-strong);">${escapeHtml(lineWh || '—')}</td>` : ''}
           <td style="text-align: center;">${escapeHtml(unit)}</td>
           <td style="text-align: center;">${escapeHtml(warrantyText)}</td>
           <td style="text-align: center; font-weight: 500;">${qty.toLocaleString('vi-VN')}</td>
           <td style="text-align: center;">${escapeHtml(baseUnitName)}</td>
           <td style="text-align: center;">${ratio}</td>
-          <td style="text-align: center; font-weight: 600; color: #2563eb;">${op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-          <td style="text-align: right; font-weight: bold; color: #059669;">${Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+          <td style="text-align: center; font-weight: 600; color: var(--wms-primary);">${op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+          <td style="text-align: right; font-weight: bold; color: var(--wms-success);">${Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
           ${showPricing ? `
             <td style="text-align: right;">${price ? price.toLocaleString('vi-VN') : ''}</td>
             <td style="text-align: center;">${vatPercent}</td>
@@ -158,7 +158,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
 
         <!-- TITLE -->
         <div class="title-container">
-          <div class="doc-title">PHIẾU ${typeTitle} ${isSplit ? `<span style="font-size: 16px; color: #2563eb; display: block; margin-top: 4px;">(${escapeHtml(currentWarehouseName)})</span>` : ''}</div>
+          <div class="doc-title">PHIẾU ${typeTitle} ${isSplit ? `<span style="font-size: 16px; color: var(--wms-primary); display: block; margin-top: 4px;">(${escapeHtml(currentWarehouseName)})</span>` : ''}</div>
           <div class="doc-subtitle">${isSplit ? `(Bản in tách kho)` : `(Kiêm phiếu bảo hành)`}</div>
         </div>
 
@@ -207,7 +207,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
               <td colspan="${colSpanTotal}" style="text-align: right;">Cộng:</td>
               <td style="text-align: center;">${totalQty.toLocaleString('vi-VN')}</td>
               <td colspan="3" style="text-align: right;">Tổng quy đổi ĐVC:</td>
-              <td style="text-align: right; font-weight: bold; color: #059669;">${Number(totalBaseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+              <td style="text-align: right; font-weight: bold; color: var(--wms-success);">${Number(totalBaseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
               ${showPricing ? `
                 <td colspan="2"></td>
                 <td style="text-align: right;">${totalAmount.toLocaleString('vi-VN')}</td>
@@ -226,7 +226,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
             </tr>
             ` : ''}
             ${showPricing ? `
-            <tr class="summary-row" style="background-color: #f1f5f9; font-size: 13px;">
+            <tr class="summary-row" style="background-color: var(--wms-bg-hover); font-size: 13px;">
               <td colspan="${colSpanSummary}" style="text-align: right; font-weight: 700;">Tổng tiền thanh toán</td>
               <td style="text-align: right; font-weight: 800; color: #000;">${grandTotal.toLocaleString('vi-VN')}</td>
             </tr>
@@ -273,7 +273,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
               <div>(Ký, họ tên)</div>
             </td>
             <td>
-              <div class="sign-role">Thủ kho ${isSplit ? `<br/><span style="font-size: 10px; color: #2563eb;">${escapeHtml(currentWarehouseName)}</span>` : ''}</div>
+              <div class="sign-role">Thủ kho ${isSplit ? `<br/><span style="font-size: 10px; color: var(--wms-primary);">${escapeHtml(currentWarehouseName)}</span>` : ''}</div>
               <div class="sign-note">(Ký, họ tên)</div>
               <div class="sign-space"></div>
               <div></div>
@@ -335,7 +335,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
           }
           body {
             font-family: 'Segoe UI', Arial, Roboto, sans-serif;
-            color: #1e293b;
+            color: var(--wms-text-strong);
             margin: 0;
             padding: 0;
             font-size: 12px;
@@ -365,7 +365,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
           .header-table {
             width: 100%;
             border-collapse: collapse;
-            border-bottom: 2px solid #2563eb;
+            border-bottom: 2px solid var(--wms-primary);
             padding-bottom: 6px;
             margin-bottom: 8px;
           }
@@ -373,18 +373,18 @@ export function printExportSlip(slipOrSlips, options = {}) {
             display: inline-block;
             font-size: 28px;
             font-weight: 900;
-            color: #2563eb;
+            color: var(--wms-primary);
             letter-spacing: -1px;
             line-height: 1;
           }
           .header-subtitle {
             font-size: 11px;
-            color: #64748b;
+            color: var(--wms-text-muted);
             font-weight: 600;
           }
           .company-info {
             font-size: 11px;
-            color: #334155;
+            color: var(--wms-text-body);
             line-height: 1.4;
           }
           .title-container {
@@ -394,12 +394,12 @@ export function printExportSlip(slipOrSlips, options = {}) {
           .doc-title {
             font-size: 18px;
             font-weight: 800;
-            color: #0f172a;
+            color: var(--wms-text-title);
             letter-spacing: 0.5px;
           }
           .doc-subtitle {
             font-size: 11px;
-            color: #64748b;
+            color: var(--wms-text-muted);
             font-style: italic;
           }
           .info-grid {
@@ -418,29 +418,29 @@ export function printExportSlip(slipOrSlips, options = {}) {
             margin-bottom: 8px;
           }
           .main-table th, .main-table td {
-            border: 1px solid #cbd5e1;
+            border: 1px solid var(--wms-border-strong);
             padding: 5px 6px;
             font-size: 11.5px;
           }
           .main-table th {
-            background-color: #f8fafc;
-            color: #0f172a;
+            background-color: var(--wms-bg-soft);
+            color: var(--wms-text-title);
             font-weight: 700;
             text-align: center;
           }
           .summary-row td {
             font-weight: 600;
-            background-color: #f8fafc;
+            background-color: var(--wms-bg-soft);
           }
           .words-row {
             font-style: italic;
             font-size: 11.5px;
             margin-bottom: 10px;
-            color: #1e293b;
+            color: var(--wms-text-strong);
           }
           .policy-section {
-            border: 1px dashed #94a3b8;
-            background-color: #f8fafc;
+            border: 1px dashed var(--wms-text-subtle);
+            background-color: var(--wms-bg-soft);
             padding: 6px 10px;
             border-radius: 4px;
             margin-bottom: 12px;
@@ -464,11 +464,11 @@ export function printExportSlip(slipOrSlips, options = {}) {
           .sign-role {
             font-weight: 700;
             font-size: 11.5px;
-            color: #0f172a;
+            color: var(--wms-text-title);
           }
           .sign-note {
             font-size: 10px;
-            color: #64748b;
+            color: var(--wms-text-muted);
             font-style: italic;
           }
           .sign-space {

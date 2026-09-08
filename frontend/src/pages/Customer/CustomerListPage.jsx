@@ -303,7 +303,7 @@ const CustomerListPage = () => {
                                             <td>{item.phone || '---'}</td>
                                             <td>
                                                 <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                                                    <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
+                                                    <span className={styles.noteText}>{item.address || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có</span>}</span>
                                                     {item.address && <span className={styles.tooltipText}>{item.address}</span>}
                                                 </div>
                                             </td>

@@ -211,10 +211,10 @@
   white-space: nowrap;
 }
 
-.badgeSuccess { background: #dcfce7; color: #16a34a; }
-.badgeInfo    { background: #dbeafe; color: #1d4ed8; }
+.badgeSuccess { background: var(--color-success-bg); color: #16a34a; }
+.badgeInfo    { background: var(--color-primary-pale); color: var(--wms-primary-hover); }
 .badgeWarning { background: #ede9fe; color: #7c3aed; }
-.badgeDanger  { background: #fef2f2; color: #dc2626; }
+.badgeDanger  { background: #fef2f2; color: var(--wms-danger); }
 
 /* Smart Date Cells & Pills */
 .dateCell {
@@ -244,37 +244,37 @@
 
 .pillOverdue {
   background: #fef2f2;
-  color: #dc2626;
+  color: var(--wms-danger);
   border: 1px solid #fecaca;
 }
 
 .pillDueToday {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: var(--color-primary-soft);
+  color: var(--wms-primary-hover);
+  border: 1px solid var(--color-info-border-soft);
 }
 
 .pillDueSoon {
-  background: #fffbeb;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background: var(--wms-warning-soft);
+  color: var(--wms-warning-hover);
+  border: 1px solid var(--wms-warning-border);
 }
 
 .pillPaid {
-  background: #f0fdf4;
+  background: var(--color-success-bg-soft);
   color: #16a34a;
-  border: 1px solid #bbf7d0;
+  border: 1px solid var(--wms-success-border);
 }
 
 .pillDeliveryLate {
   background: #fef2f2;
-  color: #dc2626;
+  color: var(--wms-danger);
   border: 1px solid #fecaca;
 }
 
 .pillDeliveryToday {
   background: #f0f9ff;
-  color: #0284c7;
+  color: var(--color-info-hover);
   border: 1px solid #bae6fd;
 }
 

@@ -81,11 +81,11 @@ const AdminLayout = ({ children }) => {
             { path: '/reports', label: 'Báo cáo kho', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer'] }
         ],
         warehouse_workspace: [
-            { path: '/warehouse-workspace?tab=imports', tabId: 'imports', label: '1. Đề nghị nhập kho' },
-            { path: '/warehouse-workspace?tab=exports', tabId: 'exports', label: '2. Đề nghị xuất kho' },
-            { path: '/warehouse-workspace?tab=transfers', tabId: 'transfers', label: '3. Đề nghị chuyển kho' },
-            { path: '/warehouse-workspace?tab=stocktakes', tabId: 'stocktakes', label: '4. Biên bản kiểm kê' },
-            { path: '/reports', label: '5. Báo cáo kho' }
+            { path: '/warehouse-workspace?tab=imports', tabId: 'imports', label: 'Đề nghị nhập kho' },
+            { path: '/warehouse-workspace?tab=exports', tabId: 'exports', label: 'Đề nghị xuất kho' },
+            { path: '/warehouse-workspace?tab=transfers', tabId: 'transfers', label: 'Đề nghị chuyển kho' },
+            { path: '/warehouse-workspace?tab=stocktakes', tabId: 'stocktakes', label: 'Biên bản kiểm kê' },
+            { path: '/reports?domain=warehouse', tabId: 'reports', label: 'Báo cáo kho', matches: ['/reports'] }
         ],
         purchase: [
             { path: '/purchase-orders', label: 'Đơn mua hàng', moduleKey: 'purchase_order' }
@@ -99,11 +99,10 @@ const AdminLayout = ({ children }) => {
             { path: '/payments/expense', label: 'Phiếu Chi', moduleKey: 'payment' }
         ],
         cashier_workspace: [
-            { path: '/cashier-workspace?tab=receipts', tabId: 'receipts', label: '1. Đề nghị thu tiền' },
-            { path: '/cashier-workspace?tab=vouchers', tabId: 'vouchers', label: '2. Đề nghị chi tiền' },
-            { path: '/cashier-workspace?tab=cash-book', tabId: 'cash-book', label: '3. Sổ quỹ tiền mặt' },
-            { path: '/cashier-workspace?tab=bank', tabId: 'bank', label: '4. Tiền gửi ngân hàng' },
-            { path: '/reports', label: '5. Báo cáo dòng tiền' }
+            { path: '/cashier-workspace?tab=requests', tabId: 'requests', label: 'Đề nghị thu, chi' },
+            { path: '/cashier-workspace?tab=cash-book', tabId: 'cash-book', label: 'Sổ quỹ tiền mặt' },
+            { path: '/cashier-workspace?tab=bank', tabId: 'bank', label: 'Tiền gửi ngân hàng' },
+            { path: '/reports?domain=cashier', tabId: 'reports', label: 'Báo cáo dòng tiền', matches: ['/reports'] }
         ],
         service: [
             { path: '/warranties', label: 'Bảo hành', moduleKey: 'warranty' },
@@ -126,10 +125,30 @@ const AdminLayout = ({ children }) => {
         ]
     };
 
-    // Determine the active module based on currentPath
+    // Determine the active module based on currentPath and workspace mode
     const getActiveModule = () => {
         if (currentPath.startsWith('/warehouse-workspace')) return 'warehouse_workspace';
         if (currentPath.startsWith('/cashier-workspace')) return 'cashier_workspace';
+        
+        const searchParams = new URLSearchParams(location.search);
+        const domainParam = searchParams.get('domain')?.toLowerCase();
+        if (currentPath.startsWith('/reports')) {
+            if (domainParam === 'cashier' || workspaceMode === WORKSPACE_MODES.CASHIER) return 'cashier_workspace';
+            if (domainParam === 'warehouse' || workspaceMode === WORKSPACE_MODES.WAREHOUSE) return 'warehouse_workspace';
+        }
+        
+        if (workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
+            if (['/dashboard', '/import', '/export', '/transfer', '/stocktake'].some(p => currentPath.startsWith(p))) {
+                return 'warehouse_workspace';
+            }
+        }
+        
+        if (workspaceMode === WORKSPACE_MODES.CASHIER) {
+            if (currentPath.startsWith('/payments')) {
+                return 'cashier_workspace';
+            }
+        }
+
         if (currentPath === '/main-dashboard') return 'overview';
         if (['/dashboard', '/import-history', '/import-slips', '/export-slips', '/transfer-history', '/stocktakes', '/assembly-orders', '/assembly-boms', '/warehouses', '/reports'].some(p => currentPath.startsWith(p))) return 'warehouse';
         if (currentPath.startsWith('/purchase-orders')) return 'purchase';
@@ -143,6 +162,11 @@ const AdminLayout = ({ children }) => {
     };
 
     const activeModule = getActiveModule();
+    const isWorkspace = workspaceMode === WORKSPACE_MODES.WAREHOUSE || 
+                        workspaceMode === WORKSPACE_MODES.CASHIER ||
+                        activeModule === 'warehouse_workspace' || 
+                        activeModule === 'cashier_workspace';
+
     const activeTabs = (TABS_CONFIG[activeModule] || []).filter(tab => {
         if (tab.adminOnly && !isSuperAdmin) return false;
         if (tab.managerOrAdmin && !isSuperAdmin && !isManager) return false;
@@ -163,14 +187,14 @@ const AdminLayout = ({ children }) => {
     useEffect(() => {
         const syncSidebarWidth = () => {
             const viewportWidth = window.innerWidth;
-            const sidebarWidth = viewportWidth < 768 ? '0px' : '72px';
+            const sidebarWidth = (isWorkspace || viewportWidth < 768) ? '0px' : '72px';
             document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
         };
 
         syncSidebarWidth();
         window.addEventListener('resize', syncSidebarWidth);
         return () => window.removeEventListener('resize', syncSidebarWidth);
-    }, []);
+    }, [isWorkspace]);
 
     useLayoutEffect(() => {
         const savedScrollTop = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY));
@@ -262,88 +286,104 @@ const AdminLayout = ({ children }) => {
     };
 
     return (
-        <div className={styles.layout}>
+        <div className={`${styles.layout} ${isWorkspace ? styles.workspaceLayout : ''}`}>
             {/* Mobile Overlay Backdrop */}
-            {mobileMenuOpen && (
+            {!isWorkspace && mobileMenuOpen && (
                 <div
                     className={styles.mobileBackdrop}
                     onClick={() => setMobileMenuOpen(false)}
                 />
             )}
 
-            <div className={styles.sidebarWrapper}>
-                <aside
-                    className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''}`}
-                >
-                    <div className={styles.logoArea}>
-                        <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
-                        <div className={styles.brandText}>
-                            <span className={styles.brandTitle}>Duy Long Computer</span>
-                            <span className={styles.brandSubtitle}>Warehouse Management</span>
+            {/* Sidebar chỉ render khi KHÔNG ở chế độ Workspace Thủ kho / Thủ quỹ (chuẩn MISA) */}
+            {!isWorkspace && (
+                <div className={styles.sidebarWrapper}>
+                    <aside
+                        className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''}`}
+                    >
+                        <div className={styles.logoArea}>
+                            <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
+                            <div className={styles.brandText}>
+                                <span className={styles.brandTitle}>Duy Long Computer</span>
+                                <span className={styles.brandSubtitle}>Warehouse Management</span>
+                            </div>
+                            <button
+                                type="button"
+                                className={styles.mobileCloseBtn}
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            className={styles.mobileCloseBtn}
-                            onClick={() => setMobileMenuOpen(false)}
-                        >
-                            <i className="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
-                        {visibleMenuGroups.map(group => {
-                            const isExpanded = expandedGroups[group.id];
+                        <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
+                            {visibleMenuGroups.map(group => {
+                                const isExpanded = expandedGroups[group.id];
 
-                            return (
-                                <div key={group.id} className={styles.menuGroup}>
-                                    <div
-                                        className={styles.navGroupLabel}
-                                        onClick={() => toggleGroup(group.id)}
-                                        aria-expanded={isExpanded}
-                                    >
-                                        <span>{group.label}</span>
-                                        <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
-                                    </div>
-                                    {isExpanded && (
-                                        <div className={styles.groupItems}>
-                                            {group.items.map(item => {
-                                                if (item.adminOnly && !isSuperAdmin) return null;
-
-                                                const isActive = item.moduleId 
-                                                    ? (item.moduleId === activeModule || (item.moduleId === 'warehouse' && activeModule === 'warehouse_workspace') || (item.moduleId === 'finance' && activeModule === 'cashier_workspace'))
-                                                    : currentPath === item.path || currentPath.startsWith(item.path + '/');
-
-                                                return (
-                                                    <button
-                                                        key={item.path}
-                                                        className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-                                                        onClick={() => handleNavClick(item.path)}
-                                                        type="button"
-                                                        title={item.label}
-                                                    >
-                                                        <i className={item.icon}></i>
-                                                        <span>{item.label}</span>
-                                                    </button>
-                                                );
-                                            })}
+                                return (
+                                    <div key={group.id} className={styles.menuGroup}>
+                                        <div
+                                            className={styles.navGroupLabel}
+                                            onClick={() => toggleGroup(group.id)}
+                                            aria-expanded={isExpanded}
+                                        >
+                                            <span>{group.label}</span>
+                                            <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
                                         </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </nav>
-                </aside>
-            </div>
+                                        {isExpanded && (
+                                            <div className={styles.groupItems}>
+                                                {group.items.map(item => {
+                                                    if (item.adminOnly && !isSuperAdmin) return null;
+
+                                                    const isActive = item.moduleId 
+                                                        ? (item.moduleId === activeModule || (item.moduleId === 'warehouse' && activeModule === 'warehouse_workspace') || (item.moduleId === 'finance' && activeModule === 'cashier_workspace'))
+                                                        : currentPath === item.path || currentPath.startsWith(item.path + '/');
+
+                                                    return (
+                                                        <button
+                                                            key={item.path}
+                                                            className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                                                            onClick={() => handleNavClick(item.path)}
+                                                            type="button"
+                                                            title={item.label}
+                                                        >
+                                                            <i className={item.icon}></i>
+                                                            <span>{item.label}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </nav>
+                    </aside>
+                </div>
+            )}
 
             <div className={styles.mainWrapper}>
                 <header className={styles.header}>
-                    <button
-                        type="button"
-                        className={styles.hamburgerBtn}
-                        onClick={() => setMobileMenuOpen(true)}
-                        aria-label="Mở menu"
-                    >
-                        <i className="fas fa-bars"></i>
-                    </button>
+                    {isWorkspace ? (
+                        <div className={styles.workspaceBrand}>
+                            <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.workspaceLogo} />
+                            <div className={styles.workspaceBrandInfo}>
+                                <span className={styles.workspaceBrandTitle}>Duy Long Computer</span>
+                                <span className={styles.workspaceBrandMode}>
+                                    <i className={workspaceMode === WORKSPACE_MODES.CASHIER ? 'fas fa-cash-register' : 'fas fa-boxes'}></i>
+                                    {workspaceMode === WORKSPACE_MODES.CASHIER ? 'Bàn làm việc Thủ quỹ' : 'Bàn làm việc Thủ kho'}
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            className={styles.hamburgerBtn}
+                            onClick={() => setMobileMenuOpen(true)}
+                            aria-label="Mở menu"
+                        >
+                            <i className="fas fa-bars"></i>
+                        </button>
+                    )}
 
                     <nav className={styles.topTabs}>
                         {activeTabs.map((tab) => {
@@ -351,11 +391,26 @@ const AdminLayout = ({ children }) => {
                             
                             // Check if current path matches the tab
                             const currentQueryTab = new URLSearchParams(location.search).get('tab');
-                            const isActive = tab.tabId
-                                ? (currentQueryTab === tab.tabId || (!currentQueryTab && (tab.tabId === 'imports' || tab.tabId === 'receipts')))
-                                : (tab.matches 
-                                    ? tab.matches.some(m => currentPath.startsWith(m))
-                                    : (tab.exact ? currentPath === tab.path : currentPath.startsWith(tab.path)));
+                            let isActive = false;
+                            if (tab.matches) {
+                                isActive = tab.matches.some(m => currentPath.startsWith(m));
+                            } else if (tab.tabId) {
+                                if (currentPath.startsWith('/reports')) {
+                                    isActive = tab.tabId === 'reports';
+                                } else if (currentQueryTab) {
+                                    if (tab.tabId === 'requests') {
+                                        isActive = ['requests', 'receipts', 'vouchers'].includes(currentQueryTab);
+                                    } else {
+                                        isActive = currentQueryTab === tab.tabId;
+                                    }
+                                } else {
+                                    isActive = (tab.tabId === 'imports' || tab.tabId === 'requests' || tab.tabId === 'receipts');
+                                }
+                            } else if (tab.exact) {
+                                isActive = currentPath === tab.path;
+                            } else {
+                                isActive = currentPath.startsWith(tab.path);
+                            }
 
                             return (
                                 <button
@@ -363,7 +418,7 @@ const AdminLayout = ({ children }) => {
                                     className={`${styles.tab} ${isActive ? styles.activeTab : ''}`}
                                     onClick={() => navigate(tab.path)}
                                     type="button"
-                                    style={tab.adminOnly ? { color: '#6366f1', fontWeight: 'bold' } : {}}
+                                    style={tab.adminOnly ? { color: 'var(--wms-primary)', fontWeight: 'bold' } : {}}
                                 >
                                     {tab.adminOnly && <i className="fas fa-database" style={{ marginRight: '6px' }}></i>}
                                     {tab.label}

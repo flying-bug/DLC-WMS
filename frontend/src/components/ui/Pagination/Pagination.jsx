@@ -43,7 +43,7 @@ const Pagination = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>Hiển thị</span>
                     <select 
-                        style={{ height: '32px', minWidth: '60px', padding: '0 8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none', backgroundColor: '#fff', fontSize: '13px', cursor: 'pointer' }}
+                        style={{ height: '32px', minWidth: '60px', padding: '0 8px', border: '1px solid var(--wms-border-strong)', borderRadius: '4px', outline: 'none', backgroundColor: '#fff', fontSize: '13px', cursor: 'pointer' }}
                         value={size} 
                         onChange={(e) => {
                             if(onSizeChange) onSizeChange(Number(e.target.value));

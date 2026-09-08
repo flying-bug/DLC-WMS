@@ -109,7 +109,7 @@ const SupplierDetailPage = () => {
         return (
             <AdminLayout>
                 <div className={styles.pageBody}>
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải thông tin...</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>Đang tải thông tin...</div>
                 </div>
             </AdminLayout>
         );
@@ -178,26 +178,26 @@ const SupplierDetailPage = () => {
                             </div>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Mã số thuế</span>
-                                <span className={styles.detailValue}>{supplier.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailValue}>{supplier.taxCode || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Địa chỉ</span>
-                                <span className={styles.detailValue}>{supplier.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailValue}>{supplier.address || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                         </div>
 
                         <div className={styles.detailGroup}>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Số điện thoại</span>
-                                <span className={styles.detailValue}>{supplier.phone || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailValue}>{supplier.phone || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Email</span>
-                                <span className={styles.detailValue}>{supplier.email || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailValue}>{supplier.email || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Người liên hệ</span>
-                                <span className={styles.detailValue}>{supplier.contactName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailValue}>{supplier.contactName || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                         </div>
 
@@ -207,15 +207,15 @@ const SupplierDetailPage = () => {
                             </div>
                             <div className={styles.detailRightRow}>
                                 <span className={styles.detailRightLabel}>Ngân hàng</span>
-                                <span className={styles.detailRightValue}>{supplier.bankName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightValue}>{supplier.bankName || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             <div className={styles.detailRightRow}>
                                 <span className={styles.detailRightLabel}>Số tài khoản</span>
-                                <span className={styles.detailRightValue}>{supplier.bankAccountNumber || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightValue}>{supplier.bankAccountNumber || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             <div className={styles.detailRightRow}>
                                 <span className={styles.detailRightLabel}>Chủ tài khoản</span>
-                                <span className={styles.detailRightValue}>{supplier.bankBeneficiaryName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightValue}>{supplier.bankBeneficiaryName || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                             
                             <div style={{ borderTop: '1px solid var(--color-border)', margin: '16px 0' }}></div>

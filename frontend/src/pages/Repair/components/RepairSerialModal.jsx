@@ -147,7 +147,7 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
                   if (e.key === 'Enter') handleAdd();
                 }}
                 disabled={isFull}
-                style={{ backgroundColor: isFull ? '#f3f4f6' : 'white' }}
+                style={{ backgroundColor: isFull ? 'var(--color-bg)' : 'white' }}
               />
             </div>
             <button 
@@ -159,14 +159,14 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
               {loading ? '...' : 'Thêm'}
             </button>
           </div>
-          {errorText && <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '20px', fontWeight: 500 }}>{errorText}</div>}
+          {errorText && <div style={{ color: 'var(--wms-danger)', fontSize: '13px', marginBottom: '20px', fontWeight: 500 }}>{errorText}</div>}
 
           {actionType === 'ADD' ? (
             <>
               <div className={styles.sectionTitle}>CÁCH 2: CHỌN TỪ KHO</div>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', padding: '8px', backgroundColor: '#f8fafc', marginBottom: '20px' }}>
+              <div style={{ border: '1px solid var(--wms-border-base)', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', padding: '8px', backgroundColor: 'var(--wms-bg-soft)', marginBottom: '20px' }}>
                 {loadingAvailable ? (
-                  <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '16px' }}>Đang tải...</div>
+                  <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)', textAlign: 'center', padding: '16px' }}>Đang tải...</div>
                 ) : availableSerials.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {availableSerials.map(s => {
@@ -177,11 +177,11 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
                           onClick={() => !isSelected && handleSelectAvailable(s)}
                           style={{
                             padding: '6px 12px',
-                            backgroundColor: isSelected ? '#dcfce7' : 'white',
-                            border: `1px solid ${isSelected ? '#86efac' : '#cbd5e1'}`,
+                            backgroundColor: isSelected ? 'var(--color-success-bg)' : 'white',
+                            border: `1px solid ${isSelected ? '#86efac' : 'var(--wms-border-strong)'}`,
                             borderRadius: '4px',
                             fontSize: '13px',
-                            color: isSelected ? '#166534' : '#334155',
+                            color: isSelected ? '#166534' : 'var(--wms-text-body)',
                             cursor: (isSelected || isFull) ? 'not-allowed' : 'pointer',
                             opacity: (isFull && !isSelected) ? 0.6 : 1,
                             fontWeight: isSelected ? 600 : 400
@@ -194,7 +194,7 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
                     })}
                   </div>
                 ) : (
-                  <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '16px' }}>Không có Serial nào khả dụng trong kho</div>
+                  <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)', textAlign: 'center', padding: '16px' }}>Không có Serial nào khả dụng trong kho</div>
                 )}
               </div>
             </>
@@ -232,16 +232,16 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
                 </div>
                 <button 
                   onClick={() => handleRemove(idx)}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                  style={{ background: 'none', border: 'none', color: 'var(--wms-text-subtle)', cursor: 'pointer', fontSize: '16px' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--wms-danger)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--wms-text-subtle)'}
                 >
                   <i className="bi bi-trash3"></i>
                 </button>
               </div>
             ))}
             {serials.length === 0 && (
-              <div style={{color: '#94a3b8', fontSize: '14px', textAlign: 'center', marginTop: '20px'}}>
+              <div style={{color: 'var(--wms-text-subtle)', fontSize: '14px', textAlign: 'center', marginTop: '20px'}}>
                 Chưa có serial nào được nhập
               </div>
             )}

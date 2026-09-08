@@ -57,7 +57,7 @@ export default function UnpostConfirmModal({
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <div className={styles.headerTitle}>
-            <i className="fas fa-undo-alt" style={{ color: '#dc2626' }}></i>
+            <i className="fas fa-undo-alt" style={{ color: 'var(--wms-danger)' }}></i>
             Bỏ ghi sổ Phiếu {docType}: {docCode}
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
@@ -95,7 +95,7 @@ export default function UnpostConfirmModal({
 
               <div className={styles.reasonGroup}>
                 <label className={styles.reasonLabel}>
-                  Lý do bỏ ghi sổ <span style={{ color: '#dc2626' }}>*</span> (Bắt buộc ghi nhận Audit Log):
+                  Lý do bỏ ghi sổ <span style={{ color: 'var(--wms-danger)' }}>*</span> (Bắt buộc ghi nhận Audit Log):
                 </label>
                 <textarea
                   className={styles.reasonTextarea}

@@ -32,7 +32,7 @@ const formatMoneyInput = (value) => {
 const customSelectStyles = {
   control: (base, state) => ({
     ...base, minHeight: 30, height: 30, fontSize: 12.5,
-    borderColor: state.isFocused ? '#0075c0' : '#d1d5db',
+    borderColor: state.isFocused ? '#0075c0' : 'var(--color-border-muted)',
     boxShadow: state.isFocused ? '0 0 0 1px #0075c0' : 'none',
     borderRadius: 4,
   }),
@@ -723,7 +723,7 @@ function CreateSalesOrderPage() {
         )}
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--wms-text-muted)' }}>Đang tải dữ liệu...</div>
         ) : (
           <>
             {/* ── Form body ── */}
@@ -769,7 +769,7 @@ function CreateSalesOrderPage() {
                         type="button"
                         onClick={() => setShowCustomerModal(true)}
                         title="Tạo khách hàng mới"
-                        style={{ width: '32px', height: '30px', border: '1px solid #cbd5e1', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: '32px', height: '30px', border: '1px solid var(--wms-border-strong)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <i className="bi bi-plus" style={{ fontSize: '18px', color: '#0075c0' }}></i>
                       </button>
@@ -876,7 +876,7 @@ function CreateSalesOrderPage() {
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
                             type="button"
-                            style={{ fontSize: 11, padding: '2px 6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer' }}
+                            style={{ fontSize: 11, padding: '2px 6px', background: 'var(--wms-bg-hover)', border: '1px solid var(--wms-border-strong)', borderRadius: 4, cursor: 'pointer' }}
                             onClick={() => {
                               setIsPaymentUserEdited(false);
                               setPaymentAmount(Math.round(grandTotal).toString());
@@ -886,7 +886,7 @@ function CreateSalesOrderPage() {
                           </button>
                           <button
                             type="button"
-                            style={{ fontSize: 11, padding: '2px 6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer' }}
+                            style={{ fontSize: 11, padding: '2px 6px', background: 'var(--wms-bg-hover)', border: '1px solid var(--wms-border-strong)', borderRadius: 4, cursor: 'pointer' }}
                             onClick={() => {
                               setIsPaymentUserEdited(true);
                               setPaymentAmount('0');
@@ -933,8 +933,8 @@ function CreateSalesOrderPage() {
                 <span className={styles.sectionTitle} style={{ margin: 0, padding: 0, border: 'none' }}>
                   <i className="bi bi-list-ul" /> Danh sách hàng hóa
                 </span>
-                <span style={{ fontSize: 12.5, color: '#64748b' }}>
-                  Tổng: <strong style={{ color: '#1e293b' }}>{lines.length}</strong> sản phẩm | SL: <strong style={{ color: '#1e293b' }}>{totalQuantity}</strong>
+                <span style={{ fontSize: 12.5, color: 'var(--wms-text-muted)' }}>
+                  Tổng: <strong style={{ color: 'var(--wms-text-strong)' }}>{lines.length}</strong> sản phẩm | SL: <strong style={{ color: 'var(--wms-text-strong)' }}>{totalQuantity}</strong>
                 </span>
               </div>
 
@@ -972,7 +972,7 @@ function CreateSalesOrderPage() {
                       return (
                         <React.Fragment key={idx}>
                           <tr>
-                            <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)' }}>{idx + 1}</td>
                             <td>
                               <ProductGridSelect
                                 id={`so-line-code-${idx}`}
@@ -1026,7 +1026,7 @@ function CreateSalesOrderPage() {
                                 hasWarning={!line.warehouseId}
                               />
                             </td>
-                            <td style={{ textAlign: 'center', color: '#475569', fontSize: 12.5 }}>
+                            <td style={{ textAlign: 'center', color: 'var(--wms-text-muted)', fontSize: 12.5 }}>
                               {line.unitName || '—'}
                             </td>
                             <td style={{ textAlign: 'center' }}>
@@ -1053,8 +1053,8 @@ function CreateSalesOrderPage() {
                                     fontSize: '12px',
                                     fontWeight: 600,
                                     color: effectiveWh
-                                      ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626')
-                                      : '#94a3b8',
+                                      ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : 'var(--wms-danger)')
+                                      : 'var(--wms-text-subtle)',
                                     whiteSpace: 'nowrap',
                                   }}
                                   title={effectiveWh ? `Tồn kho: ${money(availableQty)}` : 'Chưa chọn kho'}
@@ -1164,7 +1164,7 @@ function CreateSalesOrderPage() {
                                   {/* Ô nhập ghi chú dòng */}
                                   {(line.showNote || line.note) ? (
                                     <div className={styles.lineNoteInputWrap}>
-                                      <i className="bi bi-card-text" style={{ color: '#64748b', fontSize: 13 }} />
+                                      <i className="bi bi-card-text" style={{ color: 'var(--wms-text-muted)', fontSize: 13 }} />
                                       <input
                                         type="text"
                                         className={styles.lineSubNoteInput}
@@ -1227,7 +1227,7 @@ function CreateSalesOrderPage() {
                     )}
                   </div>
                   <div className={styles.tableCount}>
-                    Tổng số: <strong style={{ color: '#1e293b' }}>{lines.length}</strong> dòng sản phẩm
+                    Tổng số: <strong style={{ color: 'var(--wms-text-strong)' }}>{lines.length}</strong> dòng sản phẩm
                   </div>
 
                   <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
@@ -1246,7 +1246,7 @@ function CreateSalesOrderPage() {
                   </div>
                   <div className={styles.summaryRow}>
                     <span>Tiền thuế VAT:</span>
-                    <strong style={{ color: '#dc2626' }}>{money(totalVatAmount)} đ</strong>
+                    <strong style={{ color: 'var(--wms-danger)' }}>{money(totalVatAmount)} đ</strong>
                   </div>
                   <div className={styles.summaryTotalRow}>
                     <span>Tổng thanh toán:</span>
@@ -1254,13 +1254,13 @@ function CreateSalesOrderPage() {
                   </div>
                   {mode === 'direct' && (
                     <>
-                      <div className={styles.summaryRow} style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed #cbd5e1' }}>
+                      <div className={styles.summaryRow} style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed var(--wms-border-strong)' }}>
                         <span>Khách trả:</span>
                         <strong style={{ color: '#166534' }}>{money(Number(paymentAmount || 0))} đ</strong>
                       </div>
                       <div className={styles.summaryRow}>
                         <span>Còn nợ:</span>
-                        <strong style={{ color: Math.max(0, grandTotal - Number(paymentAmount || 0)) > 0 ? '#dc2626' : '#166534' }}>
+                        <strong style={{ color: Math.max(0, grandTotal - Number(paymentAmount || 0)) > 0 ? 'var(--wms-danger)' : '#166534' }}>
                           {money(Math.max(0, grandTotal - Number(paymentAmount || 0)))} đ
                         </strong>
                       </div>

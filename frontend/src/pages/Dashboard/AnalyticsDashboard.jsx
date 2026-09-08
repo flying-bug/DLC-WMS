@@ -87,15 +87,15 @@ const getTransactionStatusMeta = (status) => {
     const normalized = String(status || '').toUpperCase();
     switch (normalized) {
         case 'DRAFT':
-            return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#f3f4f6', color: '#4b5563', borderColor: '#d1d5db' };
+            return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-bg)', color: '#4b5563', borderColor: 'var(--color-border-muted)' };
         case 'QUOTATION':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' };
         case 'CONFIRMED':
-            return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#dbeafe', color: '#1d4ed8', borderColor: '#93c5fd' };
+            return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary-hover)', borderColor: '#93c5fd' };
         case 'UNDER_REPAIR':
-            return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fef3c7', color: '#b45309', borderColor: '#fcd34d' };
+            return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fef3c7', color: 'var(--wms-warning-hover)', borderColor: '#fcd34d' };
         case 'APPROVED':
-            return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#dcfce7', color: '#166534', borderColor: '#86efac' };
+            return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-success-bg)', color: '#166534', borderColor: '#86efac' };
         case 'POSTED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#f3e8ff', color: '#7e22ce', borderColor: '#d8b4fe' };
         case 'SUBMITTED':
@@ -104,7 +104,7 @@ const getTransactionStatusMeta = (status) => {
         case 'CANCELLED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' };
         default:
-            return { label: STATUS_LABELS[normalized] || status || 'Không rõ', backgroundColor: '#eff6ff', color: '#1e40af', borderColor: '#bfdbfe' };
+            return { label: STATUS_LABELS[normalized] || status || 'Không rõ', backgroundColor: 'var(--color-primary-soft)', color: 'var(--color-primary-link)', borderColor: 'var(--color-info-border-soft)' };
     }
 };
 
@@ -113,21 +113,21 @@ const getTransactionIconMeta = (entityType) => {
         case 'PURCHASE_ORDER':
             return { icon: 'fas fa-box-open', backgroundColor: '#ffedd5', color: '#ea580c' };
         case 'SALES_ORDER':
-            return { icon: 'fas fa-truck-loading', backgroundColor: '#dbeafe', color: '#2563eb' };
+            return { icon: 'fas fa-truck-loading', backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary)' };
         case 'IMPORT_DOCUMENT':
-            return { icon: 'fas fa-arrow-down', backgroundColor: '#dcfce7', color: '#16a34a' };
+            return { icon: 'fas fa-arrow-down', backgroundColor: 'var(--color-success-bg)', color: '#16a34a' };
         case 'EXPORT_DOCUMENT':
-            return { icon: 'fas fa-arrow-up', backgroundColor: '#e0f2fe', color: '#0284c7' };
+            return { icon: 'fas fa-arrow-up', backgroundColor: '#e0f2fe', color: 'var(--color-info-hover)' };
         case 'ASSEMBLY_ORDER':
             return { icon: 'fas fa-cogs', backgroundColor: '#ede9fe', color: '#7c3aed' };
         case 'DISASSEMBLY_ORDER':
-            return { icon: 'fas fa-tools', backgroundColor: '#fee2e2', color: '#dc2626' };
+            return { icon: 'fas fa-tools', backgroundColor: '#fee2e2', color: 'var(--wms-danger)' };
         case 'WARRANTY_REPAIR':
-            return { icon: 'fas fa-shield-alt', backgroundColor: '#dbeafe', color: '#1d4ed8' };
+            return { icon: 'fas fa-shield-alt', backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary-hover)' };
         case 'REPAIR':
-            return { icon: 'fas fa-wrench', backgroundColor: '#fef3c7', color: '#b45309' };
+            return { icon: 'fas fa-wrench', backgroundColor: '#fef3c7', color: 'var(--wms-warning-hover)' };
         default:
-            return { icon: 'fas fa-history', backgroundColor: '#f3f4f6', color: '#4b5563' };
+            return { icon: 'fas fa-history', backgroundColor: 'var(--color-bg)', color: '#4b5563' };
     }
 };
 
@@ -219,7 +219,7 @@ function AnalyticsDashboard() {
         xuat: Number(item.exportQuantity || 0)
     }));
 
-    const pieColors = ['var(--color-primary)', '#10b981', '#f59e0b', '#ef4444', '#64748b', '#0f766e'];
+    const pieColors = ['var(--color-primary)', 'var(--color-success-alt)', 'var(--color-warning)', 'var(--wms-danger)', 'var(--wms-text-muted)', '#0f766e'];
     const categoryData = (dashboard?.categoryInventoryBreakdown || []).map((item, index) => ({
         name: item.categoryName,
         value: Number(item.inventoryValue || 0),
@@ -470,9 +470,9 @@ function AnalyticsDashboard() {
                     {kpis.map((kpi) => {
                         const lineColors = {
                             primary: 'var(--color-primary)',
-                            orange: '#f59e0b',
-                            green: '#10b981',
-                            red: '#ef4444',
+                            orange: 'var(--color-warning)',
+                            green: 'var(--color-success-alt)',
+                            red: 'var(--wms-danger)',
                             purple: '#9333ea'
                         };
 
@@ -535,17 +535,17 @@ function AnalyticsDashboard() {
                             {trafficData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={320}>
                                     <BarChart data={trafficData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
                                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
                                         <RechartsTooltip
-                                            cursor={{ fill: '#f3f4f6' }}
+                                            cursor={{ fill: 'var(--color-bg)' }}
                                             contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                             formatter={(value) => quantity(value)}
                                         />
                                         <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
                                         <Bar dataKey="nhap" name="SL Nhap Kho" fill="var(--color-primary)" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                        <Bar dataKey="xuat" name="SL Xuat Kho" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                        <Bar dataKey="xuat" name="SL Xuat Kho" fill="var(--color-success-alt)" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (
@@ -612,18 +612,18 @@ function AnalyticsDashboard() {
                             {financeData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={320}>
                                     <ComposedChart data={financeData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
                                         <YAxis yAxisId="left" tickFormatter={(value) => shortMoney(value)} axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
                                         <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => shortMoney(value)} axisLine={false} tickLine={false} tick={{ fill: '#ea580c', fontSize: 13 }} />
                                         <RechartsTooltip
-                                            cursor={{ fill: '#f3f4f6' }}
+                                            cursor={{ fill: 'var(--color-bg)' }}
                                             contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                             formatter={(value) => money(value)}
                                         />
                                         <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
-                                        <Bar yAxisId="left" dataKey="thu" name="Tổng Thu" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                        <Bar yAxisId="left" dataKey="chi" name="Tổng Chi" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                        <Bar yAxisId="left" dataKey="thu" name="Tổng Thu" fill="var(--color-success-alt)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                        <Bar yAxisId="left" dataKey="chi" name="Tổng Chi" fill="var(--wms-danger)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                                         <Line yAxisId="right" type="monotone" dataKey="congNo" name="Công nợ phải thu" stroke="#ea580c" strokeWidth={3} dot={{ r: 4, fill: '#ea580c' }} activeDot={{ r: 6 }} />
                                     </ComposedChart>
                                 </ResponsiveContainer>

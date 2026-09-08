@@ -24,7 +24,7 @@ const STATUS_LABELS = {
 const PAYMENT_STATUS_LABELS = {
   UNPAID: { label: 'Chưa thanh toán', color: '#991b1b', bg: '#fee2e2' },
   PARTIAL: { label: 'Trả một phần', color: '#854d0e', bg: '#fef08a' },
-  PAID: { label: 'Đã thanh toán', color: '#166534', bg: '#dcfce7' },
+  PAID: { label: 'Đã thanh toán', color: '#166534', bg: 'var(--color-success-bg)' },
 };
 
 const STATUS_OPTIONS = [
@@ -346,7 +346,7 @@ function SalesOrderListPage() {
                         <i
                           className="bi bi-printer"
                           title="In báo giá"
-                          style={{ cursor: 'pointer', marginRight: 10, color: '#0284c7', fontSize: 15 }}
+                          style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-info-hover)', fontSize: 15 }}
                           onClick={(e) => handlePrintQuote(so, e)}
                         />
                         {so.status === 'DRAFT' && (
@@ -377,7 +377,7 @@ function SalesOrderListPage() {
                           <i
                             className="bi bi-x-circle"
                             title="Hủy đơn"
-                            style={{ cursor: 'pointer', color: '#ef4444', fontSize: 15 }}
+                            style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
                             onClick={() => setConfirmCancel(so)}
                           />
                         )}

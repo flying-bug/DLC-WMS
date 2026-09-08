@@ -327,7 +327,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
     const progressPercent = globalTotal > 0 ? Math.round((globalProduced / globalTotal) * 100) : 0;
     const isAllComplete = globalProduced >= globalTotal && globalTotal > 0;
     const canExecute = completedInSession > 0; // Cho phép thực thi khi có ít nhất 1 bộ hoàn chỉnh
-    const progressColor = isAllComplete ? '#10b981' : progressPercent > 0 ? '#0075c0' : '#e2e8f0';
+    const progressColor = isAllComplete ? 'var(--color-success-alt)' : progressPercent > 0 ? '#0075c0' : 'var(--wms-border-base)';
     const needParentSerial = !currentSet.parentSerial;
 
     return (
@@ -347,7 +347,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                             <p className={styles.modalTitle}>{order.orderType === 'DISASSEMBLY' ? 'Thực thi Tháo dỡ' : 'Thực thi Lắp ráp'}</p>
                             <p className={styles.modalSubtitle}>
                                 Lệnh: {order.orderCode} — {order.orderType === 'DISASSEMBLY' ? 'Đã tháo' : 'Đã lắp'}: <strong style={{ color: '#6ee7b7' }}>{alreadyProduced}</strong>/{order.quantity} bộ
-                                {remainingSets > 0 && <> — Còn lại: <strong style={{ color: '#fde68a' }}>{remainingSets}</strong> bộ</>}
+                                {remainingSets > 0 && <> — Còn lại: <strong style={{ color: 'var(--wms-warning-border)' }}>{remainingSets}</strong> bộ</>}
                             </p>
                         </div>
                     </div>
@@ -383,9 +383,9 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                                             <span className={styles.setCardSerial}>{set.parentSerial || 'Chưa có mã'}</span>
                                         </div>
                                         <span className={styles.setCardStatus}>
-                                            {done ? <i className="bi bi-check-circle-fill" style={{ color: '#10b981' }}></i>
+                                            {done ? <i className="bi bi-check-circle-fill" style={{ color: 'var(--color-success-alt)' }}></i>
                                                 : isActive ? <i className="bi bi-pencil-fill" style={{ color: '#0075c0' }}></i>
-                                                    : <i className="bi bi-circle" style={{ color: '#cbd5e1' }}></i>}
+                                                    : <i className="bi bi-circle" style={{ color: 'var(--wms-border-strong)' }}></i>}
                                         </span>
                                     </div>
                                 );
@@ -490,7 +490,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                                                 </div>
                                             </div>
                                             <div className={styles.compRight}>
-                                                <div className={styles.compQty} style={{ color: isDone ? '#16a34a' : '#94a3b8' }}>
+                                                <div className={styles.compQty} style={{ color: isDone ? '#16a34a' : 'var(--wms-text-subtle)' }}>
                                                     {scannedComps.length}/{req.requiredQty}
                                                 </div>
                                                 {!needParentSerial && !isDone && (
@@ -594,9 +594,9 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                 <div className={styles.modalFooter}>
                     <span className={styles.footerInfo}>
                         {isAllComplete
-                            ? <><i className="bi bi-check-circle-fill" style={{ color: '#10b981' }}></i> Tất cả {globalTotal} bộ đã hoàn tất. Nhấn để ghi sổ kho.</>
+                            ? <><i className="bi bi-check-circle-fill" style={{ color: 'var(--color-success-alt)' }}></i> Tất cả {globalTotal} bộ đã hoàn tất. Nhấn để ghi sổ kho.</>
                             : completedInSession > 0
-                                ? <><i className="bi bi-lightning-fill" style={{ color: '#f59e0b' }}></i> Sẵn sàng thực thi <strong>{completedInSession}</strong> bộ trong phiên này. {remainingSets - completedInSession > 0 ? `Còn ${remainingSets - completedInSession} bộ có thể làm tiếp sau.` : ''}</>
+                                ? <><i className="bi bi-lightning-fill" style={{ color: 'var(--color-warning)' }}></i> Sẵn sàng thực thi <strong>{completedInSession}</strong> bộ trong phiên này. {remainingSets - completedInSession > 0 ? `Còn ${remainingSets - completedInSession} bộ có thể làm tiếp sau.` : ''}</>
                                 : <><i className="bi bi-info-circle"></i> Quét đủ linh kiện cho ít nhất 1 bộ để bắt đầu thực thi.</>
                         }
                     </span>
@@ -606,7 +606,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                         type="button"
                         disabled={loading || !canExecute}
                         onClick={handleExecute}
-                        style={{ backgroundColor: canExecute && !isAllComplete ? '#f59e0b' : undefined }}
+                        style={{ backgroundColor: canExecute && !isAllComplete ? 'var(--color-warning)' : undefined }}
                     >
                         {loading
                             ? <><i className="bi bi-hourglass-split"></i> Đang xử lý...</>

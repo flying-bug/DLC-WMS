@@ -104,7 +104,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                         
                         <div className={styles.formField} ref={dropdownRef}>
                             <label className={styles.fieldLabel}>
-                                Chọn nhân viên <span style={{ color: '#ef4444' }}>*</span>
+                                Chọn nhân viên <span style={{ color: 'var(--wms-danger)' }}>*</span>
                             </label>
                             
                             {!userId ? (
@@ -124,7 +124,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                                             }}
                                         />
                                         {isSearching && (
-                                            <i className="fas fa-spinner fa-spin" style={{ position: 'absolute', right: '12px', top: '10px', color: '#9ca3af' }}></i>
+                                            <i className="fas fa-spinner fa-spin" style={{ position: 'absolute', right: '12px', top: '10px', color: 'var(--color-text-placeholder)' }}></i>
                                         )}
                                     </div>
                                     
@@ -132,7 +132,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                                         <ul className={styles.userDropdown}>
                                             {users.map(u => (
                                                 <li key={u.id} onClick={() => handleSelectUser(u)}>
-                                                    <div style={{ fontWeight: 500, color: '#111827' }}>{u.fullName} <span style={{ color: '#6b7280', fontWeight: 'normal' }}>({u.username})</span></div>
+                                                    <div style={{ fontWeight: 500, color: 'var(--color-text)' }}>{u.fullName} <span style={{ color: '#6b7280', fontWeight: 'normal' }}>({u.username})</span></div>
                                                     <div style={{ fontSize: '11px', color: '#6b7280' }}>{u.email || u.phone}</div>
                                                 </li>
                                             ))}
@@ -184,7 +184,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                                         );
                                     })
                                 ) : (
-                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '16px', color: '#6b7280', fontStyle: 'italic', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px dashed #d1d5db' }}>
+                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '16px', color: '#6b7280', fontStyle: 'italic', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '6px', border: '1px dashed var(--color-border-muted)' }}>
                                         Không có vai trò nào khả dụng cho phân hệ Kho. Vui lòng kiểm tra lại cấu hình phân quyền.
                                     </div>
                                 )}

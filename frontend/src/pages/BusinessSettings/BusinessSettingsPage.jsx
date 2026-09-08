@@ -79,7 +79,7 @@ function BusinessSettingsPage() {
         </div>
 
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>
             <i className="bi bi-arrow-repeat spin" style={{ marginRight: 8, fontSize: 18 }} />
             Đang tải dữ liệu...
           </div>

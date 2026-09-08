@@ -163,7 +163,7 @@ const CustomerDetailPage = () => {
         return (
             <AdminLayout>
                 <div className={styles.pageBody}>
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải thông tin...</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>Đang tải thông tin...</div>
                 </div>
             </AdminLayout>
         );

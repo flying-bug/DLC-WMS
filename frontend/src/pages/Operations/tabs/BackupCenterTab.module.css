@@ -26,17 +26,17 @@
 .syncBtn {
     display: flex; align-items: center; gap: 8px;
     padding: 9px 18px;
-    background: #2563eb;
+    background: var(--wms-primary);
     border: none; border-radius: 10px;
     color: #fff; font-size: 13px; font-weight: 600;
     cursor: pointer; flex-shrink: 0;
     transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(37,99,235,0.2);
 }
-.syncBtn:hover { background: #1d4ed8; transform: translateY(-1px); }
+.syncBtn:hover { background: var(--wms-primary-hover); transform: translateY(-1px); }
 .syncBtn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
-.pullBtn { background: rgba(37,99,235,0.12); color: #2563eb; }
+.pullBtn { background: rgba(37,99,235,0.12); color: var(--wms-primary); }
 .pullBtn:hover { background: rgba(37,99,235,0.25); }
 
 .msgBar {
@@ -267,7 +267,7 @@
 .dangerBtn {
     display: flex; align-items: center; gap: 7px;
     padding: 8px 20px; border: none; border-radius: 8px;
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    background: linear-gradient(135deg, var(--wms-danger), #b91c1c);
     color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
     transition: all 0.2s;
 }

@@ -72,7 +72,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                 onClick={handleOpen}
                 style={{
                     padding: '6px 8px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--color-border-muted)',
                     borderRadius: '4px',
                     fontSize: '13px',
                     cursor: 'text',
@@ -99,10 +99,10 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                             {selectedCat.description && <span style={{ fontSize: '11px', color: '#6b7280', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCat.description}</span>}
                         </div>
                     ) : (
-                        <span style={{ color: '#9ca3af' }}>Tìm kiếm danh mục</span>
+                        <span style={{ color: 'var(--color-text-placeholder)' }}>Tìm kiếm danh mục</span>
                     )
                 )}
-                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: '#9ca3af', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
+                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
             </div>
 
             {isOpen && rect && createPortal(
@@ -114,7 +114,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                     zIndex: 9999999,
                     transform: rect.openUpwards ? 'translateY(-100%)' : 'none',
                     backgroundColor: '#fff',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--color-border-muted)',
                     borderRadius: '4px',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     maxHeight: '200px',
@@ -131,13 +131,13 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                             style={{
                                 padding: '8px',
                                 cursor: 'pointer',
-                                borderBottom: '1px solid #f3f4f6',
-                                backgroundColor: String(cat.id) === String(value) ? '#eff6ff' : 'transparent'
+                                borderBottom: '1px solid var(--color-bg)',
+                                backgroundColor: String(cat.id) === String(value) ? 'var(--color-primary-soft)' : 'transparent'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = String(cat.id) === String(value) ? '#eff6ff' : 'transparent'}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = String(cat.id) === String(value) ? 'var(--color-primary-soft)' : 'transparent'}
                         >
-                            <div style={{ fontWeight: 500, fontSize: '13px', color: '#111827' }}>
+                            <div style={{ fontWeight: 500, fontSize: '13px', color: 'var(--color-text)' }}>
                                 {cat.name}
                             </div>
                             {cat.description && (
@@ -364,13 +364,13 @@ const QuickAddProductModal = ({
     return (
         <div className="misa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div className="misa-modal" style={{ width: '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-                <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>Thêm nhanh {effectiveProductType}</span>
-                    <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: '#9ca3af' }}></i>
+                <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-heading)' }}>Thêm nhanh {effectiveProductType}</span>
+                    <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
                 </div>
                 
                 <div className="misa-modal-body" style={{ padding: '20px 24px', backgroundColor: '#fff', overflowY: 'auto', flex: 1 }}>
-                    {errorMsg && <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '4px', marginBottom: '16px', fontSize: '13px' }}>{errorMsg}</div>}
+                    {errorMsg && <div style={{ color: 'var(--wms-danger)', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '4px', marginBottom: '16px', fontSize: '13px' }}>{errorMsg}</div>}
 
                     {productTypeOptions.length > 1 && (
                         <div className={styles.typeSelector}>
@@ -388,8 +388,8 @@ const QuickAddProductModal = ({
                         </div>
                     )}
                     
-                    <h5 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: '#111827' }}>1. Thông tin chung</h5>
-                    <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+                    <h5 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: 'var(--color-text)' }}>1. Thông tin chung</h5>
+                    <div style={{ padding: '16px', backgroundColor: 'var(--wms-bg-soft)', borderRadius: '8px', border: '1px solid var(--wms-border-base)', marginBottom: '24px' }}>
                         <div className={styles.field}>
                             <label>Tên {effectiveProductType.toLowerCase()} <span style={{color: 'red'}}>*</span></label>
                             <input 
@@ -464,7 +464,7 @@ const QuickAddProductModal = ({
                                 onChange={(e) => setTrackSerial(e.target.checked)}
                                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                             />
-                            <label htmlFor="trackSerial" style={{ fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', color: '#374151', margin: 0 }}>
+                            <label htmlFor="trackSerial" style={{ fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', color: 'var(--color-text-heading)', margin: 0 }}>
                                 Có quản lý theo số Serial / IMEI
                             </label>
                         </div>
@@ -473,25 +473,25 @@ const QuickAddProductModal = ({
                     {isAssemblyType && (
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <h5 style={{ fontSize: '13px', fontWeight: 600, color: '#111827', margin: 0 }}>2. Định mức cấu hình (Tùy chọn)</h5>
+                                <h5 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>2. Định mức cấu hình (Tùy chọn)</h5>
                             </div>
 
-                            <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden', padding: '14px 16px', minHeight: '120px' }}>
+                            <div style={{ border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden', padding: '14px 16px', minHeight: '120px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {bomLines.map((line, idx) => (
                                         <div key={idx} style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb',
+                                            padding: '8px 12px', background: '#fff', border: '1px solid var(--color-border)',
                                             borderRadius: '8px', transition: 'all 0.2s ease',
                                             boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                                         }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--wms-border-strong)'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
                                         >
                                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    width: '28px', height: '28px', borderRadius: '50%', background: '#f3f4f6',
+                                                    width: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-bg)',
                                                     color: '#6b7280', fontSize: '12px', fontWeight: 600
                                                 }}>
                                                     {idx + 1}
@@ -510,12 +510,12 @@ const QuickAddProductModal = ({
                                                         value={line.note || ''}
                                                         onChange={(e) => handleBomLineChange(idx, 'note', e.target.value)}
                                                         style={{
-                                                            width: '100%', border: 'none', borderBottom: '1px dashed #cbd5e1',
+                                                            width: '100%', border: 'none', borderBottom: '1px dashed var(--wms-border-strong)',
                                                             padding: '4px 6px', fontSize: '12px', outline: 'none',
                                                             background: 'transparent', color: '#4b5563', transition: 'border-color 0.2s'
                                                         }}
-                                                        onFocus={(e) => { e.target.style.borderBottom = '1px solid #3b82f6'; e.target.style.color = '#111827'; }}
-                                                        onBlur={(e) => { e.target.style.borderBottom = '1px dashed #cbd5e1'; e.target.style.color = '#4b5563'; }}
+                                                        onFocus={(e) => { e.target.style.borderBottom = '1px solid var(--color-primary-bright)'; e.target.style.color = 'var(--color-text)'; }}
+                                                        onBlur={(e) => { e.target.style.borderBottom = '1px dashed var(--wms-border-strong)'; e.target.style.color = '#4b5563'; }}
                                                     />
                                                 </div>
                                             </div>
@@ -523,11 +523,11 @@ const QuickAddProductModal = ({
                                                 onClick={() => handleRemoveBomLine(idx)}
                                                 style={{
                                                     border: 'none', background: 'transparent', cursor: 'pointer',
-                                                    color: '#9ca3af', fontSize: '15px', padding: '8px',
+                                                    color: 'var(--color-text-placeholder)', fontSize: '15px', padding: '8px',
                                                     borderRadius: '6px', transition: 'all 0.2s', marginLeft: '8px'
                                                 }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'transparent'; }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--wms-danger)'; e.currentTarget.style.background = '#fee2e2'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-placeholder)'; e.currentTarget.style.background = 'transparent'; }}
                                                 title="Xóa danh mục"
                                             >
                                                 <i className="bi bi-trash3"></i>
@@ -538,14 +538,14 @@ const QuickAddProductModal = ({
                                     <button
                                         onClick={handleAddBomLine}
                                         style={{
-                                            width: '100%', padding: '14px', border: '1px dashed #cbd5e1',
-                                            borderRadius: '8px', background: '#f8fafc', color: '#3b82f6',
+                                            width: '100%', padding: '14px', border: '1px dashed var(--wms-border-strong)',
+                                            borderRadius: '8px', background: 'var(--wms-bg-soft)', color: 'var(--color-primary-bright)',
                                             fontSize: '14px', fontWeight: 500, cursor: 'pointer',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                                             transition: 'all 0.2s ease'
                                         }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary-bright)'; e.currentTarget.style.background = 'var(--color-primary-soft)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--wms-border-strong)'; e.currentTarget.style.background = 'var(--wms-bg-soft)'; }}
                                     >
                                         <i className="bi bi-plus-circle" style={{ fontSize: '16px' }}></i> Thêm danh mục yêu cầu
                                     </button>
@@ -555,7 +555,7 @@ const QuickAddProductModal = ({
                     )}
                 </div>
 
-                <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '12px 20px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
+                <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
                     <button type="button" className="btn-misa-cancel" onClick={onClose}>Hủy</button>
                     <button type="button" className="btn-misa-primary" onClick={handleSave} disabled={loading}>
                         {loading ? 'Đang lưu...' : `Lưu ${effectiveProductType}`}

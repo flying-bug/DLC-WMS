@@ -522,7 +522,7 @@
 
 .pageNumber.active:focus {
   background-color: var(--color-white);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text, var(--wms-text-strong));
   border: 1px solid var(--color-primary);
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
@@ -744,7 +744,7 @@
 .emptyState {
   padding: 80px 20px;
   text-align: center;
-  color: #64748b;
+  color: var(--wms-text-muted);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -753,7 +753,7 @@
 
 .emptyIcon {
   font-size: 64px;
-  color: #e2e8f0;
+  color: var(--wms-border-base);
 }
 
 .emptyText {
@@ -850,7 +850,7 @@
   visibility: hidden;
   width: max-content;
   max-width: 300px;
-  background-color: #1e293b;
+  background-color: var(--wms-text-strong);
   color: #fff;
   text-align: center;
   border-radius: 6px;
@@ -876,7 +876,7 @@
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
-  border-color: #1e293b transparent transparent transparent;
+  border-color: var(--wms-text-strong) transparent transparent transparent;
 }
 
 /* ── Settings Column Modal ────────────────────────────────── */
@@ -1301,7 +1301,7 @@
 .removeSpecBtn {
     background: none;
     border: none;
-    color: var(--color-danger-strong, #ef4444);
+    color: var(--color-danger-strong, var(--wms-danger));
     cursor: pointer;
     font-size: 14px;
     padding: 6px 8px;
@@ -1317,8 +1317,8 @@
 
 .addSpecBtn {
     background: none;
-    border: 1px dashed var(--color-primary, #2563eb);
-    color: var(--color-primary, #2563eb);
+    border: 1px dashed var(--color-primary, var(--wms-primary));
+    color: var(--color-primary, var(--wms-primary));
     border-radius: 4px;
     padding: 6px 14px;
     font-size: 13px;
@@ -1328,13 +1328,13 @@
 }
 
 .addSpecBtn:hover {
-    background: var(--color-bg-hover, #f1f5f9);
+    background: var(--color-bg-hover, var(--wms-bg-hover));
 }
 
 .toggleJsonBtn {
     background: none;
     border: none;
-    color: var(--color-primary, #2563eb);
+    color: var(--color-primary, var(--wms-primary));
     font-size: 12px;
     cursor: pointer;
     text-decoration: underline;
@@ -1462,18 +1462,18 @@
     align-items: center;
     gap: 5px;
     padding: 3px 10px;
-    border: 1.5px solid #2563eb;
+    border: 1.5px solid var(--wms-primary);
     border-radius: 20px;
-    color: #2563eb;
+    color: var(--wms-primary);
     font-size: 12px;
     font-weight: 600;
-    background: #eff6ff;
+    background: var(--color-primary-soft);
     user-select: none;
 }
 
 /* "Thay ─æß╗òi t├¡nh chß║Ñt" link */
 .changeTypeLink {
-    color: #2563eb;
+    color: var(--wms-primary);
     font-size: 12px;
     cursor: pointer;
     text-decoration: underline;
@@ -1486,7 +1486,7 @@
     top: calc(100% + 6px);
     left: 0;
     background: #fff;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
     z-index: 1000;
@@ -1498,18 +1498,18 @@
     padding: 9px 16px;
     font-size: 13px;
     cursor: pointer;
-    color: #374151;
+    color: var(--color-text-heading);
     transition: background 0.15s;
 }
 
 .typeMenuItem:hover {
-    background: #f3f4f6;
+    background: var(--color-bg);
 }
 
 .typeMenuItemActive {
-    color: #2563eb;
+    color: var(--wms-primary);
     font-weight: 600;
-    background: #eff6ff;
+    background: var(--color-primary-soft);
 }
 
 /* Form field label */
@@ -1517,7 +1517,7 @@
     display: block;
     font-size: 12px;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-heading);
     margin-bottom: 4px;
 }
 
@@ -1526,10 +1526,10 @@
     width: 100%;
     box-sizing: border-box;
     padding: 7px 10px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border-muted);
     border-radius: 4px;
     font-size: 13px;
-    color: #111827;
+    color: var(--color-text);
     background: #fff;
     transition: border-color 0.15s, box-shadow 0.15s;
     outline: none;
@@ -1537,13 +1537,13 @@
 }
 
 .fieldInput:focus {
-    border-color: #2563eb;
+    border-color: var(--wms-primary);
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
 .fieldInput:disabled {
-    background: #f3f4f6;
-    color: #9ca3af;
+    background: var(--color-bg);
+    color: var(--color-text-placeholder);
     cursor: not-allowed;
 }
 
@@ -1561,10 +1561,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border-muted);
     border-radius: 4px;
     background: #fff;
-    color: #2563eb;
+    color: var(--wms-primary);
     font-size: 18px;
     font-weight: 700;
     cursor: pointer;
@@ -1574,28 +1574,28 @@
 }
 
 .addInlineBtn:hover {
-    background: #eff6ff;
-    border-color: #2563eb;
+    background: var(--color-primary-soft);
+    border-color: var(--wms-primary);
 }
 
 /* Image upload dashed box */
 .imageUploadBox {
     width: 158px;
     height: 158px;
-    border: 2px dashed #d1d5db;
+    border: 2px dashed var(--color-border-muted);
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f9fafb;
+    background: var(--color-bg-elevated);
     overflow: hidden;
     position: relative;
     transition: border-color 0.15s;
 }
 
 .imageUploadBox:hover {
-    border-color: #2563eb;
-    background: #eff6ff;
+    border-color: var(--wms-primary);
+    background: var(--color-primary-soft);
 }
 
 /* Centered placeholder inside image upload box */
@@ -1613,7 +1613,7 @@
 .quickAddPanel {
     margin-top: 8px;
     padding: 12px 14px;
-    border: 1.5px solid #2563eb;
+    border: 1.5px solid var(--wms-primary);
     border-radius: 6px;
     background: #f0f7ff;
     animation: slideDown 0.15s ease-out;
@@ -1630,7 +1630,7 @@
     font-weight: 600;
     border: none;
     border-radius: 4px;
-    background: #2563eb;
+    background: var(--wms-primary);
     color: #fff;
     cursor: pointer;
     transition: background 0.15s, opacity 0.15s;
@@ -1640,7 +1640,7 @@
 }
 
 .quickSaveBtn:hover:not(:disabled) {
-    background: #1d4ed8;
+    background: var(--wms-primary-hover);
 }
 
 .quickSaveBtn:disabled {
@@ -1651,16 +1651,16 @@
 .quickCancelBtn {
     padding: 5px 12px;
     font-size: 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border-muted);
     border-radius: 4px;
     background: #fff;
-    color: #374151;
+    color: var(--color-text-heading);
     cursor: pointer;
     transition: background 0.15s;
 }
 
 .quickCancelBtn:hover {
-    background: #f3f4f6;
+    background: var(--color-bg);
 }
 
 
@@ -1735,7 +1735,7 @@
 .previewTableContainer {
     max-height: 550px;
     overflow-y: auto;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--wms-border-base);
     border-radius: 12px;
     margin-bottom: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -1765,17 +1765,17 @@
 .previewTable td {
     padding: 10px 12px;
     font-size: 14px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--wms-bg-hover);
     vertical-align: middle;
-    color: #475569;
+    color: var(--wms-text-muted);
 }
 
 .rowValid {
-    background-color: #ffffff;
+    background-color: var(--color-white);
     transition: background-color 0.2s ease;
 }
 .rowValid:hover {
-    background-color: #f8fafc;
+    background-color: var(--wms-bg-soft);
 }
 
 .rowInvalidMain {
@@ -1835,10 +1835,10 @@
 .inlineSelect {
     width: 100%;
     padding: 6px 10px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--wms-border-strong);
     border-radius: 6px;
     font-size: 13px;
-    color: #1e293b;
+    color: var(--wms-text-strong);
     background-color: #fff;
     box-sizing: border-box;
     transition: all 0.2s ease;
@@ -1847,27 +1847,27 @@
 .inlineInput:focus,
 .inlineSelect:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-primary-bright);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .inlineInput:disabled,
 .inlineSelect:disabled {
-    background-color: #f1f5f9;
+    background-color: var(--wms-bg-hover);
     cursor: not-allowed;
-    color: #94a3b8;
+    color: var(--wms-text-subtle);
 }
 
 .statusBadgeValid {
     display: inline-flex;
     align-items: center;
     padding: 6px 12px;
-    background-color: #dcfce7;
+    background-color: var(--color-success-bg);
     color: #166534;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
-    border: 1px solid #bbf7d0;
+    border: 1px solid var(--wms-success-border);
 }
 
 .statusBadgeInvalid {

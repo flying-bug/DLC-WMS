@@ -307,7 +307,7 @@ function AiChatPage() {
                         height: 72,
                         borderRadius: '50%',
                         backgroundColor: '#fef2f2',
-                        color: '#ef4444',
+                        color: 'var(--wms-danger)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -317,17 +317,17 @@ function AiChatPage() {
                     }}>
                         <i className="bi bi-robot" />
                     </div>
-                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--wms-text-strong)', marginBottom: '8px' }}>
                         Tính năng Trợ lý AI hiện đang tạm khóa
                     </h2>
-                    <p style={{ color: '#64748b', maxWidth: 480, marginBottom: '24px', lineHeight: 1.5 }}>
+                    <p style={{ color: 'var(--wms-text-muted)', maxWidth: 480, marginBottom: '24px', lineHeight: 1.5 }}>
                         Quản trị viên đã tắt tính năng Trợ lý AI trên toàn hệ thống. Vui lòng liên hệ Admin nếu bạn cần sử dụng tính năng này.
                     </p>
                     <button
                         onClick={() => navigate('/main-dashboard')}
                         style={{
                             padding: '10px 24px',
-                            backgroundColor: '#2563eb',
+                            backgroundColor: 'var(--wms-primary)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: '8px',

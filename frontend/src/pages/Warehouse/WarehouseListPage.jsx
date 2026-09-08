@@ -317,7 +317,7 @@ const WarehouseListPage = () => {
                                                 <i 
                                                     className="bi bi-trash"
                                                     title="Xóa"
-                                                    style={{ cursor: 'pointer', color: '#ef4444', fontSize: '16px' }}
+                                                    style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: '16px' }}
                                                     onClick={(e) => handleDelete(e, item)}
                                                 ></i>
                                             </div>

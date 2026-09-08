@@ -17,7 +17,7 @@
   justify-content: center;
   height: 60vh;
   gap: 12px;
-  color: var(--color-text-subtle, #64748b);
+  color: var(--color-text-subtle, var(--wms-text-muted));
   font-size: 0.9375rem;
 }
 
@@ -41,10 +41,10 @@
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border-subtle, #cbd5e1);
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-strong));
   border-radius: var(--border-radius-base, 6px);
-  color: var(--color-text-main, #334155);
+  color: var(--color-text-main, var(--wms-text-body));
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -52,19 +52,19 @@
 }
 
 .backBtn:hover {
-  background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-strong, #0f172a);
+  background: var(--color-bg-hover, var(--wms-bg-hover));
+  color: var(--color-text-strong, var(--wms-text-title));
 }
 
 .divider {
-  color: var(--color-border-subtle, #cbd5e1);
+  color: var(--color-border-subtle, var(--wms-border-strong));
   font-size: 0.875rem;
 }
 
 .docTitle {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--color-text-strong, #0f172a);
+  color: var(--color-text-strong, var(--wms-text-title));
   margin: 0;
   display: flex;
   align-items: center;
@@ -72,7 +72,7 @@
 }
 
 .docCodeText {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, var(--wms-primary));
 }
 
 .statusBadge {
@@ -97,9 +97,9 @@
 }
 
 .statusDraft {
-  background: var(--color-bg-subtle, #f1f5f9);
-  color: var(--color-text-subtle, #64748b);
-  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  background: var(--color-bg-subtle, var(--wms-bg-hover));
+  color: var(--color-text-subtle, var(--wms-text-muted));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
 }
 
 .headerActions {
@@ -114,9 +114,9 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: var(--border-radius-base, 6px);
-  border: 1px solid var(--color-border-subtle, #cbd5e1);
-  background: var(--color-surface, #ffffff);
-  color: var(--color-text-main, #334155);
+  border: 1px solid var(--color-border-subtle, var(--wms-border-strong));
+  background: var(--color-surface, var(--color-white));
+  color: var(--color-text-main, var(--wms-text-body));
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -124,8 +124,8 @@
 }
 
 .btnSecondary:hover {
-  background: var(--color-bg-hover, #f1f5f9);
-  color: var(--color-text-strong, #0f172a);
+  background: var(--color-bg-hover, var(--wms-bg-hover));
+  color: var(--color-text-strong, var(--wms-text-title));
 }
 
 .btnPost {
@@ -136,7 +136,7 @@
   border-radius: var(--border-radius-base, 6px);
   border: none;
   background: var(--color-success-action, #2ca01c);
-  color: #ffffff;
+  color: var(--color-white);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -186,8 +186,8 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
   border-radius: var(--border-radius-base, 6px);
   padding: 12px 18px;
   box-shadow: var(--shadow-card-subtle, 0 1px 2px rgba(0, 0, 0, 0.04));
@@ -210,32 +210,32 @@
 
 .fieldLabel {
   width: 140px;
-  color: var(--color-text-subtle, #64748b);
+  color: var(--color-text-subtle, var(--wms-text-muted));
   flex-shrink: 0;
 }
 
 .fieldValue {
-  color: var(--color-text-main, #334155);
+  color: var(--color-text-main, var(--wms-text-body));
 }
 
 .fieldValueBold {
-  color: var(--color-text-strong, #0f172a);
+  color: var(--color-text-strong, var(--wms-text-title));
   font-weight: 600;
 }
 
 .fieldValueCode {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, var(--wms-primary));
   font-weight: 700;
 }
 
 .fieldValueBadge {
   display: inline-flex;
   align-items: center;
-  background: var(--color-bg-subtle, #f1f5f9);
+  background: var(--color-bg-subtle, var(--wms-bg-hover));
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 500;
-  color: var(--color-text-strong, #0f172a);
+  color: var(--color-text-strong, var(--wms-text-title));
 }
 
 /* SCANNER BAR */
@@ -243,8 +243,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-info-border-soft, #bfdbfe);
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-info-border-soft, var(--color-info-border-soft));
   padding: 8px 14px;
   border-radius: var(--border-radius-base, 6px);
   box-shadow: 0 1px 3px rgba(37, 99, 235, 0.05);
@@ -256,14 +256,14 @@
   border: none;
   font-size: 0.875rem;
   background: transparent;
-  color: var(--color-text-strong, #0f172a);
+  color: var(--color-text-strong, var(--wms-text-title));
   outline: none;
 }
 
 .scannerFeedback {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary, var(--wms-primary));
 }
 
 /* GRID CARD */
@@ -271,8 +271,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface, #ffffff);
-  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
   border-radius: var(--border-radius-base, 6px);
   box-shadow: var(--shadow-card-subtle, 0 1px 2px rgba(0, 0, 0, 0.04));
   overflow: hidden;
@@ -294,39 +294,39 @@
 .dataTable th {
   position: sticky;
   top: 0;
-  background: var(--table-header-bg, #f1f5f9);
-  color: var(--color-text-strong, #1e293b);
+  background: var(--table-header-bg, var(--wms-bg-hover));
+  color: var(--color-text-strong, var(--wms-text-strong));
   font-weight: 600;
   padding: 8px 12px;
-  border-bottom: 2px solid var(--color-border-subtle, #cbd5e1);
-  border-right: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-bottom: 2px solid var(--color-border-subtle, var(--wms-border-strong));
+  border-right: 1px solid var(--color-border-subtle, var(--wms-border-base));
   white-space: nowrap;
   z-index: 10;
 }
 
 .dataTable td {
   padding: 8px 12px;
-  border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
-  border-right: 1px solid var(--color-border-subtle, #f1f5f9);
-  color: var(--color-text-main, #334155);
+  border-bottom: 1px solid var(--color-border-subtle, var(--wms-border-base));
+  border-right: 1px solid var(--color-border-subtle, var(--wms-bg-hover));
+  color: var(--color-text-main, var(--wms-text-body));
   white-space: nowrap;
   font-size: 0.8125rem;
 }
 
 .dataRow:hover {
-  background-color: var(--table-hover-bg, #f8fafc);
+  background-color: var(--table-hover-bg, var(--wms-bg-soft));
 }
 
 .subText {
   display: block;
   font-size: 0.6875rem;
-  color: var(--color-text-subtle, #64748b);
+  color: var(--color-text-subtle, var(--wms-text-muted));
 }
 
 .qtyCellInput {
   width: 75px;
   padding: 3px 6px;
-  border: 1px solid var(--color-primary, #2563eb);
+  border: 1px solid var(--color-primary, var(--wms-primary));
   border-radius: 4px;
   text-align: right;
   font-size: 0.8125rem;
@@ -341,9 +341,9 @@
   gap: 5px;
   padding: 3px 10px;
   border-radius: var(--border-radius-base, 4px);
-  border: 1px solid var(--color-border-subtle, #cbd5e1);
-  background: var(--color-surface, #ffffff);
-  color: var(--color-text-main, #334155);
+  border: 1px solid var(--color-border-subtle, var(--wms-border-strong));
+  background: var(--color-surface, var(--color-white));
+  color: var(--color-text-main, var(--wms-text-body));
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -351,9 +351,9 @@
 }
 
 .serialBtn:hover {
-  background: var(--color-bg-hover, #f1f5f9);
-  border-color: var(--color-primary, #2563eb);
-  color: var(--color-primary, #2563eb);
+  background: var(--color-bg-hover, var(--wms-bg-hover));
+  border-color: var(--color-primary, var(--wms-primary));
+  color: var(--color-primary, var(--wms-primary));
 }
 
 .serialBtnSuccess {
@@ -371,12 +371,12 @@
 }
 
 .tableFooterRow {
-  background: var(--color-bg-subtle, #f8fafc);
-  border-top: 2px solid var(--color-border-subtle, #cbd5e1);
+  background: var(--color-bg-subtle, var(--wms-bg-soft));
+  border-top: 2px solid var(--color-border-subtle, var(--wms-border-strong));
 }
 
 .tableFooterRow td {
   padding: 8px 12px;
   font-size: 0.8125rem;
-  color: var(--color-text-strong, #0f172a);
+  color: var(--color-text-strong, var(--wms-text-title));
 }

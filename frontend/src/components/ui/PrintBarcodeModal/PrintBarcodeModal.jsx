@@ -109,7 +109,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
             <div className={`misa-modal ${styles.modalContainer}`}>
                 <div className="misa-modal-header">
                     <h3>In mã vạch - {product.productName}</h3>
-                    <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: '#94a3b8' }}></i>
+                    <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--wms-text-subtle)' }}></i>
                 </div>
 
                 <div className={`misa-modal-body ${styles.modalBody}`}>
@@ -174,8 +174,8 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                             <div className={styles.formGroup} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                                     <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: 0 }}>
-                                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>Nhập Serial Number cần in</span>
-                                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 400 }}>(Mỗi Serial một dòng)</span>
+                                        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--wms-text-strong)' }}>Nhập Serial Number cần in</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)', fontWeight: 400 }}>(Mỗi Serial một dòng)</span>
                                     </label>
                                 </div>
                                 <textarea
@@ -201,7 +201,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                                     <button
                                         type="button"
                                         className="btn-misa-save"
-                                        style={{ flex: '1 1 auto', backgroundColor: '#10b981', padding: '6px 12px', display: 'flex', justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap', minWidth: '150px' }}
+                                        style={{ flex: '1 1 auto', backgroundColor: 'var(--color-success-alt)', padding: '6px 12px', display: 'flex', justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap', minWidth: '150px' }}
                                         onClick={handleAutoGenerateSerials}
                                         disabled={isGenerating}
                                     >
@@ -212,7 +212,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                                         <button
                                             type="button"
                                             className="btn-misa-cancel"
-                                            style={{ flex: '1 1 auto', padding: '6px 12px', display: 'flex', justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap', minWidth: '100px', backgroundColor: '#fef2f2', color: '#ef4444', borderColor: '#fca5a5' }}
+                                            style={{ flex: '1 1 auto', padding: '6px 12px', display: 'flex', justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap', minWidth: '100px', backgroundColor: '#fef2f2', color: 'var(--wms-danger)', borderColor: '#fca5a5' }}
                                             onClick={() => setSerialsText('')}
                                             title="Xóa toàn bộ mã đã nhập"
                                         >
@@ -221,7 +221,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                                         </button>
                                     )}
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
+                                <div style={{ fontSize: '12px', color: 'var(--wms-text-muted)', marginTop: '8px' }}>
                                     Đã nhập: <strong>{serialList.length}</strong> Serial (Sẽ in {serialList.length} tem)
                                 </div>
                             </div>
@@ -258,13 +258,13 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                                         />
                                     ))}
                                     {totalLabels > 50 && (
-                                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--wms-text-muted)', marginTop: '8px' }}>
                                             ...và {totalLabels - 50} tem khác (Sẽ hiển thị đầy đủ khi in)
                                         </div>
                                     )}
                                 </>
                             ) : (
-                                <div style={{ color: '#94a3b8', textAlign: 'center', marginTop: '40px', wordBreak: 'break-word', padding: '0 10px', width: '100%' }}>
+                                <div style={{ color: 'var(--wms-text-subtle)', textAlign: 'center', marginTop: '40px', wordBreak: 'break-word', padding: '0 10px', width: '100%' }}>
                                     Vui lòng nhập Serial để xem trước
                                 </div>
                             )}

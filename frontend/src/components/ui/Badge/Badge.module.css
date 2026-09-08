@@ -50,18 +50,18 @@
 
 /* ── SOFT (Default) ── */
 .success.soft {
-  background-color: var(--wms-success-soft, var(--color-success-bg, #ecfdf5));
-  color: var(--wms-success, var(--color-success-dark, #059669));
-  border: 1px solid var(--wms-success-border, var(--color-success-border, #a7f3d0));
+  background-color: var(--wms-success-soft, var(--color-success-bg, var(--wms-success-soft)));
+  color: var(--wms-success, var(--color-success-dark, var(--wms-success)));
+  border: 1px solid var(--wms-success-border, var(--color-success-border, var(--wms-success-border)));
 }
 .success.soft .dot {
-  background-color: var(--wms-success, #059669);
+  background-color: var(--wms-success, var(--wms-success));
 }
 
 .warning.soft {
-  background-color: var(--wms-warning-soft, var(--color-warning-bg, #fffbeb));
+  background-color: var(--wms-warning-soft, var(--color-warning-bg, var(--wms-warning-soft)));
   color: var(--wms-warning, var(--color-warning-dark, #d97706));
-  border: 1px solid var(--wms-warning-border, var(--color-warning-border, #fde68a));
+  border: 1px solid var(--wms-warning-border, var(--color-warning-border, var(--wms-warning-border)));
 }
 .warning.soft .dot {
   background-color: var(--wms-warning, #d97706);
@@ -69,11 +69,11 @@
 
 .danger.soft {
   background-color: var(--wms-danger-soft, var(--color-danger-bg, #fef2f2));
-  color: var(--wms-danger, var(--color-danger, #ef4444));
+  color: var(--wms-danger, var(--color-danger, var(--wms-danger)));
   border: 1px solid var(--wms-danger-border, var(--color-danger-border, #fecaca));
 }
 .danger.soft .dot {
-  background-color: var(--wms-danger, #ef4444);
+  background-color: var(--wms-danger, var(--wms-danger));
 }
 
 .info.soft {
@@ -86,46 +86,46 @@
 }
 
 .neutral.soft {
-  background-color: var(--color-bg-soft, #f1f5f9);
-  color: var(--color-text-muted, #64748b);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background-color: var(--color-bg-soft, var(--wms-bg-hover));
+  color: var(--color-text-muted, var(--wms-text-muted));
+  border: 1px solid var(--color-border, var(--wms-border-base));
 }
 .neutral.soft .dot {
-  background-color: var(--color-text-muted, #64748b);
+  background-color: var(--color-text-muted, var(--wms-text-muted));
 }
 
 /* ── SOLID ── */
 .success.solid {
-  background-color: var(--wms-success, #059669);
-  color: #ffffff;
+  background-color: var(--wms-success, var(--wms-success));
+  color: var(--color-white);
   border: 1px solid transparent;
 }
 .warning.solid {
   background-color: var(--wms-warning, #d97706);
-  color: #ffffff;
+  color: var(--color-white);
   border: 1px solid transparent;
 }
 .danger.solid {
-  background-color: var(--wms-danger, #ef4444);
-  color: #ffffff;
+  background-color: var(--wms-danger, var(--wms-danger));
+  color: var(--color-white);
   border: 1px solid transparent;
 }
 .info.solid {
   background-color: var(--wms-info, #0ea5e9);
-  color: #ffffff;
+  color: var(--color-white);
   border: 1px solid transparent;
 }
 .neutral.solid {
-  background-color: var(--color-text-muted, #64748b);
-  color: #ffffff;
+  background-color: var(--color-text-muted, var(--wms-text-muted));
+  color: var(--color-white);
   border: 1px solid transparent;
 }
 
 /* ── OUTLINE ── */
 .success.outline {
   background-color: transparent;
-  color: var(--wms-success, #059669);
-  border: 1px solid var(--wms-success, #059669);
+  color: var(--wms-success, var(--wms-success));
+  border: 1px solid var(--wms-success, var(--wms-success));
 }
 .warning.outline {
   background-color: transparent;
@@ -134,8 +134,8 @@
 }
 .danger.outline {
   background-color: transparent;
-  color: var(--wms-danger, #ef4444);
-  border: 1px solid var(--wms-danger, #ef4444);
+  color: var(--wms-danger, var(--wms-danger));
+  border: 1px solid var(--wms-danger, var(--wms-danger));
 }
 .info.outline {
   background-color: transparent;
@@ -144,6 +144,6 @@
 }
 .neutral.outline {
   background-color: transparent;
-  color: var(--color-text-muted, #64748b);
-  border: 1px solid var(--color-border-strong, #cbd5e1);
+  color: var(--color-text-muted, var(--wms-text-muted));
+  border: 1px solid var(--color-border-strong, var(--wms-border-strong));
 }

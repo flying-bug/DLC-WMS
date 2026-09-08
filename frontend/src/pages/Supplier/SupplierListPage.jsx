@@ -283,10 +283,10 @@ const SupplierListPage = () => {
                                             </a>
                                         </td>
                                         <td style={{ fontWeight: 600 }}>{item.name}</td>
-                                        <td>{item.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
+                                        <td>{item.taxCode || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
                                         <td style={{ maxWidth: '250px' }}>
                                             <div className={styles.tooltipContainer}>
-                                                <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có địa chỉ</span>}</span>
+                                                <span className={styles.noteText}>{item.address || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có địa chỉ</span>}</span>
                                                 {item.address && <span className={styles.tooltipText}>{item.address}</span>}
                                             </div>
                                         </td>

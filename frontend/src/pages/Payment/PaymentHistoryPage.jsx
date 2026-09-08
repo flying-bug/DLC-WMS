@@ -13,7 +13,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
-const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
+const statusText = (status) => (status === 'POSTED' ? 'Đã ghi sổ' : status === 'DRAFT' ? 'Chờ ghi sổ' : status || '-');
 const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
 const entityTypeLabel = (type) => {
@@ -48,7 +48,6 @@ function PaymentHistoryPage() {
   const [ledgerEntries, setLedgerEntries] = useState([]);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [postingId, setPostingId] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
 
   // Filters for left column (Invoices & Import/Export Docs)
@@ -148,19 +147,6 @@ function PaymentHistoryPage() {
     ? `${partner.code || ''} - ${partner.name || ''}`.trim()
     : location.state?.partnerLabel || `ID ${partnerId}`;
 
-  const postDraftPayment = async (item) => {
-    if (!item?.id || item.status !== 'DRAFT') return;
-    setPostingId(item.id);
-    try {
-      await paymentApi.postPayment(item.id);
-      await loadData();
-      showToast('success', 'Ghi sổ phiếu nháp thành công');
-    } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể ghi sổ phiếu nháp');
-    } finally {
-      setPostingId(null);
-    }
-  };
 
   const handleConfirmDelete = async () => {
     if (!deletingItem?.id) return;
@@ -370,24 +356,13 @@ function PaymentHistoryPage() {
                               <i className="bi bi-printer" />
                             </button>
                             {item.status === 'DRAFT' && (
-                              <>
-                                <button
-                                  className={styles.postButton}
-                                  disabled={postingId === item.id}
-                                  onClick={() => postDraftPayment(item)}
-                                  title="Ghi sổ phiếu nháp"
-                                  style={{ borderRadius: 4, padding: '2px 6px', fontSize: 11 }}
-                                >
-                                  Ghi sổ
-                                </button>
-                                <button
-                                  className={styles.btnActionSmallDelete}
-                                  onClick={() => setDeletingItem(item)}
-                                  title="Xóa phiếu nháp"
-                                >
-                                  <i className="bi bi-trash" />
-                                </button>
-                              </>
+                              <button
+                                className={styles.btnActionSmallDelete}
+                                onClick={() => setDeletingItem(item)}
+                                title="Xóa đề nghị"
+                              >
+                                <i className="bi bi-trash" />
+                              </button>
                             )}
                           </div>
                         </td>

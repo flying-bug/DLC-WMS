@@ -57,13 +57,13 @@
 }
 
 .table th, .table td {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--wms-border-strong);
   padding: 8px 10px;
   text-align: left;
 }
 
 .table th {
-  background-color: #f1f5f9;
+  background-color: var(--wms-bg-hover);
   font-weight: bold;
   text-align: center;
   white-space: nowrap;

@@ -16,6 +16,9 @@ import com.duylongtech.backend.service.PartnerLedgerService;
 import com.duylongtech.backend.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,27 +64,20 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BusinessException(SystemMessage.PAY_ERR_005.getMessage());
         }
 
-        String status = normalizeStatus(request.getStatus());
         String paymentMethod = normalizePaymentMethod(request.getPaymentMethod());
-        if ("POSTED".equals(status)) {
-            ensurePaymentDoesNotExceedDebt(partner.getId(), amount);
-        }
 
         PaymentTransaction transaction = PaymentTransaction.builder()
                 .transactionCode(codeGeneratorService.generateCode("PAYMENT_TRANSACTIONS", "transaction_code", prefix, 5))
                 .type(type)
                 .partnerId(partner.getId())
                 .amount(amount)
-                .status(status)
+                .status("DRAFT")
                 .paymentMethod(paymentMethod)
                 .note(trimToNull(request.getNote()))
                 .createdAt(LocalDateTime.now())
                 .build();
 
         PaymentTransaction saved = paymentTransactionRepository.save(transaction);
-        if ("POSTED".equals(saved.getStatus())) {
-            recordPostedPaymentLedger(saved, saved.getNote());
-        }
         return toResponse(saved, partner);
     }
 
@@ -104,23 +100,15 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BusinessException(SystemMessage.PAY_ERR_005.getMessage());
         }
 
-        String nextStatus = request != null && request.getStatus() != null ? normalizeStatus(request.getStatus()) : payment.getStatus();
         String paymentMethod = request != null && request.getPaymentMethod() != null ? normalizePaymentMethod(request.getPaymentMethod()) : payment.getPaymentMethod();
-
-        if ("POSTED".equals(nextStatus)) {
-            ensurePaymentDoesNotExceedDebt(partner.getId(), amount);
-        }
 
         payment.setPartnerId(partner.getId());
         payment.setAmount(amount);
         payment.setPaymentMethod(paymentMethod);
         payment.setNote(request != null ? trimToNull(request.getNote()) : payment.getNote());
-        payment.setStatus(nextStatus);
+        payment.setStatus("DRAFT");
 
         PaymentTransaction saved = paymentTransactionRepository.save(payment);
-        if ("POSTED".equals(saved.getStatus())) {
-            recordPostedPaymentLedger(saved, saved.getNote());
-        }
         return toResponse(saved, partner);
     }
 
@@ -140,6 +128,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse postPayment(Long id) {
+        if (!canPostDirectly()) {
+            throw new BusinessException("Chỉ Thủ quỹ hoặc Quản trị viên mới có quyền ghi sổ quỹ");
+        }
         PaymentTransaction payment = paymentTransactionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi"));
         Partner partner = partnerRepository.findById(payment.getPartnerId())
@@ -156,6 +147,47 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus("POSTED");
         PaymentTransaction saved = paymentTransactionRepository.save(payment);
         recordPostedPaymentLedger(saved, saved.getNote());
+        return toResponse(saved, partner);
+    }
+
+    @Override
+    @Transactional
+    public PaymentResponse unpostPayment(Long id, String reason) {
+        if (!canPostDirectly()) {
+            throw new BusinessException("Chỉ Thủ quỹ hoặc Quản trị viên mới có quyền bỏ ghi sổ quỹ");
+        }
+        PaymentTransaction payment = paymentTransactionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi với ID: " + id));
+        Partner partner = partnerRepository.findById(payment.getPartnerId())
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác"));
+
+        if (!"POSTED".equals(payment.getStatus())) {
+            throw new BusinessException("Chỉ có thể bỏ ghi sổ cho phiếu đã ghi sổ quỹ (POSTED)");
+        }
+
+        // Hoàn tác công nợ trên sổ cái: ghi nợ ngược lại để khôi phục số dư nợ
+        String rollbackRefType = "UNPOST_" + ("RECEIPT".equals(payment.getType()) ? "RECEIPT" : "VOUCHER");
+        String cleanReason = reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu";
+        String rollbackNote = "Bỏ ghi sổ " + ("RECEIPT".equals(payment.getType()) ? "phiếu thu " : "phiếu chi ")
+                + payment.getTransactionCode() + " - Lý do: " + cleanReason;
+
+        partnerLedgerService.recordLedger(
+                payment.getPartnerId(),
+                rollbackRefType,
+                payment.getId(),
+                payment.getTransactionCode(),
+                payment.getAmount(),
+                ZERO,
+                rollbackNote
+        );
+
+        // Chuyển trạng thái phiếu về DRAFT (Chờ ghi sổ)
+        payment.setStatus("DRAFT");
+        PaymentTransaction saved = paymentTransactionRepository.save(payment);
+
+        log.info("[Payment] Đã bỏ ghi sổ phiếu {}. Đưa về trạng thái DRAFT. Lý do: {}", 
+                saved.getTransactionCode(), cleanReason);
+
         return toResponse(saved, partner);
     }
 
@@ -255,16 +287,23 @@ public class PaymentServiceImpl implements PaymentService {
         return normalized;
     }
 
-    private String normalizeStatus(String status) {
-        if (status == null || status.isBlank()) {
-            return "POSTED";
+    private boolean canPostDirectly() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
         }
-        String normalized = status.trim().toUpperCase();
-        if (!"DRAFT".equals(normalized) && !"POSTED".equals(normalized)) {
-            throw new BusinessException(SystemMessage.PAY_ERR_001.getMessage());
+        for (GrantedAuthority authority : auth.getAuthorities()) {
+            String role = authority.getAuthority();
+            if ("ROLE_CASHIER_CONTROLLER".equals(role)
+                    || "ROLE_SUPER_ADMIN".equals(role)
+                    || "ROLE_MANAGER".equals(role)
+                    || "ROLE_ADMIN".equals(role)) {
+                return true;
+            }
         }
-        return normalized;
+        return false;
     }
+
 
     private String trimToNull(String value) {
         if (value == null) {

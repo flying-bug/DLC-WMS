@@ -370,7 +370,7 @@ function AssemblyBomFormPage() {
                 <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid var(--color-border)', padding: '24px' }}>
 
                     {!canEdit && (
-                        <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'var(--color-success-bg-soft)', border: '1px solid var(--wms-success-border)', borderRadius: '8px', color: '#166534', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <i className="bi bi-shield-lock-fill" style={{ fontSize: '20px' }}></i>
                             <div>
                                 <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Cấu hình đã được duyệt</h4>
@@ -469,7 +469,7 @@ function AssemblyBomFormPage() {
                                                     {index + 1}. {line.componentRole || (selectedVariant ? selectedVariant.categoryName : 'Linh kiện tùy chọn')}
                                                 </span>
                                                 {displayTemplateNote && (
-                                                    <div style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '4px', fontWeight: 500, border: '1px dashed #f59e0b', display: 'flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.4, width: '100%', wordBreak: 'break-word' }}>
+                                                    <div style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '4px', fontWeight: 500, border: '1px dashed var(--color-warning)', display: 'flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.4, width: '100%', wordBreak: 'break-word' }}>
                                                         <i className="bi bi-pin-angle-fill" style={{ marginTop: '2px' }}></i>
                                                         <span><strong>Yêu cầu:</strong> {displayTemplateNote}</span>
                                                     </div>
@@ -482,7 +482,7 @@ function AssemblyBomFormPage() {
                                                     </div>
                                                 )}
                                                 {line.componentRole && (
-                                                    <span style={{ fontSize: '0.65rem', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                                    <span style={{ fontSize: '0.65rem', backgroundColor: '#fef2f2', color: 'var(--wms-danger)', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
                                                         Bắt buộc
                                                     </span>
                                                 )}
@@ -507,7 +507,7 @@ function AssemblyBomFormPage() {
                                                     </div>
                                                     <div className={styles.bomItemMeta}>
                                                         <span>Bảo hành: <strong>{selectedVariant.warrantyMonths > 0 ? `${selectedVariant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
-                                                        <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
+                                                        <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                         <span>Mã SP: <strong>{selectedVariant.sku}</strong></span>
                                                     </div>
                                                     <div className={styles.bomExtraFields}>
@@ -553,11 +553,11 @@ function AssemblyBomFormPage() {
                                                 {line.componentRole && (
                                                     <div style={{ fontWeight: 600, color: '#4b5563', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <i className="bi bi-info-circle" style={{ color: '#3b82f6' }}></i>
-                                                            Cần chọn danh mục: <span style={{ color: '#1d4ed8' }}>{line.componentRole}</span>
+                                                            <i className="bi bi-info-circle" style={{ color: 'var(--color-primary-bright)' }}></i>
+                                                            Cần chọn danh mục: <span style={{ color: 'var(--wms-primary-hover)' }}>{line.componentRole}</span>
                                                         </div>
                                                         {displayTemplateNote && (
-                                                            <div style={{ color: '#92400e', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '6px', border: '1px dashed #f59e0b', maxWidth: '400px', textAlign: 'left', lineHeight: 1.4 }}>
+                                                            <div style={{ color: '#92400e', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '6px', border: '1px dashed var(--color-warning)', maxWidth: '400px', textAlign: 'left', lineHeight: 1.4 }}>
                                                                 <i className="bi bi-pin-angle-fill" style={{ marginTop: '2px' }}></i>
                                                                 <span><strong>Yêu cầu:</strong> {displayTemplateNote}</span>
                                                             </div>
@@ -574,7 +574,7 @@ function AssemblyBomFormPage() {
                                                     </button>
                                                 )}
                                                 {canEdit && !line.componentRole && (
-                                                    <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                                                    <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}>
                                                         <i className="bi bi-trash"></i>
                                                     </button>
                                                 )}
@@ -598,7 +598,7 @@ function AssemblyBomFormPage() {
                         <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-boms')}>{canEdit ? 'Hủy bỏ' : 'Đóng'}</button>
 
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-                            <button className="btn-misa-cancel" style={{ border: '1px solid #10b981', color: '#10b981' }} type="button" onClick={handleExportExcel}>
+                            <button className="btn-misa-cancel" style={{ border: '1px solid var(--color-success-alt)', color: 'var(--color-success-alt)' }} type="button" onClick={handleExportExcel}>
                                 <i className="bi bi-file-earmark-excel"></i>
                             </button>
                             {canEdit && (
@@ -628,14 +628,14 @@ function AssemblyBomFormPage() {
                 {pickingLineIndex !== null && (
                     <div className={styles.modalOverlay} style={{ zIndex: 1100 }}>
                         <div className={styles.modal} style={{ maxWidth: '800px', width: '90%' }}>
-                            <div className={styles.modalHeader} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
-                                <button type="button" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }} style={{ background: '#f3f4f6', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4b5563', transition: 'all 0.2s' }} title="Quay lại danh sách cấu hình">
+                            <div className={styles.modalHeader} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', background: '#fff' }}>
+                                <button type="button" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }} style={{ background: 'var(--color-bg)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4b5563', transition: 'all 0.2s' }} title="Quay lại danh sách cấu hình">
                                     <i className="bi bi-arrow-left" style={{ fontSize: '18px' }}></i>
                                 </button>
                                 <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tìm kiếm & Chọn linh kiện</h2>
                             </div>
                             <div className={styles.modalBody} style={{ padding: 0 }}>
-                                <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', background: '#f8fafc' }}>
+                                <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', background: 'var(--wms-bg-soft)' }}>
                                     <input
                                         type="text"
                                         className="misa-input"
@@ -679,7 +679,7 @@ function AssemblyBomFormPage() {
                                                     <div className={styles.bomItemMeta}>
                                                         <span>Mã SP: <strong>{variant.sku}</strong></span>
                                                         <span>Bảo hành: <strong>{variant.warrantyMonths > 0 ? `${variant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
-                                                        <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
+                                                        <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                     </div>
                                                     <div className={styles.variantPickerPrice}>
                                                         {Number(variant.salePrice || 0).toLocaleString('vi-VN')} đ

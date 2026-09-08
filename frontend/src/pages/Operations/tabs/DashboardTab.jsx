@@ -19,7 +19,7 @@ function StatCard({ icon, iconColor, label, value, sub, percent, trend }) {
                         className={styles.statBarFill}
                         style={{
                             width: `${Math.min(percent, 100)}%`,
-                            background: percent > 80 ? '#ef4444' : percent > 60 ? '#f59e0b' : iconColor
+                            background: percent > 80 ? 'var(--wms-danger)' : percent > 60 ? 'var(--color-warning)' : iconColor
                         }}
                     />
                     <span className={styles.statBarPct}>{percent}%</span>
@@ -134,7 +134,7 @@ function DashboardTab() {
             <div className={styles.statsGrid}>
                 <StatCard
                     icon="bi bi-server"
-                    iconColor="#6366f1"
+                    iconColor="var(--wms-primary)"
                     label="Kích thước Database"
                     value={h.dbSizeFormatted}
                     sub={`${h.tableCount} bảng dữ liệu`}
@@ -157,7 +157,7 @@ function DashboardTab() {
                 />
                 <StatCard
                     icon="bi bi-archive-fill"
-                    iconColor="#10b981"
+                    iconColor="var(--color-success-alt)"
                     label="Tổng số bản sao lưu"
                     value={`${h.totalBackupFiles} files`}
                     sub={`Dung lượng: ${h.totalBackupSizeFormatted}`}

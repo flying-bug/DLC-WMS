@@ -5,7 +5,7 @@ import styles from './SystemMonitorTab.module.css';
 // Simple gauge bar component
 function GaugeBar({ label, value, max, unit, color }) {
     const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
-    const barColor = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : color;
+    const barColor = pct > 80 ? 'var(--wms-danger)' : pct > 60 ? 'var(--color-warning)' : color;
     return (
         <div className={styles.gaugeRow}>
             <div className={styles.gaugeLabel}>{label}</div>
@@ -157,7 +157,7 @@ function SystemMonitorTab() {
                                         />
                                         <defs>
                                             <linearGradient id="memGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                <stop offset="0%" stopColor="#6366f1" />
+                                                <stop offset="0%" stopColor="var(--wms-primary)" />
                                                 <stop offset="100%" stopColor="#8b5cf6" />
                                             </linearGradient>
                                         </defs>
@@ -167,8 +167,8 @@ function SystemMonitorTab() {
                                         <span className={styles.donutLabel}>Đã dùng</span>
                                     </div>
                                 </div>
-                                <GaugeBar label="Đã dùng"  value={health.jvmUsedMb}  max={health.jvmTotalMb} unit=" MB" color="#6366f1" />
-                                <GaugeBar label="Trống"  value={health.jvmFreeMb}  max={health.jvmTotalMb} unit=" MB" color="#10b981" />
+                                <GaugeBar label="Đã dùng"  value={health.jvmUsedMb}  max={health.jvmTotalMb} unit=" MB" color="var(--wms-primary)" />
+                                <GaugeBar label="Trống"  value={health.jvmFreeMb}  max={health.jvmTotalMb} unit=" MB" color="var(--color-success-alt)" />
                             </div>
 
                             <div className={styles.resourceCard}>
@@ -178,9 +178,9 @@ function SystemMonitorTab() {
                                     <div className={styles.liveTag}><i className="bi bi-circle-fill" />LIVE</div>
                                 </div>
                                 <GaugeBar label="Đã dùng"  value={health.diskUsedGb}  max={health.diskTotalGb} unit=" GB" color="#06b6d4" />
-                                <GaugeBar label="Trống"  value={health.diskFreeGb}  max={health.diskTotalGb} unit=" GB" color="#10b981" />
+                                <GaugeBar label="Trống"  value={health.diskFreeGb}  max={health.diskTotalGb} unit=" GB" color="var(--color-success-alt)" />
                                 <div className={styles.diskPercent}>
-                                    <span style={{ color: health.diskUsedPercent > 80 ? '#ef4444' : '#94a3b8' }}>
+                                    <span style={{ color: health.diskUsedPercent > 80 ? 'var(--wms-danger)' : 'var(--wms-text-subtle)' }}>
                                         {health.diskUsedPercent}% dung lượng đã dùng
                                     </span>
                                 </div>
@@ -188,7 +188,7 @@ function SystemMonitorTab() {
 
                             <div className={styles.resourceCard}>
                                 <div className={styles.resourceCardHeader}>
-                                    <i className="bi bi-server" style={{ color: '#10b981' }} />
+                                    <i className="bi bi-server" style={{ color: 'var(--color-success-alt)' }} />
                                     <span>Cơ sở dữ liệu</span>
                                 </div>
                                 <div className={styles.dbMetrics}>

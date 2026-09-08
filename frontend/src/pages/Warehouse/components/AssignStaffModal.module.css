@@ -13,7 +13,7 @@
 }
 
 .modalContent {
-  background-color: #ffffff;
+  background-color: var(--color-white);
   border-radius: 12px;
   width: 100%;
   max-width: 600px;
@@ -26,7 +26,7 @@
 
 .modalHeader {
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -36,7 +36,7 @@
   font-size: 18px;
   font-weight: 700;
   margin: 0;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .modalClose {
@@ -44,12 +44,12 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #9ca3af;
+  color: var(--color-text-placeholder);
   line-height: 1;
 }
 
 .modalClose:hover {
-  color: #111827;
+  color: var(--color-text);
 }
 
 .modalBody {
@@ -60,11 +60,11 @@
 
 .modalFooter {
   padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  background-color: #f9fafb;
+  background-color: var(--color-bg-elevated);
 }
 
 .modalError {
@@ -89,11 +89,11 @@
 .fieldLabel {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-text-heading);
 }
 
 .fieldInput {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   padding: 8px 12px;
   font-size: 14px;
@@ -105,8 +105,8 @@
 }
 
 .fieldInput:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 1px var(--color-primary-bright);
 }
 
 .userDropdown {
@@ -115,7 +115,7 @@
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   max-height: 200px;
   overflow-y: auto;
@@ -130,31 +130,31 @@
   padding: 8px 12px;
   cursor: pointer;
   font-size: 13px;
-  color: #374151;
+  color: var(--color-text-heading);
 }
 
 .userDropdown li:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
 
 .selectedUser {
   margin-top: 6px;
   font-size: 13px;
-  color: #059669;
+  color: var(--wms-success);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #ecfdf5;
+  background-color: var(--wms-success-soft);
   padding: 8px 12px;
   border-radius: 4px;
-  border: 1px solid #a7f3d0;
+  border: 1px solid var(--wms-success-border);
 }
 
 .changeUserBtn {
   background: none;
   border: none;
-  color: #059669;
+  color: var(--wms-success);
   cursor: pointer;
   text-decoration: underline;
   font-weight: 500;
@@ -173,7 +173,7 @@
   align-items: flex-start;
   gap: 10px;
   padding: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -181,13 +181,13 @@
 }
 
 .roleItem:hover {
-  border-color: #cbd5e1;
-  background-color: #f8fafc;
+  border-color: var(--wms-border-strong);
+  background-color: var(--wms-bg-soft);
 }
 
 .roleItemActive {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
+  border-color: var(--color-primary-bright);
+  background-color: var(--color-primary-soft);
 }
 
 .roleItem input[type="checkbox"] {
@@ -204,7 +204,7 @@
 
 .roleName {
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text);
   font-size: 13px;
 }
 
@@ -216,8 +216,8 @@
 .btnCancel {
   padding: 8px 16px;
   background-color: white;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  border: 1px solid var(--color-border-muted);
+  color: var(--color-text-heading);
   border-radius: 4px;
   font-weight: 500;
   font-size: 14px;
@@ -225,7 +225,7 @@
 }
 
 .btnCancel:hover:not(:disabled) {
-  background-color: #f9fafb;
+  background-color: var(--color-bg-elevated);
 }
 
 .btnSave {

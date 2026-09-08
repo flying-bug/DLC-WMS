@@ -358,8 +358,8 @@ export default function WarehouseDocumentFormPage() {
           {/* UNPOST HISTORY ALERT BANNER */}
           {doc.unpostReason && (
             <div style={{
-              background: '#fffbeb',
-              border: '1px solid #fde68a',
+              background: 'var(--wms-warning-soft)',
+              border: '1px solid var(--wms-warning-border)',
               borderRadius: '8px',
               padding: '12px 16px',
               marginBottom: '16px',
@@ -393,7 +393,7 @@ export default function WarehouseDocumentFormPage() {
               alignItems: 'flex-start',
               gap: '12px'
             }}>
-              <i className="fas fa-exclamation-triangle" style={{ color: '#dc2626', fontSize: '18px', marginTop: '2px' }}></i>
+              <i className="fas fa-exclamation-triangle" style={{ color: 'var(--wms-danger)', fontSize: '18px', marginTop: '2px' }}></i>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, color: '#991b1b', fontSize: '14px', marginBottom: '2px' }}>
                   Cảnh báo Chênh lệch Kiểm nhận (Hàng thiếu / Hàng lỗi):
@@ -598,18 +598,18 @@ export default function WarehouseDocumentFormPage() {
 
           {/* AUDIT LOG TIMELINE */}
           <div style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            background: 'var(--color-white)',
+            border: '1px solid var(--wms-border-base)',
             borderRadius: '8px',
             padding: '16px 20px',
             marginTop: '16px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fas fa-stream" style={{ color: '#0284c7' }}></i>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--wms-text-strong)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fas fa-stream" style={{ color: 'var(--color-info-hover)' }}></i>
                 Nhật ký thao tác & Lịch sử chứng từ ({auditLogs.length > 0 ? auditLogs.length : 1} sự kiện)
               </h4>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
+              <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>
                 Lưu vết toàn bộ các lần Tạo mới, Ghi sổ và Bỏ ghi sổ
               </span>
             </div>
@@ -621,15 +621,15 @@ export default function WarehouseDocumentFormPage() {
                   const isPost = logItem.action === 'POST' || logItem.action === 'POST_IMPORT' || logItem.action === 'POST_EXPORT';
                   const isCreate = logItem.action === 'CREATE' || logItem.action === 'CREATE_IMPORT';
                   
-                  let badgeBg = '#f1f5f9';
-                  let badgeColor = '#475569';
+                  let badgeBg = 'var(--wms-bg-hover)';
+                  let badgeColor = 'var(--wms-text-muted)';
                   let icon = 'fas fa-info-circle';
                   if (isUnpost) {
                     badgeBg = '#fef3c7';
                     badgeColor = '#92400e';
                     icon = 'fas fa-undo-alt';
                   } else if (isPost) {
-                    badgeBg = '#dcfce7';
+                    badgeBg = 'var(--color-success-bg)';
                     badgeColor = '#166534';
                     icon = 'fas fa-check-circle';
                   } else if (isCreate) {
@@ -646,8 +646,8 @@ export default function WarehouseDocumentFormPage() {
                         alignItems: 'flex-start',
                         justifyContent: 'space-between',
                         padding: '10px 14px',
-                        background: isUnpost ? '#fffbeb' : '#f8fafc',
-                        border: `1px solid ${isUnpost ? '#fde68a' : '#f1f5f9'}`,
+                        background: isUnpost ? 'var(--wms-warning-soft)' : 'var(--wms-bg-soft)',
+                        border: `1px solid ${isUnpost ? 'var(--wms-warning-border)' : 'var(--wms-bg-hover)'}`,
                         borderRadius: '6px',
                         fontSize: '13px'
                       }}
@@ -671,15 +671,15 @@ export default function WarehouseDocumentFormPage() {
                           {isUnpost ? 'BỎ GHI SỔ' : isPost ? 'GHI SỔ KHO' : isCreate ? 'TẠO CHỨNG TỪ' : logItem.action}
                         </span>
                         <div>
-                          <div style={{ fontWeight: 500, color: '#1e293b' }}>
+                          <div style={{ fontWeight: 500, color: 'var(--wms-text-strong)' }}>
                             {logItem.description || logItem.action}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                            Thực hiện bởi: <strong style={{ color: '#334155' }}>{logItem.user || 'Hệ thống'}</strong>
+                          <div style={{ fontSize: '11px', color: 'var(--wms-text-muted)', marginTop: '2px' }}>
+                            Thực hiện bởi: <strong style={{ color: 'var(--wms-text-body)' }}>{logItem.user || 'Hệ thống'}</strong>
                           </div>
                         </div>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap', marginLeft: '12px', marginTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', whiteSpace: 'nowrap', marginLeft: '12px', marginTop: '2px' }}>
                         {logItem.timestamp ? new Date(logItem.timestamp).toLocaleString('vi-VN') : ''}
                       </div>
                     </div>
@@ -688,46 +688,46 @@ export default function WarehouseDocumentFormPage() {
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Người tạo chứng từ:</div>
-                  <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px', marginTop: '2px' }}>
+                <div style={{ background: 'var(--wms-bg-soft)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--wms-bg-hover)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>Người tạo chứng từ:</div>
+                  <div style={{ fontWeight: 600, color: 'var(--wms-text-title)', fontSize: '13px', marginTop: '2px' }}>
                     {doc.createdByName || (doc.createdBy ? `User #${doc.createdBy}` : '-')}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', marginTop: '2px' }}>
                     {doc.createdAt ? new Date(doc.createdAt).toLocaleString('vi-VN') : '-'}
                   </div>
                 </div>
 
                 {doc.postedAt && (
-                  <div style={{ background: '#f0fdf4', padding: '10px 14px', borderRadius: '6px', border: '1px solid #dcfce7' }}>
+                  <div style={{ background: 'var(--color-success-bg-soft)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--color-success-bg)' }}>
                     <div style={{ fontSize: '12px', color: '#166534' }}>Ghi sổ kho:</div>
                     <div style={{ fontWeight: 600, color: '#14532d', fontSize: '13px', marginTop: '2px' }}>
                       {isPosted ? 'Đã ghi sổ thành công' : 'Đã từng ghi sổ'}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#15803d', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--color-success-deep)', marginTop: '2px' }}>
                       {new Date(doc.postedAt).toLocaleString('vi-VN')}
                     </div>
                   </div>
                 )}
 
                 {doc.unpostedAt && (
-                  <div style={{ background: '#fffbeb', padding: '10px 14px', borderRadius: '6px', border: '1px solid #fef3c7' }}>
+                  <div style={{ background: 'var(--wms-warning-soft)', padding: '10px 14px', borderRadius: '6px', border: '1px solid #fef3c7' }}>
                     <div style={{ fontSize: '12px', color: '#92400e' }}>Bỏ ghi sổ bởi:</div>
                     <div style={{ fontWeight: 600, color: '#78350f', fontSize: '13px', marginTop: '2px' }}>
                       {doc.unpostedByName || 'Thủ kho'}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#b45309', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--wms-warning-hover)', marginTop: '2px' }}>
                       {new Date(doc.unpostedAt).toLocaleString('vi-VN')} • Lý do: "{doc.unpostReason}"
                     </div>
                   </div>
                 )}
 
-                <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Cập nhật lần cuối:</div>
-                  <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px', marginTop: '2px' }}>
+                <div style={{ background: 'var(--wms-bg-soft)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--wms-bg-hover)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>Cập nhật lần cuối:</div>
+                  <div style={{ fontWeight: 600, color: 'var(--wms-text-title)', fontSize: '13px', marginTop: '2px' }}>
                     {doc.updatedAt ? new Date(doc.updatedAt).toLocaleString('vi-VN') : '-'}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', marginTop: '2px' }}>
                     Trạng thái hiện tại: {doc.status === 'POSTED' ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : 'Lưu tạm'}
                   </div>
                 </div>

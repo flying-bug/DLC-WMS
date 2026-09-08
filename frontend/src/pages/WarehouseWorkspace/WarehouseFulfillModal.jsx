@@ -185,7 +185,7 @@ export default function WarehouseFulfillModal({
         {/* HEADER */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitle}>
-            <i className="fas fa-barcode" style={{ color: '#2563eb' }}></i>
+            <i className="fas fa-barcode" style={{ color: 'var(--wms-primary)' }}></i>
             Kiểm đếm, Quét mã & Xác nhận Ghi sổ kho: {slip.docCode}
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
@@ -213,7 +213,7 @@ export default function WarehouseFulfillModal({
 
           {/* TABLE OF ITEMS */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--wms-text-muted)' }}>
               <i className="fas fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginRight: '8px' }}></i>
               Đang tải danh sách vật tư hàng hóa...
             </div>
@@ -267,7 +267,7 @@ export default function WarehouseFulfillModal({
                       </td>
                       <td>
                         {l.serialList.length === 0 ? (
-                          <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Chưa có serial nào</span>
+                          <span style={{ color: 'var(--wms-text-subtle)', fontSize: '0.8rem' }}>Chưa có serial nào</span>
                         ) : (
                           <div className={styles.serialBadgeList}>
                             {l.serialList.map((sn, sIdx) => (

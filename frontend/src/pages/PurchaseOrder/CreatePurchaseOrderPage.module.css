@@ -13,7 +13,7 @@
 
 .breadcrumb {
   align-items: center;
-  color: #64748b;
+  color: var(--wms-text-muted);
   display: flex;
   font-size: 12.5px;
   margin-bottom: 4px;
@@ -62,7 +62,7 @@
 
 .sectionTitle {
   align-items: center;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--wms-bg-hover);
   color: #1e3f7a;
   display: flex;
   font-size: 14px;
@@ -83,7 +83,7 @@
 }
 
 .label {
-  color: #374151;
+  color: var(--color-text-heading);
   display: block;
   font-size: 12.5px;
   font-weight: 600;
@@ -91,16 +91,16 @@
 }
 
 .required {
-  color: #ef4444;
+  color: var(--wms-danger);
   margin-left: 2px;
 }
 
 .input {
   background: #fff;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   box-sizing: border-box;
-  color: #374151;
+  color: var(--color-text-heading);
   font-size: 13px;
   height: 32px;
   outline: none;
@@ -116,10 +116,10 @@
 
 .textarea {
   background: #fff;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   box-sizing: border-box;
-  color: #374151;
+  color: var(--color-text-heading);
   font-size: 13px;
   outline: none;
   padding: 6px 8px;
@@ -144,8 +144,8 @@
 
 .linesSectionHeader {
   align-items: center;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--wms-bg-soft);
+  border-bottom: 1px solid var(--wms-border-base);
   display: flex;
   justify-content: space-between;
   padding: 10px 16px;
@@ -164,13 +164,13 @@
 }
 
 .linesTable thead tr {
-  background: #f1f5f9;
+  background: var(--wms-bg-hover);
 }
 
 .linesTable th {
-  border-bottom: 1px solid #cbd5e1;
-  border-right: 1px solid #e2e8f0;
-  color: #334155;
+  border-bottom: 1px solid var(--wms-border-strong);
+  border-right: 1px solid var(--wms-border-base);
+  color: var(--wms-text-body);
   font-weight: 700;
   padding: 8px 6px;
   text-align: left;
@@ -184,9 +184,9 @@
 }
 
 .linesTable td {
-  border-bottom: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  color: #1e293b;
+  border-bottom: 1px solid var(--wms-border-base);
+  border-right: 1px solid var(--wms-border-base);
+  color: var(--wms-text-strong);
   padding: 4px 6px;
   vertical-align: middle;
   height: 38px;
@@ -194,14 +194,14 @@
 }
 
 .linesTable tbody tr:hover {
-  background: #f8fafc;
+  background: var(--wms-bg-soft);
 }
 
 .cellInput {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--wms-border-strong);
   border-radius: 4px;
   box-sizing: border-box;
-  color: #1e293b;
+  color: var(--wms-text-strong);
   font-size: 13px;
   height: 28px;
   outline: none;
@@ -228,7 +228,7 @@
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: #94a3b8;
+  color: var(--wms-text-subtle);
   cursor: pointer;
   font-size: 14px;
   padding: 4px 6px;
@@ -239,7 +239,7 @@
 }
 
 .btnRemoveLine:hover {
-  color: #ef4444;
+  color: var(--wms-danger);
   background: #fee2e2;
 }
 
@@ -249,7 +249,7 @@
   align-items: flex-start;
   padding: 12px 16px;
   background-color: #fff;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--wms-border-base);
   gap: 20px;
 }
 
@@ -261,7 +261,7 @@
 }
 
 .tableCount {
-  color: #64748b;
+  color: var(--wms-text-muted);
   font-size: 12.5px;
 }
 
@@ -272,13 +272,13 @@
 
 .btnTableAction {
   padding: 5px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--wms-border-strong);
   background-color: #fff;
   border-radius: 4px;
   cursor: pointer;
   font-size: 12.5px;
   font-weight: 500;
-  color: #334155;
+  color: var(--wms-text-body);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -286,15 +286,15 @@
 }
 
 .btnTableAction:hover {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
+  background-color: var(--wms-bg-hover);
+  border-color: var(--wms-text-subtle);
 }
 
 .summarySection {
   min-width: 320px;
   max-width: 380px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--wms-bg-soft);
+  border: 1px solid var(--wms-border-base);
   border-radius: 6px;
   padding: 10px 14px;
 }
@@ -305,11 +305,11 @@
   align-items: center;
   padding: 3px 0;
   font-size: 13px;
-  color: #475569;
+  color: var(--wms-text-muted);
 }
 
 .summaryRow strong {
-  color: #1e293b;
+  color: var(--wms-text-strong);
 }
 
 .summaryTotalRow {
@@ -318,10 +318,10 @@
   align-items: center;
   padding-top: 6px;
   margin-top: 6px;
-  border-top: 1px solid #cbd5e1;
+  border-top: 1px solid var(--wms-border-strong);
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--wms-text-title);
 }
 
 .summaryTotalValue {
@@ -332,7 +332,7 @@
 
 .actionBar {
   align-items: center;
-  background: #ffffff;
+  background: var(--color-white);
   border-top: 1px solid #dbe4ef;
   bottom: 0;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
@@ -376,13 +376,13 @@
 
 .btnOutline {
   background: #fff;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  border: 1px solid var(--color-border-muted);
+  color: var(--color-text-heading);
 }
 
 .btnOutline:hover {
-  background: #f8fafc;
-  border-color: #9ca3af;
+  background: var(--wms-bg-soft);
+  border-color: var(--color-text-placeholder);
 }
 
 .btnSave {

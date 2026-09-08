@@ -14,12 +14,12 @@
 }
 
 .modalCard {
-  background: var(--bg-card, #ffffff);
+  background: var(--bg-card, var(--color-white));
   border-radius: 16px;
   width: 100%;
   max-width: 520px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1px solid var(--border-color, var(--wms-border-base));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -42,13 +42,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  border-bottom: 1px solid var(--border-light, var(--wms-bg-hover));
 }
 
 .headerTitle {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, var(--wms-text-title));
   display: flex;
   align-items: center;
   gap: 8px;
@@ -58,7 +58,7 @@
   background: transparent;
   border: none;
   font-size: 1.25rem;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted, var(--wms-text-subtle));
   cursor: pointer;
 }
 
@@ -78,7 +78,7 @@
   justify-content: center;
   padding: 32px 16px;
   gap: 12px;
-  color: #2563eb;
+  color: var(--wms-primary);
   font-weight: 500;
 }
 
@@ -106,8 +106,8 @@
 }
 
 .safeAlert {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--color-success-bg-soft);
+  border: 1px solid var(--wms-success-border);
   border-radius: 10px;
   padding: 12px 14px;
   color: #166534;
@@ -126,14 +126,14 @@
 .reasonLabel {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-primary, #1e293b);
+  color: var(--text-primary, var(--wms-text-strong));
 }
 
 .reasonTextarea {
   width: 100%;
   min-height: 80px;
   padding: 10px;
-  border: 1px solid var(--border-color, #cbd5e1);
+  border: 1px solid var(--border-color, var(--wms-border-strong));
   border-radius: 8px;
   font-size: 0.875rem;
   font-family: inherit;
@@ -142,7 +142,7 @@
 
 .reasonTextarea:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--wms-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
@@ -152,15 +152,15 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 20px;
-  background: #f8fafc;
-  border-top: 1px solid var(--border-light, #f1f5f9);
+  background: var(--wms-bg-soft);
+  border-top: 1px solid var(--border-light, var(--wms-bg-hover));
 }
 
 .btnCancel {
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid var(--border-color, #cbd5e1);
-  background: #ffffff;
+  border: 1px solid var(--border-color, var(--wms-border-strong));
+  background: var(--color-white);
   font-weight: 500;
   cursor: pointer;
 }
@@ -169,8 +169,8 @@
   padding: 8px 16px;
   border-radius: 8px;
   border: none;
-  background: #dc2626;
-  color: #ffffff;
+  background: var(--wms-danger);
+  color: var(--color-white);
   font-weight: 600;
   cursor: pointer;
   display: flex;

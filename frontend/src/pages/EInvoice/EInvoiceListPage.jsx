@@ -96,7 +96,7 @@ export default function EInvoiceListPage() {
           <div className={styles.kpiCard}>
             <div className={styles.kpiHeader}>
               <span className={styles.kpiLabel}>Tổng Hóa Đơn</span>
-              <div className={styles.kpiIconWrapper} style={{ background: '#f0f9ff', color: '#0284c7' }}>
+              <div className={styles.kpiIconWrapper} style={{ background: '#f0f9ff', color: 'var(--color-info-hover)' }}>
                 <i className="bi bi-collection" />
               </div>
             </div>
@@ -107,11 +107,11 @@ export default function EInvoiceListPage() {
           <div className={styles.kpiCard}>
             <div className={styles.kpiHeader}>
               <span className={styles.kpiLabel}>Đã Phát Hành</span>
-              <div className={styles.kpiIconWrapper} style={{ background: '#ecfdf5', color: '#10b981' }}>
+              <div className={styles.kpiIconWrapper} style={{ background: 'var(--wms-success-soft)', color: 'var(--color-success-alt)' }}>
                 <i className="bi bi-check-circle" />
               </div>
             </div>
-            <div className={styles.kpiValue} style={{ color: '#059669' }}>{kpis.issued}</div>
+            <div className={styles.kpiValue} style={{ color: 'var(--wms-success)' }}>{kpis.issued}</div>
             <div className={styles.kpiSub}>Hợp lệ & đã cấp mã CQT</div>
           </div>
 
@@ -129,7 +129,7 @@ export default function EInvoiceListPage() {
           <div className={styles.kpiCard}>
             <div className={styles.kpiHeader}>
               <span className={styles.kpiLabel}>Doanh Thu Hóa Đơn (Trang)</span>
-              <div className={styles.kpiIconWrapper} style={{ background: '#eef2ff', color: '#6366f1' }}>
+              <div className={styles.kpiIconWrapper} style={{ background: '#eef2ff', color: 'var(--wms-primary)' }}>
                 <i className="bi bi-cash-stack" />
               </div>
             </div>
@@ -202,13 +202,13 @@ export default function EInvoiceListPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
+                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: 'var(--wms-text-muted)' }}>
                       <i className="bi bi-arrow-repeat spin" style={{ marginRight: 8, fontSize: '18px' }} /> Đang tải danh sách hóa đơn điện tử...
                     </td>
                   </tr>
                 ) : invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: '#94a3b8' }}>
+                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: 'var(--wms-text-subtle)' }}>
                       <i className="bi bi-inbox" style={{ fontSize: '28px', display: 'block', marginBottom: '8px' }} />
                       Không tìm thấy hóa đơn điện tử nào
                     </td>
@@ -218,7 +218,7 @@ export default function EInvoiceListPage() {
                     const st = STATUS_MAP[inv.status] || { label: inv.status, className: styles.statusIssued, icon: 'bi-check' };
                     return (
                       <tr key={inv.id}>
-                        <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                        <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)', fontSize: '12px' }}>
                           {page * size + idx + 1}
                         </td>
                         <td>
@@ -231,7 +231,7 @@ export default function EInvoiceListPage() {
                           </span>
                         </td>
                         <td>
-                          <span className={styles.monoText} style={{ fontWeight: 600, color: '#475569' }}>
+                          <span className={styles.monoText} style={{ fontWeight: 600, color: 'var(--wms-text-muted)' }}>
                             {inv.invoiceSeries}
                           </span>
                         </td>
@@ -239,11 +239,11 @@ export default function EInvoiceListPage() {
                           {inv.invoiceDate}
                         </td>
                         <td style={{ minWidth: '220px' }}>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--wms-text-title)' }}>
                             {inv.buyerLegalName || inv.buyerName || 'Khách lẻ'}
                           </div>
                           {inv.buyerPhone && (
-                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--wms-text-muted)', marginTop: '2px' }}>
                               <i className="bi bi-telephone" style={{ marginRight: '4px' }} />{inv.buyerPhone}
                             </div>
                           )}
@@ -254,14 +254,14 @@ export default function EInvoiceListPage() {
                               {inv.buyerTaxCode}
                             </span>
                           ) : (
-                            <span style={{ color: '#cbd5e1' }}>—</span>
+                            <span style={{ color: 'var(--wms-border-strong)' }}>—</span>
                           )}
                         </td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {inv.soCode && (
                               <span
-                                style={{ color: '#0284c7', cursor: 'pointer', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}
+                                style={{ color: 'var(--color-info-hover)', cursor: 'pointer', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}
                                 onClick={() => navigate(`/sales-orders/${inv.salesOrderId}`)}
                                 title="Xem chi tiết đơn bán hàng"
                               >
@@ -270,7 +270,7 @@ export default function EInvoiceListPage() {
                             )}
                             {inv.exportDocCode && (
                               <span
-                                style={{ color: '#059669', cursor: 'pointer', fontSize: '11px', fontWeight: 500, whiteSpace: 'nowrap' }}
+                                style={{ color: 'var(--wms-success)', cursor: 'pointer', fontSize: '11px', fontWeight: 500, whiteSpace: 'nowrap' }}
                                 onClick={() => navigate(`/exports/edit/${inv.inventoryDocumentId}`)}
                                 title="Xem phiếu xuất kho"
                               >
@@ -278,7 +278,7 @@ export default function EInvoiceListPage() {
                               </span>
                             )}
                             {!inv.soCode && !inv.exportDocCode && (
-                              <span style={{ color: '#cbd5e1' }}>—</span>
+                              <span style={{ color: 'var(--wms-border-strong)' }}>—</span>
                             )}
                           </div>
                         </td>
@@ -291,7 +291,7 @@ export default function EInvoiceListPage() {
                           </div>
                           {inv.cqtCode && (
                             <div
-                              style={{ fontSize: '10px', color: '#64748b', fontFamily: 'JetBrains Mono, monospace', marginTop: '2px', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              style={{ fontSize: '10px', color: 'var(--wms-text-muted)', fontFamily: 'JetBrains Mono, monospace', marginTop: '2px', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                               title={inv.cqtCode}
                             >
                               {inv.cqtCode}
@@ -306,7 +306,7 @@ export default function EInvoiceListPage() {
                           {inv.status === 'CANCELED' && (
                             <div className={styles.cancelInfoBox} title={`Hủy bởi: ${inv.canceledByName || 'Quản trị viên'}`}>
                               <div><strong>Lý do:</strong> {inv.cancelReason || '—'}</div>
-                              {inv.canceledByName && <div style={{ color: '#64748b', fontSize: '10px' }}>Bởi: {inv.canceledByName}</div>}
+                              {inv.canceledByName && <div style={{ color: 'var(--wms-text-muted)', fontSize: '10px' }}>Bởi: {inv.canceledByName}</div>}
                             </div>
                           )}
                         </td>

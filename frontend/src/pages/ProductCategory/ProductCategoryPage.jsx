@@ -285,12 +285,12 @@ const ProductCategoryPage = () => {
                                         <td style={{ fontWeight: 600 }}>{item.name}</td>
                                         <td>
                                             <span className={styles.noteText} style={{ whiteSpace: 'pre-wrap' }}>
-                                                {item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>---</span>}
+                                                {item.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>---</span>}
                                             </span>
                                         </td>
                                         <td>
                                             <span className={styles.noteText}>
-                                                {item.parentName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}
+                                                {item.parentName || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có</span>}
                                             </span>
                                         </td>
                                         <td>

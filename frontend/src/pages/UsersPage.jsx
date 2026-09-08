@@ -414,7 +414,7 @@ function UsersPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px 0', color: '#64748b' }}>
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px 0', color: 'var(--wms-text-muted)' }}>
                                         <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '8px' }}></i>
                                         Đang tải dữ liệu...
                                     </td>

@@ -113,26 +113,26 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
       <div className="modal-content" style={{ width: '850px', maxWidth: '95vw', backgroundColor: '#fff', borderRadius: '4px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#111827' }}>Chọn chứng từ tham chiếu</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-elevated)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: 'var(--color-text)' }}>Chọn chứng từ tham chiếu</h2>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>
             <i className="bi bi-x-lg"></i>
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f3f4f6' }}>
+        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: 'var(--color-bg)' }}>
 
           {/* Top Filter Area (MISA Style) */}
-          <div style={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '16px' }}>
+          <div style={{ backgroundColor: '#fff', border: '1px solid var(--color-border)', borderRadius: '4px', padding: '16px' }}>
             <div style={{ display: 'flex', gap: '24px' }}>
               <div style={{ flex: '0 0 250px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Loại chứng từ</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--color-text-heading)', marginBottom: '8px' }}>Loại chứng từ</label>
                 <SearchableSelect
                   className="misa-input"
                   value={docType}
                   onChange={(e) => { setDocType(e.target.value); setPage(1); setKeyword(''); }}
-                  style={{ width: '100%', padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '6px 12px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px' }}
                 >
                   {DOC_TYPES.map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
@@ -143,24 +143,24 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
           </div>
 
           {/* Search and Table Area */}
-          <div style={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ backgroundColor: '#fff', border: '1px solid var(--color-border)', borderRadius: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: '8px' }}>
               <div style={{ position: 'relative', width: '300px' }}>
-                <i className="bi bi-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '14px' }}></i>
+                <i className="bi bi-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-placeholder)', fontSize: '14px' }}></i>
                 <input
                   type="text"
                   placeholder="Nhập từ khóa tìm kiếm"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  style={{ width: '100%', padding: '6px 12px 6px 32px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '6px 12px 6px 32px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px' }}
                 />
               </div>
               <button
                 type="button"
                 onClick={handleSearch}
-                style={{ padding: '6px 16px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: '500', color: '#374151' }}
+                style={{ padding: '6px 16px', backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: '500', color: 'var(--color-text-heading)' }}
               >
                 Lấy dữ liệu
               </button>
@@ -168,12 +168,12 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
 
             <div style={{ overflowY: 'auto', maxHeight: '350px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f9fafb', zIndex: 1 }}>
+                <thead style={{ position: 'sticky', top: 0, backgroundColor: 'var(--color-bg-elevated)', zIndex: 1 }}>
                   <tr>
-                    <th style={{ padding: '10px 16px', textAlign: 'center', borderBottom: '1px solid #e5e7eb', borderRight: '1px solid #e5e7eb', width: '60px' }}>Chọn</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', borderRight: '1px solid #e5e7eb', width: '150px' }}>NGÀY CHỨNG TỪ</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', borderRight: '1px solid #e5e7eb', width: '180px' }}>SỐ CHỨNG TỪ</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>DIỄN GIẢI</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'center', borderBottom: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)', width: '60px' }}>Chọn</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)', width: '150px' }}>NGÀY CHỨNG TỪ</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)', width: '180px' }}>SỐ CHỨNG TỪ</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--color-border)' }}>DIỄN GIẢI</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,7 +182,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                   ) : data.length === 0 ? (
                     <tr><td colSpan="4" style={{ textAlign: 'center', padding: '24px', color: '#6b7280' }}>Không có dữ liệu</td></tr>
                   ) : data.map((item) => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #e5e7eb', cursor: 'pointer' }} onClick={() => {
+                    <tr key={item.id} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }} onClick={() => {
                       onSelect({
                         referenceType: docType,
                         referenceId: item.id,
@@ -190,16 +190,16 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                       });
                       onClose();
                     }}>
-                      <td style={{ padding: '10px 16px', textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
-                        <i className="bi bi-circle" style={{ color: '#d1d5db', fontSize: '14px' }}></i>
+                      <td style={{ padding: '10px 16px', textAlign: 'center', borderRight: '1px solid var(--color-border)' }}>
+                        <i className="bi bi-circle" style={{ color: 'var(--color-border-muted)', fontSize: '14px' }}></i>
                       </td>
-                      <td style={{ padding: '10px 16px', borderRight: '1px solid #e5e7eb', color: '#374151' }}>
+                      <td style={{ padding: '10px 16px', borderRight: '1px solid var(--color-border)', color: 'var(--color-text-heading)' }}>
                         {getDocDate(item)}
                       </td>
-                      <td style={{ padding: '10px 16px', borderRight: '1px solid #e5e7eb', color: '#0070cc' }}>
+                      <td style={{ padding: '10px 16px', borderRight: '1px solid var(--color-border)', color: '#0070cc' }}>
                         {item.docCode || item.code || item.orderCode || item.stocktakeCode || item.warrantyCode || item.poCode || item.soCode}
                       </td>
-                      <td style={{ padding: '10px 16px', color: '#374151' }}>
+                      <td style={{ padding: '10px 16px', color: 'var(--color-text-heading)' }}>
                         {item.note || item.issuePurpose || item.description || item.targetName || (item.partnerName ? `Bảo hành cho KH: ${item.partnerName}` : '') || ''}
                       </td>
                     </tr>
@@ -209,9 +209,9 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
             </div>
 
             {totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', padding: '12px', borderTop: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', padding: '12px', borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-elevated)' }}>
                 <button
-                  style={{ padding: '4px 12px', border: '1px solid #d1d5db', borderRadius: '4px', background: page <= 1 ? '#f3f4f6' : '#fff', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}
+                  style={{ padding: '4px 12px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', background: page <= 1 ? 'var(--color-bg)' : '#fff', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}
                   disabled={page <= 1}
                   onClick={() => setPage(p => p - 1)}
                 >
@@ -219,7 +219,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                 </button>
                 <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px' }}>Trang {page} / {totalPages}</span>
                 <button
-                  style={{ padding: '4px 12px', border: '1px solid #d1d5db', borderRadius: '4px', background: page >= totalPages ? '#f3f4f6' : '#fff', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
+                  style={{ padding: '4px 12px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', background: page >= totalPages ? 'var(--color-bg)' : '#fff', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
                   disabled={page >= totalPages}
                   onClick={() => setPage(p => p + 1)}
                 >

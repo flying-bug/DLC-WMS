@@ -3,13 +3,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 24px;
-    background-color: var(--color-bg-soft, #f8fafc);
-    border-top: 1px solid var(--color-border, #e2e8f0);
+    background-color: var(--color-bg-soft, var(--wms-bg-soft));
+    border-top: 1px solid var(--color-border, var(--wms-border-base));
 }
 
 .pageInfo {
     font-size: 0.875rem;
-    color: var(--color-text-muted, #64748b);
+    color: var(--color-text-muted, var(--wms-text-muted));
 }
 
 .pageControls {
@@ -22,9 +22,9 @@
     width: 32px;
     height: 32px;
     border-radius: 4px;
-    border: 1px solid var(--color-border, #e2e8f0);
+    border: 1px solid var(--color-border, var(--wms-border-base));
     background-color: white;
-    color: var(--color-text-body, #475569);
+    color: var(--color-text-body, var(--wms-text-muted));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -36,11 +36,11 @@
 .pageNavBtn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background-color: #f8fafc;
+    background-color: var(--wms-bg-soft);
 }
 
 .pageBtn:hover:not(.active), .pageNavBtn:hover:not(:disabled) {
-    background-color: #f1f5f9;
+    background-color: var(--wms-bg-hover);
 }
 
 .pageBtn.active {
@@ -51,7 +51,7 @@
 }
 
 .pageDots {
-    color: #64748b;
+    color: var(--wms-text-muted);
     padding: 0 4px;
 }
 
@@ -62,9 +62,9 @@
 .pageSizeSelect select {
     height: 32px;
     border-radius: 4px;
-    border: 1px solid var(--color-border, #e2e8f0);
+    border: 1px solid var(--color-border, var(--wms-border-base));
     background-color: white;
-    color: var(--color-text-strong, #334155);
+    color: var(--color-text-strong, var(--wms-text-body));
     padding: 0 12px;
     font-size: 0.875rem;
     outline: none;

@@ -406,8 +406,8 @@
 
 .btnActionSmall {
   background: #fff;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  border: 1px solid var(--color-border-muted);
+  color: var(--color-text-heading);
   padding: 3px 6px;
   font-size: 12px;
   border-radius: 4px;
@@ -419,15 +419,15 @@
 }
 
 .btnActionSmall:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
-  color: #111827;
+  background: var(--color-bg);
+  border-color: var(--color-text-placeholder);
+  color: var(--color-text);
 }
 
 .btnActionSmallDelete {
   background: #fff;
   border: 1px solid #fecaca;
-  color: #dc2626;
+  color: var(--wms-danger);
   padding: 3px 6px;
   font-size: 12px;
   border-radius: 4px;
@@ -440,7 +440,7 @@
 
 .btnActionSmallDelete:hover {
   background: #fef2f2;
-  border-color: #ef4444;
+  border-color: var(--wms-danger);
   color: #b91c1c;
 }
 

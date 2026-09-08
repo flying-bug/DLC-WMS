@@ -10,7 +10,7 @@
     grid-template-columns: minmax(0, 1fr) 340px;
     padding: 24px;
     gap: 24px;
-    background-color: #f8fafc;
+    background-color: var(--wms-bg-soft);
     align-items: start;
 }
 
@@ -18,11 +18,11 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
-    background: #ffffff;
+    background: var(--color-white);
     padding: 24px;
     border-radius: 12px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--wms-border-base);
 }
 
 .formGroup {
@@ -34,7 +34,7 @@
 .formGroup label {
     font-size: 13px;
     font-weight: 500;
-    color: #475569;
+    color: var(--wms-text-muted);
 }
 
 .checkboxGroup {
@@ -50,24 +50,24 @@
     gap: 8px;
     cursor: pointer;
     font-size: 13px;
-    color: #334155;
+    color: var(--wms-text-body);
 }
 
 .checkboxLabel input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: var(--color-primary, #2563eb);
+    accent-color: var(--color-primary, var(--wms-primary));
     cursor: pointer;
 }
 
 .previewSection {
     display: flex;
     flex-direction: column;
-    background: #ffffff;
+    background: var(--color-white);
     padding: 24px;
     border-radius: 12px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--wms-border-base);
     position: sticky;
     top: 0;
     max-height: calc(90vh - 96px);
@@ -75,11 +75,11 @@
 
 .previewHeader {
     font-weight: 600;
-    color: #1e293b;
+    color: var(--wms-text-strong);
     margin-bottom: 16px;
     font-size: 14px;
     padding-bottom: 12px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--wms-border-base);
 }
 
 .previewBox {
@@ -88,8 +88,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    background: #f1f5f9;
-    border: 2px dashed #cbd5e1;
+    background: var(--wms-bg-hover);
+    border: 2px dashed var(--wms-border-strong);
     border-radius: 8px;
     padding: 24px;
     min-height: 250px;

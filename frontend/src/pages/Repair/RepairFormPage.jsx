@@ -29,9 +29,9 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const customSelectStyles = {
   control: (base, state) => ({
     ...base, minHeight: '32px', height: '32px', fontSize: '13px',
-    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #2563eb' : 'none',
-    '&:hover': { borderColor: state.isFocused ? '#2563eb' : '#9ca3af' }
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    boxShadow: state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
+    '&:hover': { borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-text-placeholder)' }
   }),
   valueContainer: (base) => ({ ...base, height: '32px', padding: '0 8px' }),
   input: (base) => ({ ...base, margin: '0', padding: '0' }),
@@ -47,8 +47,8 @@ const STAGES = ['DRAFT', 'CONFIRMED', 'UNDER_REPAIR', 'DONE'];
 const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', CONFIRMED: 'Xác nhận', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
 const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'UNDER_REPAIR'];
 const COMPONENT_SERIAL_STATUS = {
-  ACTIVE: { label: 'Đang dùng', color: '#166534', bg: '#dcfce7', border: '#bbf7d0' },
-  REPLACED: { label: 'Đã thay thế', color: '#92400e', bg: '#fef3c7', border: '#fde68a' },
+  ACTIVE: { label: 'Đang dùng', color: '#166534', bg: 'var(--color-success-bg)', border: 'var(--wms-success-border)' },
+  REPLACED: { label: 'Đã thay thế', color: '#92400e', bg: '#fef3c7', border: 'var(--wms-warning-border)' },
   REMOVED: { label: 'Đã loại bỏ', color: '#991b1b', bg: '#fee2e2', border: '#fecaca' }
 };
 const today = getTodayIsoDate;
@@ -1102,7 +1102,7 @@ function RepairFormPage() {
 
               <div className="misa-form-row" style={{ marginBottom: '8px', justifyContent: 'flex-start' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label htmlFor="underWarranty" className="misa-label" style={{ marginBottom: 0, width: 'auto', fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>Có bảo hành</label>
+                  <label htmlFor="underWarranty" className="misa-label" style={{ marginBottom: 0, width: 'auto', fontWeight: 600, fontSize: '13px', color: 'var(--wms-text-strong)' }}>Có bảo hành</label>
                   <input type="checkbox" id="underWarranty" disabled={!isEditable} checked={formData.underWarranty} onChange={e => handleToggleGlobalWarranty(e.target.checked)} />
                 </div>
               </div>
@@ -1187,7 +1187,7 @@ function RepairFormPage() {
 
         {/* BẢNG CHI TIẾT LINH KIỆN & DỊCH VỤ CHUNG */}
         <div className={styles.card} style={{ marginTop: '16px' }}>
-          <div className={styles.cardHeader} style={{ marginBottom: 0, paddingBottom: '12px', borderBottom: '1px solid #e5e7eb' }}>
+          <div className={styles.cardHeader} style={{ marginBottom: 0, paddingBottom: '12px', borderBottom: '1px solid var(--color-border)' }}>
             <i className="bi bi-list-check" style={{ color: '#017e84', fontSize: '18px' }}></i>
             <h3 className={styles.cardTitle}>Chi tiết linh kiện & dịch vụ</h3>
           </div>
@@ -1255,7 +1255,7 @@ function RepairFormPage() {
                         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                           <input type="number" min="0" step="1" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={line.quantity} onChange={(e) => handleUpdateLineField(line.id, line._key, 'quantity', e.target.value)} />
                           {showRepairCols && ['ADD', 'REPLACE'].includes(line.actionType) && Number(line.availableQuantity || 0) < Number(line.quantity || 0) && (
-                            <span title={`Tồn khả dụng: ${Number(line.availableQuantity || 0)}`} style={{ color: '#dc2626', fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                            <span title={`Tồn khả dụng: ${Number(line.availableQuantity || 0)}`} style={{ color: 'var(--wms-danger)', fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                               Thiếu tồn
                             </span>
                           )}
@@ -1308,7 +1308,7 @@ function RepairFormPage() {
 
                         const renderSerialButton = (role, label, hasSerial) => {
                           const btnStyle = hasSerial
-                            ? { padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#22c55e', color: '#16a34a', backgroundColor: '#f0fdf4', border: '1px solid #22c55e', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }
+                            ? { padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#22c55e', color: '#16a34a', backgroundColor: 'var(--color-success-bg-soft)', border: '1px solid #22c55e', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }
                             : { padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#f97316', color: '#ea580c', backgroundColor: '#fff7ed', border: '1px solid #f97316', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' };
                           return (
                             <button
@@ -1417,13 +1417,13 @@ function RepairFormPage() {
           </div>
 
           {isEditable && (
-            <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb', backgroundColor: '#ffffff', display: 'flex', gap: '12px' }}>
+            <div style={{ padding: '16px', borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-white)', display: 'flex', gap: '12px' }}>
               <button 
                 type="button"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px', fontWeight: '500', color: '#2563eb', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px', fontWeight: '500', color: 'var(--wms-primary)', backgroundColor: 'var(--color-primary-soft)', border: '1px solid var(--color-info-border-soft)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
                 onClick={() => setAddingType('PART')}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#dbeafe'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#eff6ff'}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--color-primary-pale)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--color-primary-soft)'}
               >
                 <i className="bi bi-plus-lg"></i> Thêm linh kiện
               </button>
@@ -1454,21 +1454,21 @@ function RepairFormPage() {
                 onBlur={() => handleUpdateInternalNotes()}
               ></textarea>
             </div>
-            <div style={{ width: '380px', backgroundColor: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '15px', color: '#475569' }}>
+            <div style={{ width: '380px', backgroundColor: 'var(--wms-bg-soft)', padding: '24px', borderRadius: '12px', border: '1px solid var(--wms-border-base)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '15px', color: 'var(--wms-text-muted)' }}>
                 <span>Tổng tiền linh kiện:</span>
-                <span style={{ fontWeight: '600', color: '#0f172a' }}>{money(totalLinesAmount)} đ</span>
+                <span style={{ fontWeight: '600', color: 'var(--wms-text-title)' }}>{money(totalLinesAmount)} đ</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '15px', color: '#475569' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '15px', color: 'var(--wms-text-muted)' }}>
                 <span>Tổng tiền dịch vụ:</span>
-                <span style={{ fontWeight: '600', color: '#0f172a' }}>{money(totalFeesAmount)} đ</span>
+                <span style={{ fontWeight: '600', color: 'var(--wms-text-title)' }}>{money(totalFeesAmount)} đ</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '15px', color: '#475569' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '15px', color: 'var(--wms-text-muted)' }}>
                 <span>Tiền thuế VAT:</span>
-                <span style={{ fontWeight: '600', color: '#0f172a' }}>{money(totalVAT)} đ</span>
+                <span style={{ fontWeight: '600', color: 'var(--wms-text-title)' }}>{money(totalVAT)} đ</span>
               </div>
-              <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>TỔNG CỘNG ĐƠN:</span>
+              <div style={{ borderTop: '2px dashed var(--wms-border-strong)', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--wms-text-title)' }}>TỔNG CỘNG ĐƠN:</span>
                 <span style={{ color: '#017e84', fontSize: '26px', fontWeight: '900' }}>{money(totalAmount)} đ</span>
               </div>
             </div>
@@ -1492,13 +1492,13 @@ function RepairFormPage() {
           <div className={styles.footerRight}>
             {!isNew && repair && repair.repairStatus === 'DRAFT' && (
               <>
-                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }} onClick={handlePrintQuote}>
+                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
                   <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
                 </button>
-                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }}>
                   Xác nhận sửa chữa
                 </button>
-                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
                   Hủy đơn
                 </button>
               </>
@@ -1506,13 +1506,13 @@ function RepairFormPage() {
 
             {!isNew && repair && repair.repairStatus === 'QUOTATION' && (
               <>
-                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }} onClick={handlePrintQuote}>
+                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
                   <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
                 </button>
-                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }}>
                   Xác nhận sửa chữa
                 </button>
-                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
                   Hủy đơn
                 </button>
               </>
@@ -1523,7 +1523,7 @@ function RepairFormPage() {
                 <button className="btn-misa-post" style={{ marginRight: '8px' }} disabled={saving} onClick={() => handleChangeStatus('UNDER_REPAIR')}>
                   Bắt đầu sửa chữa
                 </button>
-                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
                   Hủy lệnh
                 </button>
               </>
@@ -1606,14 +1606,14 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
   };
 
   return (
-    <div style={{ marginBottom: '12px', border: '1px solid #dbeafe', backgroundColor: '#f8fbff', borderRadius: '6px', overflow: 'hidden' }}>
-      <div style={{ padding: '10px 12px', borderBottom: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+    <div style={{ marginBottom: '12px', border: '1px solid var(--color-primary-pale)', backgroundColor: '#f8fbff', borderRadius: '6px', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-primary-pale)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          <i className="bi bi-diagram-3" style={{ color: '#2563eb', fontSize: '15px' }}></i>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>Linh kiện bên trong</span>
+          <i className="bi bi-diagram-3" style={{ color: 'var(--wms-primary)', fontSize: '15px' }}></i>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-strong)' }}>Linh kiện bên trong</span>
         </div>
         {displaySerial && (
-          <span style={{ fontSize: '12px', color: '#1d4ed8', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '2px 8px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '12px', color: 'var(--wms-primary-hover)', backgroundColor: 'var(--color-primary-soft)', border: '1px solid var(--color-info-border-soft)', borderRadius: '4px', padding: '2px 8px', fontWeight: 600, whiteSpace: 'nowrap' }}>
             Serial PC: {displaySerial}
           </span>
         )}
@@ -1621,23 +1621,23 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
 
       <div style={{ padding: '10px 12px' }}>
         {loading ? (
-          <div style={{ fontSize: '13px', color: '#64748b' }}>Đang tải danh sách linh kiện...</div>
+          <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Đang tải danh sách linh kiện...</div>
         ) : error ? (
-          <div style={{ fontSize: '13px', color: '#dc2626' }}>{error}</div>
+          <div style={{ fontSize: '13px', color: 'var(--wms-danger)' }}>{error}</div>
         ) : !displaySerial ? (
-          <div style={{ fontSize: '13px', color: '#64748b' }}>Chưa có serial PC để tra linh kiện bên trong.</div>
+          <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Chưa có serial PC để tra linh kiện bên trong.</div>
         ) : (
           <>
             {activeComponents.length === 0 ? (
-              <div style={{ fontSize: '13px', color: '#64748b' }}>Chưa có linh kiện đang dùng cho serial này.</div>
+              <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Chưa có linh kiện đang dùng cho serial này.</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ color: '#475569' }}>
-                      <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '38%' }}>Linh kiện</th>
-                      <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '22%' }}>SKU</th>
-                      <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>Serial</th>
+                    <tr style={{ color: 'var(--wms-text-muted)' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)', width: '38%' }}>Linh kiện</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)', width: '22%' }}>SKU</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)' }}>Serial</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1646,10 +1646,10 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
                         <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: '#1f2937' }}>
                           {component.componentName || 'Chưa rõ linh kiện'}
                         </td>
-                        <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: '#64748b' }}>
+                        <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: 'var(--wms-text-muted)' }}>
                           {component.componentSku || '-'}
                         </td>
-                        <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: '#0f172a', fontWeight: 600 }}>
+                        <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: 'var(--wms-text-title)', fontWeight: 600 }}>
                           {component.componentSerial || '-'}
                         </td>
                       </tr>
@@ -1660,37 +1660,37 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
             )}
 
             {changeHistory.length > 0 && (
-              <details style={{ marginTop: '12px', borderTop: '1px solid #dbeafe', paddingTop: '10px' }}>
-                <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              <details style={{ marginTop: '12px', borderTop: '1px solid var(--color-primary-pale)', paddingTop: '10px' }}>
+                <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="bi bi-clock-history" style={{ color: '#2563eb' }}></i>
+                    <i className="bi bi-clock-history" style={{ color: 'var(--wms-primary)' }}></i>
                     Lịch sử thay đổi linh kiện
                   </span>
-                  <span style={{ border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '999px', padding: '1px 8px', fontSize: '12px', fontWeight: 600 }}>
+                  <span style={{ border: '1px solid var(--color-info-border-soft)', backgroundColor: 'var(--color-primary-soft)', color: 'var(--wms-primary-hover)', borderRadius: '999px', padding: '1px 8px', fontSize: '12px', fontWeight: 600 }}>
                     {changeHistory.length}
                   </span>
                 </summary>
                 <div style={{ overflowX: 'auto', marginTop: '10px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
-                      <tr style={{ color: '#475569' }}>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '28%' }}>Linh kiện</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '18%' }}>Serial</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '16%' }}>Trạng thái</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '18%' }}>Serial thay thế</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>Thời điểm</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '10%' }}>Phiếu</th>
+                      <tr style={{ color: 'var(--wms-text-muted)' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)', width: '28%' }}>Linh kiện</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)', width: '18%' }}>Serial</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)', width: '16%' }}>Trạng thái</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)', width: '18%' }}>Serial thay thế</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)' }}>Thời điểm</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--wms-border-base)', width: '10%' }}>Phiếu</th>
                       </tr>
                     </thead>
                     <tbody>
                       {changeHistory.map((item, index) => (
                         <tr key={`${item.componentSerial || 'history'}-${item.status || 'ACTIVE'}-${index}`}>
                           <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: '#1f2937' }}>{item.componentName || 'Chưa rõ linh kiện'}</td>
-                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: '#0f172a', fontWeight: 600 }}>{item.componentSerial || '-'}</td>
+                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: 'var(--wms-text-title)', fontWeight: 600 }}>{item.componentSerial || '-'}</td>
                           <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none' }}>{statusBadge(item.status)}</td>
-                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: '#64748b' }}>{item.replacedBySerial || '-'}</td>
-                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: '#64748b' }}>{historyTime(item)}</td>
-                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: '#1d4ed8', fontWeight: 600 }}>{historyRepair(item)}</td>
+                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: 'var(--wms-text-muted)' }}>{item.replacedBySerial || '-'}</td>
+                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: 'var(--wms-text-muted)' }}>{historyTime(item)}</td>
+                          <td style={{ padding: '7px 8px', borderBottom: index < changeHistory.length - 1 ? '1px solid #eef2f7' : 'none', color: 'var(--wms-primary-hover)', fontWeight: 600 }}>{historyRepair(item)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1744,7 +1744,7 @@ function FeeNameInput({ value, suggestions = [], onChange, onCommit, disabled = 
       {open && filtered.length > 0 && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
-          background: '#fff', border: '1px solid #d1d5db', borderRadius: '4px',
+          background: '#fff', border: '1px solid var(--color-border-muted)', borderRadius: '4px',
           boxShadow: '0 4px 8px rgba(0,0,0,0.1)', maxHeight: '180px', overflowY: 'auto'
         }}>
           {filtered.map(s => (
@@ -1753,7 +1753,7 @@ function FeeNameInput({ value, suggestions = [], onChange, onCommit, disabled = 
               onMouseDown={e => { e.preventDefault(); onChange(s.productName, s); setOpen(false); }}
               style={{
                 padding: '6px 10px', fontSize: '13px', cursor: 'pointer',
-                borderBottom: '1px solid #f3f4f6'
+                borderBottom: '1px solid var(--color-bg)'
               }}
               onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
               onMouseLeave={e => e.currentTarget.style.background = '#fff'}
@@ -1947,7 +1947,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
             title="Xóa dòng thêm mới"
             style={{
               width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: isSaving ? 'not-allowed' : 'pointer'
+              background: '#fee2e2', color: 'var(--wms-danger)', border: 'none', borderRadius: '6px', cursor: isSaving ? 'not-allowed' : 'pointer'
             }}
           >
             <i className="bi bi-trash" style={{ fontSize: '14px', fontWeight: 'bold' }}></i>
@@ -2080,7 +2080,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
             title="Xóa dòng thêm mới"
             style={{
               width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: isSaving ? 'not-allowed' : 'pointer'
+              background: '#fee2e2', color: 'var(--wms-danger)', border: 'none', borderRadius: '6px', cursor: isSaving ? 'not-allowed' : 'pointer'
             }}
           >
             <i className="bi bi-trash" style={{ fontSize: '14px', fontWeight: 'bold' }}></i>

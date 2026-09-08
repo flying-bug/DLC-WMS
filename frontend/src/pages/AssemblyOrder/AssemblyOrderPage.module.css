@@ -376,7 +376,7 @@
 
 .success {
     color: #166534;
-    background: #dcfce7;
+    background: var(--color-success-bg);
 }
 
 .danger {
@@ -405,8 +405,8 @@
 
 .successBox {
     color: #166534;
-    background: #dcfce7;
-    border: 1px solid #bbf7d0;
+    background: var(--color-success-bg);
+    border: 1px solid var(--wms-success-border);
 }
 
 .detailGrid {
@@ -521,7 +521,7 @@
 
 .gainPanel {
     background: #f4fbf6;
-    border-color: #bbf7d0;
+    border-color: var(--wms-success-border);
 }
 
 .lossHeader {
@@ -536,12 +536,12 @@
 
 .gainHeader {
     color: #166534;
-    background: #dcfce7;
+    background: var(--color-success-bg);
 }
 
 .gainHeader i {
     color: #166534;
-    background: #bbf7d0;
+    background: var(--wms-success-border);
 }
 
 .flowList {
@@ -633,7 +633,7 @@
 /* BOM Builder Redesign */
 .bomBuilderContainer {
     margin-top: 20px;
-    background: #f8fafc;
+    background: var(--wms-bg-soft);
     border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 16px;
@@ -688,12 +688,12 @@
 
 .bomLineCard:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    border-color: #cbd5e1;
+    border-color: var(--wms-border-strong);
 }
 
 .bomLineHeader {
     width: 170px;
-    background: #f8fafc;
+    background: var(--wms-bg-soft);
     padding: 16px;
     border-right: 1px solid var(--color-border);
     display: flex;
@@ -731,7 +731,7 @@
 
 .bomItemImgBox i {
     font-size: 40px;
-    color: #cbd5e1;
+    color: var(--wms-border-strong);
 }
 
 .bomItemDetails {
@@ -744,7 +744,7 @@
 
 .bomItemTitle {
     font-weight: 600;
-    color: #0f172a;
+    color: var(--wms-text-title);
     font-size: 0.95rem;
     line-height: 1.4;
     white-space: normal;
@@ -753,14 +753,14 @@
 
 .bomItemMeta {
     font-size: 0.85rem;
-    color: #64748b;
+    color: var(--wms-text-muted);
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
 }
 
 .bomItemMeta span strong {
-    color: #334155;
+    color: var(--wms-text-body);
 }
 
 .stockStatus {
@@ -785,7 +785,7 @@
     width: 55px;
     text-align: center;
     padding: 6px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--wms-border-strong);
     border-radius: 4px;
     font-weight: 700;
 }
@@ -824,12 +824,12 @@
 }
 
 .bomActionBtn.edit {
-    color: #0284c7;
+    color: var(--color-info-hover);
 }
 .bomActionBtn.edit:hover { background: #e0f2fe; }
 
 .bomActionBtn.delete {
-    color: #dc2626;
+    color: var(--wms-danger);
 }
 .bomActionBtn.delete:hover { background: #fee2e2; }
 
@@ -937,13 +937,13 @@
 }
 
 .variantPickerItem:hover {
-    background-color: #f8fafc;
+    background-color: var(--wms-bg-soft);
 }
 
 .variantPickerImg {
     width: 100px;
     height: 100px;
-    background: #f1f5f9;
+    background: var(--wms-bg-hover);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -961,7 +961,7 @@
 
 .variantPickerImg i {
     font-size: 40px;
-    color: #94a3b8;
+    color: var(--wms-text-subtle);
 }
 
 .variantPickerInfo {
@@ -1067,7 +1067,7 @@
 
 .pageNumber.active:focus {
   background-color: var(--color-white);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text, var(--wms-text-strong));
   border: 1px solid var(--color-primary);
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
@@ -1192,26 +1192,26 @@
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 .activeCardPrimary {
-    border-color: #2563eb;
+    border-color: var(--wms-primary);
 }
 .activeCardSuccess {
-    border-color: #10b981;
+    border-color: var(--color-success-alt);
 }
 .activeCardWarning {
-    border-color: #f59e0b;
+    border-color: var(--color-warning);
 }
 .activeCardDanger {
-    border-color: #ef4444;
+    border-color: var(--wms-danger);
 }
 .activeCardSecondary {
-    border-color: #64748b;
+    border-color: var(--wms-text-muted);
 }
 .iconPrimary {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: var(--color-primary-pale);
+    color: var(--wms-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1222,7 +1222,7 @@
     height: 48px;
     border-radius: 50%;
     background-color: #d1fae5;
-    color: #10b981;
+    color: var(--color-success-alt);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1233,7 +1233,7 @@
     height: 48px;
     border-radius: 50%;
     background-color: #fef3c7;
-    color: #f59e0b;
+    color: var(--color-warning);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1244,7 +1244,7 @@
     height: 48px;
     border-radius: 50%;
     background-color: #fee2e2;
-    color: #ef4444;
+    color: var(--wms-danger);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1254,8 +1254,8 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background-color: #f1f5f9;
-    color: #64748b;
+    background-color: var(--wms-bg-hover);
+    color: var(--wms-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;

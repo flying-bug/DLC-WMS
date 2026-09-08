@@ -130,9 +130,9 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
       }}>
         {/* Header */}
         <div style={{
-          padding: '16px 20px', borderBottom: '1px solid #e2e8f0',
+          padding: '16px 20px', borderBottom: '1px solid var(--wms-border-base)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: 'linear-gradient(to right, #059669, #047857)', color: '#fff'
+          background: 'linear-gradient(to right, var(--wms-success), var(--wms-success-hover))', color: '#fff'
         }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -146,27 +146,27 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
         <form onSubmit={handleSubmit} style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
           {/* Summary Box */}
           <div style={{
-            background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
-            padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#334155'
+            background: 'var(--wms-bg-soft)', border: '1px solid var(--wms-border-base)', borderRadius: '8px',
+            padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: 'var(--wms-text-body)'
           }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>Chứng từ tham chiếu: <strong>{exportDoc ? `PXK: ${exportDoc.docCode}` : `Đơn hàng: ${so?.soCode}`}</strong></div>
               <div>Tiền hàng (chưa thuế): <strong>{Number(calcSubTotal).toLocaleString('vi-VN')} đ</strong></div>
-              <div>Tiền thuế VAT (10%): <strong style={{ color: '#dc2626' }}>{Number(calcVat).toLocaleString('vi-VN')} đ</strong></div>
-              <div>Tổng cộng thanh toán: <strong style={{ color: '#059669', fontSize: '14px' }}>{Number(calcTotal).toLocaleString('vi-VN')} đ</strong></div>
+              <div>Tiền thuế VAT (10%): <strong style={{ color: 'var(--wms-danger)' }}>{Number(calcVat).toLocaleString('vi-VN')} đ</strong></div>
+              <div>Tổng cộng thanh toán: <strong style={{ color: 'var(--wms-success)', fontSize: '14px' }}>{Number(calcTotal).toLocaleString('vi-VN')} đ</strong></div>
             </div>
 
             {/* Chi tiết mặt hàng & S/N */}
             {displayLines.length > 0 && (
-              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1', fontSize: '12px' }}>
-                <div style={{ fontWeight: 600, marginBottom: '4px', color: '#475569' }}>Chi tiết hàng hóa ({displayLines.length} món):</div>
+              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--wms-border-strong)', fontSize: '12px' }}>
+                <div style={{ fontWeight: 600, marginBottom: '4px', color: 'var(--wms-text-muted)' }}>Chi tiết hàng hóa ({displayLines.length} món):</div>
                 <div style={{ maxHeight: '80px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {displayLines.map((line, idx) => {
                     const name = line.productName || line.variantName || line.sku || `Sản phẩm #${idx + 1}`;
                     const sn = line.serialNumbersText || (Array.isArray(line.serialNumbers) ? line.serialNumbers.join(', ') : '');
                     return (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                        <span>• <strong>{name}</strong> {sn ? <span style={{ color: '#0284c7' }}>(S/N: {sn})</span> : ''}</span>
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--wms-text-muted)' }}>
+                        <span>• <strong>{name}</strong> {sn ? <span style={{ color: 'var(--color-info-hover)' }}>(S/N: {sn})</span> : ''}</span>
                         <span>x{line.quantityOut || line.quantity || 1}</span>
                       </div>
                     );
@@ -178,7 +178,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
 
           {/* Chọn Loại Khách Hàng */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '8px' }}>
               Đối tượng xuất hóa đơn:
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
@@ -187,9 +187,9 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onClick={() => handleSelectBuyerType('COMPANY')}
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                  border: buyerType === 'COMPANY' ? '2px solid #059669' : '1px solid #cbd5e1',
-                  background: buyerType === 'COMPANY' ? '#ecfdf5' : '#fff',
-                  color: buyerType === 'COMPANY' ? '#065f46' : '#475569',
+                  border: buyerType === 'COMPANY' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
+                  background: buyerType === 'COMPANY' ? 'var(--wms-success-soft)' : '#fff',
+                  color: buyerType === 'COMPANY' ? '#065f46' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -201,9 +201,9 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onClick={() => handleSelectBuyerType('INDIVIDUAL')}
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                  border: buyerType === 'INDIVIDUAL' ? '2px solid #059669' : '1px solid #cbd5e1',
-                  background: buyerType === 'INDIVIDUAL' ? '#ecfdf5' : '#fff',
-                  color: buyerType === 'INDIVIDUAL' ? '#065f46' : '#475569',
+                  border: buyerType === 'INDIVIDUAL' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
+                  background: buyerType === 'INDIVIDUAL' ? 'var(--wms-success-soft)' : '#fff',
+                  color: buyerType === 'INDIVIDUAL' ? '#065f46' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -215,9 +215,9 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onClick={() => handleSelectBuyerType('ANONYMOUS')}
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                  border: buyerType === 'ANONYMOUS' ? '2px solid #059669' : '1px solid #cbd5e1',
-                  background: buyerType === 'ANONYMOUS' ? '#ecfdf5' : '#fff',
-                  color: buyerType === 'ANONYMOUS' ? '#065f46' : '#475569',
+                  border: buyerType === 'ANONYMOUS' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
+                  background: buyerType === 'ANONYMOUS' ? 'var(--wms-success-soft)' : '#fff',
+                  color: buyerType === 'ANONYMOUS' ? '#065f46' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -230,8 +230,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {buyerType === 'COMPANY' && (
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Mã số thuế doanh nghiệp <span style={{ color: '#ef4444' }}>*</span>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '4px' }}>
+                  Mã số thuế doanh nghiệp <span style={{ color: 'var(--wms-danger)' }}>*</span>
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input
@@ -240,14 +240,14 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                     value={buyerTaxCode}
                     onChange={(e) => setBuyerTaxCode(e.target.value)}
                     placeholder="Nhập MST công ty (VD: 0100109106)..."
-                    style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontFamily: 'monospace' }}
+                    style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', fontFamily: 'monospace' }}
                   />
                   <button
                     type="button"
                     onClick={handleLookupTax}
                     disabled={lookingUpTax || !buyerTaxCode?.trim()}
                     style={{
-                      padding: '0 12px', background: '#0284c7', color: '#fff', border: 'none',
+                      padding: '0 12px', background: 'var(--color-info-hover)', color: '#fff', border: 'none',
                       borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                       display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap'
                     }}
@@ -259,8 +259,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 {taxLookupMsg.text && (
                   <div style={{
                     marginTop: '4px', fontSize: '12px',
-                    color: taxLookupMsg.type === 'success' ? '#166534' : '#dc2626',
-                    background: taxLookupMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                    color: taxLookupMsg.type === 'success' ? '#166534' : 'var(--wms-danger)',
+                    background: taxLookupMsg.type === 'success' ? 'var(--color-success-bg-soft)' : '#fef2f2',
                     padding: '4px 8px', borderRadius: '4px'
                   }}>
                     {taxLookupMsg.text}
@@ -271,8 +271,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
 
             {buyerType === 'COMPANY' && (
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Tên công ty / Đơn vị mua hàng (theo ĐKKD) <span style={{ color: '#ef4444' }}>*</span>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '4px' }}>
+                  Tên công ty / Đơn vị mua hàng (theo ĐKKD) <span style={{ color: 'var(--wms-danger)' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -280,13 +280,13 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                   value={buyerLegalName}
                   onChange={(e) => setBuyerLegalName(e.target.value)}
                   placeholder="Tên pháp nhân công ty theo đăng ký kinh doanh..."
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
                 />
               </div>
             )}
 
             <div style={{ gridColumn: buyerType === 'COMPANY' ? '1' : 'span 2' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '4px' }}>
                 {buyerType === 'COMPANY' ? 'Người đại diện / Người liên hệ' : 'Họ và tên người mua hàng'}
               </label>
               <input
@@ -295,13 +295,13 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onChange={(e) => setBuyerName(e.target.value)}
                 disabled={buyerType === 'ANONYMOUS'}
                 placeholder="Họ tên người mua..."
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? '#f1f5f9' : '#fff' }}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : '#fff' }}
               />
             </div>
 
             {buyerType === 'COMPANY' && (
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '4px' }}>
                   Số điện thoại liên hệ
                 </label>
                 <input
@@ -309,14 +309,14 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                   value={buyerPhone}
                   onChange={(e) => setBuyerPhone(e.target.value)}
                   placeholder="Số điện thoại..."
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
                 />
               </div>
             )}
 
             {buyerType !== 'COMPANY' && (
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '4px' }}>
                   Số điện thoại
                 </label>
                 <input
@@ -325,13 +325,13 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                   onChange={(e) => setBuyerPhone(e.target.value)}
                   disabled={buyerType === 'ANONYMOUS'}
                   placeholder="Số điện thoại..."
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? '#f1f5f9' : '#fff' }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : '#fff' }}
                 />
               </div>
             )}
 
             <div style={{ gridColumn: buyerType === 'COMPANY' ? 'span 2' : '1' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '4px' }}>
                 Email nhận hóa đơn điện tử
               </label>
               <input
@@ -340,13 +340,13 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onChange={(e) => setBuyerEmail(e.target.value)}
                 disabled={buyerType === 'ANONYMOUS'}
                 placeholder="email@example.com..."
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? '#f1f5f9' : '#fff' }}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : '#fff' }}
               />
             </div>
 
             {buyerType !== 'ANONYMOUS' && (
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '4px' }}>
                   {buyerType === 'COMPANY' ? 'Địa chỉ trụ sở chính' : 'Địa chỉ khách hàng'}
                 </label>
                 <input
@@ -354,7 +354,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                   value={buyerAddress}
                   onChange={(e) => setBuyerAddress(e.target.value)}
                   placeholder="Địa chỉ..."
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
                 />
               </div>
             )}
@@ -367,8 +367,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
               onClick={onClose}
               disabled={loading}
               style={{
-                padding: '8px 16px', background: '#fff', border: '1px solid #cbd5e1',
-                borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#475569'
+                padding: '8px 16px', background: '#fff', border: '1px solid var(--wms-border-strong)',
+                borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--wms-text-muted)'
               }}
             >
               Hủy
@@ -377,7 +377,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
               type="submit"
               disabled={loading}
               style={{
-                padding: '8px 18px', background: '#059669', border: 'none',
+                padding: '8px 18px', background: 'var(--wms-success)', border: 'none',
                 borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#fff',
                 display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}

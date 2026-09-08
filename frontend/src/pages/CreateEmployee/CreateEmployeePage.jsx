@@ -322,7 +322,7 @@ function CreateEmployeePage() {
                                         style={{
                                             padding: '12px 16px',
                                             borderRadius: '8px',
-                                            border: `1.5px solid ${isChecked ? 'var(--color-primary, #3b82f6)' : 'var(--color-border, #e2e8f0)'}`,
+                                            border: `1.5px solid ${isChecked ? 'var(--color-primary, var(--color-primary-bright))' : 'var(--color-border, var(--wms-border-base))'}`,
                                             background: isChecked ? 'rgba(59, 130, 246, 0.06)' : 'var(--color-surface, #fff)',
                                             cursor: 'pointer',
                                             display: 'flex',
@@ -335,13 +335,13 @@ function CreateEmployeePage() {
                                             type="checkbox"
                                             checked={isChecked}
                                             onChange={() => {}} // Handled by div onClick
-                                            style={{ marginTop: '3px', cursor: 'pointer', accentColor: 'var(--color-primary, #3b82f6)' }}
+                                            style={{ marginTop: '3px', cursor: 'pointer', accentColor: 'var(--color-primary, var(--color-primary-bright))' }}
                                         />
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 600, fontSize: '14px', color: isChecked ? 'var(--color-primary, #1d4ed8)' : 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ fontWeight: 600, fontSize: '14px', color: isChecked ? 'var(--color-primary, var(--wms-primary-hover))' : 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <i className={`bi ${role.icon}`}></i> {role.label}
                                             </div>
-                                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted, #64748b)', marginTop: '4px', lineHeight: 1.4 }}>
+                                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted, var(--wms-text-muted))', marginTop: '4px', lineHeight: 1.4 }}>
                                                 {role.desc}
                                             </div>
                                         </div>

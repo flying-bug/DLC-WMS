@@ -18,7 +18,7 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--wms-text-strong);
 }
 
 .title i {
@@ -28,7 +28,7 @@
 
 .maxSizeHint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--wms-text-muted);
 }
 
 /* Dropzone */
@@ -39,9 +39,9 @@
   justify-content: center;
   gap: 6px;
   padding: 18px 16px;
-  border: 1.5px dashed #cbd5e1;
+  border: 1.5px dashed var(--wms-border-strong);
   border-radius: 8px;
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
@@ -72,7 +72,7 @@
 
 .dropzoneText {
   font-size: 13px;
-  color: #475569;
+  color: var(--wms-text-muted);
 }
 
 .dropzoneText strong {
@@ -125,8 +125,8 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-white);
+  border: 1px solid var(--wms-border-base);
   border-radius: 6px;
   transition: all 0.15s ease;
   position: relative;
@@ -143,8 +143,8 @@
   border-radius: 4px;
   object-fit: cover;
   flex-shrink: 0;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background-color: var(--wms-bg-hover);
+  border: 1px solid var(--wms-border-base);
   cursor: pointer;
 }
 
@@ -153,7 +153,7 @@
   height: 38px;
   border-radius: 4px;
   background-color: #fee2e2;
-  color: #dc2626;
+  color: var(--wms-danger);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -172,7 +172,7 @@
 .fileName {
   font-size: 12.5px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--wms-text-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -180,7 +180,7 @@
 
 .fileMeta {
   font-size: 11px;
-  color: #64748b;
+  color: var(--wms-text-muted);
 }
 
 .fileActions {
@@ -192,7 +192,7 @@
 .actionBtn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--wms-text-muted);
   padding: 4px 6px;
   border-radius: 4px;
   cursor: pointer;
@@ -209,7 +209,7 @@
 }
 
 .deleteBtn:hover {
-  color: #ef4444;
+  color: var(--wms-danger);
   background-color: #fee2e2;
 }
 
@@ -252,7 +252,7 @@
   right: 0;
   background: none;
   border: none;
-  color: #ffffff;
+  color: var(--color-white);
   font-size: 28px;
   cursor: pointer;
   display: flex;
@@ -262,7 +262,7 @@
 
 .lightboxTitle {
   margin-top: 10px;
-  color: #ffffff;
+  color: var(--color-white);
   font-size: 14px;
   font-weight: 500;
   text-align: center;

@@ -129,10 +129,10 @@ export default function NotificationBell() {
                 <div className={styles.dropdown}>
                     <div className={styles.dropdownHeader}>
                         <div className={styles.headerTitle}>
-                            <i className="bi bi-bell-fill" style={{ color: '#0284c7' }}></i>
+                            <i className="bi bi-bell-fill" style={{ color: 'var(--color-info-hover)' }}></i>
                             <span>Thông báo</span>
                             {unreadCount > 0 && (
-                                <span style={{ fontSize: 11, background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
+                                <span style={{ fontSize: 11, background: '#fee2e2', color: 'var(--wms-danger)', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
                                     {unreadCount} mới
                                 </span>
                             )}
@@ -153,7 +153,7 @@ export default function NotificationBell() {
                             <div className={styles.emptyState}>Đang tải thông báo...</div>
                         ) : notifications.length === 0 ? (
                             <div className={styles.emptyState}>
-                                <i className="bi bi-check2-circle" style={{ fontSize: 24, display: 'block', marginBottom: 6, color: '#10b981' }}></i>
+                                <i className="bi bi-check2-circle" style={{ fontSize: 24, display: 'block', marginBottom: 6, color: 'var(--color-success-alt)' }}></i>
                                 Chưa có thông báo mới
                             </div>
                         ) : (

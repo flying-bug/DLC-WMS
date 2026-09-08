@@ -45,9 +45,9 @@ export function printWarrantyCard(warrantyOrWarranties, options = {}) {
           <td style="text-align: center;">${index + 1}</td>
           <td>
             <strong>${escapeHtml(name)}</strong><br/>
-            <span style="font-size: 11px; color: #64748b;">Mã SKU: ${escapeHtml(sku)}</span>
+            <span style="font-size: 11px; color: var(--wms-text-muted);">Mã SKU: ${escapeHtml(sku)}</span>
           </td>
-          <td style="text-align: center; font-weight: bold; color: #0f172a;">${escapeHtml(serial)}</td>
+          <td style="text-align: center; font-weight: bold; color: var(--wms-text-title);">${escapeHtml(serial)}</td>
           <td style="text-align: center; font-weight: bold;">${escapeHtml(months)}</td>
           <td>${escapeHtml(note)}</td>
         </tr>
@@ -60,9 +60,9 @@ export function printWarrantyCard(warrantyOrWarranties, options = {}) {
           <td style="text-align: center;">1</td>
           <td>
             <strong>${escapeHtml(w.productName || 'Sản phẩm')}</strong><br/>
-            <span style="font-size: 11px; color: #64748b;">Mã SKU: ${escapeHtml(w.sku || '-')}</span>
+            <span style="font-size: 11px; color: var(--wms-text-muted);">Mã SKU: ${escapeHtml(w.sku || '-')}</span>
           </td>
-          <td style="text-align: center; font-weight: bold; color: #0f172a;">${escapeHtml(w.serialNumber || '-')}</td>
+          <td style="text-align: center; font-weight: bold; color: var(--wms-text-title);">${escapeHtml(w.serialNumber || '-')}</td>
           <td style="text-align: center; font-weight: bold;">${w.warrantyMonths ? `${w.warrantyMonths} tháng` : '---'}</td>
           <td>${escapeHtml(w.note || '')}</td>
         </tr>
@@ -74,14 +74,14 @@ export function printWarrantyCard(warrantyOrWarranties, options = {}) {
         <table class="header-table">
           <tr>
             <td style="width: 50%;">
-              <strong style="font-size: 18px; color: #1e3a8a;">DLC COMPUTER</strong><br/>
-              <span style="font-size: 12px; color: #475569;">Địa chỉ: Số 59 Thịnh Liệt - Hoàng Mai - Hà Nội</span><br/>
-              <span style="font-size: 12px; color: #475569;">Hotline: 0392718888 - Website: duylongcomputer.com</span>
+              <strong style="font-size: 18px; color: var(--color-primary-navy);">DLC COMPUTER</strong><br/>
+              <span style="font-size: 12px; color: var(--wms-text-muted);">Địa chỉ: Số 59 Thịnh Liệt - Hoàng Mai - Hà Nội</span><br/>
+              <span style="font-size: 12px; color: var(--wms-text-muted);">Hotline: 0392718888 - Website: duylongcomputer.com</span>
             </td>
             <td style="width: 50%; text-align: right; font-size: 13px;">
-              Mã bảo hành: <strong style="font-size: 15px; color: #2563eb;">${escapeHtml(w.warrantyCode || `WRT#${w.id}`)}</strong><br/>
+              Mã bảo hành: <strong style="font-size: 15px; color: var(--wms-primary);">${escapeHtml(w.warrantyCode || `WRT#${w.id}`)}</strong><br/>
               Ngày bắt đầu: <strong>${escapeHtml(startDate)}</strong><br/>
-              Hạn bảo hành: <strong style="color: #dc2626;">${escapeHtml(endDate)}</strong>
+              Hạn bảo hành: <strong style="color: var(--wms-danger);">${escapeHtml(endDate)}</strong>
             </td>
           </tr>
         </table>
@@ -104,7 +104,7 @@ export function printWarrantyCard(warrantyOrWarranties, options = {}) {
           </table>
         </div>
 
-        <h4 style="margin: 16px 0 8px 0; font-size: 14px; text-transform: uppercase; color: #1e293b;">Danh sách sản phẩm được bảo hành:</h4>
+        <h4 style="margin: 16px 0 8px 0; font-size: 14px; text-transform: uppercase; color: var(--wms-text-strong);">Danh sách sản phẩm được bảo hành:</h4>
 
         <table class="main-table">
           <thead>
@@ -117,13 +117,13 @@ export function printWarrantyCard(warrantyOrWarranties, options = {}) {
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Không có danh sách sản phẩm</td></tr>'}
+            ${rowsHtml || '<tr><td colspan="5" style="text-align: center; color: var(--wms-text-subtle);">Không có danh sách sản phẩm</td></tr>'}
           </tbody>
         </table>
 
         <div class="terms-box">
-          <strong style="font-size: 12px; text-transform: uppercase; color: #334155;">Điều kiện & Điều khoản bảo hành:</strong>
-          <ul style="margin: 6px 0 0 0; padding-left: 18px; font-size: 11px; color: #475569; line-height: 1.5;">
+          <strong style="font-size: 12px; text-transform: uppercase; color: var(--wms-text-body);">Điều kiện & Điều khoản bảo hành:</strong>
+          <ul style="margin: 6px 0 0 0; padding-left: 18px; font-size: 11px; color: var(--wms-text-muted); line-height: 1.5;">
             <li>Sản phẩm phải còn tem bảo hành nguyên vẹn, số Serial/IMEI trùng khớp với thông tin trên hệ thống.</li>
             <li>Không bảo hành đối với các trường hợp rơi vỡ, nứt chập cháy, ngấm nước, thiên tai hoặc hỏng hóc do tác động vật lý ngoại lực.</li>
             <li>Thời gian tiếp nhận bảo hành: Từ 8h00 đến 17h30 các ngày trong tuần (trừ Lễ, Tết).</li>
@@ -153,14 +153,14 @@ export function printWarrantyCard(warrantyOrWarranties, options = {}) {
         <meta charset="UTF-8">
         <title>In Phieu Bao Hanh ${escapeHtml(warranties.length === 1 ? (warranties[0].warrantyCode || '') : '')}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; color: #0f172a; }
-          .header-table { width: 100%; border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 16px; }
-          .title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 4px; color: #1e3a8a; letter-spacing: 0.5px; }
-          .subtitle { text-align: center; font-size: 12px; font-style: italic; margin-bottom: 18px; color: #64748b; }
-          .info-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; }
+          body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; color: var(--wms-text-title); }
+          .header-table { width: 100%; border-bottom: 2px solid var(--wms-primary); padding-bottom: 12px; margin-bottom: 16px; }
+          .title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 4px; color: var(--color-primary-navy); letter-spacing: 0.5px; }
+          .subtitle { text-align: center; font-size: 12px; font-style: italic; margin-bottom: 18px; color: var(--wms-text-muted); }
+          .info-box { background: var(--wms-bg-soft); border: 1px solid var(--wms-border-strong); padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; }
           .main-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-          .main-table th { border: 1px solid #cbd5e1; padding: 8px 10px; background-color: #f1f5f9; text-align: left; font-size: 12px; }
-          .main-table td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 12px; }
+          .main-table th { border: 1px solid var(--wms-border-strong); padding: 8px 10px; background-color: var(--wms-bg-hover); text-align: left; font-size: 12px; }
+          .main-table td { border: 1px solid var(--wms-border-strong); padding: 8px 10px; font-size: 12px; }
           .terms-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; }
           .signatures { width: 100%; margin-top: 30px; }
           .signatures td { text-align: center; width: 33%; font-size: 13px; padding-top: 8px; }

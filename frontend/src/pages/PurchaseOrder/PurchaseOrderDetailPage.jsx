@@ -19,10 +19,10 @@ const fmtDate     = (v)   => (v ? formatDateOnly(v) : '—');
 const fmtDateTime = (v)   => (v ? formatDateTime(v) : '—');
 
 const STATUS_CONFIG = {
-  DRAFT:     { label: 'Nháp',       bg: '#f1f5f9', color: '#64748b', icon: 'bi-pencil-square' },
-  APPROVED:  { label: 'Đã duyệt',   bg: '#dcfce7', color: '#16a34a', icon: 'bi-check-circle-fill' },
+  DRAFT:     { label: 'Nháp',       bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', icon: 'bi-pencil-square' },
+  APPROVED:  { label: 'Đã duyệt',   bg: 'var(--color-success-bg)', color: '#16a34a', icon: 'bi-check-circle-fill' },
   POSTED:    { label: 'Ghi sổ',     bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
-  CANCELLED: { label: 'Đã hủy',     bg: '#fef2f2', color: '#dc2626', icon: 'bi-x-circle-fill' },
+  CANCELLED: { label: 'Đã hủy',     bg: '#fef2f2', color: 'var(--wms-danger)', icon: 'bi-x-circle-fill' },
 };
 
 function PurchaseOrderDetailPage() {
@@ -139,7 +139,7 @@ function PurchaseOrderDetailPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div style={{ padding: 60, textAlign: 'center', color: '#64748b' }}>
+        <div style={{ padding: 60, textAlign: 'center', color: 'var(--wms-text-muted)' }}>
           <i className="bi bi-hourglass-split" style={{ fontSize: 32 }} />
           <p>Đang tải...</p>
         </div>
@@ -150,7 +150,7 @@ function PurchaseOrderDetailPage() {
   if (!po) {
     return (
       <AdminLayout>
-        <div style={{ padding: 60, textAlign: 'center', color: '#dc2626' }}>
+        <div style={{ padding: 60, textAlign: 'center', color: 'var(--wms-danger)' }}>
           Không tìm thấy đơn mua hàng
         </div>
       </AdminLayout>
@@ -240,7 +240,7 @@ function PurchaseOrderDetailPage() {
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Số đơn</span>
-              <span className={styles.infoValue} style={{ fontWeight: 700, color: '#1d4ed8' }}>{po.poCode}</span>
+              <span className={styles.infoValue} style={{ fontWeight: 700, color: 'var(--wms-primary-hover)' }}>{po.poCode}</span>
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Ngày lập</span>
@@ -314,9 +314,9 @@ function PurchaseOrderDetailPage() {
               <span className={styles.infoLabel}>Thuế VAT</span>
               <span className={styles.infoValue}>{money(po.taxAmount)}</span>
             </div>
-            <div className={styles.infoRow} style={{ borderTop: '1px dashed #e2e8f0', paddingTop: 8, marginTop: 4 }}>
+            <div className={styles.infoRow} style={{ borderTop: '1px dashed var(--wms-border-base)', paddingTop: 8, marginTop: 4 }}>
               <span className={styles.infoLabel} style={{ fontWeight: 700 }}>Công nợ ghi nhận</span>
-              <span className={styles.infoValue} style={{ fontWeight: 700, fontSize: 16, color: '#1e40af' }}>
+              <span className={styles.infoValue} style={{ fontWeight: 700, fontSize: 16, color: 'var(--color-primary-link)' }}>
                 {money(po.totalAmount)}
               </span>
             </div>
@@ -348,36 +348,36 @@ function PurchaseOrderDetailPage() {
               <tbody>
                 {(po.lines || []).length === 0 ? (
                   <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: 24, color: '#94a3b8' }}>
+                    <td colSpan={11} style={{ textAlign: 'center', padding: 24, color: 'var(--wms-text-subtle)' }}>
                       Không có dòng sản phẩm
                     </td>
                   </tr>
                 ) : (
                   (po.lines || []).map((line, idx) => (
                     <tr key={line.id || idx}>
-                      <td style={{ color: '#94a3b8' }}>{idx + 1}</td>
+                      <td style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</td>
                       <td style={{ fontWeight: 500 }}>{line.variantName || line.productName || `#${line.variantId}`}</td>
-                      <td style={{ color: '#64748b', fontSize: 12 }}>{line.sku || '—'}</td>
-                      <td style={{ color: '#1e40af', fontWeight: 500 }}>
+                      <td style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.sku || '—'}</td>
+                      <td style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>
                         {line.warehouseName || (line.warehouseId ? warehouseById.get(line.warehouseId)?.name : null) || '—'}
                       </td>
-                      <td style={{ color: '#64748b' }}>{line.unitName || '—'}</td>
+                      <td style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || '—'}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>
                         {Number(line.quantity).toLocaleString('vi-VN')}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         {money(line.unitPrice)}
                       </td>
-                      <td style={{ textAlign: 'center', color: '#64748b' }}>
+                      <td style={{ textAlign: 'center', color: 'var(--wms-text-muted)' }}>
                         {line.vatRate || 0}%
                       </td>
-                      <td style={{ textAlign: 'right', color: '#64748b' }}>
+                      <td style={{ textAlign: 'right', color: 'var(--wms-text-muted)' }}>
                         {money(line.vatAmount)}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#1e40af' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-link)' }}>
                         {money(Number(line.lineAmount) + Number(line.vatAmount || 0))}
                       </td>
-                      <td style={{ color: '#64748b', fontSize: 12 }}>{line.note || ''}</td>
+                      <td style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.note || ''}</td>
                     </tr>
                   ))
                 )}
@@ -387,7 +387,7 @@ function PurchaseOrderDetailPage() {
                   <td colSpan={8} style={{ textAlign: 'right', fontWeight: 600, padding: '12px 8px', fontSize: 14 }}>
                     TỔNG CỘNG:
                   </td>
-                  <td style={{ textAlign: 'right', fontWeight: 700, color: '#1e40af', fontSize: 15, padding: '12px 8px' }}>
+                  <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-link)', fontSize: 15, padding: '12px 8px' }}>
                     {money(po.totalAmount)}
                   </td>
                   <td />
@@ -407,7 +407,7 @@ function PurchaseOrderDetailPage() {
                 <i className="bi bi-paperclip" /> Ghi chú &amp; Tệp đính kèm
               </div>
               {cleanNote && (
-                <div style={{ marginBottom: (poAttachments && poAttachments.length > 0) ? 14 : 0, fontSize: 13.5, color: '#334155', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: 6, border: '1px solid #e2e8f0', lineHeight: 1.6 }}>
+                <div style={{ marginBottom: (poAttachments && poAttachments.length > 0) ? 14 : 0, fontSize: 13.5, color: 'var(--wms-text-body)', backgroundColor: 'var(--wms-bg-soft)', padding: '10px 14px', borderRadius: 6, border: '1px solid var(--wms-border-base)', lineHeight: 1.6 }}>
                   <strong>Ghi chú:</strong> {cleanNote}
                 </div>
               )}
@@ -441,7 +441,7 @@ function PurchaseOrderDetailPage() {
                 <tbody>
                   {importSlips.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: 24, color: '#94a3b8' }}>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--wms-text-subtle)' }}>
                         Chưa có phiếu nhập kho nào được tạo cho đơn hàng này
                       </td>
                     </tr>
@@ -450,7 +450,7 @@ function PurchaseOrderDetailPage() {
                       <tr key={slip.id}>
                         <td>
                           <span 
-                            style={{ fontWeight: 600, color: '#2563eb', cursor: 'pointer' }}
+                            style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }}
                             onClick={() => navigate(`/import-history`)} // ideally go to detail page if available
                           >
                             {slip.docCode}
@@ -459,7 +459,7 @@ function PurchaseOrderDetailPage() {
                         <td>{fmtDateTime(slip.createdAt)}</td>
                         <td>{slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '—'}</td>
                         <td>{slip.createdByName || userById.get(slip.createdBy)?.fullName || userById.get(slip.createdBy)?.username || `#${slip.createdBy}`}</td>
-                        <td style={{ color: '#64748b' }}>{slip.note || '—'}</td>
+                        <td style={{ color: 'var(--wms-text-muted)' }}>{slip.note || '—'}</td>
                       </tr>
                     ))
                   )}

@@ -363,7 +363,7 @@ function PurchaseOrderListPage() {
                         <i
                           className="bi bi-printer"
                           title="In đơn mua hàng"
-                          style={{ cursor: 'pointer', marginRight: 8, color: '#0284c7', fontSize: 15 }}
+                          style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-info-hover)', fontSize: 15 }}
                           onClick={() => handlePrintPo(po)}
                         />
                         {po.status === 'DRAFT' && (
@@ -386,7 +386,7 @@ function PurchaseOrderListPage() {
                           <i
                             className="bi bi-x-circle"
                             title="Hủy đơn"
-                            style={{ cursor: 'pointer', color: '#ef4444', fontSize: 15 }}
+                            style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
                             onClick={() => setConfirmCancel(po)}
                           />
                         )}

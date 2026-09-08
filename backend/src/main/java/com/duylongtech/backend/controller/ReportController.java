@@ -29,7 +29,7 @@ public class ReportController {
     }
 
     @GetMapping("/inventory-balance")
-    @PreAuthorize("hasAuthority('report_balance:view') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('report_balance:view') or hasAnyRole('SUPER_ADMIN', 'WAREHOUSE_CONTROLLER', 'WH_CONTROLLER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<InventoryBalanceReportResponse>>> getInventoryBalanceReport(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long warehouseId) {
@@ -40,7 +40,7 @@ public class ReportController {
     }
 
     @GetMapping("/stock-ledger")
-    @PreAuthorize("hasAuthority('report_ledger:view') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('report_ledger:view') or hasAnyRole('SUPER_ADMIN', 'WAREHOUSE_CONTROLLER', 'WH_CONTROLLER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<StockLedgerReportResponse>>> getStockLedgerReport(
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -53,7 +53,7 @@ public class ReportController {
     }
 
     @GetMapping("/stock-transfers")
-    @PreAuthorize("hasAuthority('report_transfer:view') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('report_transfer:view') or hasAnyRole('SUPER_ADMIN', 'WAREHOUSE_CONTROLLER', 'WH_CONTROLLER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<StockTransferReportResponse>>> getStockTransferReport(
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -71,7 +71,7 @@ public class ReportController {
     }
 
     @GetMapping("/debt")
-    @PreAuthorize("hasAuthority('report_debt:view') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('report_debt:view') or hasAnyRole('SUPER_ADMIN', 'CASHIER_CONTROLLER', 'ACCOUNTANT', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<DebtReportResponse>>> getDebtReport(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
@@ -110,7 +110,7 @@ public class ReportController {
     }
 
     @GetMapping("/inventory-summary")
-    @PreAuthorize("hasAuthority('report_summary:view') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('report_summary:view') or hasAnyRole('SUPER_ADMIN', 'WAREHOUSE_CONTROLLER', 'WH_CONTROLLER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<InventorySummaryReportResponse>>> getInventorySummaryReport(
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,

@@ -214,7 +214,7 @@
 
 .statCardActive {
     border-color: var(--color-primary);
-    background: #f8fafc;
+    background: var(--wms-bg-soft);
 }
 
 .statCard:focus-visible,
@@ -351,7 +351,7 @@
 }
 
 .tableRow:hover {
-    background-color: #ffffff;
+    background-color: var(--color-white);
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     transform: translateY(-2px);
     z-index: 10;
@@ -408,13 +408,13 @@
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #ffffff;
+    border: 2px solid var(--color-white);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.bgBlue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
-.bgOrange { background: rgba(245, 158, 11, 0.1); color: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
-.bgGray { background: rgba(100, 116, 139, 0.1); color: #64748b; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15); }
+.bgBlue { background: rgba(59, 130, 246, 0.1); color: var(--color-primary-bright); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+.bgOrange { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
+.bgGray { background: rgba(100, 116, 139, 0.1); color: var(--wms-text-muted); box-shadow: 0 4px 12px rgba(100, 116, 139, 0.15); }
 
 /* Badges */
 .roleBadge {
@@ -427,8 +427,8 @@
     max-width: 100%;
     white-space: normal;
 }
-.rolePrimary { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.roleSecondary { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+.rolePrimary { background: rgba(59, 130, 246, 0.1); color: var(--color-primary-bright); }
+.roleSecondary { background: rgba(100, 116, 139, 0.1); color: var(--wms-text-muted); }
 
 .statusBadge {
     display: inline-flex;
@@ -451,9 +451,9 @@
     100% { opacity: 1; transform: scale(1); }
 }
 
-.statusActive { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.statusPending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.statusInactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.statusActive { background: rgba(16, 185, 129, 0.1); color: var(--color-success-alt); }
+.statusPending { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); }
+.statusInactive { background: rgba(239, 68, 68, 0.1); color: var(--wms-danger); }
 
 /* Pagination */
 .pagination {
@@ -483,7 +483,7 @@
 
 .skeletonBox {
     height: 20px;
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background: linear-gradient(90deg, var(--wms-bg-hover) 25%, var(--wms-border-base) 50%, var(--wms-bg-hover) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 4px;
@@ -494,7 +494,7 @@
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background: linear-gradient(90deg, var(--wms-bg-hover) 25%, var(--wms-border-base) 50%, var(--wms-bg-hover) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
 }
@@ -717,7 +717,7 @@
         flex-direction: column;
         align-items: stretch;
         padding: 24px 20px;
-        background: linear-gradient(145deg, #ffffff, #f8fafc);
+        background: linear-gradient(145deg, var(--color-white), var(--wms-bg-soft));
         border: 1px solid rgba(255, 255, 255, 0.8);
         border-radius: 24px;
         box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 1);
@@ -734,7 +734,7 @@
 
     .searchInput {
         height: 50px;
-        background: #f1f5f9;
+        background: var(--wms-bg-hover);
         border: 1px solid transparent;
         border-radius: 25px;
         padding-left: 46px;
@@ -744,15 +744,15 @@
     }
 
     .searchInput:focus {
-        background: #ffffff;
-        border-color: #3b82f6;
+        background: var(--color-white);
+        border-color: var(--color-primary-bright);
         box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
     }
 
     .searchBox i:first-child {
         left: 18px;
         font-size: 18px;
-        color: #64748b;
+        color: var(--wms-text-muted);
     }
 
     .filterSelectGroup {
@@ -766,18 +766,18 @@
         width: 100%;
         min-width: 100%;
         height: 48px;
-        background: #f1f5f9;
+        background: var(--wms-bg-hover);
         border: 1px solid transparent;
         border-radius: 14px;
         font-weight: 500;
-        color: #334155;
+        color: var(--wms-text-body);
         transition: all 0.3s ease;
         padding: 0 16px;
     }
 
     .filterSelect:focus {
-        background: #ffffff;
-        border-color: #3b82f6;
+        background: var(--color-white);
+        border-color: var(--color-primary-bright);
         box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
     }
 
@@ -793,9 +793,9 @@
         width: 100%;
         height: 48px;
         border-radius: 14px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        color: #475569;
+        background: var(--color-white);
+        border: 1px solid var(--wms-border-base);
+        color: var(--wms-text-muted);
         font-size: 18px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -803,7 +803,7 @@
 
     .iconBtn:active {
         transform: scale(0.95);
-        background: #f8fafc;
+        background: var(--wms-bg-soft);
     }
 
     .tableToolbar,
@@ -816,7 +816,7 @@
         border-radius: 24px;
         border: none;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-        background: #ffffff;
+        background: var(--color-white);
         margin-top: 16px;
         overflow: hidden;
     }
@@ -1007,7 +1007,7 @@
 
 .emptyIcon {
   font-size: 40px;
-  color: #94a3b8;
+  color: var(--wms-text-subtle);
   margin-bottom: 8px;
   display: flex;
   justify-content: center;
@@ -1017,5 +1017,5 @@
 .emptyText {
   font-size: 14px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--wms-text-muted);
 }

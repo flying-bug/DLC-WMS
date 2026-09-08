@@ -15,6 +15,9 @@ export const createVoucher = (data) =>
 export const postPayment = (id) =>
   axiosClient.post(`${BASE}/${id}/post`);
 
+export const unpostPayment = (id, reason) =>
+  axiosClient.post(`${BASE}/${id}/unpost`, null, { params: { reason } });
+
 export const updatePayment = (id, data) =>
   axiosClient.put(`${BASE}/${id}`, data);
 

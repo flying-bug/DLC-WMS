@@ -499,10 +499,10 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px 20px;
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
   padding: 18px 20px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wms-border-base);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -514,7 +514,7 @@
 
 .infoLabel {
   font-size: 11px;
-  color: #64748b;
+  color: var(--wms-text-muted);
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -524,22 +524,22 @@
 }
 
 .infoLabel i {
-  color: #94a3b8;
+  color: var(--wms-text-subtle);
   font-size: 13px;
 }
 
 .infoValue {
   font-size: 14px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--wms-text-strong);
   overflow-wrap: anywhere;
 }
 
 .detailRight {
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
   padding: 18px 20px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wms-border-base);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -552,7 +552,7 @@
   justify-content: space-between;
   align-items: center;
   padding-bottom: 12px;
-  border-bottom: 1px dashed #cbd5e1;
+  border-bottom: 1px dashed var(--wms-border-strong);
 }
 
 .detailRightRow:last-child {
@@ -561,7 +561,7 @@
 }
 
 .detailRightLabel {
-  color: #64748b;
+  color: var(--wms-text-muted);
   font-size: 13px;
   font-weight: 500;
   display: flex;
@@ -570,12 +570,12 @@
 }
 
 .detailRightLabel i {
-  color: #94a3b8;
+  color: var(--wms-text-subtle);
 }
 
 .detailRightValue {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--wms-text-title);
   font-size: 14px;
   text-align: right;
   white-space: nowrap;
@@ -592,19 +592,19 @@
   border-collapse: separate;
   border-spacing: 0;
   margin-bottom: 20px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wms-border-base);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .detailTable th {
-  background-color: #f1f5f9;
+  background-color: var(--wms-bg-hover);
   padding: 10px 12px;
   text-align: left;
   font-size: 11px;
   font-weight: 600;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--wms-text-muted);
+  border-bottom: 1px solid var(--wms-border-base);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -612,8 +612,8 @@
 .detailTable td {
   padding: 10px 12px;
   font-size: 13px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  border-bottom: 1px solid var(--wms-bg-hover);
+  color: var(--wms-text-strong);
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -627,7 +627,7 @@
 }
 
 .detailTable tr:hover td {
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
 }
 
 .textRight {
@@ -642,9 +642,9 @@
 
 .serialBadge {
   display: inline-block;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  background-color: var(--wms-bg-hover);
+  border: 1px solid var(--wms-border-base);
+  color: var(--wms-text-muted);
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 12px;
@@ -657,9 +657,9 @@
   justify-content: flex-end;
   align-items: center;
   padding: 20px 24px;
-  background-color: #f8fafc;
+  background-color: var(--wms-bg-soft);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--wms-border-base);
   font-weight: 600;
   font-size: 15px;
   gap: 32px;
@@ -672,14 +672,14 @@
 }
 
 .footerTotalLabel {
-  color: #64748b;
+  color: var(--wms-text-muted);
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.5px;
 }
 
 .footerQty {
-  color: #0f172a;
+  color: var(--wms-text-title);
   font-size: 18px;
   font-weight: 700;
 }
@@ -894,7 +894,7 @@
 
 .pageNumber.active:focus {
   background-color: var(--color-white);
-  color: var(--color-text, #1e293b);
+  color: var(--color-text, var(--wms-text-strong));
   border: 1px solid var(--color-primary);
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
@@ -926,7 +926,7 @@
   visibility: hidden;
   width: max-content;
   max-width: 300px;
-  background-color: #1e293b;
+  background-color: var(--wms-text-strong);
   color: #fff;
   text-align: center;
   border-radius: 6px;
@@ -952,7 +952,7 @@
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
-  border-color: #1e293b transparent transparent transparent;
+  border-color: var(--wms-text-strong) transparent transparent transparent;
 }
 
 /* ── Settings Column Modal ────────────────────────────────── */
@@ -1114,7 +1114,7 @@
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #1e293b;
+  background-color: var(--wms-text-strong);
   border-radius: 8px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
   padding: 12px 24px;
@@ -1151,7 +1151,7 @@
 }
 
 .actionText strong {
-  color: #38bdf8;
+  color: var(--color-info);
   font-weight: 700;
   font-size: 16px;
 }

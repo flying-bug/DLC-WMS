@@ -47,10 +47,19 @@ public class PaymentController {
     }
 
     @PostMapping("/{id}/post")
-    @PreAuthorize("hasAuthority('payment:edit')")
-    @Operation(summary = "Post a DRAFT receipt/voucher")
+    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('ADMIN')")
+    @Operation(summary = "Post a DRAFT receipt/voucher (Restricted to Cashier and Admins)")
     public ResponseEntity<PaymentResponse> postPayment(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.postPayment(id));
+    }
+
+    @PostMapping("/{id}/unpost")
+    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('ADMIN')")
+    @Operation(summary = "Unpost a POSTED receipt/voucher (Rolls back ledger, returns to DRAFT)")
+    public ResponseEntity<PaymentResponse> unpostPayment(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(paymentService.unpostPayment(id, reason));
     }
 
     @PutMapping("/{id}")

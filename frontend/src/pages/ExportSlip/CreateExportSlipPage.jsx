@@ -57,10 +57,10 @@ const customSelectStyles = {
     minHeight: '32px',
     height: '32px',
     fontSize: '13px',
-    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #2563eb' : 'none',
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    boxShadow: state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
     '&:hover': {
-      borderColor: state.isFocused ? '#2563eb' : '#9ca3af'
+      borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-text-placeholder)'
     }
   }),
   valueContainer: (base) => ({
@@ -876,7 +876,7 @@ function CreateExportSlipPage({ mode: propMode }) {
             <i className="bi bi-arrow-left"></i> Quay lại
           </a>
           <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu xuất kho {form.docCode ? form.docCode : ''}</span>
-          <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
+          <span style={{ color: 'var(--color-border-muted)', fontSize: '20px' }}>|</span>
           <div style={{ width: '280px' }}>
             <Select
               value={[
@@ -906,7 +906,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         {error && <div className={styles.errorCard}>{error}</div>}
 
         {soData && (
-          <div style={{ marginBottom: '12px', padding: '10px 16px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#1d4ed8' }}>
+          <div style={{ marginBottom: '12px', padding: '10px 16px', background: 'var(--color-primary-soft)', border: '1px solid var(--color-info-border-soft)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--wms-primary-hover)' }}>
             <i className="bi bi-link-45deg" style={{ fontSize: '16px' }} />
             <span>Phiếu xuất được tạo từ đơn hàng <b>{soData.soCode}</b>. Thông tin đã được tự điền — bạn có thể điều chỉnh trước khi lưu.</span>
           </div>
@@ -950,7 +950,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         className="misa-input"
                         readOnly
                         value={customers.find(s => String(s.id) === String(form.partnerId))?.name || ''}
-                        style={{ backgroundColor: '#f9fafb' }}
+                        style={{ backgroundColor: 'var(--color-bg-elevated)' }}
                         placeholder="Tìm kiếm và chọn Tên Khách hàng"
                       />
                     </div>
@@ -1009,7 +1009,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         readOnly
                         value={selectedAssemblyOrder?.orderCode || form.referenceCode || ''}
                         placeholder="Nhấn chọn lệnh"
-                        style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
+                        style={{ flex: 1, backgroundColor: 'var(--color-bg)', cursor: 'pointer' }}
                         onClick={() => setShowAssemblyModal(true)}
                       />
                       <button
@@ -1045,7 +1045,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                       readOnly
                       value={form.referenceCode || ''}
                       placeholder="Không có"
-                      style={{ backgroundColor: '#f3f4f6' }}
+                      style={{ backgroundColor: 'var(--color-bg)' }}
                     />
                   </div>
                 </div>
@@ -1076,7 +1076,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                     className="misa-input"
                     value={currentUser ? (currentUser.fullName || currentUser.username) : 'Đang tải...'}
                     readOnly
-                    style={{ backgroundColor: '#f3f4f6' }}
+                    style={{ backgroundColor: 'var(--color-bg)' }}
                   />
                 </div>
               </div>
@@ -1282,17 +1282,17 @@ function CreateExportSlipPage({ mode: propMode }) {
                       </td>
                       <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
                       <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                      <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                      <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
                       <td align="center">
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {product?.trackSerial && (
                             <button
                               type="button"
                               style={{
-                                background: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#dcfce7' : '#fef9c3',
+                                background: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? 'var(--color-success-bg)' : '#fef9c3',
                                 color: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#166534' : '#854d0e',
-                                border: `1px solid ${(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#bbf7d0' : '#fef08a'}`,
+                                border: `1px solid ${(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? 'var(--wms-success-border)' : '#fef08a'}`,
                                 borderRadius: '4px',
                                 padding: '2px 8px',
                                 fontSize: '12px',
@@ -1341,10 +1341,10 @@ function CreateExportSlipPage({ mode: propMode }) {
           <div className={styles.tableFooter}>
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ color: '#4b5563', fontSize: '13px' }}>Tổng số: <span style={{ fontWeight: 'bold', color: '#111827' }}>{items.length}</span> bản ghi</div>
+                <div style={{ color: '#4b5563', fontSize: '13px' }}>Tổng số: <span style={{ fontWeight: 'bold', color: 'var(--color-text)' }}>{items.length}</span> bản ghi</div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
-                  <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                  <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
+                  <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
                 </div>
 
                 <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
@@ -1358,7 +1358,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                  <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                  <SearchableSelect style={{ padding: '4px 8px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px' }}>
                     <option>5 bản ghi trên 1 trang</option>
                     <option>10 bản ghi trên 1 trang</option>
                     <option>20 bản ghi trên 1 trang</option>
@@ -1366,7 +1366,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   </SearchableSelect>
                   <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <span style={{ cursor: 'pointer' }}>Trước</span>
-                    <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
+                    <span style={{ fontWeight: 'bold', color: 'var(--color-text)' }}>1</span>
                     <span style={{ cursor: 'pointer' }}>Sau</span>
                   </div>
                 </div>

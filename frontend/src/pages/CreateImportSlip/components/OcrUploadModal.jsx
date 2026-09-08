@@ -169,13 +169,13 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
                 <div className={styles.loadingWrap}>
                   <div className={styles.spinner} />
                   <p>⚙️ Đang tối ưu hóa dung lượng ảnh...</p>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>Nén về chuẩn 1800px để xử lý siêu tốc</span>
+                  <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>Nén về chuẩn 1800px để xử lý siêu tốc</span>
                 </div>
               ) : loading ? (
                 <div className={styles.loadingWrap}>
                   <div className={styles.spinner} />
                   <p>⚡ AI đang quét & trích xuất dữ liệu...</p>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>Thời gian phản hồi ~2–3 giây</span>
+                  <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>Thời gian phản hồi ~2–3 giây</span>
                 </div>
               ) : preview ? (
                 <img src={preview} alt="Preview" className={styles.previewImg} />
@@ -192,35 +192,35 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
             <div className={styles.qrContainer} style={{ textAlign: 'center', padding: '20px 0' }}>
               {window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? (
                 <div style={{ backgroundColor: '#fef2f2', padding: '16px', borderRadius: '8px', border: '1px solid #fca5a5' }}>
-                  <h4 style={{ color: '#dc2626', marginBottom: '8px' }}>⚠️ Lỗi: Không thể dùng localhost</h4>
+                  <h4 style={{ color: 'var(--wms-danger)', marginBottom: '8px' }}>⚠️ Lỗi: Không thể dùng localhost</h4>
                   <p style={{ color: '#991b1b', marginBottom: '16px' }}>
                     Điện thoại không thể quét mã QR có địa chỉ <b>localhost</b>. Vui lòng mở lại trang web này trên máy tính bằng địa chỉ IP mạng Wi-Fi của bạn.<br/>
                     <i>Ví dụ: http://192.168.1.45:5173</i>
                   </p>
-                  <button className={styles.actionBtn} onClick={() => setShowQR(false)} style={{ backgroundColor: '#f1f5f9', color: '#334155' }}>
+                  <button className={styles.actionBtn} onClick={() => setShowQR(false)} style={{ backgroundColor: 'var(--wms-bg-hover)', color: 'var(--wms-text-body)' }}>
                     Đã hiểu, quay lại
                   </button>
                 </div>
               ) : mobileStatus === 'PROCESSING' ? (
                 <div className={styles.loadingWrap}>
                   <div className={styles.spinner} style={{ margin: '0 auto 16px' }} />
-                  <h4 style={{ color: '#2563eb', margin: '10px 0' }}>Đang nhận dữ liệu từ điện thoại...</h4>
+                  <h4 style={{ color: 'var(--wms-primary)', margin: '10px 0' }}>Đang nhận dữ liệu từ điện thoại...</h4>
                   <p>AI đang phân tích ảnh hóa đơn, vui lòng chờ trong giây lát.</p>
                 </div>
               ) : (
                 <>
-                  <h4 style={{ color: '#2563eb', marginBottom: '16px' }}>Quét mã để chụp ảnh trên điện thoại</h4>
+                  <h4 style={{ color: 'var(--wms-primary)', marginBottom: '16px' }}>Quét mã để chụp ảnh trên điện thoại</h4>
                   <img 
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/m/scan?session=' + sessionId)}`} 
                     alt="QR Code" 
                     style={{ border: '8px solid white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   />
-                  <p style={{ marginTop: '16px', color: '#64748b' }}>
+                  <p style={{ marginTop: '16px', color: 'var(--wms-text-muted)' }}>
                     1. Mở camera điện thoại hoặc Zalo để quét.<br/>
                     2. Chụp ảnh hóa đơn.<br/>
                     3. Máy tính sẽ tự động nhận dữ liệu!
                   </p>
-                  <button className={styles.actionBtn} onClick={() => setShowQR(false)} style={{ marginTop: '16px', backgroundColor: '#f1f5f9', color: '#334155' }}>
+                  <button className={styles.actionBtn} onClick={() => setShowQR(false)} style={{ marginTop: '16px', backgroundColor: 'var(--wms-bg-hover)', color: 'var(--wms-text-body)' }}>
                     Quay lại tải file
                   </button>
                 </>
@@ -240,7 +240,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
               </button>
               <button
                 className={styles.actionBtn}
-                style={{ backgroundColor: '#2563eb', color: 'white', borderColor: '#2563eb' }}
+                style={{ backgroundColor: 'var(--wms-primary)', color: 'white', borderColor: 'var(--wms-primary)' }}
                 onClick={handleOpenQR}
                 disabled={loading || qrLoading}
               >
