@@ -358,16 +358,91 @@
   white-space: nowrap;
 }
 
-.badgeDraft {
+.badgeSuccess {
+  background: var(--color-success-bg, #e6f8ec);
+  color: var(--color-success-deep, #166534);
+  border: 1px solid var(--color-success-border, #b3e6c8);
+}
+
+.badgeInfo {
+  background: var(--color-info-bg, #e6f0ff);
+  color: var(--color-primary-navy, var(--color-primary-link));
+  border: 1px solid var(--color-info-border, #b3d4ff);
+}
+
+.badgeWarning {
   background: var(--color-warning-bg, #fff7ed);
   color: var(--color-warning-dark, #c2410c);
   border: 1px solid var(--color-warning-border, #fed7aa);
 }
 
-.badgePosted {
-  background: var(--color-success-bg, #e6f8ec);
-  color: var(--color-success-deep, #166534);
-  border: 1px solid var(--color-success-border, #b3e6c8);
+.badgeDraft, .badgeDanger {
+  background: var(--color-bg-subtle, var(--wms-bg-hover));
+  color: var(--color-text-subtle, var(--wms-text-muted));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
+}
+
+/* ACTIONS IN TABLE */
+.misaActionLink {
+  background: transparent;
+  border: none;
+  color: var(--color-primary, var(--wms-primary));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.misaActionLink:hover {
+  background: var(--color-primary-soft, var(--color-primary-soft));
+}
+
+.actionDropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
+  border-radius: var(--border-radius-base, 6px);
+  box-shadow: var(--shadow-modal, 0 10px 25px -5px rgba(0, 0, 0, 0.15));
+  z-index: 100;
+  min-width: 150px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  font-size: 0.8125rem;
+  color: var(--color-text-main, var(--wms-text-body));
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.dropdownItem:hover {
+  background: var(--color-bg-hover, var(--wms-bg-hover));
+  color: var(--color-text-strong, var(--wms-text-title));
+}
+
+.dropdownItemDanger {
+  color: var(--color-danger, var(--wms-danger));
+}
+
+.dropdownItemDanger:hover {
+  background: var(--color-danger-bg, #feeced);
+  color: var(--color-danger-deep, #991b1b);
 }
 
 @media (max-width: 1024px) {

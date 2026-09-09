@@ -318,9 +318,8 @@ export default function WarehouseDocumentFormPage() {
             <h1 className={styles.docTitle}>
               {docTypeLabel}: <span className={styles.docCodeText}>{doc.docCode || doc.code}</span>
               <span
-                className={`${styles.statusBadge} ${
-                  isPosted ? styles.statusPosted : doc.status === 'UNPOSTED' ? styles.statusUnposted : styles.statusDraft
-                }`}
+                className={`${styles.statusBadge} ${isPosted ? styles.statusPosted : doc.status === 'UNPOSTED' ? styles.statusUnposted : styles.statusDraft
+                  }`}
               >
                 <i className={`fas ${isPosted ? 'fa-check' : doc.status === 'UNPOSTED' ? 'fa-undo' : 'fa-clock'}`} style={{ marginRight: 4 }}></i>
                 {isPosted ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : 'Chưa ghi sổ'}
@@ -544,8 +543,8 @@ export default function WarehouseDocumentFormPage() {
                                 isMismatch
                                   ? `Chưa khớp: Đã nhập ${snCount} / ${actNum} serial`
                                   : isMatch
-                                  ? `Đã nhập đủ ${snCount} serial`
-                                  : 'Nhập / quét serial cho mặt hàng này'
+                                    ? `Đã nhập đủ ${snCount} serial`
+                                    : 'Nhập / quét serial cho mặt hàng này'
                               }
                               onClick={() => {
                                 setSelectedLineIdx(idx);
@@ -620,7 +619,7 @@ export default function WarehouseDocumentFormPage() {
                   const isUnpost = logItem.action === 'UNPOST' || logItem.action === 'UNPOST_IMPORT' || logItem.action === 'UNPOST_EXPORT';
                   const isPost = logItem.action === 'POST' || logItem.action === 'POST_IMPORT' || logItem.action === 'POST_EXPORT';
                   const isCreate = logItem.action === 'CREATE' || logItem.action === 'CREATE_IMPORT';
-                  
+
                   let badgeBg = 'var(--wms-bg-hover)';
                   let badgeColor = 'var(--wms-text-muted)';
                   let icon = 'fas fa-info-circle';

@@ -43,6 +43,9 @@ export default function CashierWorkspacePage() {
   const [detailData, setDetailData] = useState([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  // Active Row Action Dropdown
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+
   // Pagination State
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -233,7 +236,7 @@ export default function CashierWorkspacePage() {
     const s = String(status).toUpperCase();
     if (s === 'POSTED') {
       return (
-        <span className={`${styles.badge} ${styles.badgePosted}`}>
+        <span className={`${styles.badge} ${styles.badgeSuccess}`}>
           <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ quỹ
         </span>
       );
@@ -345,48 +348,59 @@ export default function CashierWorkspacePage() {
         key: 'actions',
         label: 'Thao tác',
         width: '130px',
-        render: (_, row) => (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {row.status === 'DRAFT' && (
+        render: (_, row) => {
+          const isOpen = openDropdownId === row.id;
+          return (
+            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
-                className={styles.btnRowActionPost}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmPostItem(row);
-                }}
-                title="Ghi sổ quỹ"
+                className={styles.misaActionLink}
+                onClick={() => setOpenDropdownId(isOpen ? null : row.id)}
               >
-                <i className="fas fa-check"></i> Ghi sổ
+                Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
               </button>
-            )}
-            {row.status === 'POSTED' && (
-              <button
-                type="button"
-                className={styles.btnRowActionUnpost}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setUnpostItem(row);
-                  setUnpostReason('');
-                }}
-                title="Bỏ ghi sổ quỹ để hoàn tác"
-              >
-                <i className="fas fa-undo"></i> Bỏ ghi
-              </button>
-            )}
-            <button
-              type="button"
-              className={styles.btnRowActionPrint}
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePrint(row);
-              }}
-              title="In phiếu"
-            >
-              <i className="fas fa-print"></i>
-            </button>
-          </div>
-        ),
+              {isOpen && (
+                <div className={styles.actionDropdownMenu}>
+                  {row.status === 'DRAFT' && (
+                    <button
+                      type="button"
+                      className={styles.dropdownItem}
+                      onClick={() => {
+                        setOpenDropdownId(null);
+                        setConfirmPostItem(row);
+                      }}
+                    >
+                      <i className="fas fa-check"></i> Ghi sổ quỹ
+                    </button>
+                  )}
+                  {row.status === 'POSTED' && (
+                    <button
+                      type="button"
+                      className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                      onClick={() => {
+                        setOpenDropdownId(null);
+                        setUnpostItem(row);
+                        setUnpostReason('');
+                      }}
+                    >
+                      <i className="fas fa-undo"></i> Bỏ ghi sổ
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      setOpenDropdownId(null);
+                      handlePrint(row);
+                    }}
+                  >
+                    <i className="fas fa-print"></i> In phiếu
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        },
       },
     ],
     []
@@ -468,7 +482,7 @@ export default function CashierWorkspacePage() {
 
   return (
     <AdminLayout>
-      <div className={styles.pageContainer}>
+      <div className={styles.pageContainer} onClick={() => setOpenDropdownId(null)}>
         {/* HEADER ROW: TITLE & ACTION BUTTONS */}
         <div className={styles.headerRow}>
           <div className={styles.titleGroup}>
@@ -476,8 +490,8 @@ export default function CashierWorkspacePage() {
               {activeTab === 'cash-book'
                 ? 'Sổ quỹ tiền mặt'
                 : activeTab === 'bank'
-                ? 'Tiền gửi ngân hàng'
-                : 'Đề nghị thu, chi tiền'}
+                  ? 'Tiền gửi ngân hàng'
+                  : 'Đề nghị thu, chi tiền'}
             </h1>
             <span className={styles.personaBadge}>
               <i className="fas fa-cash-register"></i> Chế độ Thủ quỹ

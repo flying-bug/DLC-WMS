@@ -83,6 +83,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   const [detailItem, setDetailItem] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
 
   // Form inputs inside modal
   const [formPartnerId, setFormPartnerId] = useState(null);
@@ -376,7 +377,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
 
   return (
     <AdminLayout>
-      <div className={styles.pageBody}>
+      <div className={styles.pageBody} onClick={() => setOpenDropdownId(null)}>
         {/* HEADER SECTION: TIÊU ĐỀ & CÁC NÚT ĐIỀU HƯỚNG */}
         <div className={styles.pageTitleContainer}>
           <div className={styles.titleWrapper}>
@@ -597,9 +598,15 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                         </span>
                       </td>
                       <td className={styles.textCenter}>
-                        <span className={`${styles.badge} ${item.status === 'POSTED' ? styles.badgeSuccess : styles.badgeDraft}`}>
-                          {statusText(item.status)}
-                        </span>
+                        {item.status === 'POSTED' ? (
+                          <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+                            <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+                          </span>
+                        ) : (
+                          <span className={`${styles.badge} ${styles.badgeDraft}`}>
+                            <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+                          </span>
+                        )}
                       </td>
                       <td>
                         <div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--wms-text-muted)' }} title={item.note || ''}>
@@ -607,34 +614,61 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                         </div>
                       </td>
                       <td className={styles.textCenter}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <i
-                            className="bi bi-eye"
-                            style={{ cursor: 'pointer', color: 'var(--wms-text-muted)', fontSize: 16, marginRight: 8 }}
-                            title="Xem chi tiết"
-                            onClick={() => setDetailItem(item)}
-                          />
-                          <i
-                            className="bi bi-printer"
-                            style={{ cursor: 'pointer', color: 'var(--color-info-hover)', fontSize: 16, marginRight: 8 }}
-                            title="In phiếu"
-                            onClick={() => printPaymentReceipt(item, { partnerName: item.partnerName, salespersonName: '' })}
-                          />
-                          {item.status === 'DRAFT' && (
-                            <>
-                              <i
-                                className="bi bi-pencil"
-                                style={{ cursor: 'pointer', color: 'var(--wms-primary)', fontSize: 16, marginRight: 8 }}
-                                title="Sửa phiếu nháp"
-                                onClick={() => handleStartEdit(item)}
-                              />
-                              <i
-                                className="bi bi-trash"
-                                style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 16 }}
-                                title="Xóa phiếu nháp"
-                                onClick={() => setDeletingItem(item)}
-                              />
-                            </>
+                        <div style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className={styles.misaActionLink}
+                            onClick={() => setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
+                          >
+                            Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                          </button>
+                          {openDropdownId === item.id && (
+                            <div className={styles.actionDropdownMenu}>
+                              <button
+                                type="button"
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  setDetailItem(item);
+                                }}
+                              >
+                                <i className="fas fa-eye"></i> Xem chi tiết
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  printPaymentReceipt(item, { partnerName: item.partnerName, salespersonName: '' });
+                                }}
+                              >
+                                <i className="fas fa-print"></i> In phiếu
+                              </button>
+                              {item.status === 'DRAFT' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className={styles.dropdownItem}
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleStartEdit(item);
+                                    }}
+                                  >
+                                    <i className="fas fa-edit"></i> Sửa phiếu nháp
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      setDeletingItem(item);
+                                    }}
+                                  >
+                                    <i className="fas fa-trash-alt"></i> Xóa phiếu nháp
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>

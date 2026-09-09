@@ -152,8 +152,8 @@ export default function MasterDetailLayout({
                           {col.render
                             ? col.render(row[col.key], row, (safeCurrentPage - 1) * currentPageSize + rowIdx)
                             : row[col.key] != null
-                            ? String(row[col.key])
-                            : '-'}
+                              ? String(row[col.key])
+                              : '-'}
                         </td>
                       ))}
                     </tr>
@@ -283,8 +283,8 @@ export default function MasterDetailLayout({
                           {col.render
                             ? col.render(line[col.key], line, (safeDetailPage - 1) * detailPageSize + lineIdx)
                             : line[col.key] != null
-                            ? String(line[col.key])
-                            : '-'}
+                              ? String(line[col.key])
+                              : '-'}
                         </td>
                       ))}
                     </tr>

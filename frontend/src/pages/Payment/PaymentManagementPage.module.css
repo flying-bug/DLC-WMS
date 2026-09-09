@@ -233,37 +233,100 @@
   min-width: 1400px;
   border-collapse: collapse;
   table-layout: fixed;
+  font-size: 13px;
+  text-align: left;
 }
 
 .table th {
-  background-color: var(--color-bg-subtle);
-  padding: 14px 16px;
-  text-align: left;
-  font-size: 12px;
+  background: var(--table-header-bg, var(--wms-bg-hover));
+  color: var(--color-text-strong, var(--wms-text-strong));
   font-weight: 600;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border);
-  text-transform: uppercase;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--color-border-subtle, var(--wms-border-strong));
+  border-right: 1px solid var(--color-border-subtle, var(--wms-border-base));
   white-space: nowrap;
 }
 
 .table td {
-  padding: 14px 16px;
-  font-size: 14px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-subtle, var(--wms-border-base));
+  border-right: 1px solid var(--color-border-subtle, var(--wms-bg-hover));
   vertical-align: middle;
-  color: var(--color-text-strong);
+  color: var(--color-text-main, var(--wms-text-body));
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .table tr.activeRow {
-  background-color: var(--table-hover-bg);
+  background-color: var(--color-primary-soft, var(--color-primary-soft)) !important;
 }
 
 .table tr:hover {
-  background-color: var(--table-header-bg);
+  background-color: var(--table-hover-bg, var(--wms-bg-soft));
   cursor: pointer;
+}
+
+/* ACTIONS IN TABLE (MISA Style) */
+.misaActionLink {
+  background: transparent;
+  border: none;
+  color: var(--color-primary, var(--wms-primary));
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.misaActionLink:hover {
+  background: var(--color-primary-soft, var(--color-primary-soft));
+}
+
+.actionDropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-white, #fff);
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
+  border-radius: 6px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: 150px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--color-text-main, var(--wms-text-body));
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.dropdownItem:hover {
+  background: var(--color-bg-hover, var(--wms-bg-hover));
+  color: var(--color-text-strong, var(--wms-text-title));
+}
+
+.dropdownItemDanger {
+  color: var(--color-danger, var(--wms-danger));
+}
+
+.dropdownItemDanger:hover {
+  background: var(--color-danger-bg, #feeced);
+  color: var(--color-danger-deep, #991b1b);
 }
 
 .checkbox {
@@ -296,26 +359,39 @@
   white-space: nowrap;
 }
 
-/* Badges */
+/* BADGES */
 .badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--border-radius-pill, 12px);
+  font-size: 0.75rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .badgeSuccess {
-  background-color: var(--status-success-bg, var(--wms-success-soft));
-  color: var(--color-success-strong, var(--wms-success-hover));
-  border: 1px solid var(--status-success-border, var(--wms-success-border));
+  background: var(--color-success-bg, #e6f8ec);
+  color: var(--color-success-deep, #166534);
+  border: 1px solid var(--color-success-border, #b3e6c8);
+}
+
+.badgeInfo {
+  background: var(--color-info-bg, #e6f0ff);
+  color: var(--color-primary-navy, var(--color-primary-link));
+  border: 1px solid var(--color-info-border, #b3d4ff);
+}
+
+.badgeWarning {
+  background: var(--color-warning-bg, #fff7ed);
+  color: var(--color-warning-dark, #c2410c);
+  border: 1px solid var(--color-warning-border, #fed7aa);
 }
 
 .badgeDraft {
-  background-color: var(--status-warning-bg, var(--wms-warning-soft));
-  color: var(--color-warning, var(--wms-warning-hover));
-  border: 1px solid var(--status-warning-border, var(--wms-warning-border));
+  background: var(--color-bg-subtle, var(--wms-bg-hover));
+  color: var(--color-text-subtle, var(--wms-text-muted));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
 }
 
 /* Pagination */

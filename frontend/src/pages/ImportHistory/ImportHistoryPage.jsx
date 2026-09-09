@@ -119,6 +119,7 @@ function ImportHistoryPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   const DEFAULT_FILTERS = useMemo(() => {
     const range = getDateRangePreset('THIS_YEAR');
     return {
@@ -390,7 +391,7 @@ function ImportHistoryPage() {
 
   return (
     <AdminLayout>
-      <div className={styles.pageBody}>
+      <div className={styles.pageBody} onClick={() => setOpenDropdownId(null)}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách phiếu nhập kho</h1>
           <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create')}>
@@ -546,13 +547,23 @@ function ImportHistoryPage() {
                     )}
                     {columns.status && (
                       <td>
-                        <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
-                          slip.statusCode === 'info' ? styles.badgeInfo :
-                            slip.statusCode === 'warning' ? styles.badgeWarning :
-                              styles.badgeDanger
-                          }`}>
-                          {slip.statusLabel}
-                        </span>
+                        {slip.status === 'POSTED' || slip.status === 'COMPLETED' ? (
+                          <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+                            <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+                          </span>
+                        ) : slip.status === 'UNPOSTED' ? (
+                          <span className={`${styles.badge} ${styles.badgeWarning}`}>
+                            <i className="fas fa-undo" style={{ marginRight: 4 }}></i>Bỏ ghi sổ
+                          </span>
+                        ) : slip.status === 'APPROVED' ? (
+                          <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                            <i className="fas fa-check-double" style={{ marginRight: 4 }}></i>Đã duyệt
+                          </span>
+                        ) : (
+                          <span className={`${styles.badge} ${styles.badgeDraft}`}>
+                            <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+                          </span>
+                        )}
                         {slip.hasDiscrepancy && (
                           <span
                             style={{
@@ -577,21 +588,55 @@ function ImportHistoryPage() {
                       </td>
                     )}
                     <td className={styles.textCenter}>
-                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '10px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
-                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '10px' }} title="Sửa phiếu nhập kho" onClick={(e) => {
-                        e.stopPropagation();
-                        if (slip.status !== 'DRAFT' && slip.status !== 'UNPOSTED') {
-                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm hoặc đã bỏ ghi sổ.');
-                        } else {
-                          navigate(`/import-slips/${slip.id}/edit`);
-                        }
-                      }}></i>
-                      {slip.status === 'POSTED' && (
-                        <i className="bi bi-arrow-counterclockwise" style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: '16px' }} title="Bỏ ghi sổ kho an toàn" onClick={(e) => {
-                          e.stopPropagation();
-                          setUnpostTarget(slip);
-                        }}></i>
-                      )}
+                      <div style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className={styles.misaActionLink}
+                          onClick={() => setOpenDropdownId(openDropdownId === slip.id ? null : slip.id)}
+                        >
+                          Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                        </button>
+                        {openDropdownId === slip.id && (
+                          <div className={styles.actionDropdownMenu}>
+                            <button
+                              type="button"
+                              className={styles.dropdownItem}
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                setSelectedSlip(slip);
+                              }}
+                            >
+                              <i className="fas fa-eye"></i> Xem chi tiết
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.dropdownItem}
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                if (slip.status !== 'DRAFT' && slip.status !== 'UNPOSTED') {
+                                  showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm hoặc đã bỏ ghi sổ.');
+                                } else {
+                                  navigate(`/import-slips/${slip.id}/edit`);
+                                }
+                              }}
+                            >
+                              <i className="fas fa-edit"></i> Sửa phiếu nhập kho
+                            </button>
+                            {slip.status === 'POSTED' && (
+                              <button
+                                type="button"
+                                className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  setUnpostTarget(slip);
+                                }}
+                              >
+                                <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                   </tr>
