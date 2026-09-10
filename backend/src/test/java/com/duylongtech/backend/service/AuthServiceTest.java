@@ -71,7 +71,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(
+        authService = new com.duylongtech.backend.service.impl.AuthServiceImpl(
                 authenticationManager,
                 jwtUtils,
                 userRepository,

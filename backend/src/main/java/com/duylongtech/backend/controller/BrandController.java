@@ -1,13 +1,13 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.BrandRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.BrandResponse;
-import com.duylongtech.backend.service.AuditLogService;
 import com.duylongtech.backend.service.BrandService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,33 +45,6 @@ import java.util.List;
 public class BrandController {
 
     private final BrandService brandService;
-    private final AuditLogService auditLogService;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // UTILITY
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Lấy IP client từ header (hỗ trợ proxy / load balancer).
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        return ipAddress;
-    }
-
-    /**
-     * Lấy username của user đang đăng nhập từ SecurityContext.
-     */
-    private String getCurrentUser() {
-        return org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName();
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // READ - UC-36, UC-37
@@ -138,30 +111,9 @@ public class BrandController {
     @PostMapping
     @Operation(summary = "Tạo mới thương hiệu (UC-38)")
     @PreAuthorize("hasRole('MANAGER') or hasAuthority('brand:add')")
-    public ApiResponse<BrandResponse> createBrand(
-            @Valid @RequestBody BrandRequest req,
-            HttpServletRequest servletRequest
-    ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            BrandResponse created = brandService.createBrand(req);
-            // BR-06: Ghi audit log thành công
-            auditLogService.logEvent(
-                    actor, "CREATE", "Brand", created.getId(),
-                    "SUCCESS", "Tạo thương hiệu: " + created.getName() + " (" + created.getCode() + ")",
-                    ip, null
-            );
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            // BR-06: Ghi audit log thất bại
-            auditLogService.logEvent(
-                    actor, "CREATE", "Brand", null,
-                    "FAILED", "Tạo thương hiệu thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.CREATE, entityName = "Brand", actionDescription = "Tạo thương hiệu")
+    public ApiResponse<BrandResponse> createBrand(@Valid @RequestBody BrandRequest req) {
+        return ApiResponse.success(brandService.createBrand(req));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -190,31 +142,12 @@ public class BrandController {
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật thương hiệu (UC-39)")
     @PreAuthorize("hasRole('MANAGER') or hasAuthority('brand:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "Brand", actionDescription = "Cập nhật thương hiệu")
     public ApiResponse<BrandResponse> updateBrand(
             @PathVariable Long id,
-            @Valid @RequestBody BrandRequest req,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody BrandRequest req
     ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            BrandResponse updated = brandService.updateBrand(id, req);
-            // BR-06: Ghi audit log thành công
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Brand", id,
-                    "SUCCESS", "Cập nhật thương hiệu: " + updated.getName() + " (" + updated.getCode() + ")",
-                    ip, null
-            );
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            // BR-06: Ghi audit log thất bại
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Brand", id,
-                    "FAILED", "Cập nhật thương hiệu ID " + id + " thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        return ApiResponse.success(brandService.updateBrand(id, req));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -242,41 +175,14 @@ public class BrandController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Xóa thương hiệu (UC-40)")
     @PreAuthorize("hasRole('MANAGER') or hasAuthority('brand:delete')")
-    public org.springframework.http.ResponseEntity<ApiResponse<Void>> deleteBrand(
-            @PathVariable Long id,
-            HttpServletRequest servletRequest
-    ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            boolean isHardDeleted = brandService.deleteBrand(id);
-            
-            if (!isHardDeleted) {
-                // Soft deleted
-                auditLogService.logEvent(
-                        actor, "DELETE", "Brand", id,
-                        "SUCCESS", "Thương hiệu có sản phẩm liên kết, tự động chuyển trạng thái về INACTIVE",
-                        ip, null
-                );
-                return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).body(ApiResponse.error(
-                        com.duylongtech.backend.constant.SystemMessage.BRAND_INVALID_STATUS.getCode(), "Không thể xóa thương hiệu này vì đang có dữ liệu sản phẩm/bảo hành liên quan."));
-            }
-
-            // BR-06: Ghi audit log thành công
-            auditLogService.logEvent(
-                    actor, "DELETE", "Brand", id,
-                    "SUCCESS", "Xóa vật lý thương hiệu ID: " + id,
-                    ip, null
-            );
-            return org.springframework.http.ResponseEntity.ok(ApiResponse.success(null));
-        } catch (Exception e) {
-            // BR-06: Ghi audit log thất bại
-            auditLogService.logEvent(
-                    actor, "DELETE", "Brand", id,
-                    "FAILED", "Xóa thương hiệu ID " + id + " thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
+    @Auditable(action = AuditAction.DELETE, entityName = "Brand", actionDescription = "Xóa thương hiệu")
+    public org.springframework.http.ResponseEntity<ApiResponse<Void>> deleteBrand(@PathVariable Long id) {
+        boolean isHardDeleted = brandService.deleteBrand(id);
+        if (!isHardDeleted) {
+            // Soft deleted
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).body(ApiResponse.error(
+                    com.duylongtech.backend.constant.SystemMessage.BRAND_INVALID_STATUS.getCode(), "Không thể xóa thương hiệu này vì đang có dữ liệu sản phẩm/bảo hành liên quan."));
         }
+        return org.springframework.http.ResponseEntity.ok(ApiResponse.success(null));
     }
 }

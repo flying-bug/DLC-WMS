@@ -1,0 +1,193 @@
+package com.duylongtech.backend.service.impl;
+
+import com.duylongtech.backend.service.*;
+
+import com.duylongtech.backend.dto.SystemSettingsDto;
+import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.entity.SystemSetting;
+import com.duylongtech.backend.repository.SystemSettingRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Base64;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class SystemSettingsServiceImpl  implements SystemSettingsService {
+
+    private final SystemSettingRepository settingRepo;
+    private final GoogleDriveService driveService;
+    private final Environment env;
+
+    public String getSetting(String key, String def) {
+        return settingRepo.findBySettingKey(key)
+                .map(SystemSetting::getSettingValue)
+                .filter(v -> v != null && !v.isBlank())
+                .orElse(def);
+    }
+
+    private boolean getBool(String key) {
+        return "true".equalsIgnoreCase(getSetting(key, "false"));
+    }
+
+    public boolean isAiEnabled() {
+        return "true".equalsIgnoreCase(getSetting("ai.enabled", "true"));
+    }
+
+    public SystemSettingsDto getSettings() {
+        String saJson = getSetting("drive.service.account", "");
+        return SystemSettingsDto.builder()
+                .backupPath(getSetting("backup.path", "/tmp/backups"))
+                .driveEnabled(getBool("drive.enabled"))
+                .driveFolderId(getSetting("drive.folder.id", ""))
+                .driveConfigured(!saJson.isBlank())
+                .encryptEnabled(getBool("backup.encrypt.enabled"))
+                .encryptKey("") // never expose key
+                .notifyEmailEnabled(getBool("notify.email.enabled"))
+                .notifyEmailTo(getSetting("notify.email.to", ""))
+                .snapshotTime(getSetting("snapshot.time", "00:05"))
+                .reservationExpiryHours(Integer.parseInt(getSetting("sales.reservation.expiry_hours", "72")))
+                .aiEnabled(isAiEnabled())
+                .build();
+    }
+
+    @Transactional
+    public void saveSettings(SystemSettingsDto dto) {
+        upsert("backup.path", dto.getBackupPath());
+        upsert("drive.enabled", String.valueOf(dto.isDriveEnabled()));
+        upsert("drive.folder.id", dto.getDriveFolderId());
+        upsert("backup.encrypt.enabled", String.valueOf(dto.isEncryptEnabled()));
+        upsert("notify.email.enabled", String.valueOf(dto.isNotifyEmailEnabled()));
+        upsert("notify.email.to", dto.getNotifyEmailTo());
+        upsert("ai.enabled", String.valueOf(dto.isAiEnabled()));
+
+        if (dto.getSnapshotTime() != null && !dto.getSnapshotTime().isBlank()) {
+            upsert("snapshot.time", dto.getSnapshotTime().trim());
+        }
+        
+        Integer expiry = dto.getReservationExpiryHours();
+        if (expiry == null || expiry <= 0) {
+            expiry = 24; // Mặc định an toàn là 24h nếu người dùng nhập linh tinh
+        }
+        upsert("sales.reservation.expiry_hours", String.valueOf(expiry));
+
+        // Only update encrypt key if explicitly provided
+        if (dto.getEncryptKey() != null && !dto.getEncryptKey().isBlank()) {
+            upsert("backup.encrypt.key", dto.getEncryptKey());
+        }
+    }
+
+    @Transactional
+    public void saveServiceAccountJson(byte[] jsonBytes) {
+        String base64 = Base64.getEncoder().encodeToString(jsonBytes);
+        upsert("drive.service.account", base64);
+    }
+
+    public void testDriveConnection() throws Exception {
+        driveService.testConnection();
+    }
+
+    public String getOAuthAuthUrl(String redirectUri) {
+        String clientId = env.getProperty("google.client-id", "889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com");
+        return "https://accounts.google.com/o/oauth2/v2/auth" +
+                "?client_id=" + clientId +
+                "&redirect_uri=" + java.net.URLEncoder.encode(redirectUri, java.nio.charset.StandardCharsets.UTF_8) +
+                "&response_type=code" +
+                "&scope=" + java.net.URLEncoder.encode("https://www.googleapis.com/auth/drive.file", java.nio.charset.StandardCharsets.UTF_8) +
+                "&access_type=offline" +
+                "&prompt=consent";
+    }
+
+    @Transactional
+    public void exchangeOAuthCode(String code, String redirectUri) throws Exception {
+        String clientId = env.getProperty("google.client-id", "889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com");
+
+        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+        org.springframework.util.MultiValueMap<String, String> body = new org.springframework.util.LinkedMultiValueMap<>();
+        body.add("code", code);
+        body.add("client_id", clientId);
+        body.add("grant_type", "authorization_code");
+        body.add("redirect_uri", redirectUri);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED);
+
+        org.springframework.http.HttpEntity<org.springframework.util.MultiValueMap<String, String>> request = new org.springframework.http.HttpEntity<>(body, headers);
+        org.springframework.http.ResponseEntity<Map> resp = restTemplate.postForEntity("https://oauth2.googleapis.com/token", request, Map.class);
+
+        if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+            Map respMap = resp.getBody();
+            String refreshToken = (String) respMap.get("refresh_token");
+            if (refreshToken != null && !refreshToken.isBlank()) {
+                upsert("drive.oauth.refresh_token", refreshToken);
+                log.info("Successfully saved Google OAuth2 refresh token!");
+            } else {
+                log.warn("OAuth2 exchange returned no refresh_token: {}", respMap);
+            }
+        } else {
+            throw new IllegalStateException(SystemMessage.SYS_SET_ERR_001.getMessage());
+        }
+    }
+
+    public int getDefaultVatRate() {
+        try {
+            return Integer.parseInt(getSetting("tax.default_vat_rate", "8"));
+        } catch (Exception e) {
+            return 8;
+        }
+    }
+
+    public java.util.List<Integer> getAllowedVatRates() {
+        return java.util.List.of(0, 5, 8, 10);
+    }
+
+    public com.duylongtech.backend.dto.BusinessSettingsDto getBusinessSettings() {
+        return com.duylongtech.backend.dto.BusinessSettingsDto.builder()
+                .defaultVatRate(getDefaultVatRate())
+                .allowedVatRates(getAllowedVatRates())
+                .companyName(getSetting("company.name", "Công ty TNHH Công nghệ Thương mại Duy Long Techcom"))
+                .companyTaxCode(getSetting("company.tax_code", "0109123456"))
+                .companyAddress(getSetting("company.address", "Số 12 ngõ 44 Đỗ Đức Dục, Mễ Trì, Nam Từ Liêm, Hà Nội"))
+                .companyPhone(getSetting("company.phone", "0987654321"))
+                .companyEmail(getSetting("company.email", "duylongcomputer@gmail.com"))
+                .companyBankAccount(getSetting("company.bank_account", "1903666888999 - Techcombank"))
+                .build();
+    }
+
+    @Transactional
+    public void saveBusinessSettings(com.duylongtech.backend.dto.BusinessSettingsDto dto) {
+        if (dto.getDefaultVatRate() != null) {
+            upsert("tax.default_vat_rate", String.valueOf(dto.getDefaultVatRate()));
+        }
+        if (dto.getCompanyName() != null) {
+            upsert("company.name", dto.getCompanyName().trim());
+        }
+        if (dto.getCompanyTaxCode() != null) {
+            upsert("company.tax_code", dto.getCompanyTaxCode().trim());
+        }
+        if (dto.getCompanyAddress() != null) {
+            upsert("company.address", dto.getCompanyAddress().trim());
+        }
+        if (dto.getCompanyPhone() != null) {
+            upsert("company.phone", dto.getCompanyPhone().trim());
+        }
+        if (dto.getCompanyEmail() != null) {
+            upsert("company.email", dto.getCompanyEmail().trim());
+        }
+        if (dto.getCompanyBankAccount() != null) {
+            upsert("company.bank_account", dto.getCompanyBankAccount().trim());
+        }
+    }
+
+    private void upsert(String key, String value) {
+        SystemSetting s = settingRepo.findBySettingKey(key)
+                .orElse(SystemSetting.builder().settingKey(key).build());
+        s.setSettingValue(value);
+        settingRepo.save(s);
+    }
+}

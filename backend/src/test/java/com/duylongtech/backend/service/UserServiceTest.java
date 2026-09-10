@@ -9,6 +9,8 @@ import com.duylongtech.backend.repository.PermissionRepository;
 import com.duylongtech.backend.repository.RoleRepository;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.security.UserDetailsImpl;
+import com.duylongtech.backend.service.UserService;
+import com.duylongtech.backend.service.impl.UserServiceImpl;
 import com.duylongtech.backend.constant.SystemMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,18 +49,21 @@ class UserServiceTest {
     private CloudinaryService cloudinaryService;
     @Mock
     private EmailService emailService;
+    @Mock
+    private com.duylongtech.backend.mapper.UserMapper userMapper;
 
-    private UserService userService;
+    private UserServiceImpl userService;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(
+        userService = new UserServiceImpl(
                 userRepository,
                 roleRepository,
                 passwordEncoder,
                 permissionRepository,
                 cloudinaryService,
-                emailService
+                emailService,
+                userMapper
         );
     }
 

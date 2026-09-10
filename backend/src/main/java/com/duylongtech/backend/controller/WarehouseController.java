@@ -1,5 +1,7 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.WarehouseRequest;
 import com.duylongtech.backend.dto.response.WarehouseDetailResponse;
 import com.duylongtech.backend.dto.response.WarehouseResponse;
@@ -21,8 +23,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.List;
 import com.duylongtech.backend.dto.response.WarehouseStockAiRow;
 
@@ -39,61 +39,12 @@ public class WarehouseController {
     // Utility methods (following UnitController pattern)
     // ──────────────────────────────────────────────────────────
 
-    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        return ipAddress;
-    }
-
-    private String getCurrentUsername() {
-        return org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName();
-    }
-
     private Long getCurrentUserId() {
-        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl userDetails) {
-            return userDetails.getId();
-        }
-
-        String username = getCurrentUsername();
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username)
                 .or(() -> userRepository.findByEmail(username))
                 .map(User::getId)
                 .orElse(null);
-    }
-
-    // ──────────────────────────────────────────────────────────
-    private Map<String, Object> warehouseAuditSnapshot(WarehouseResponse warehouse) {
-        Map<String, Object> snapshot = new LinkedHashMap<>();
-        if (warehouse == null) {
-            return snapshot;
-        }
-        snapshot.put("code", warehouse.getCode());
-        snapshot.put("name", warehouse.getName());
-        snapshot.put("address", warehouse.getAddress());
-        snapshot.put("type", warehouse.getType());
-        snapshot.put("status", warehouse.getStatus());
-        return snapshot;
-    }
-
-    private Map<String, Object> warehouseAuditSnapshot(WarehouseDetailResponse warehouse) {
-        Map<String, Object> snapshot = new LinkedHashMap<>();
-        if (warehouse == null) {
-            return snapshot;
-        }
-        snapshot.put("code", warehouse.getCode());
-        snapshot.put("name", warehouse.getName());
-        snapshot.put("address", warehouse.getAddress());
-        snapshot.put("type", warehouse.getType());
-        snapshot.put("status", warehouse.getStatus());
-        return snapshot;
     }
 
     @GetMapping("/my-warehouses")
@@ -199,25 +150,12 @@ public class WarehouseController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('warehouse_master:add') or hasRole('MANAGER')")
+    @Auditable(action = AuditAction.CREATE, entityName = "Warehouse", actionDescription = "Tạo mới kho")
     public ResponseEntity<ApiResponse<WarehouseResponse>> createWarehouse(
-            @Valid @RequestBody WarehouseRequest request,
-            jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUsername();
+            @Valid @RequestBody WarehouseRequest request) {
         Long userId = getCurrentUserId();
-        try {
-            WarehouseResponse created = warehouseService.createWarehouse(request, userId);
-            String detailJson = auditLogService.buildChangeDetail(null, warehouseAuditSnapshot(created), "Created warehouse");
-            auditLogService.logEvent(
-                    actor, "CREATE", "Warehouse", created.getId(),
-                    "SUCCESS", "Tạo mới kho: " + created.getName(), ip, detailJson);
-            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(created));
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                    actor, "CREATE", "Warehouse", null,
-                    "FAILED", "Tạo mới kho: " + request.getName() + " thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        WarehouseResponse created = warehouseService.createWarehouse(request, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(created));
     }
 
     // ──────────────────────────────────────────────────────────
@@ -226,31 +164,13 @@ public class WarehouseController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('warehouse_master:edit') or hasRole('MANAGER')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "Warehouse", actionDescription = "Cập nhật thông tin kho")
     public ResponseEntity<ApiResponse<WarehouseResponse>> updateWarehouse(
             @PathVariable Long id,
-            @Valid @RequestBody WarehouseRequest request,
-            jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUsername();
+            @Valid @RequestBody WarehouseRequest request) {
         Long userId = getCurrentUserId();
-        try {
-            WarehouseDetailResponse before = warehouseService.getWarehouseDetail(id);
-            WarehouseResponse updated = warehouseService.updateWarehouse(id, request, userId);
-            String detailJson = auditLogService.buildChangeDetail(
-                    warehouseAuditSnapshot(before),
-                    warehouseAuditSnapshot(updated),
-                    "Updated warehouse"
-            );
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Warehouse", id,
-                    "SUCCESS", "Cập nhật kho: " + updated.getName(), ip, detailJson);
-            return ResponseEntity.ok(ApiResponse.success(updated));
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Warehouse", id,
-                    "FAILED", "Cập nhật kho ID " + id + " thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        WarehouseResponse updated = warehouseService.updateWarehouse(id, request, userId);
+        return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
     // ──────────────────────────────────────────────────────────
@@ -259,43 +179,14 @@ public class WarehouseController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('warehouse_master:delete') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<Void>> deleteWarehouse(
-            @PathVariable Long id,
-            jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUsername();
-        try {
-            WarehouseDetailResponse before = warehouseService.getWarehouseDetail(id);
-            boolean isHardDeleted = warehouseService.deleteWarehouse(id);
-            if (!isHardDeleted) {
-                WarehouseDetailResponse after = warehouseService.getWarehouseDetail(id);
-                String detailJson = auditLogService.buildChangeDetail(
-                        warehouseAuditSnapshot(before),
-                        warehouseAuditSnapshot(after),
-                        "Warehouse has inventory, changed status to INACTIVE"
-                );
-                // Soft deleted - return 409 Conflict as per spec
-                auditLogService.logEvent(
-                        actor, "DELETE", "Warehouse", id,
-                        "SUCCESS", "Kho đã phát sinh giao dịch, tự động chuyển trạng thái về INACTIVE", ip, detailJson);
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(
-                        SystemMessage.WH_HAS_TRANSACTION.getCode(), SystemMessage.WH_HAS_TRANSACTION.getMessage()));
-            }
-
-            String detailJson = auditLogService.buildChangeDetail(
-                    warehouseAuditSnapshot(before),
-                    null,
-                    "Deleted warehouse"
-            );
-            auditLogService.logEvent(
-                    actor, "DELETE", "Warehouse", id,
-                    "SUCCESS", "Xóa vật lý kho ID: " + id, ip, detailJson);
-            return ResponseEntity.ok(ApiResponse.success(null));
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                    actor, "DELETE", "Warehouse", id,
-                    "FAILED", "Xóa kho ID " + id + " thất bại: " + e.getMessage(), ip, null);
-            throw e;
+    @Auditable(action = AuditAction.DELETE, entityName = "Warehouse", actionDescription = "Xóa kho")
+    public ResponseEntity<ApiResponse<Void>> deleteWarehouse(@PathVariable Long id) {
+        boolean isHardDeleted = warehouseService.deleteWarehouse(id);
+        if (!isHardDeleted) {
+            // Soft deleted - return 409 Conflict as per spec
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(
+                    SystemMessage.WH_HAS_TRANSACTION.getCode(), SystemMessage.WH_HAS_TRANSACTION.getMessage()));
         }
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

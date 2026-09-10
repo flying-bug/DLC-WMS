@@ -1,5 +1,7 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderSerialRequest;
@@ -9,14 +11,12 @@ import com.duylongtech.backend.dto.response.AssemblyOrderResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse;
 import com.duylongtech.backend.dto.response.SerialTreeResponse;
 import com.duylongtech.backend.service.AssemblyOrderService;
-import com.duylongtech.backend.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import java.time.LocalDate;
@@ -27,18 +27,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AssemblyOrderController {
     private final AssemblyOrderService assemblyOrderService;
-    private final AuditLogService auditLogService;
-
-    private String getClientIp(HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        return ipAddress;
-    }
 
     private String getCurrentUser() {
         if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() == null) return "System";
@@ -65,33 +53,17 @@ public class AssemblyOrderController {
     @PostMapping("/assembly-boms")
     @Operation(summary = "Create assembly BOM")
     @PreAuthorize("hasAuthority('assembly_config:add')")
-    public ApiResponse<AssemblyBomResponse> createBom(@Valid @RequestBody AssemblyBomRequest request, HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            AssemblyBomResponse created = assemblyOrderService.createBom(request);
-            auditLogService.logEvent(actor, "CREATE", "AssemblyBom", created.getId(), "SUCCESS", "Tạo cấu hình: " + created.getBomCode(), ip, null);
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "CREATE", "AssemblyBom", null, "FAILED", "Tạo cấu hình thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+    @Auditable(action = AuditAction.CREATE, entityName = "AssemblyBom", actionDescription = "Tạo cấu hình BOM")
+    public ApiResponse<AssemblyBomResponse> createBom(@Valid @RequestBody AssemblyBomRequest request) {
+        return ApiResponse.success(assemblyOrderService.createBom(request));
     }
 
     @PutMapping("/assembly-boms/{id}")
     @Operation(summary = "Update assembly BOM")
     @PreAuthorize("hasAuthority('assembly_config:edit')")
-    public ApiResponse<AssemblyBomResponse> updateBom(@PathVariable Long id, @Valid @RequestBody AssemblyBomRequest request, HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            AssemblyBomResponse updated = assemblyOrderService.updateBom(id, request);
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyBom", id, "SUCCESS", "Cập nhật cấu hình: " + updated.getBomCode(), ip, null);
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyBom", id, "FAILED", "Cập nhật cấu hình thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+    @Auditable(action = AuditAction.UPDATE, entityName = "AssemblyBom", actionDescription = "Cập nhật cấu hình BOM")
+    public ApiResponse<AssemblyBomResponse> updateBom(@PathVariable Long id, @Valid @RequestBody AssemblyBomRequest request) {
+        return ApiResponse.success(assemblyOrderService.updateBom(id, request));
     }
 
     @GetMapping("/assembly-orders")
@@ -118,106 +90,57 @@ public class AssemblyOrderController {
     @PostMapping("/assembly-orders")
     @Operation(summary = "Create assembly order")
     @PreAuthorize("hasAuthority('assembly:add')")
-    public ApiResponse<AssemblyOrderResponse> createAssemblyOrder(@Valid @RequestBody AssemblyOrderRequest request, HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            AssemblyOrderResponse created = assemblyOrderService.createAssemblyOrder(request);
-            auditLogService.logEvent(actor, "CREATE", "AssemblyOrder", created.getId(), "SUCCESS", "Tạo Lệnh Lắp ráp: " + created.getOrderCode(), ip, null);
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "CREATE", "AssemblyOrder", null, "FAILED", "Tạo Lệnh Lắp ráp thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+    @Auditable(action = AuditAction.CREATE, entityName = "AssemblyOrder", actionDescription = "Tạo lệnh lắp ráp")
+    public ApiResponse<AssemblyOrderResponse> createAssemblyOrder(@Valid @RequestBody AssemblyOrderRequest request) {
+        return ApiResponse.success(assemblyOrderService.createAssemblyOrder(request));
     }
 
     @PostMapping("/disassembly-orders")
     @Operation(summary = "Create disassembly order")
     @PreAuthorize("hasAuthority('assembly:add')")
-    public ApiResponse<AssemblyOrderResponse> createDisassemblyOrder(@Valid @RequestBody AssemblyOrderRequest request, HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            AssemblyOrderResponse created = assemblyOrderService.createDisassemblyOrder(request);
-            auditLogService.logEvent(actor, "CREATE", "DisassemblyOrder", created.getId(), "SUCCESS", "Tạo Lệnh Tháo dỡ: " + created.getOrderCode(), ip, null);
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "CREATE", "DisassemblyOrder", null, "FAILED", "Tạo Lệnh Tháo dỡ thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+    @Auditable(action = AuditAction.CREATE, entityName = "DisassemblyOrder", actionDescription = "Tạo lệnh tháo dỡ")
+    public ApiResponse<AssemblyOrderResponse> createDisassemblyOrder(@Valid @RequestBody AssemblyOrderRequest request) {
+        return ApiResponse.success(assemblyOrderService.createDisassemblyOrder(request));
     }
 
     @PutMapping("/assembly-orders/{id}")
     @Operation(summary = "Update assembly/disassembly order")
     @PreAuthorize("hasAuthority('assembly:edit')")
-    public ApiResponse<AssemblyOrderResponse> updateAssemblyOrder(@PathVariable Long id, @Valid @RequestBody AssemblyOrderRequest request, HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            AssemblyOrderResponse updated = assemblyOrderService.updateAssemblyOrder(id, request);
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrder", id, "SUCCESS", "Cập nhật Lệnh: " + updated.getOrderCode(), ip, null);
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrder", id, "FAILED", "Cập nhật Lệnh thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+    @Auditable(action = AuditAction.UPDATE, entityName = "AssemblyOrder", actionDescription = "Cập nhật lệnh lắp ráp/tháo dỡ")
+    public ApiResponse<AssemblyOrderResponse> updateAssemblyOrder(@PathVariable Long id, @Valid @RequestBody AssemblyOrderRequest request) {
+        return ApiResponse.success(assemblyOrderService.updateAssemblyOrder(id, request));
     }
 
     @PutMapping("/assembly-orders/{id}/status")
     @Operation(summary = "Update assembly order status")
     @PreAuthorize("hasAuthority('assembly:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "AssemblyOrderStatus", actionDescription = "Cập nhật trạng thái lệnh")
     public ApiResponse<AssemblyOrderResponse> updateOrderStatus(
             @PathVariable Long id,
-            @RequestParam String status,
-            HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            AssemblyOrderResponse updated = assemblyOrderService.updateOrderStatus(id, status);
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrderStatus", id, "SUCCESS", "Cập nhật trạng thái Lệnh thành " + status, ip, null);
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrderStatus", id, "FAILED", "Cập nhật trạng thái Lệnh thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+            @RequestParam String status) {
+        return ApiResponse.success(assemblyOrderService.updateOrderStatus(id, status));
     }
 
     @PatchMapping("/assembly-orders/{id}/note")
     @Operation(summary = "Update assembly order note")
     @PreAuthorize("hasAuthority('assembly:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "AssemblyOrderNote", actionDescription = "Cập nhật ghi chú lệnh")
     public ApiResponse<AssemblyOrderResponse> updateOrderNote(
             @PathVariable Long id,
-            @RequestBody AssemblyOrderRequest request,
-            HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            AssemblyOrderResponse updated = assemblyOrderService.updateNote(id, request);
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrderNote", id, "SUCCESS", "Cập nhật ghi chú Lệnh: " + updated.getOrderCode(), ip, null);
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrderNote", id, "FAILED", "Cập nhật ghi chú thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+            @RequestBody AssemblyOrderRequest request) {
+        return ApiResponse.success(assemblyOrderService.updateNote(id, request));
     }
 
     @PostMapping("/assembly-orders/{id}/inventory-documents")
     @Operation(summary = "Generate inventory document for assembly order")
     @PreAuthorize("hasAuthority('assembly:edit')")
+    @Auditable(action = AuditAction.CREATE, entityName = "InventoryDocument", actionDescription = "Tạo phiếu kho cho lệnh lắp ráp")
     public ApiResponse<Void> generateInventoryDocument(
             @PathVariable Long id,
-            @Valid @RequestBody com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request,
-            HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
+            @Valid @RequestBody com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request) {
         String actor = getCurrentUser();
-        try {
-            assemblyOrderService.generateInventoryDocument(id, request, actor);
-            auditLogService.logEvent(actor, "CREATE", "InventoryDocument", null, "SUCCESS", "Tạo phiếu kho cho Lệnh Lắp ráp ID: " + id, ip, null);
-            return ApiResponse.success(null);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "CREATE", "InventoryDocument", null, "FAILED", "Tạo phiếu kho thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        assemblyOrderService.generateInventoryDocument(id, request, actor);
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/assembly-orders/{id}/serials")
@@ -250,28 +173,18 @@ public class AssemblyOrderController {
     @PostMapping("/assembly-orders/{id}/execute")
     @Operation(summary = "Execute assembly order (scan and go)")
     @PreAuthorize("hasAuthority('assembly:edit')")
+    @Auditable(action = AuditAction.EXECUTE, entityName = "AssemblyOrder", actionDescription = "Thực thi lắp ráp qua quét mã vạch")
     public ApiResponse<Void> executeAssemblyOrder(
             @PathVariable Long id,
-            @RequestBody @Valid com.duylongtech.backend.dto.request.AssemblyExecutionRequest request,
-            HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
+            @RequestBody @Valid com.duylongtech.backend.dto.request.AssemblyExecutionRequest request) {
         Long userId = 1L; // Fallback ID if cannot determine from context, in a real app extract from Principal
-        try {
-            // Retrieve userId from security context if available
-            if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
-                Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-                if (principal instanceof com.duylongtech.backend.security.UserDetailsImpl) {
-                    userId = ((com.duylongtech.backend.security.UserDetailsImpl) principal).getId();
-                }
+        if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
+            Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof com.duylongtech.backend.security.UserDetailsImpl) {
+                userId = ((com.duylongtech.backend.security.UserDetailsImpl) principal).getId();
             }
-            
-            assemblyOrderService.executeAssemblyOrder(id, request, userId);
-            auditLogService.logEvent(actor, "EXECUTE", "AssemblyOrder", id, "SUCCESS", "Thực thi lắp ráp qua quét mã vạch thành công", ip, null);
-            return ApiResponse.success(null);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "EXECUTE", "AssemblyOrder", id, "FAILED", "Thực thi lắp ráp thất bại: " + e.getMessage(), ip, null);
-            throw e;
         }
+        assemblyOrderService.executeAssemblyOrder(id, request, userId);
+        return ApiResponse.success(null);
     }
 }

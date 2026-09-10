@@ -12,80 +12,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
-public class UnitService {
-
-    private final UnitRepository unitRepository;
-
-    public Page<UnitResponse> getAllUnits(String search, Pageable pageable) {
-        Page<Unit> unitPage;
-        if (search != null && !search.isEmpty()) {
-            unitPage = unitRepository.findByNameContainingIgnoreCase(search, pageable);
-        } else {
-            unitPage = unitRepository.findAll(pageable);
-        }
-        return unitPage.map(this::mapToDto);
-    }
-
-    public UnitResponse getUnitById(Long id) {
-        Unit unit = unitRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(SystemMessage.UNIT_NOT_FOUND));
-        return mapToDto(unit);
-    }
-
-    @Transactional
-    public UnitResponse createUnit(UnitRequest dto) {
-        if (unitRepository.findByName(dto.getName()).isPresent()) {
-            throw new BusinessException(SystemMessage.UNIT_EXISTS);
-        }
-
-        Unit unit = Unit.builder()
-                .name(dto.getName())
-                .description(dto.getDescription())
-                .status(dto.getStatus() != null ? dto.getStatus() : "ACTIVE")
-                .build();
-
-        Unit savedUnit = unitRepository.save(unit);
-        return mapToDto(savedUnit);
-    }
-
-    @Transactional
-    public UnitResponse updateUnit(Long id, UnitRequest dto) {
-        Unit unit = unitRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(SystemMessage.UNIT_NOT_FOUND));
-
-        if (!unit.getName().equals(dto.getName()) && unitRepository.findByName(dto.getName()).isPresent()) {
-            throw new BusinessException(SystemMessage.UNIT_EXISTS);
-        }
-
-        unit.setName(dto.getName());
-        unit.setDescription(dto.getDescription());
-        if (dto.getStatus() != null) {
-            unit.setStatus(dto.getStatus());
-        }
-
-        Unit updatedUnit = unitRepository.save(unit);
-        return mapToDto(updatedUnit);
-    }
-
-    @Transactional
-    public void deleteUnit(Long id) {
-        if (!unitRepository.existsById(id)) {
-            throw new BusinessException(SystemMessage.UNIT_NOT_FOUND);
-        }
-        // Có thể thay bằng soft delete nếu cần: unit.setStatus("INACTIVE")
-        unitRepository.deleteById(id);
-    }
-
-    private UnitResponse mapToDto(Unit unit) {
-        return UnitResponse.builder()
-                .id(unit.getId())
-                .name(unit.getName())
-                .description(unit.getDescription())
-                .status(unit.getStatus())
-                .createdAt(unit.getCreatedAt())
-                .updatedAt(unit.getUpdatedAt())
-                .build();
-    }
+public interface UnitService {
+    Page<UnitResponse> getAllUnits(String search, Pageable pageable);
+    UnitResponse getUnitById(Long id);
+    UnitResponse createUnit(UnitRequest dto);
+    UnitResponse updateUnit(Long id, UnitRequest dto);
+    void deleteUnit(Long id);
 }

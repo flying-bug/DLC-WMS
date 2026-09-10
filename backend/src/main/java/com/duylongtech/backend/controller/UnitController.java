@@ -1,9 +1,10 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.UnitRequest;
 import com.duylongtech.backend.dto.response.UnitResponse;
 import com.duylongtech.backend.service.UnitService;
-import com.duylongtech.backend.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,22 +20,6 @@ import jakarta.validation.Valid;
 public class UnitController {
 
     private final UnitService unitService;
-    private final AuditLogService auditLogService;
-
-    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        return ipAddress;
-    }
-
-    private String getCurrentUser() {
-        return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('unit:view')")
@@ -54,113 +39,23 @@ public class UnitController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('unit:add')")
-    public ResponseEntity<UnitResponse> createUnit(@Valid @RequestBody UnitRequest unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            UnitResponse created = unitService.createUnit(unitDto);
-            String detailJson = auditLogService.buildChangeDetail(null, created, "Tạo mới đơn vị tính");
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "Unit",
-                created.getId(),
-                "SUCCESS",
-                "Thêm mới đơn vị tính: " + created.getName(),
-                ip,
-                detailJson
-            );
-            return ResponseEntity.ok(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "Unit",
-                null,
-                "FAILED",
-                "Thêm mới đơn vị tính: " + unitDto.getName() + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.CREATE, entityName = "Unit", actionDescription = "Thêm mới đơn vị tính")
+    public ResponseEntity<UnitResponse> createUnit(@Valid @RequestBody UnitRequest unitDto) {
+        return ResponseEntity.ok(unitService.createUnit(unitDto));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('unit:edit')")
-    public ResponseEntity<UnitResponse> updateUnit(@PathVariable Long id, @Valid @RequestBody UnitRequest unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            UnitResponse before = unitService.getUnitById(id);
-            UnitResponse updated = unitService.updateUnit(id, unitDto);
-            String detailJson = auditLogService.buildChangeDetail(before, updated, "Cập nhật đơn vị tính");
-            auditLogService.logEvent(
-                actor,
-                "UPDATE",
-                "Unit",
-                id,
-                "SUCCESS",
-                "Cập nhật đơn vị tính: " + updated.getName(),
-                ip,
-                detailJson
-            );
-            return ResponseEntity.ok(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "UPDATE",
-                "Unit",
-                id,
-                "FAILED",
-                "Cập nhật đơn vị tính ID " + id + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.UPDATE, entityName = "Unit", actionDescription = "Cập nhật đơn vị tính")
+    public ResponseEntity<UnitResponse> updateUnit(@PathVariable Long id, @Valid @RequestBody UnitRequest unitDto) {
+        return ResponseEntity.ok(unitService.updateUnit(id, unitDto));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('unit:delete')")
-    public ResponseEntity<Void> deleteUnit(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        String unitName = "ID " + id;
-        UnitResponse target = null;
-        try {
-            target = unitService.getUnitById(id);
-            if (target != null) {
-                unitName = target.getName();
-            }
-        } catch (Exception ignored) {}
-
-        try {
-            unitService.deleteUnit(id);
-            String detailJson = auditLogService.buildChangeDetail(target, null, "Xóa đơn vị tính");
-            auditLogService.logEvent(
-                actor,
-                "DELETE",
-                "Unit",
-                id,
-                "SUCCESS",
-                "Xóa đơn vị tính: " + unitName,
-                ip,
-                detailJson
-            );
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "DELETE",
-                "Unit",
-                id,
-                "FAILED",
-                "Xóa đơn vị tính " + unitName + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.DELETE, entityName = "Unit", actionDescription = "Xóa đơn vị tính")
+    public ResponseEntity<Void> deleteUnit(@PathVariable Long id) {
+        unitService.deleteUnit(id);
+        return ResponseEntity.noContent().build();
     }
 }

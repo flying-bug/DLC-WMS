@@ -1,5 +1,7 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import jakarta.validation.Valid;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.request.ScanResolveRequest;
@@ -26,21 +28,6 @@ public class InventoryDocumentController {
     private final InventoryDocumentService inventoryDocumentService;
     private final AuditLogService auditLogService;
     private final UserRepository userRepository;
-
-    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        return ipAddress;
-    }
-
-    private String getCurrentUser() {
-        return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-    }
 
     @GetMapping("/next-code")
     @Operation(summary = "Get next export slip code")
@@ -93,132 +80,43 @@ public class InventoryDocumentController {
     @PostMapping("/create")
     @Operation(summary = "Create export slip")
     @PreAuthorize("hasAuthority('export:add')")
-    public ApiResponse<InventoryDocumentResponse> createExport(@Valid @RequestBody InventoryDocumentRequest req, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            InventoryDocumentResponse created = inventoryDocumentService.createExport(req);
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "ExportSlip",
-                created.getId(),
-                "SUCCESS",
-                "Tạo phiếu xuất kho " + created.getDocCode(),
-                ip,
-                null
-            );
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "ExportSlip",
-                null,
-                "FAILED",
-                "Tạo phiếu xuất kho thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.CREATE, entityName = "ExportSlip", actionDescription = "Tạo phiếu xuất kho")
+    public ApiResponse<InventoryDocumentResponse> createExport(@Valid @RequestBody InventoryDocumentRequest req) {
+        return ApiResponse.success(inventoryDocumentService.createExport(req));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update export slip")
     @PreAuthorize("hasAuthority('export:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "ExportSlip", actionDescription = "Cập nhật phiếu xuất kho")
     public ApiResponse<InventoryDocumentResponse> updateExport(
             @PathVariable Long id,
-            @Valid @RequestBody InventoryDocumentRequest req,
-            jakarta.servlet.http.HttpServletRequest servletRequest
+            @Valid @RequestBody InventoryDocumentRequest req
     ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            InventoryDocumentResponse updated = inventoryDocumentService.updateExport(id, req);
-            auditLogService.logEvent(
-                actor,
-                "UPDATE",
-                "ExportSlip",
-                id,
-                "SUCCESS",
-                "Cập nhật phiếu xuất kho " + updated.getDocCode(),
-                ip,
-                null
-            );
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "UPDATE",
-                "ExportSlip",
-                id,
-                "FAILED",
-                "Cập nhật phiếu xuất kho ID " + id + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+        return ApiResponse.success(inventoryDocumentService.updateExport(id, req));
     }
 
     @PostMapping("/{id}/post")
     @Operation(summary = "Post export slip (Ghi Sổ)")
     @PreAuthorize("hasAuthority('export:edit')")
-    public ApiResponse<InventoryDocumentResponse> postExport(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            InventoryDocumentResponse posted = inventoryDocumentService.postExport(id);
-            auditLogService.logEvent(
-                actor,
-                "POST",
-                "ExportSlip",
-                id,
-                "SUCCESS",
-                "Ghi sổ phiếu xuất kho " + posted.getDocCode(),
-                ip,
-                null
-            );
-            return ApiResponse.success(posted);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "POST",
-                "ExportSlip",
-                id,
-                "FAILED",
-                "Ghi sổ phiếu xuất kho ID " + id + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.POST, entityName = "ExportSlip", actionDescription = "Ghi sổ phiếu xuất kho")
+    public ApiResponse<InventoryDocumentResponse> postExport(@PathVariable Long id) {
+        return ApiResponse.success(inventoryDocumentService.postExport(id));
     }
 
     // ─── Tạo phiếu xuất kho nhanh từ Sales Order đã duyệt ───────────────
     @PostMapping("/from-sales-order/{soId}")
     @Operation(summary = "Tạo draft phiếu xuất kho từ Sales Order đã duyệt")
     @PreAuthorize("hasAuthority('export:add') or hasAuthority('sales_order:edit')")
+    @Auditable(action = AuditAction.CREATE, entityName = "ExportSlip", actionDescription = "Tạo phiếu xuất kho từ Sales Order")
     public ApiResponse<InventoryDocumentResponse> createExportFromSalesOrder(
-            @PathVariable Long soId,
-            jakarta.servlet.http.HttpServletRequest servletRequest
+            @PathVariable Long soId
     ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            Long actorUserId = userRepository.findByUsername(actor)
-                    .map(u -> u.getId()).orElse(1L);
+        String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Long actorUserId = userRepository.findByUsername(actor)
+                .map(com.duylongtech.backend.entity.User::getId).orElse(1L);
 
-            InventoryDocumentResponse created = inventoryDocumentService.createExportFromSalesOrder(soId, actorUserId);
-            auditLogService.logEvent(actor, "CREATE", "ExportSlip", created.getId(), "SUCCESS",
-                    "Tạo phiếu xuất từ SO ID " + soId + ": " + created.getDocCode(), ip, null);
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "CREATE", "ExportSlip", null, "FAILED",
-                    "Tạo phiếu xuất từ SO ID " + soId + " thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        return ApiResponse.success(inventoryDocumentService.createExportFromSalesOrder(soId, actorUserId));
     }
 
     @GetMapping("/{id}/check-unpost")
@@ -231,22 +129,14 @@ public class InventoryDocumentController {
     @PostMapping("/{id}/unpost")
     @Operation(summary = "Unpost export slip and rollback inventory safely")
     @PreAuthorize("hasAuthority('export:edit') or hasAuthority('export:add')")
+    @Auditable(action = AuditAction.UNPOST, entityName = "ExportSlip", actionDescription = "Bỏ ghi sổ phiếu xuất kho")
     public ApiResponse<InventoryDocumentResponse> unpostExport(
             @PathVariable Long id,
-            @RequestParam(required = false) String reason,
-            jakarta.servlet.http.HttpServletRequest request
+            @RequestParam(required = false) String reason
     ) {
-        String actor = getCurrentUser();
-        String ip = getClientIp(request);
-        Long currentUserId = null;
-        try {
-            currentUserId = userRepository.findByUsername(actor).map(com.duylongtech.backend.entity.User::getId).orElse(null);
-        } catch (Exception ignored) {}
-        InventoryDocumentResponse res = inventoryDocumentService.unpostExport(id, reason, currentUserId);
-        auditLogService.logEvent(actor, "UNPOST", "ExportSlip", id, "SUCCESS",
-                "Bỏ ghi sổ phiếu xuất kho " + res.getDocCode() + ". Lý do: " + (reason != null ? reason : "Không có"),
-                ip, null);
-        return ApiResponse.success(res);
+        String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Long currentUserId = userRepository.findByUsername(actor).map(com.duylongtech.backend.entity.User::getId).orElse(null);
+        return ApiResponse.success(inventoryDocumentService.unpostExport(id, reason, currentUserId));
     }
 
     @GetMapping("/{id}/logs")

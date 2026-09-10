@@ -67,13 +67,19 @@ class StocktakeServiceTest {
     private InventoryDocumentService inventoryDocumentService;
     @Mock
     private SerialNumberRepository serialNumberRepository;
+    @Mock
+    private com.duylongtech.backend.repository.InventoryBalanceRepository inventoryBalanceRepository;
+    @Mock
+    private com.duylongtech.backend.mapper.StocktakeMapper stocktakeMapper;
 
     private StocktakeService stocktakeService;
 
     @BeforeEach
     void setUp() {
-        stocktakeService = new StocktakeService(
+        stocktakeService = new com.duylongtech.backend.service.impl.StocktakeServiceImpl(
                 stocktakeRepository,
+                inventoryBalanceRepository,
+                stocktakeMapper,
                 codeGeneratorService,
                 productVariantRepository,
                 warehouseRepository,

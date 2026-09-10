@@ -1,16 +1,16 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.CustomerRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.CustomerResponse;
 import com.duylongtech.backend.dto.response.SalesHistoryResponse;
 import com.duylongtech.backend.dto.response.WarrantyHistoryResponse;
 import com.duylongtech.backend.dto.response.ReceiptHistoryResponse;
-import com.duylongtech.backend.service.AuditLogService;
 import com.duylongtech.backend.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,7 +40,6 @@ import org.springframework.web.bind.annotation.*;
 public class CustomerController {
 
     private final CustomerService  customerService;
-    private final AuditLogService  auditLogService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // READ
@@ -182,11 +181,11 @@ public class CustomerController {
     @PostMapping("/import/confirm")
     @Operation(summary = "Xác nhận lưu dữ liệu Import")
     @PreAuthorize("hasAuthority('customer:add')")
+    @Auditable(action = AuditAction.IMPORT, entityName = "Customer", actionDescription = "Import khách hàng")
     public ApiResponse<Void> confirmImport(
-            @RequestBody com.duylongtech.backend.dto.request.CustomerRequest.ImportConfirmRequest request,
-            HttpServletRequest servletRequest
+            @RequestBody com.duylongtech.backend.dto.request.CustomerRequest.ImportConfirmRequest request
     ) {
-        String actor = getCurrentUser();
+        String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         customerService.confirmImport(request, actor);
         return ApiResponse.success(null);
     }
@@ -206,28 +205,11 @@ public class CustomerController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Tạo mới khách hàng (UC-CUST-02)")
     @PreAuthorize("hasAuthority('customer:add')")
+    @Auditable(action = AuditAction.CREATE, entityName = "Customer", actionDescription = "Tạo mới khách hàng")
     public ApiResponse<CustomerResponse> createCustomer(
-            @Valid @RequestBody CustomerRequest req,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody CustomerRequest req
     ) {
-        String actor = getCurrentUser();
-        String ip    = getClientIp(servletRequest);
-        try {
-            CustomerResponse created = customerService.createCustomer(req);
-            auditLogService.logEvent(
-                    actor, "CREATE", "Customer", created.getId(),
-                    "SUCCESS", "Tạo khách hàng: " + created.getName() + " - " + created.getPhone(),
-                    ip, null
-            );
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                    actor, "CREATE", "Customer", null,
-                    "FAILED", "Tạo khách hàng thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        return ApiResponse.success(customerService.createCustomer(req));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -245,29 +227,13 @@ public class CustomerController {
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật khách hàng (UC-CUST-04)")
     @PreAuthorize("hasAuthority('customer:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "Customer", actionDescription = "Cập nhật khách hàng")
     public ApiResponse<CustomerResponse> updateCustomer(
             @PathVariable Long id,
-            @Valid @RequestBody CustomerRequest req,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody CustomerRequest req
     ) {
-        String actor = getCurrentUser();
-        String ip    = getClientIp(servletRequest);
-        try {
-            CustomerResponse updated = customerService.updateCustomer(id, req, actor);
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Customer", id,
-                    "SUCCESS", "Cập nhật khách hàng ID: " + id,
-                    ip, null
-            );
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Customer", id,
-                    "FAILED", "Cập nhật khách hàng ID " + id + " thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        String actor = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ApiResponse.success(customerService.updateCustomer(id, req, actor));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -284,28 +250,12 @@ public class CustomerController {
     @PatchMapping("/{id}/status")
     @Operation(summary = "Vô hiệu hóa khách hàng (UC-CUST-05)")
     @PreAuthorize("hasAuthority('customer:edit')")
+    @Auditable(action = AuditAction.DEACTIVATE, entityName = "Customer", actionDescription = "Vô hiệu hóa khách hàng")
     public ApiResponse<Void> deactivateCustomer(
-            @PathVariable Long id,
-            HttpServletRequest servletRequest
+            @PathVariable Long id
     ) {
-        String actor = getCurrentUser();
-        String ip    = getClientIp(servletRequest);
-        try {
-            customerService.deactivateCustomer(id);
-            auditLogService.logEvent(
-                    actor, "DEACTIVATE", "Customer", id,
-                    "SUCCESS", "Vô hiệu hóa khách hàng ID: " + id,
-                    ip, null
-            );
-            return ApiResponse.success(null);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                    actor, "DEACTIVATE", "Customer", id,
-                    "FAILED", "Vô hiệu hóa khách hàng ID " + id + " thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        customerService.deactivateCustomer(id);
+        return ApiResponse.success(null);
     }
 
     /**
@@ -317,46 +267,12 @@ public class CustomerController {
     @PatchMapping("/{id}/activate")
     @Operation(summary = "Kích hoạt lại khách hàng (UC-CUST-05b)")
     @PreAuthorize("hasAuthority('customer:edit')")
+    @Auditable(action = AuditAction.ACTIVATE, entityName = "Customer", actionDescription = "Kích hoạt lại khách hàng")
     public ApiResponse<Void> activateCustomer(
-            @PathVariable Long id,
-            HttpServletRequest servletRequest
+            @PathVariable Long id
     ) {
-        String actor = getCurrentUser();
-        String ip    = getClientIp(servletRequest);
-        try {
-            customerService.activateCustomer(id);
-            auditLogService.logEvent(
-                    actor, "ACTIVATE", "Customer", id,
-                    "SUCCESS", "Kích hoạt lại khách hàng ID: " + id,
-                    ip, null
-            );
-            return ApiResponse.success(null);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                    actor, "ACTIVATE", "Customer", id,
-                    "FAILED", "Kích hoạt lại khách hàng ID " + id + " thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        customerService.activateCustomer(id);
+        return ApiResponse.success(null);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PRIVATE HELPERS
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private String getCurrentUser() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
-    }
 }

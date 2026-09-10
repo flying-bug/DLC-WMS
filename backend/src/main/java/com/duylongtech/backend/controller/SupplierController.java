@@ -1,9 +1,10 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.SupplierRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.SupplierResponse;
-import com.duylongtech.backend.service.AuditLogService;
 import com.duylongtech.backend.service.SupplierService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,29 +44,6 @@ import java.util.List;
 public class SupplierController {
 
     private final SupplierService supplierService;
-    private final AuditLogService auditLogService;
-
-    /**
-     * Lấy IP client từ header (hỗ trợ proxy/load balancer).
-     */
-    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        return ipAddress;
-    }
-
-    /**
-     * Lấy username của user đang đăng nhập.
-     */
-    private String getCurrentUser() {
-        return org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName();
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // READ - UC-20, UC-21
@@ -119,30 +97,11 @@ public class SupplierController {
     @PostMapping
     @Operation(summary = "Tạo mới nhà cung cấp (UC-22)")
     @PreAuthorize("hasAuthority('supplier:add')")
+    @Auditable(action = AuditAction.CREATE, entityName = "Supplier", actionDescription = "Tạo mới nhà cung cấp")
     public ApiResponse<SupplierResponse> createSupplier(
-            @Valid @RequestBody SupplierRequest req,
-            jakarta.servlet.http.HttpServletRequest servletRequest
+            @Valid @RequestBody SupplierRequest req
     ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            SupplierResponse created = supplierService.createSupplier(req);
-            // BR-06: Ghi audit log thành công
-            auditLogService.logEvent(
-                    actor, "CREATE", "Supplier", created.getId(),
-                    "SUCCESS", "Tạo nhà cung cấp: " + created.getName() + " (" + created.getCode() + ")",
-                    ip, null
-            );
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            // BR-06: Ghi audit log thất bại
-            auditLogService.logEvent(
-                    actor, "CREATE", "Supplier", null,
-                    "FAILED", "Tạo nhà cung cấp thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        return ApiResponse.success(supplierService.createSupplier(req));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -162,31 +121,12 @@ public class SupplierController {
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật nhà cung cấp (UC-23)")
     @PreAuthorize("hasAuthority('supplier:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "Supplier", actionDescription = "Cập nhật nhà cung cấp")
     public ApiResponse<SupplierResponse> updateSupplier(
             @PathVariable Long id,
-            @Valid @RequestBody SupplierRequest req,
-            jakarta.servlet.http.HttpServletRequest servletRequest
+            @Valid @RequestBody SupplierRequest req
     ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            SupplierResponse updated = supplierService.updateSupplier(id, req);
-            // BR-06: Ghi audit log thành công
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Supplier", id,
-                    "SUCCESS", "Cập nhật nhà cung cấp: " + updated.getName() + " (" + updated.getCode() + ")",
-                    ip, null
-            );
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            // BR-06: Ghi audit log thất bại
-            auditLogService.logEvent(
-                    actor, "UPDATE", "Supplier", id,
-                    "FAILED", "Cập nhật nhà cung cấp ID " + id + " thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        return ApiResponse.success(supplierService.updateSupplier(id, req));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -206,29 +146,11 @@ public class SupplierController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Xóa nhà cung cấp (UC-24)")
     @PreAuthorize("hasAuthority('supplier:delete')")
+    @Auditable(action = AuditAction.DELETE, entityName = "Supplier", actionDescription = "Xóa nhà cung cấp")
     public ApiResponse<Void> deleteSupplier(
-            @PathVariable Long id,
-            jakarta.servlet.http.HttpServletRequest servletRequest
+            @PathVariable Long id
     ) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            supplierService.deleteSupplier(id);
-            // BR-06: Ghi audit log thành công
-            auditLogService.logEvent(
-                    actor, "DELETE", "Supplier", id,
-                    "SUCCESS", "Xóa/Vô hiệu hóa nhà cung cấp ID: " + id,
-                    ip, null
-            );
-            return ApiResponse.success(null);
-        } catch (Exception e) {
-            // BR-06: Ghi audit log thất bại
-            auditLogService.logEvent(
-                    actor, "DELETE", "Supplier", id,
-                    "FAILED", "Xóa nhà cung cấp ID " + id + " thất bại: " + e.getMessage(),
-                    ip, null
-            );
-            throw e;
-        }
+        supplierService.deleteSupplier(id);
+        return ApiResponse.success(null);
     }
 }

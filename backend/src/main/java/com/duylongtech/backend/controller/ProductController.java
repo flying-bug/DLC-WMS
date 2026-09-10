@@ -1,5 +1,7 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.ProductRequest;
 import com.duylongtech.backend.dto.request.ProductVariantRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
@@ -7,7 +9,6 @@ import com.duylongtech.backend.dto.response.ProductResponse;
 import com.duylongtech.backend.dto.response.ProductVariantResponse;
 import com.duylongtech.backend.dto.response.StockAlertSummaryResponse;
 import com.duylongtech.backend.service.ProductService;
-import com.duylongtech.backend.service.AuditLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,22 +21,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
-    private final AuditLogService auditLogService;
-
-    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        if (ipAddress != null && ipAddress.contains(",")) {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
-        return ipAddress;
-    }
-
-    private String getCurrentUser() {
-        return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('product:view')")
@@ -104,6 +89,7 @@ public class ProductController {
 
     @PostMapping("/{id}/variants/{variantId}/serial-codes")
     @PreAuthorize("hasAuthority('product:view')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "ProductVariant", actionDescription = "Tạo mã serial cho phiên bản sản phẩm")
     public ResponseEntity<ApiResponse<java.util.List<String>>> generateSerialCodes(
             @PathVariable Long id,
             @PathVariable Long variantId,
@@ -113,6 +99,7 @@ public class ProductController {
 
     @PostMapping("/{id}/variants")
     @PreAuthorize("hasAuthority('product:add')")
+    @Auditable(action = AuditAction.CREATE, entityName = "ProductVariant", actionDescription = "Tạo mới phiên bản sản phẩm (SKU)")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> createProductVariant(
             @PathVariable Long id,
             @Valid @RequestBody ProductVariantRequest request) {
@@ -126,6 +113,7 @@ public class ProductController {
 
     @PutMapping("/{id}/variants/{variantId}")
     @PreAuthorize("hasAuthority('product:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "ProductVariant", actionDescription = "Cập nhật phiên bản sản phẩm (SKU)")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> updateProductVariant(
             @PathVariable Long id,
             @PathVariable Long variantId,
@@ -140,6 +128,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}/variants/{variantId}")
     @PreAuthorize("hasAuthority('product:delete')")
+    @Auditable(action = AuditAction.DELETE, entityName = "ProductVariant", actionDescription = "Xóa phiên bản sản phẩm (SKU)")
     public ResponseEntity<ApiResponse<Void>> deleteProductVariant(
             @PathVariable Long id,
             @PathVariable Long variantId) {
@@ -152,124 +141,36 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('product:add')")
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            ProductResponse created = productService.createProduct(dto);
-            String detailJson = auditLogService.buildChangeDetail(null, created, "Tạo mới sản phẩm");
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "Product",
-                created.getId(),
-                "SUCCESS",
-                "Thêm mới sản phẩm " + created.getProductCode(),
-                ip,
-                detailJson
-            );
-            return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
-                    .success(true)
-                    .userMessage("Tạo hàng hóa/dịch vụ thành công")
-                    .data(created)
-                    .build());
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "Product",
-                null,
-                "FAILED",
-                "Thêm mới sản phẩm " + dto.getProductCode() + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.CREATE, entityName = "Product", actionDescription = "Tạo mới sản phẩm")
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest dto) {
+        ProductResponse created = productService.createProduct(dto);
+        return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
+                .success(true)
+                .userMessage("Tạo hàng hóa/dịch vụ thành công")
+                .data(created)
+                .build());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('product:edit')")
-    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        try {
-            ProductResponse before = productService.getProductById(id);
-            ProductResponse updated = productService.updateProduct(id, dto);
-            String detailJson = auditLogService.buildChangeDetail(before, updated, "Cập nhật sản phẩm");
-            auditLogService.logEvent(
-                actor,
-                "UPDATE",
-                "Product",
-                id,
-                "SUCCESS",
-                "Cập nhật sản phẩm " + updated.getProductCode(),
-                ip,
-                detailJson
-            );
-            return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
-                    .success(true)
-                    .userMessage("Cập nhật hàng hóa/dịch vụ thành công")
-                    .data(updated)
-                    .build());
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "UPDATE",
-                "Product",
-                id,
-                "FAILED",
-                "Cập nhật sản phẩm ID " + id + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.UPDATE, entityName = "Product", actionDescription = "Cập nhật sản phẩm")
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest dto) {
+        ProductResponse updated = productService.updateProduct(id, dto);
+        return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
+                .success(true)
+                .userMessage("Cập nhật hàng hóa/dịch vụ thành công")
+                .data(updated)
+                .build());
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('product:delete')")
-    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String actor = getCurrentUser();
-        String productCode = "ID " + id;
-        ProductResponse target = null;
-        try {
-            target = productService.getProductById(id);
-            if (target != null) {
-                productCode = target.getProductCode();
-            }
-        } catch (Exception ignored) {}
-
-        try {
-            productService.deleteProduct(id);
-            String detailJson = auditLogService.buildChangeDetail(target, null, "Xóa sản phẩm");
-            auditLogService.logEvent(
-                actor,
-                "DELETE",
-                "Product",
-                id,
-                "SUCCESS",
-                "Xóa sản phẩm " + productCode,
-                ip,
-                detailJson
-            );
-            return ResponseEntity.ok(ApiResponse.<Void>builder()
-                    .success(true)
-                    .userMessage("Xóa hàng hóa/dịch vụ thành công")
-                    .build());
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "DELETE",
-                "Product",
-                id,
-                "FAILED",
-                "Xóa sản phẩm " + productCode + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.DELETE, entityName = "Product", actionDescription = "Xóa sản phẩm")
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .userMessage("Xóa hàng hóa/dịch vụ thành công")
+                .build());
     }
 }

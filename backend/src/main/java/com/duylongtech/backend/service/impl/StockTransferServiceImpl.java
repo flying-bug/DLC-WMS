@@ -35,6 +35,9 @@ public class StockTransferServiceImpl implements StockTransferService {
     private SerialNumberRepository serialNumberRepository;
 
     @Autowired
+    private com.duylongtech.backend.mapper.StockTransferMapper stockTransferMapper;
+
+    @Autowired
     private InventoryBalanceRepository inventoryBalanceRepository;
 
     @Autowired
@@ -398,39 +401,27 @@ public class StockTransferServiceImpl implements StockTransferService {
     }
 
     private StockTransferResponseDTO mapToResponseDTO(StockTransfer transfer) {
-        List<StockTransferLineDTO> lines = transfer.getLines().stream()
-                .map(line -> {
-                    List<String> serials = new ArrayList<>();
-                    if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
-                        try {
-                            serials = objectMapper.readValue(line.getSerialNumbersText(), new TypeReference<List<String>>(){});
-                        } catch (Exception e) {}
-                    }
-                    return StockTransferLineDTO.builder()
-                        .variantId(line.getVariantId())
-                        .quantity(line.getQuantity())
-                        .unitCost(line.getUnitCost())
-                        .serialNumbers(serials)
-                        .note(line.getNote())
-                        .build();
-                })
-                .collect(Collectors.toList());
+        StockTransferResponseDTO response = stockTransferMapper.toResponse(transfer);
 
-        return StockTransferResponseDTO.builder()
-                .id(transfer.getId())
-                .transferCode(transfer.getTransferCode())
-                .fromWarehouseId(transfer.getFromWarehouseId())
-                .toWarehouseId(transfer.getToWarehouseId())
-                .transferDate(transfer.getTransferDate())
-                .status(transfer.getStatus())
-                .note(transfer.getNote())
-                .deliverer(transfer.getDeliverer())
-                .attachedDocument(transfer.getAttachedDocument())
-                .referenceId(transfer.getReferenceId())
-                .referenceType(transfer.getReferenceType())
-                .referenceCode(transfer.getReferenceCode())
-                .createdAt(transfer.getCreatedAt())
-                .lines(lines)
-                .build();
+        if (transfer.getLines() != null) {
+            List<StockTransferLineDTO> lines = transfer.getLines().stream()
+                    .map(line -> {
+                        StockTransferLineDTO dto = stockTransferMapper.toLineDTO(line);
+                        List<String> serials = new ArrayList<>();
+                        if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
+                            try {
+                                serials = objectMapper.readValue(line.getSerialNumbersText(), new TypeReference<List<String>>(){});
+                            } catch (Exception e) {}
+                        }
+                        dto.setSerialNumbers(serials);
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+            response.setLines(lines);
+        } else {
+            response.setLines(new ArrayList<>());
+        }
+
+        return response;
     }
 }

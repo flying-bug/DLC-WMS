@@ -1,13 +1,13 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.PurchaseOrderRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.PurchaseOrderResponse;
-import com.duylongtech.backend.service.AuditLogService;
 import com.duylongtech.backend.service.PurchaseOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,18 +25,10 @@ import java.util.List;
 public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
-    private final AuditLogService auditLogService;
 
     private String getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null) ? auth.getName() : "System";
-    }
-
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) ip = request.getRemoteAddr();
-        if (ip != null && ip.contains(",")) ip = ip.split(",")[0].trim();
-        return ip;
     }
 
     // ─── GET: Danh sách đơn mua hàng ───────────────────────────────────
@@ -73,89 +65,49 @@ public class PurchaseOrderController {
     @PostMapping
     @Operation(summary = "Tạo đơn mua hàng mới")
     @PreAuthorize("hasAuthority('purchase_order:add')")
+    @Auditable(action = AuditAction.CREATE, entityName = "PurchaseOrder", actionDescription = "Tạo đơn mua hàng")
     public ApiResponse<PurchaseOrderResponse> createPurchaseOrder(
-            @Valid @RequestBody PurchaseOrderRequest request,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody PurchaseOrderRequest request
     ) {
         String actor = getCurrentUser();
-        String ip = getClientIp(servletRequest);
-        try {
-            PurchaseOrderResponse created = purchaseOrderService.createPurchaseOrder(request, actor);
-            auditLogService.logEvent(actor, "CREATE", "PurchaseOrder", created.getId(), "SUCCESS",
-                    "Tạo đơn mua hàng: " + created.getPoCode(), ip, null);
-            return ApiResponse.success(created);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "CREATE", "PurchaseOrder", null, "FAILED",
-                    "Tạo đơn mua hàng thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        return ApiResponse.success(purchaseOrderService.createPurchaseOrder(request, actor));
     }
 
     // ─── PUT: Cập nhật đơn mua hàng (chỉ DRAFT) ────────────────────────
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật đơn mua hàng (chỉ khi DRAFT)")
     @PreAuthorize("hasAuthority('purchase_order:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "PurchaseOrder", actionDescription = "Cập nhật đơn mua hàng")
     public ApiResponse<PurchaseOrderResponse> updatePurchaseOrder(
             @PathVariable Long id,
-            @Valid @RequestBody PurchaseOrderRequest request,
-            HttpServletRequest servletRequest
+            @Valid @RequestBody PurchaseOrderRequest request
     ) {
         String actor = getCurrentUser();
-        String ip = getClientIp(servletRequest);
-        try {
-            PurchaseOrderResponse updated = purchaseOrderService.updatePurchaseOrder(id, request, actor);
-            auditLogService.logEvent(actor, "UPDATE", "PurchaseOrder", id, "SUCCESS",
-                    "Cập nhật đơn mua hàng: " + updated.getPoCode(), ip, null);
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "UPDATE", "PurchaseOrder", id, "FAILED",
-                    "Cập nhật thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        return ApiResponse.success(purchaseOrderService.updatePurchaseOrder(id, request, actor));
     }
 
     // ─── PUT: Duyệt đơn ─────────────────────────────────────────────────
     @PutMapping("/{id}/approve")
     @Operation(summary = "Duyệt đơn mua hàng — ghi nhận công nợ phải trả")
     @PreAuthorize("hasAuthority('purchase_order:edit')")
+    @Auditable(action = AuditAction.APPROVE, entityName = "PurchaseOrder", actionDescription = "Duyệt đơn mua hàng")
     public ApiResponse<PurchaseOrderResponse> approvePurchaseOrder(
-            @PathVariable Long id,
-            HttpServletRequest servletRequest
+            @PathVariable Long id
     ) {
         String actor = getCurrentUser();
-        String ip = getClientIp(servletRequest);
-        try {
-            PurchaseOrderResponse approved = purchaseOrderService.approvePurchaseOrder(id, actor);
-            auditLogService.logEvent(actor, "APPROVE", "PurchaseOrder", id, "SUCCESS",
-                    "Duyệt đơn mua hàng: " + approved.getPoCode(), ip, null);
-            return ApiResponse.success(approved);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "APPROVE", "PurchaseOrder", id, "FAILED",
-                    "Duyệt thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        return ApiResponse.success(purchaseOrderService.approvePurchaseOrder(id, actor));
     }
 
     // ─── PUT: Hủy đơn ───────────────────────────────────────────────────
     @PutMapping("/{id}/cancel")
     @Operation(summary = "Hủy đơn mua hàng")
     @PreAuthorize("hasAuthority('purchase_order:edit')")
+    @Auditable(action = AuditAction.CANCEL, entityName = "PurchaseOrder", actionDescription = "Hủy đơn mua hàng")
     public ApiResponse<PurchaseOrderResponse> cancelPurchaseOrder(
-            @PathVariable Long id,
-            HttpServletRequest servletRequest
+            @PathVariable Long id
     ) {
         String actor = getCurrentUser();
-        String ip = getClientIp(servletRequest);
-        try {
-            PurchaseOrderResponse cancelled = purchaseOrderService.cancelPurchaseOrder(id, actor);
-            auditLogService.logEvent(actor, "CANCEL", "PurchaseOrder", id, "SUCCESS",
-                    "Hủy đơn mua hàng: " + cancelled.getPoCode(), ip, null);
-            return ApiResponse.success(cancelled);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "CANCEL", "PurchaseOrder", id, "FAILED",
-                    "Hủy thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
+        return ApiResponse.success(purchaseOrderService.cancelPurchaseOrder(id, actor));
     }
 
 }

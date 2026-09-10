@@ -1,5 +1,7 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.dto.request.LoginRequest;
 import com.duylongtech.backend.dto.request.ChangePasswordRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
@@ -107,34 +109,9 @@ public class AuthController {
 
     // 6. Change Password
     @PostMapping("/change-password")
-    public ApiResponse<?> changePassword(@RequestBody ChangePasswordRequest request, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        String ip = getClientIp(servletRequest);
-        String currentUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-        try {
-            authService.changePassword(request);
-            auditLogService.logEvent(
-                currentUser,
-                "UPDATE",
-                "Auth",
-                null,
-                "SUCCESS",
-                "Đổi mật khẩu tài khoản thành công",
-                ip,
-                null
-            );
-            return ApiResponse.success(null);
-        } catch (Exception e) {
-            auditLogService.logEvent(
-                currentUser,
-                "UPDATE",
-                "Auth",
-                null,
-                "FAILED",
-                "Đổi mật khẩu tài khoản thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
-            throw e;
-        }
+    @Auditable(action = AuditAction.UPDATE, entityName = "Auth", actionDescription = "Đổi mật khẩu tài khoản thành công")
+    public ApiResponse<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ApiResponse.success(null);
     }
 }
