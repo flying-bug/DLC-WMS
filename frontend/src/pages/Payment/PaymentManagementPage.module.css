@@ -286,14 +286,13 @@
 }
 
 .actionDropdownMenu {
-  position: absolute;
-  top: 100%;
-  right: 0;
+  /* position (fixed/top/left) được set inline vì menu được render qua portal vào document.body,
+     nhờ đó không còn bị bảng cha (overflow-x/y) cắt mất khi bảng chỉ có ít dòng. */
   background: var(--color-white, #fff);
   border: 1px solid var(--color-border-subtle, var(--wms-border-base));
   border-radius: 6px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
-  z-index: 100;
+  z-index: 1010;
   min-width: 150px;
   padding: 4px;
   display: flex;

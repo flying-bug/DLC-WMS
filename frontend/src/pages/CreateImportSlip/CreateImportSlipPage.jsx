@@ -58,13 +58,16 @@ const isWarehouseLine = (line) => !line?.productType || isWarehouseProduct(line)
 const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
 const filterWarehouseLines = (lines) => (lines || []).filter(isWarehouseLine);
 
+// Đồng bộ với .misa-input/.misa-select (global.css): height 38px (--height-control) và bo góc 6px
+// (--radius-control) để các ô react-select (Kho, Khách hàng/NCC...) thẳng hàng với input thường trong cùng 1 dòng.
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
-    minHeight: '32px',
-    height: '32px',
+    minHeight: '38px',
+    height: '38px',
+    borderRadius: '6px',
     fontSize: '13px',
-    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-strong, var(--color-border-muted))',
     boxShadow: state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
     '&:hover': {
       borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-text-placeholder)'
@@ -72,7 +75,7 @@ const customSelectStyles = {
   }),
   valueContainer: (base) => ({
     ...base,
-    height: '32px',
+    height: '38px',
     padding: '0 8px'
   }),
   input: (base) => ({
@@ -85,7 +88,7 @@ const customSelectStyles = {
   }),
   indicatorsContainer: (base) => ({
     ...base,
-    height: '30px'
+    height: '36px'
   }),
   dropdownIndicator: (base) => ({
     ...base,
@@ -239,11 +242,12 @@ function CreateImportSlipPage() {
 
   const [form, setForm] = useState(() => ({
     docCode: '',
-    warehouseId: poData ? (poData.warehouseId ? String(poData.warehouseId) : '') : '',
-    partnerId: poData ? poData.supplierId : '',
-    partnerName: poData ? poData.supplierName : '',
+    warehouseId: poData ? (poData.warehouseId ? String(poData.warehouseId) : (poData.lines?.[0]?.warehouseId ? String(poData.lines[0].warehouseId) : '')) : '',
+    // Đơn mua hàng (PurchaseOrderResponse) trả về đối tác qua field partnerId/partnerName (không phải supplierId/supplierName)
+    partnerId: poData ? poData.partnerId : '',
+    partnerName: poData ? poData.partnerName : '',
     purchaser: '',
-    deliverer: poData ? poData.creatorName || '' : '',
+    deliverer: poData ? poData.createdByName || '' : '',
     attachedDoc: poData ? `PO: ${poData.poCode}` : '',
     docDate: today(),
     note: assemblyData ? `Nhập thành phẩm phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : stocktakeData ? stocktakeData.reason : (poData ? `Nhập hàng cho Đơn mua hàng ${poData.poCode}` : ''),
@@ -259,7 +263,7 @@ function CreateImportSlipPage() {
       return poLines.length > 0 ? poLines.map(line => ({
         ...emptyLine(poData.warehouseId ? String(poData.warehouseId) : ''),
         variantId: String(line.variantId),
-        warehouseId: poData.warehouseId ? String(poData.warehouseId) : '',
+        warehouseId: String(line.warehouseId || poData.warehouseId || ''),
         quantity: Number(line.quantity) || 1,
         price: Number(line.unitPrice) || 0,
         vatPercent: Number(line.vatRate) || 0,
@@ -459,6 +463,25 @@ function CreateImportSlipPage() {
   }, [voiceData, warehouses, suppliers, products, form.warehouseId]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
+
+  // NCC của đơn mua hàng chuyển sang có thể không nằm trong danh sách suppliers đã tải (VD: NCC đã ngừng hoạt động),
+  // nên cần fallback hiển thị mã/tên đã lưu trong form thay vì để trống.
+  const { partnerId: formPartnerId, partnerName: formPartnerName } = form;
+  const selectedSupplier = useMemo(
+    () => suppliers.find(s => String(s.id) === String(formPartnerId)) || null,
+    [suppliers, formPartnerId]
+  );
+  const selectedSupplierOption = useMemo(() => {
+    if (selectedSupplier) {
+      const codeOnly = selectedSupplier.code || `NCC#${formPartnerId}`;
+      return { value: formPartnerId, label: `${codeOnly} - ${selectedSupplier.name || ''}`, codeOnly };
+    }
+    if (formPartnerId) {
+      const codeOnly = `NCC#${formPartnerId}`;
+      return { value: formPartnerId, label: `${codeOnly} - ${formPartnerName || ''}`, codeOnly };
+    }
+    return null;
+  }, [selectedSupplier, formPartnerId, formPartnerName]);
 
   const filteredProducts = useMemo(() => {
     return filterWarehouseProducts(products);
@@ -924,7 +947,7 @@ function CreateImportSlipPage() {
                           <Select
                             inputId="import-partnerId"
                             options={suppliers.map(s => ({ value: s.id, label: `${s.code || `NCC#${s.id}`} - ${s.name || ''}`, codeOnly: s.code || `NCC#${s.id}` }))}
-                            value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: `${suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}`} - ${suppliers.find(s => String(s.id) === String(form.partnerId)).name || ''}`, codeOnly: suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}` } : null}
+                            value={selectedSupplierOption}
                             onChange={(selected) => {
                               handleFormChange('partnerId', selected ? selected.value : '');
                               handleFormChange('partnerName', selected ? (suppliers.find(s => String(s.id) === String(selected.value))?.name || '') : '');
@@ -945,7 +968,7 @@ function CreateImportSlipPage() {
                       <input
                         type="text"
                         className="misa-input"
-                        value={form.partnerName !== undefined ? form.partnerName : (suppliers.find(s => String(s.id) === String(form.partnerId))?.name || '')}
+                        value={form.partnerName !== undefined ? form.partnerName : (selectedSupplier?.name || '')}
                         onChange={(e) => handleFormChange('partnerName', e.target.value)}
                         placeholder="Nhập tên nhà cung cấp..."
                         readOnly={!!form.partnerId}
@@ -956,7 +979,7 @@ function CreateImportSlipPage() {
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '1' }}>
                       <label className="misa-label">Địa chỉ</label>
-                      <input type="text" className="misa-input" readOnly value={suppliers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: 'var(--color-bg)' }} />
+                      <input type="text" className="misa-input" readOnly value={selectedSupplier?.address || ''} style={{ backgroundColor: 'var(--color-bg)' }} />
                     </div>
                   </div>
                 </>
@@ -1221,10 +1244,7 @@ function CreateImportSlipPage() {
                   <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
                   <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                  <th style={{ minWidth: '75px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
-                  <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
-                  <th style={{ minWidth: '55px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
-                  <th style={{ minWidth: '75px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                  <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>
                   <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                   <th style={{ minWidth: '55px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                   {showPricing && <th style={{ minWidth: '95px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
@@ -1289,10 +1309,20 @@ function CreateImportSlipPage() {
                       <td align="right">
                         <input id={`import-line-qty-${index}`} type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                       </td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                      <td style={{ textAlign: 'right', fontSize: '13px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px' }}>
+                        {ratio === 1 ? (
+                          <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
+                        ) : (
+                          <span
+                            title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
+                          >
+                            <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
+                            {' = '}
+                            <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
+                            <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
+                          </span>
+                        )}
+                      </td>
                       <td align="center">
                         <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
                           {product?.trackSerial && (

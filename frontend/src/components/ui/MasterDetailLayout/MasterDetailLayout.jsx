@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useId, useState, useMemo } from 'react';
 import styles from './MasterDetailLayout.module.css';
 
 /**
@@ -26,6 +26,9 @@ export default function MasterDetailLayout({
   setPageSize
 }) {
   const [detailVisible, setDetailVisible] = useState(true);
+  // Bảng master chỉ hỗ trợ chọn 1 dòng tại một thời điểm (selectedItem là giá trị đơn),
+  // nên dùng radio button thay vì checkbox để phản ánh đúng hành vi chọn (không dùng "chọn tất cả").
+  const rowSelectName = useId();
 
   // Internal pagination fallback if not provided via props
   const [internalPage, setInternalPage] = useState(1);
@@ -90,23 +93,9 @@ export default function MasterDetailLayout({
           <table className={styles.dataTable}>
             <thead>
               <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    style={{ cursor: 'pointer' }}
-                    checked={
-                      paginatedMasterData.length > 0 &&
-                      paginatedMasterData.every(
-                        (r) => selectedItem && (selectedItem.id === r.id || selectedItem.docCode === r.docCode)
-                      )
-                    }
-                    onChange={(e) => {
-                      if (e.target.checked && paginatedMasterData.length > 0) {
-                        onSelectItem && onSelectItem(paginatedMasterData[0]);
-                      }
-                    }}
-                  />
-                </th>
+                {/* Không có khái niệm "chọn tất cả" vì bảng chỉ cho phép chọn 1 dòng để xem chi tiết */}
+                <th style={{ width: '40px', textAlign: 'center' }} aria-hidden="true" />
+
                 {masterColumns.map((col, idx) => (
                   <th key={col.key || idx} style={col.style || { width: col.width }}>
                     {col.label}
@@ -141,7 +130,8 @@ export default function MasterDetailLayout({
                     >
                       <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                         <input
-                          type="checkbox"
+                          type="radio"
+                          name={rowSelectName}
                           checked={isSelected}
                           onChange={() => onSelectItem && onSelectItem(row)}
                           style={{ cursor: 'pointer' }}

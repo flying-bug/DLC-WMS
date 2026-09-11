@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -84,6 +85,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   const [deletingItem, setDeletingItem] = useState(null);
   const [saving, setSaving] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
   // Form inputs inside modal
   const [formPartnerId, setFormPartnerId] = useState(null);
@@ -143,6 +145,19 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
     setSelectedIds([]);
     setCurrentPage(1);
   }, [mode]);
+
+  // Đóng dropdown "Xem" (được render qua portal) khi cuộn trang hoặc đổi kích thước cửa sổ
+  // để tránh menu bị lệch vị trí so với nút bấm.
+  useEffect(() => {
+    if (openDropdownId === null) return undefined;
+    const closeDropdown = () => setOpenDropdownId(null);
+    window.addEventListener('scroll', closeDropdown, true);
+    window.addEventListener('resize', closeDropdown);
+    return () => {
+      window.removeEventListener('scroll', closeDropdown, true);
+      window.removeEventListener('resize', closeDropdown);
+    };
+  }, [openDropdownId]);
 
   // Load debt balance when formPartnerId changes in modal
   useEffect(() => {
@@ -618,12 +633,23 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                           <button
                             type="button"
                             className={styles.misaActionLink}
-                            onClick={() => setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
+                            onClick={(e) => {
+                              if (openDropdownId === item.id) {
+                                setOpenDropdownId(null);
+                                return;
+                              }
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setDropdownPos({ top: rect.bottom + 4, left: rect.right });
+                              setOpenDropdownId(item.id);
+                            }}
                           >
                             Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
                           </button>
-                          {openDropdownId === item.id && (
-                            <div className={styles.actionDropdownMenu}>
+                          {openDropdownId === item.id && createPortal(
+                            <div
+                              className={styles.actionDropdownMenu}
+                              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, transform: 'translateX(-100%)' }}
+                            >
                               <button
                                 type="button"
                                 className={styles.dropdownItem}
@@ -668,7 +694,8 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                   </button>
                                 </>
                               )}
-                            </div>
+                            </div>,
+                            document.body
                           )}
                         </div>
                       </td>

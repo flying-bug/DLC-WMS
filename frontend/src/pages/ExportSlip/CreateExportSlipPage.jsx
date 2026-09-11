@@ -51,13 +51,16 @@ const isWarehouseLine = (line) => !line?.productType || isWarehouseProduct(line)
 const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
 const filterWarehouseLines = (lines) => (lines || []).filter(isWarehouseLine);
 
+// Đồng bộ với .misa-input/.misa-select (global.css): height 38px (--height-control) và bo góc 6px
+// (--radius-control) để các ô react-select (Kho, Khách hàng/NCC...) thẳng hàng với input thường trong cùng 1 dòng.
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
-    minHeight: '32px',
-    height: '32px',
+    minHeight: '38px',
+    height: '38px',
+    borderRadius: '6px',
     fontSize: '13px',
-    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-muted)',
+    borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-border-strong, var(--color-border-muted))',
     boxShadow: state.isFocused ? '0 0 0 1px var(--wms-primary)' : 'none',
     '&:hover': {
       borderColor: state.isFocused ? 'var(--wms-primary)' : 'var(--color-text-placeholder)'
@@ -65,7 +68,7 @@ const customSelectStyles = {
   }),
   valueContainer: (base) => ({
     ...base,
-    height: '32px',
+    height: '38px',
     padding: '0 8px'
   }),
   input: (base) => ({
@@ -78,7 +81,7 @@ const customSelectStyles = {
   }),
   indicatorsContainer: (base) => ({
     ...base,
-    height: '30px'
+    height: '36px'
   }),
   dropdownIndicator: (base) => ({
     ...base,
@@ -1209,10 +1212,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                   <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                  <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
-                  <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
-                  <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
-                  <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                  <th style={{ minWidth: '110px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>
                   <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                   <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                   {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
@@ -1280,10 +1280,20 @@ function CreateExportSlipPage({ mode: propMode }) {
                       <td className={styles.textRight}>
                         <input id={`export-line-qty-${index}`} type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                       </td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                      <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px' }}>
+                        {ratio === 1 ? (
+                          <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
+                        ) : (
+                          <span
+                            title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
+                          >
+                            <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
+                            {' = '}
+                            <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
+                            <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
+                          </span>
+                        )}
+                      </td>
                       <td align="center">
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {product?.trackSerial && (
