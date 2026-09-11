@@ -721,4 +721,27 @@ public class RepairServiceImpl  implements RepairService {
             return "system";
         }
     }
+
+
+
+    private ProductVariant resolveRepairVariant(Long variantId, Long serialNumberId, Long legacyProductId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new BusinessException("SKU cua thiet bi sua chua khong ton tai"));
+        if (serialNumberId != null) {
+            SerialNumber serial = serialNumberRepository.findById(serialNumberId)
+                    .orElseThrow(() -> new BusinessException("Serial cua thiet bi sua chua khong ton tai"));
+            if (!variant.getId().equals(serial.getVariantId())) {
+                throw new BusinessException("Serial khong thuoc SKU cua thiet bi sua chua");
+            }
+        }
+        if (legacyProductId != null && (variant.getProduct() == null
+                || !legacyProductId.equals(variant.getProduct().getId()))) {
+            throw new BusinessException("SKU khong thuoc san pham da chon");
+        }
+        if (variant.getProduct() == null) {
+            throw new BusinessException("SKU chua duoc gan san pham");
+        }
+        return variant;
+    }
+
 }

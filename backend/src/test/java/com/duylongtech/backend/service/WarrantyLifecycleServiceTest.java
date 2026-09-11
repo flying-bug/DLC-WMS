@@ -8,6 +8,7 @@ import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
+import com.duylongtech.backend.service.impl.WarrantyLifecycleServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,11 +37,9 @@ class WarrantyLifecycleServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new WarrantyLifecycleService(
+        service = new WarrantyLifecycleServiceImpl(
                 warrantyRepository,
-                codeGeneratorService,
-                serialNumberRepository,
-                productVariantRepository);
+                codeGeneratorService);
     }
 
     @Test

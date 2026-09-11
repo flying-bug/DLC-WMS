@@ -15,6 +15,8 @@ import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
 import com.duylongtech.backend.repository.WarehouseRepository;
+import com.duylongtech.backend.service.InventoryDocumentService;
+import com.duylongtech.backend.service.impl.StocktakeServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -84,6 +86,7 @@ class StocktakeServiceTest {
                 codeGeneratorService,
                 productVariantRepository,
                 warehouseRepository,
+                inventoryDocumentService,
                 serialNumberRepository
         );
     }

@@ -23,6 +23,7 @@ import com.duylongtech.backend.repository.SalesOrderLineRepository;
 import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.StockTransferLineRepository;
 import com.duylongtech.backend.repository.UnitRepository;
+import com.duylongtech.backend.service.impl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,13 +66,14 @@ class ProductServiceVariantCreationTest {
     @Mock private AssemblyBomRepository assemblyBomRepository;
     @Mock private AssemblyOrderRepository assemblyOrderRepository;
     @Mock private CodeGeneratorService codeGeneratorService;
+    @Mock private com.duylongtech.backend.mapper.ProductMapper productMapper;
 
     private final List<ProductVariant> savedVariants = new ArrayList<>();
     private ProductService service;
 
     @BeforeEach
     void setUp() {
-        service = new ProductService(
+        service = new ProductServiceImpl(
                 productRepository,
                 brandRepository,
                 categoryRepository,
@@ -87,7 +89,8 @@ class ProductServiceVariantCreationTest {
                 serialNumberRepository,
                 assemblyBomRepository,
                 assemblyOrderRepository,
-                codeGeneratorService);
+                codeGeneratorService,
+                productMapper);
 
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(ProductCategory.builder().id(10L).name("Laptop").build()));
         when(unitRepository.findById(20L)).thenReturn(Optional.of(Unit.builder().id(20L).name("Cai").build()));

@@ -23,6 +23,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.security.SecureRandom;
 import java.util.List;
 import com.duylongtech.backend.dto.response.WarehouseStockAiRow;
 
@@ -138,12 +139,12 @@ public class WarehouseController {
         return ResponseEntity.ok(ApiResponse.success(warehouseService.getSerialTree(id, variantId)));
     }
 
-    @GetMapping("/serials/check")
+    @GetMapping("/{warehouseId}/serials/{serial}/check")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Boolean>> checkSerialExists(
-            @RequestParam(required = false) Long variantId,
-            @RequestParam String serialNumber) {
-        return ResponseEntity.ok(ApiResponse.success(warehouseService.checkSerialExists(variantId, serialNumber)));
+            @PathVariable Long warehouseId,
+            @PathVariable String serial) {
+        return ResponseEntity.ok(ApiResponse.success(warehouseService.checkSerialExists(serial)));
     }
 
     // ──────────────────────────────────────────────────────────

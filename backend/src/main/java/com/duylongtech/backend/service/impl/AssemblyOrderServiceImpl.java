@@ -63,6 +63,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     private final DeviceComponentSerialRepository deviceComponentSerialRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final RepairRepository repairRepository;
+    private final AppNotificationService appNotificationService;
     private final com.duylongtech.backend.repository.UserRepository userRepository;
     private final com.duylongtech.backend.mapper.AssemblyOrderMapper assemblyOrderMapper;
 
@@ -1231,4 +1232,275 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         }
         return normalizedCurrent + " | " + normalizedAppend;
     }
+
+
+
+    @Transactional
+    public AssemblyBomResponse submitBom(Long id, Long actorId) {
+        AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
+                .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
+        requireState(bom.getStatus(), "DRAFT", "REJECTED");
+        validateBomEntity(bom);
+        bom.setStatus("PENDING_APPROVAL");
+        bom.setSubmittedBy(actorId);
+        bom.setSubmittedAt(LocalDateTime.now());
+        notifyRole("ROLE_ACCOUNTANT", "BOM chß╗¥ duyß╗çt: " + bom.getBomCode(),
+                "Kß╗╣ thuß║¡t vi├¬n ─æ├ú gß╗¡i BOM " + bom.getBomCode() + " ─æß╗â duyß╗çt.", "ASSEMBLY_BOM", bom.getId(),
+                "/assembly-boms/" + bom.getId());
+        return toBomResponse(assemblyBomRepository.save(bom));
+    }
+
+
+    @Transactional
+    public AssemblyBomResponse approveBom(Long id, Long actorId) {
+        AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
+                .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
+        requireState(bom.getStatus(), "PENDING_APPROVAL");
+        validateBomEntity(bom);
+        bom.setStatus("APPROVED");
+        bom.setApprovedBy(actorId);
+        bom.setApprovedAt(LocalDateTime.now());
+        notifyUser(bom.getSubmittedBy(), "BOM ─æ├ú ─æ╞░ß╗úc duyß╗çt: " + bom.getBomCode(),
+                "Kß║┐ to├ín ─æ├ú duyß╗çt BOM " + bom.getBomCode() + ".", "ASSEMBLY_BOM", bom.getId(),
+                "/assembly-boms/" + bom.getId());
+        return toBomResponse(assemblyBomRepository.save(bom));
+    }
+
+
+    @Transactional
+    public AssemblyBomResponse rejectBom(Long id, Long actorId, String reason) {
+        AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
+                .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
+        requireState(bom.getStatus(), "PENDING_APPROVAL");
+        String normalizedReason = requireReason(reason);
+        bom.setStatus("REJECTED");
+        bom.setRejectedBy(actorId);
+        bom.setRejectedAt(LocalDateTime.now());
+        bom.setRejectionReason(normalizedReason);
+        notifyUser(bom.getSubmittedBy(), "BOM bß╗ï tß╗½ chß╗æi: " + bom.getBomCode(), normalizedReason,
+                "ASSEMBLY_BOM", bom.getId(), "/assembly-boms/" + bom.getId());
+        return toBomResponse(assemblyBomRepository.save(bom));
+    }
+
+
+    @Transactional
+    public AssemblyOrderResponse submitOrder(Long id, Long actorId) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        requireState(order.getStatus(), "DRAFT", "REJECTED");
+        order.setStatus("PENDING_APPROVAL");
+        order.setSubmittedBy(actorId);
+        order.setSubmittedAt(LocalDateTime.now());
+        notifyRole("ROLE_ACCOUNTANT", "Lß╗çnh chß╗¥ duyß╗çt: " + order.getOrderCode(),
+                "Kß╗╣ thuß║¡t vi├¬n ─æ├ú gß╗¡i lß╗çnh " + order.getOrderCode() + " ─æß╗â duyß╗çt.", "ASSEMBLY_ORDER", order.getId(),
+                "/assembly-orders/" + order.getId());
+        return toOrderResponse(assemblyOrderRepository.save(order));
+    }
+
+
+    @Transactional
+    public AssemblyOrderResponse approveOrder(Long id, Long actorId) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        if ("APPROVED".equals(order.getStatus())
+                && inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("ASSEMBLY_ORDER", id, "EX_SO")
+                && inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("ASSEMBLY_ORDER", id, "IN_PO")) {
+            return toOrderResponse(order);
+        }
+        requireState(order.getStatus(), "PENDING_APPROVAL");
+        if (!"APPROVED".equals(order.getBom().getStatus())) {
+            throw new BusinessException(SystemMessage.ASM_ERR_018.getMessage());
+        }
+        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceId("ASSEMBLY_ORDER", id)) {
+            throw new BusinessException(SystemMessage.ASM_ERR_042.getMessage());
+        }
+        order.setStatus("APPROVED");
+        order.setApprovedBy(actorId);
+        order.setApprovedAt(LocalDateTime.now());
+        assemblyOrderRepository.saveAndFlush(order);
+        createDocumentPair(order);
+        notifyRole("ROLE_WAREHOUSE_CONTROLLER", "Lß╗çnh ─æ├ú duyß╗çt: " + order.getOrderCode(),
+                "Cß║╖p phiß║┐u kho cß╗ºa lß╗çnh " + order.getOrderCode() + " ─æ├ú sß║╡n s├áng.", "ASSEMBLY_ORDER", order.getId(),
+                "/assembly-orders/" + order.getId());
+        return toOrderResponse(order);
+    }
+
+
+    @Transactional
+    public AssemblyOrderResponse rejectOrder(Long id, Long actorId, String reason) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        requireState(order.getStatus(), "PENDING_APPROVAL");
+        String normalizedReason = requireReason(reason);
+        order.setStatus("REJECTED");
+        order.setRejectedBy(actorId);
+        order.setRejectedAt(LocalDateTime.now());
+        order.setRejectionReason(normalizedReason);
+        notifyUser(order.getCreatedBy(), "Lß╗çnh bß╗ï tß╗½ chß╗æi: " + order.getOrderCode(), order.getRejectionReason(),
+                "ASSEMBLY_ORDER", order.getId(), "/assembly-orders/" + order.getId());
+        return toOrderResponse(assemblyOrderRepository.save(order));
+    }
+
+
+    @Transactional
+    public AssemblyOrderResponse requestCancel(Long id, Long actorId, String reason) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        requireState(order.getStatus(), "DRAFT", "REJECTED", "PENDING_APPROVAL", "APPROVED", "IN_PROGRESS");
+        order.setCancellationReason(requireReason(reason));
+        order.setCancelRequestedBy(actorId);
+        order.setCancelRequestedAt(LocalDateTime.now());
+        if (Set.of("DRAFT", "REJECTED", "PENDING_APPROVAL").contains(order.getStatus())) {
+            order.setStatus("CANCELLED");
+            order.setCancelledBy(actorId);
+            order.setCancelledAt(LocalDateTime.now());
+            order.setCancellationSettlementStatus("SETTLED");
+        } else {
+            order.setCancellationSettlementStatus("REQUESTED");
+            notifyRole("ROLE_ACCOUNTANT", "Y├¬u cß║ºu hß╗ºy: " + order.getOrderCode(),
+                    order.getCancellationReason(), "ASSEMBLY_ORDER_CANCEL", order.getId(),
+                    "/assembly-orders/" + order.getId());
+        }
+        return toOrderResponse(assemblyOrderRepository.save(order));
+    }
+
+
+    @Transactional
+    public AssemblyOrderResponse confirmCancel(Long id, Long actorId) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        if (!"REQUESTED".equals(order.getCancellationSettlementStatus())) {
+            throw new BusinessException(SystemMessage.ASM_ERR_040.getMessage());
+        }
+        List<InventoryDocument> documents = inventoryDocumentRepository
+                .findByReferenceWithLines("ASSEMBLY_ORDER", id);
+        if (documents.stream().anyMatch(d -> "IN_PO".equals(d.getDocType()) && "POSTED".equals(d.getStatus()))) {
+            throw new BusinessException(SystemMessage.ASM_ERR_044.getMessage());
+        }
+        boolean exportPosted = documents.stream()
+                .anyMatch(d -> "EX_SO".equals(d.getDocType()) && "POSTED".equals(d.getStatus()));
+        documents.stream().filter(d -> "DRAFT".equals(d.getStatus())).forEach(d -> d.setStatus("CANCELLED"));
+        inventoryDocumentRepository.saveAll(documents);
+        order.setStatus("CANCELLED");
+        order.setCancelConfirmedBy(actorId);
+        order.setCancelConfirmedAt(LocalDateTime.now());
+        order.setCancelledBy(actorId);
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancellationSettlementStatus(exportPosted ? "PENDING_UNPOST" : "SETTLED");
+        return toOrderResponse(assemblyOrderRepository.save(order));
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<com.duylongtech.backend.dto.response.InventoryDocumentResponse> getOrderDocuments(Long id) {
+        findOrderOrThrow(id);
+        return inventoryDocumentService.getAssemblyDocuments(id);
+    }
+
+
+    private void validateBomEntity(AssemblyBom bom) {
+        if (bom.getLines() == null || bom.getLines().isEmpty()) {
+            throw new BusinessException(SystemMessage.ASM_ERR_022.getMessage());
+        }
+        for (int i = 0; i < bom.getLines().size(); i++) {
+            AssemblyBomLine line = bom.getLines().get(i);
+            if (line.getComponentVariant() == null || line.getQuantity() == null || line.getQuantity().compareTo(ZERO) <= 0) {
+                throw new BusinessException(String.format(SystemMessage.ASM_ERR_020.getMessage(), i + 1));
+            }
+        }
+    }
+
+
+    private void createDocumentPair(AssemblyOrder order) {
+        com.duylongtech.backend.dto.request.InventoryDocumentRequest export = baseDocument(order);
+        com.duylongtech.backend.dto.request.InventoryDocumentRequest receipt = baseDocument(order);
+        List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> componentLines = order.getLines().stream()
+                .map(line -> documentLine(line.getComponentVariant().getId(), line.getQuantityRequired()))
+                .toList();
+        List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> targetLines =
+                List.of(documentLine(order.getTargetVariant().getId(), order.getQuantity()));
+        if (ASSEMBLY.equals(order.getOrderType())) {
+            export.setLines(asExportLines(componentLines));
+            receipt.setLines(asImportLines(targetLines));
+        } else {
+            export.setLines(asExportLines(targetLines));
+            receipt.setLines(asImportLines(componentLines));
+        }
+        inventoryDocumentService.createExport(export);
+        inventoryDocumentService.createImport(receipt);
+    }
+
+
+    private com.duylongtech.backend.dto.request.InventoryDocumentRequest baseDocument(AssemblyOrder order) {
+        com.duylongtech.backend.dto.request.InventoryDocumentRequest request =
+                new com.duylongtech.backend.dto.request.InventoryDocumentRequest();
+        request.setIssuePurpose("ASSEMBLY");
+        request.setReferenceType("ASSEMBLY_ORDER");
+        request.setReferenceId(order.getId());
+        request.setWarehouseId(order.getWarehouseId());
+        request.setDocDate(LocalDate.now());
+        request.setStatus("DRAFT");
+        request.setCreatedBy(order.getCreatedBy());
+        request.setNote("Tß╗▒ ─æß╗Öng tß║ío tß╗½ lß╗çnh " + order.getOrderCode());
+        return request;
+    }
+
+
+    private com.duylongtech.backend.dto.request.InventoryDocumentLineRequest documentLine(Long variantId, BigDecimal quantity) {
+        com.duylongtech.backend.dto.request.InventoryDocumentLineRequest line =
+                new com.duylongtech.backend.dto.request.InventoryDocumentLineRequest();
+        line.setVariantId(variantId);
+        line.setWarehouseId(null);
+        line.setUnitCost(ZERO);
+        line.setUnitPrice(ZERO);
+        line.setBaseQuantity(quantity);
+        return line;
+    }
+
+
+    private List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> asExportLines(
+            List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> lines) {
+        lines.forEach(line -> line.setQuantityOut(line.getBaseQuantity()));
+        return lines;
+    }
+
+
+    private List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> asImportLines(
+            List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> lines) {
+        lines.forEach(line -> line.setQuantityIn(line.getBaseQuantity()));
+        return lines;
+    }
+
+
+    private void requireState(String actual, String... allowed) {
+        if (!Set.of(allowed).contains(actual)) {
+            throw new BusinessException(SystemMessage.ASM_ERR_040.getMessage());
+        }
+    }
+
+
+    private String requireReason(String reason) {
+        String normalized = trimToNull(reason);
+        if (normalized == null) {
+            throw new BusinessException(SystemMessage.ASM_ERR_041.getMessage());
+        }
+        return normalized;
+    }
+
+
+    private void notifyRole(String role, String title, String message, String type, Long id, String link) {
+        try {
+            appNotificationService.createNotification(role, null, title, message, type, type, id, link);
+        } catch (RuntimeException ignored) {
+            // Notification failure must not roll back the workflow transaction.
+        }
+    }
+
+
+    private void notifyUser(Long userId, String title, String message, String type, Long id, String link) {
+        if (userId == null) {
+            return;
+        }
+        try {
+            appNotificationService.createNotification(null, userId, title, message, type, type, id, link);
+        } catch (RuntimeException ignored) {
+            // Notification failure must not roll back the workflow transaction.
+        }
+    }
+
 }

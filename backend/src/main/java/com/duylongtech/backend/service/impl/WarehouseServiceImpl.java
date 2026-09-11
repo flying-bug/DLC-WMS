@@ -425,4 +425,25 @@ public class WarehouseServiceImpl  implements WarehouseService {
     public boolean checkSerialExists(String serialNumber) {
         return serialNumberRepository.existsBySerialNumber(serialNumber);
     }
+
+
+
+    private WarehouseResponse mapToResponse(Warehouse warehouse) {
+        return WarehouseResponse.builder()
+                .id(warehouse.getId())
+                .code(warehouse.getCode())
+                .name(warehouse.getName())
+                .address(warehouse.getAddress())
+                .type(warehouse.getType())
+                .status(warehouse.getStatus())
+                .creatorId(warehouse.getCreator() != null ? warehouse.getCreator().getId() : null)
+                .creatorName(warehouse.getCreator() != null ? warehouse.getCreator().getFullName() : null)
+                .updaterId(warehouse.getUpdater() != null ? warehouse.getUpdater().getId() : null)
+                .updaterName(warehouse.getUpdater() != null ? warehouse.getUpdater().getFullName() : null)
+                .version(warehouse.getVersion())
+                .createdAt(warehouse.getCreatedAt())
+                .updatedAt(warehouse.getUpdatedAt())
+                .build();
+    }
+
 }

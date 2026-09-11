@@ -11,6 +11,9 @@ import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
 import com.duylongtech.backend.dto.response.ScanResolveResponse;
 import com.duylongtech.backend.entity.InventoryBalance;
 import com.duylongtech.backend.entity.InventoryCostLayer;
+import com.duylongtech.backend.entity.AssemblyBom;
+import com.duylongtech.backend.entity.AssemblyOrder;
+import com.duylongtech.backend.entity.AssemblyOrderSerial;
 import com.duylongtech.backend.entity.InventoryDocument;
 import com.duylongtech.backend.entity.InventoryDocumentLine;
 import com.duylongtech.backend.entity.InventoryLedger;
@@ -23,6 +26,7 @@ import com.duylongtech.backend.entity.Warranty;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
 import com.duylongtech.backend.repository.InventoryCostLayerRepository;
+import com.duylongtech.backend.repository.InventoryDocumentLineRepository;
 import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.InventoryLedgerRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
@@ -44,6 +48,7 @@ import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
 import com.duylongtech.backend.repository.RepairRepository;
 import com.duylongtech.backend.repository.PurchaseOrderRepository;
+import com.duylongtech.backend.repository.AssemblyOrderSerialRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -95,7 +100,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
             ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
 
     private final InventoryDocumentRepository inventoryDocumentRepository;
-    private final com.duylongtech.backend.repository.InventoryDocumentLineRepository inventoryDocumentLineRepository;
+    private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
@@ -105,6 +110,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
     private final WarrantyRepository warrantyRepository;
     private final WarrantyLifecycleService warrantyLifecycleService;
     private final PartnerRepository partnerRepository;
+    private final AssemblyOrderSerialRepository assemblyOrderSerialRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
@@ -2072,4 +2078,266 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
 
         return toResponse(saved, true);
     }
+
+
+
+    @Transactional(readOnly = true)
+    public List<InventoryDocumentResponse> getAssemblyDocuments(Long orderId) {
+        return inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", orderId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+
+    private boolean isPostedDocument(Long documentId) {
+        return documentId != null && inventoryDocumentRepository.findById(documentId)
+                .map(document -> "POSTED".equals(document.getStatus()))
+                .orElse(false);
+    }
+
+
+    private void rollbackInventory(InventoryDocument doc, boolean importDocument) {
+        for (InventoryDocumentLine line : doc.getLines()) {
+            Long warehouseId = line.getWarehouseId() != null ? line.getWarehouseId() : doc.getWarehouseId();
+            if (warehouseId == null) {
+                throw new BusinessException("D├▓ng sß║ún phß║⌐m ch╞░a ─æ╞░ß╗úc chß╗ìn kho");
+            }
+            BigDecimal quantity = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
+                    ? line.getBaseQuantity()
+                    : (importDocument ? line.getQuantityIn() : line.getQuantityOut());
+            InventoryBalance balance = inventoryBalanceRepository
+                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "GOOD")
+                    .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy tß╗ôn kho ─æß╗â ho├án t├íc"));
+            BigDecimal newQuantity = importDocument
+                    ? balance.getQuantityOnHand().subtract(quantity)
+                    : balance.getQuantityOnHand().add(quantity);
+            if (newQuantity.compareTo(ZERO) < 0) {
+                throw new BusinessException("Tß╗ôn kho kh├┤ng ─æß╗º ─æß╗â ho├án t├íc chß╗⌐ng tß╗½");
+            }
+
+            balance.setQuantityOnHand(newQuantity);
+            balance.setUpdatedAt(LocalDateTime.now());
+            inventoryBalanceRepository.save(balance);
+            inventoryLedgerRepository.save(buildLedger(doc, line,
+                    importDocument ? "UNPOST_IMPORT" : "UNPOST_EXPORT",
+                    importDocument ? ZERO : quantity,
+                    importDocument ? quantity : ZERO,
+                    nonNegativeOrZero(line.getUnitCost(), "unitCost"), newQuantity, warehouseId));
+            if (!importDocument) {
+                for (String serialValue : parseSerialNumbers(line.getSerialNumbersText())) {
+                    serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), serialValue)
+                            .ifPresent(serial -> {
+                                serial.setStatus("AVAILABLE");
+                                serial.setWarehouseId(warehouseId);
+                                serial.setSoldAt(null);
+                                serial.setSalesOrderLineId(null);
+                                serial.setUpdatedAt(LocalDateTime.now());
+                                serialNumberRepository.save(serial);
+                            });
+                }
+            }
+        }
+    }
+
+
+    private void validateAssemblyPost(InventoryDocument doc, boolean importDocument) {
+        if (!"ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(doc.getReferenceType())) || doc.getReferenceId() == null) {
+            return;
+        }
+        AssemblyOrder order = assemblyOrderRepository.findByIdWithLines(doc.getReferenceId())
+                .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy lß╗çnh cß╗ºa phiß║┐u kho"));
+        if ("REQUESTED".equals(order.getCancellationSettlementStatus()) || "CANCELLED".equals(order.getStatus())) {
+            throw new BusinessException(SystemMessage.ASM_ERR_045.getMessage());
+        }
+        List<InventoryDocument> pair = inventoryDocumentRepository
+                .findByReferenceWithLines("ASSEMBLY_ORDER", order.getId());
+        if (pair.size() != 2) {
+            throw new BusinessException(SystemMessage.ASM_ERR_042.getMessage());
+        }
+        if (importDocument && pair.stream().noneMatch(d -> EXPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()))) {
+            throw new BusinessException(SystemMessage.ASM_ERR_043.getMessage());
+        }
+        validateAssemblyQuantities(order, doc, importDocument);
+    }
+
+
+    private void validateAssemblyQuantities(AssemblyOrder order, InventoryDocument doc, boolean importDocument) {
+        boolean componentsExpected = ("ASSEMBLY".equals(order.getOrderType()) && !importDocument)
+                || ("DISASSEMBLY".equals(order.getOrderType()) && importDocument);
+        Map<Long, BigDecimal> expected = componentsExpected
+                ? order.getLines().stream().collect(Collectors.toMap(
+                        line -> line.getComponentVariant().getId(),
+                        line -> line.getQuantityRequired(), BigDecimal::add))
+                : Map.of(order.getTargetVariant().getId(), order.getQuantity());
+        Map<Long, BigDecimal> actual = doc.getLines().stream().collect(Collectors.toMap(
+                InventoryDocumentLine::getVariantId,
+                line -> importDocument ? line.getQuantityIn() : line.getQuantityOut(), BigDecimal::add));
+        if (actual.size() != expected.size() || expected.entrySet().stream()
+                .anyMatch(entry -> actual.get(entry.getKey()) == null
+                        || actual.get(entry.getKey()).compareTo(entry.getValue()) != 0)) {
+            throw new BusinessException(SystemMessage.ASM_ERR_035.getMessage());
+        }
+    }
+
+
+    private void validateAssemblyExportUnpost(InventoryDocument doc) {
+        if (!"ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(doc.getReferenceType())) || doc.getReferenceId() == null) {
+            return;
+        }
+        AssemblyOrder order = assemblyOrderRepository.findById(doc.getReferenceId())
+                .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy lß╗çnh cß╗ºa phiß║┐u kho"));
+        if (!"CANCELLED".equals(order.getStatus())
+                || !"PENDING_UNPOST".equals(order.getCancellationSettlementStatus())) {
+            throw new BusinessException(SystemMessage.ASM_ERR_046.getMessage());
+        }
+        if (inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", order.getId()).stream()
+                .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()))) {
+            throw new BusinessException(SystemMessage.ASM_ERR_044.getMessage());
+        }
+    }
+
+
+    private void synchronizeAssemblyOrder(InventoryDocument document) {
+        if (!"ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(document.getReferenceType()))
+                || document.getReferenceId() == null) {
+            return;
+        }
+        AssemblyOrder order = assemblyOrderRepository.findById(document.getReferenceId()).orElse(null);
+        if (order == null) {
+            return;
+        }
+        List<InventoryDocument> pair = inventoryDocumentRepository
+                .findByReferenceWithLines("ASSEMBLY_ORDER", order.getId());
+        boolean exportPosted = pair.stream()
+                .anyMatch(d -> EXPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()));
+        boolean importPosted = pair.stream()
+                .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()));
+        if ("CANCELLED".equals(order.getStatus()) && "UNPOSTED".equals(document.getStatus())) {
+            order.setCancellationSettlementStatus("SETTLED");
+        } else if (exportPosted && importPosted) {
+            order.setStatus("COMPLETED");
+            order.setQuantityProduced(order.getQuantity());
+        } else if (exportPosted) {
+            order.setStatus("IN_PROGRESS");
+        }
+        assemblyOrderRepository.save(order);
+    }
+
+
+    private void markUnposted(InventoryDocument doc, String reason, Long currentUserId) {
+        doc.setStatus("UNPOSTED");
+        doc.setUnpostReason(trimToNull(reason));
+        doc.setUnpostedBy(currentUserId);
+        doc.setUnpostedAt(LocalDateTime.now());
+        doc.setUpdatedAt(LocalDateTime.now());
+    }
+
+
+    private void auditUnpost(InventoryDocument doc, String action, Long currentUserId) {
+        String username = currentUserId == null ? "system" : userRepository.findById(currentUserId)
+                .map(User::getUsername)
+                .orElse("system");
+        auditLogService.logEvent(username, action, "InventoryDocument", doc.getId(), "SUCCESS",
+                "Bß╗Å ghi sß╗ò phiß║┐u " + (IMPORT_DOC_TYPE.equals(doc.getDocType()) ? "nhß║¡p" : "xuß║Ñt")
+                        + " kho " + doc.getDocCode(), null, null);
+    }
+
+
+    private boolean isDisassemblyImport(InventoryDocument doc) {
+        if (!"ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(doc.getReferenceType())) || doc.getReferenceId() == null) {
+            return false;
+        }
+        return assemblyOrderRepository.findById(doc.getReferenceId())
+                .map(order -> "DISASSEMBLY".equals(order.getOrderType()))
+                .orElse(false);
+    }
+
+
+    private void createAssemblyGenealogy(InventoryDocument importDocument) {
+        if (!IMPORT_DOC_TYPE.equals(importDocument.getDocType())
+                || !"ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(importDocument.getReferenceType()))
+                || importDocument.getReferenceId() == null) {
+            return;
+        }
+        AssemblyOrder order = assemblyOrderRepository.findByIdWithLines(importDocument.getReferenceId()).orElse(null);
+        if (order == null || order.getTargetVariant() == null || !order.getTargetVariant().isSerialTracked()) {
+            return;
+        }
+        List<InventoryDocument> pair = inventoryDocumentRepository
+                .findByReferenceWithLines("ASSEMBLY_ORDER", order.getId());
+        InventoryDocument exportDocument = pair.stream()
+                .filter(document -> EXPORT_DOC_TYPE.equals(document.getDocType()))
+                .findFirst().orElse(null);
+        if (exportDocument == null) {
+            return;
+        }
+        boolean assembly = "ASSEMBLY".equals(order.getOrderType());
+        InventoryDocument targetDocument = assembly ? importDocument : exportDocument;
+        InventoryDocument componentDocument = assembly ? exportDocument : importDocument;
+        List<String> targetSerials = targetDocument.getLines().stream()
+                .filter(line -> order.getTargetVariant().getId().equals(line.getVariantId()))
+                .flatMap(line -> parseSerialNumbers(line.getSerialNumbersText()).stream())
+                .toList();
+        if (targetSerials.isEmpty()) {
+            return;
+        }
+        if (!assembly) {
+            List<AssemblyOrderSerial> active = assemblyOrderSerialRepository
+                    .findByTargetVariantIdAndTargetSerialsIn(order.getTargetVariant().getId(), targetSerials);
+            active.forEach(mapping -> {
+                mapping.setStatus("REMOVED");
+                mapping.setRemovedAt(LocalDateTime.now());
+            });
+            assemblyOrderSerialRepository.saveAll(active);
+        }
+        for (var orderLine : order.getLines()) {
+            List<String> componentSerials = componentDocument.getLines().stream()
+                    .filter(line -> orderLine.getComponentVariant().getId().equals(line.getVariantId()))
+                    .flatMap(line -> parseSerialNumbers(line.getSerialNumbersText()).stream())
+                    .toList();
+            if (componentSerials.isEmpty()) {
+                continue;
+            }
+            int perTarget;
+            try {
+                perTarget = orderLine.getQuantityRequired().divide(order.getQuantity())
+                        .stripTrailingZeros().intValueExact();
+            } catch (ArithmeticException ex) {
+                throw new BusinessException("Kh├┤ng thß╗â chia serial linh kiß╗çn theo tß╗½ng th├ánh phß║⌐m");
+            }
+            if (componentSerials.size() != targetSerials.size() * perTarget) {
+                throw new BusinessException(SystemMessage.ASM_ERR_036.getMessage());
+            }
+            if (!assembly) {
+                continue;
+            }
+            for (int targetIndex = 0; targetIndex < targetSerials.size(); targetIndex++) {
+                for (int componentIndex = 0; componentIndex < perTarget; componentIndex++) {
+                    String componentSerial = componentSerials.get(targetIndex * perTarget + componentIndex);
+                    assemblyOrderSerialRepository.save(AssemblyOrderSerial.builder()
+                            .assemblyOrder(order)
+                            .targetVariant(order.getTargetVariant())
+                            .targetSerial(targetSerials.get(targetIndex))
+                            .componentVariant(orderLine.getComponentVariant())
+                            .componentSerial(componentSerial)
+                            .status("ACTIVE")
+                            .installedAt(LocalDateTime.now())
+                            .createdBy(order.getCreatedBy())
+                            .build());
+                }
+            }
+        }
+    }
+
+
+    private void ensureUniqueSerials(List<String> serials) {
+        long uniqueCount = serials.stream()
+                .map(value -> value.trim().toUpperCase(Locale.ROOT))
+                .distinct()
+                .count();
+        if (uniqueCount != serials.size()) {
+            throw new BusinessException("Danh s├ích serial kh├┤ng ─æ╞░ß╗úc chß╗⌐a m├ú tr├╣ng lß║╖p");
+        }
+    }
+
 }
