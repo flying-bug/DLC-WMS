@@ -391,7 +391,7 @@ const AdminLayout = ({ children }) => {
                             
                             // Check if current path matches the tab
                             const currentQueryTab = new URLSearchParams(location.search).get('tab');
-                            let isActive = false;
+                            let isActive;
                             if (tab.matches) {
                                 isActive = tab.matches.some(m => currentPath.startsWith(m));
                             } else if (tab.tabId) {

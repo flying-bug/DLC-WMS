@@ -86,7 +86,7 @@ export default function ProductVariantConfigurator({
     setPendingSnapshot(null);
   };
 
-  const regenerateRows = (sourceAttributes, excludedKeys, previousRows = draft.rows || [], extra = {}) => {
+  function regenerateRows(sourceAttributes, excludedKeys, previousRows = draft.rows || [], extra = {}) {
     try {
       if (!String(productCode || '').trim()) {
         patch({ ...extra, rows: [], error: 'Vui lòng nhập mã sản phẩm để sinh SKU phiên bản.' });
