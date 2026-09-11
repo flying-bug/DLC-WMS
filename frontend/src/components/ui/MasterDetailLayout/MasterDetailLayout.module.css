@@ -8,6 +8,7 @@
   box-shadow: var(--shadow-card-subtle, 0 1px 3px rgba(0, 0, 0, 0.05));
   overflow: hidden;
   min-height: 0;
+  min-width: 0;
 }
 
 .masterSection {
@@ -15,6 +16,7 @@
   flex-direction: column;
   flex: 1 1 52%;
   min-height: 160px;
+  min-width: 0;
   overflow: hidden;
   background: var(--color-surface, var(--color-white));
 }
@@ -23,10 +25,13 @@
   flex: 1;
   overflow: auto;
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 
 .dataTable {
   width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 0.8125rem;
   text-align: left;
@@ -88,6 +93,10 @@
   color: var(--color-text-subtle, var(--wms-text-muted));
   min-height: 38px;
   flex-shrink: 0;
+}
+
+.legacyPaginationHidden {
+  display: none;
 }
 
 .footerLeft {
@@ -222,6 +231,7 @@
   flex-direction: column;
   flex: 1 1 48%;
   min-height: 150px;
+  min-width: 0;
   overflow: hidden;
   background: var(--color-surface, var(--color-white));
 }

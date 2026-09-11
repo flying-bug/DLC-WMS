@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../../utils/datePresets';
 import styles from './FilterPopover.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
@@ -23,6 +24,31 @@ const FilterPopover = ({
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState(filters);
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0, visibility: 'hidden' });
+
+  const updatePopoverPosition = useCallback(() => {
+    if (!isOpen || !triggerRef.current || !popoverRef.current) return;
+
+    const viewportMargin = 16;
+    const gap = 8;
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const popoverWidth = popoverRef.current.offsetWidth;
+    const popoverHeight = popoverRef.current.offsetHeight;
+    const spaceBelow = window.innerHeight - triggerRect.bottom - gap;
+    const spaceAbove = triggerRect.top - gap;
+    const openAbove = spaceBelow < popoverHeight && spaceAbove > spaceBelow;
+    const preferredTop = openAbove
+      ? triggerRect.top - popoverHeight - gap
+      : triggerRect.bottom + gap;
+    const maxTop = Math.max(viewportMargin, window.innerHeight - popoverHeight - viewportMargin);
+    const top = Math.min(maxTop, Math.max(viewportMargin, preferredTop));
+    const maxLeft = Math.max(viewportMargin, window.innerWidth - popoverWidth - viewportMargin);
+    const left = Math.min(maxLeft, Math.max(viewportMargin, triggerRect.right - popoverWidth));
+
+    setPopoverPosition({ top, left, visibility: 'visible' });
+  }, [isOpen]);
 
   useEffect(() => {
     setLocalFilters(filters);
@@ -30,7 +56,9 @@ const FilterPopover = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      const clickedTrigger = containerRef.current?.contains(event.target);
+      const clickedPopover = popoverRef.current?.contains(event.target);
+      if (!clickedTrigger && !clickedPopover) {
         setIsOpen(false);
       }
     };
@@ -41,6 +69,21 @@ const FilterPopover = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  useLayoutEffect(() => {
+    updatePopoverPosition();
+  }, [updatePopoverPosition]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    window.addEventListener('resize', updatePopoverPosition);
+    window.addEventListener('scroll', updatePopoverPosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePopoverPosition);
+      window.removeEventListener('scroll', updatePopoverPosition, true);
+    };
+  }, [isOpen, updatePopoverPosition]);
 
   const handlePresetChange = (presetKey) => {
     if (presetKey === 'CUSTOM') {
@@ -89,6 +132,7 @@ const FilterPopover = ({
   return (
     <div className={styles.container} ref={containerRef}>
       <button
+        ref={triggerRef}
         className={`${styles.triggerBtn} ${activeCount > 0 ? styles.activeTrigger : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         type="button"
@@ -98,8 +142,8 @@ const FilterPopover = ({
         {activeCount > 0 && <span className={styles.badge}>{activeCount}</span>}
       </button>
 
-      {isOpen && (
-        <div className={styles.popover}>
+      {isOpen && typeof document !== 'undefined' && createPortal((
+        <div ref={popoverRef} className={styles.popover} style={popoverPosition}>
           <div className={styles.header}>
             <span className={styles.title}>Bộ lọc dữ liệu</span>
             <button className={styles.closeBtn} onClick={() => setIsOpen(false)} type="button">
@@ -258,7 +302,7 @@ const FilterPopover = ({
             </button>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 };
