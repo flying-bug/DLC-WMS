@@ -19,7 +19,7 @@ export default function CashierWorkspacePage() {
   // Master State
   const [rawList, setRawList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [loadingMaster, setLoadingMaster] = useState(false);
+  const [loadingMaster, setLoadingMaster] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
   const [fromDate, setFromDate] = useState(() => getDateRangePreset('THIS_MONTH')?.fromDate || '');
@@ -36,6 +36,19 @@ export default function CashierWorkspacePage() {
         setFromDate(range.fromDate || '');
         setToDate(range.toDate || '');
       }
+    }
+  };
+
+  const handleReturnToList = () => {
+    setSearchTerm('');
+    setRequestFilterType('ALL');
+    setPeriodPreset('ALL');
+    setFromDate('');
+    setToDate('');
+    setPage(1);
+
+    if (rawList.length === 0) {
+      fetchMasterData();
     }
   };
 
@@ -256,13 +269,13 @@ export default function CashierWorkspacePage() {
   const renderEntityType = (type) => {
     switch (type) {
       case 'PAYMENT_RECEIPT':
-        return <span style={{ color: 'var(--color-success-deep)', fontWeight: 600 }}>Phiếu thu tiền</span>;
+        return <span className={styles.operationType}>Phiếu thu tiền</span>;
       case 'PAYMENT_VOUCHER':
-        return <span style={{ color: 'var(--color-danger-deep)', fontWeight: 600 }}>Phiếu chi tiền</span>;
+        return <span className={styles.operationType}>Phiếu chi tiền</span>;
       case 'SALES_INVOICE':
-        return <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Hóa đơn bán hàng</span>;
+        return <span className={styles.operationType}>Hóa đơn bán hàng</span>;
       case 'IMPORT_INVOICE':
-        return <span style={{ color: '#854d0e', fontWeight: 600 }}>Hóa đơn mua hàng</span>;
+        return <span className={styles.operationType}>Hóa đơn mua hàng</span>;
       default:
         return type || '-';
     }
@@ -288,12 +301,7 @@ export default function CashierWorkspacePage() {
         label: 'Loại nghiệp vụ',
         width: '120px',
         render: (v) => (
-          <span
-            style={{
-              fontWeight: 600,
-              color: v === 'RECEIPT' ? 'var(--color-success-deep)' : 'var(--color-danger-deep)',
-            }}
-          >
+          <span className={styles.operationType}>
             {v === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}
           </span>
         ),
@@ -315,11 +323,11 @@ export default function CashierWorkspacePage() {
         width: '120px',
         render: (v) =>
           v === 'BANK_TRANSFER' ? (
-            <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>
+            <span className={styles.paymentMethodText}>
               <i className="fas fa-credit-card" style={{ marginRight: 4 }}></i>Chuyển khoản
             </span>
           ) : (
-            <span style={{ color: 'var(--color-success-deep)', fontWeight: 500 }}>
+            <span className={styles.paymentMethodText}>
               <i className="fas fa-money-bill-wave" style={{ marginRight: 4 }}></i>Tiền mặt
             </span>
           ),
@@ -432,7 +440,7 @@ export default function CashierWorkspacePage() {
         label: 'Phát sinh Tăng (Nợ)',
         width: '150px',
         render: (v) => (
-          <span style={{ color: 'var(--color-danger)', fontWeight: 600, textAlign: 'right', display: 'block' }}>
+          <span className={styles.ledgerAmount}>
             {Number(v) > 0 ? formatCurrency(v) : '-'}
           </span>
         ),
@@ -442,7 +450,7 @@ export default function CashierWorkspacePage() {
         label: 'Phát sinh Giảm (Có)',
         width: '150px',
         render: (v) => (
-          <span style={{ color: 'var(--color-success)', fontWeight: 600, textAlign: 'right', display: 'block' }}>
+          <span className={styles.ledgerAmount}>
             {Number(v) > 0 ? formatCurrency(v) : '-'}
           </span>
         ),
@@ -565,51 +573,48 @@ export default function CashierWorkspacePage() {
         {/* KPI SUMMARY CARDS */}
         <div className={styles.kpiGrid}>
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: 'var(--wms-success-soft)', color: 'var(--wms-success)' }}>
+            <div className={styles.kpiIconWrapper}>
               <i className="fas fa-arrow-down"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Tổng thu trong kỳ</span>
-              <span className={styles.kpiValue} style={{ color: 'var(--wms-success)' }}>
+              <span className={styles.kpiValue}>
                 {formatCurrency(kpiStats.totalReceipt)}
               </span>
             </div>
           </div>
 
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: '#fef2f2', color: 'var(--wms-danger)' }}>
+            <div className={styles.kpiIconWrapper}>
               <i className="fas fa-arrow-up"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Tổng chi trong kỳ</span>
-              <span className={styles.kpiValue} style={{ color: 'var(--wms-danger)' }}>
+              <span className={styles.kpiValue}>
                 {formatCurrency(kpiStats.totalVoucher)}
               </span>
             </div>
           </div>
 
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: 'var(--color-primary-soft)', color: 'var(--wms-primary)' }}>
+            <div className={styles.kpiIconWrapper}>
               <i className="fas fa-wallet"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Dòng tiền ròng (Thu - Chi)</span>
-              <span
-                className={styles.kpiValue}
-                style={{ color: kpiStats.netFlow >= 0 ? 'var(--wms-success)' : 'var(--wms-danger)' }}
-              >
+              <span className={styles.kpiValue}>
                 {formatCurrency(kpiStats.netFlow)}
               </span>
             </div>
           </div>
 
           <div className={styles.kpiCard}>
-            <div className={styles.kpiIconWrapper} style={{ background: 'var(--wms-warning-soft)', color: '#d97706' }}>
+            <div className={styles.kpiIconWrapper}>
               <i className="fas fa-clock"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Chờ ghi sổ quỹ</span>
-              <span className={styles.kpiValue} style={{ color: '#d97706' }}>
+              <span className={styles.kpiValue}>
                 {kpiStats.pendingCount} phiếu
               </span>
             </div>
@@ -640,7 +645,7 @@ export default function CashierWorkspacePage() {
                     setPage(1);
                   }}
                 >
-                  <i className="fas fa-arrow-down" style={{ color: 'var(--wms-success)', marginRight: 4 }}></i>
+                  <i className="fas fa-arrow-down" style={{ marginRight: 4 }}></i>
                   Thu tiền
                 </button>
                 <button
@@ -651,7 +656,7 @@ export default function CashierWorkspacePage() {
                     setPage(1);
                   }}
                 >
-                  <i className="fas fa-arrow-up" style={{ color: 'var(--wms-danger)', marginRight: 4 }}></i>
+                  <i className="fas fa-arrow-up" style={{ marginRight: 4 }}></i>
                   Chi tiền
                 </button>
               </div>
@@ -707,32 +712,67 @@ export default function CashierWorkspacePage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className={styles.clearSearchButton}
+                  onClick={() => {
+                    setSearchTerm('');
+                    setPage(1);
+                  }}
+                  aria-label="Xóa từ khóa tìm kiếm"
+                  title="Xóa tìm kiếm"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* MASTER - DETAIL LAYOUT */}
         <div className={styles.workspaceLayoutWrapper}>
-          <MasterDetailLayout
-            masterColumns={masterColumns}
-            masterData={filteredList}
-            selectedItem={selectedItem}
-            onSelectItem={setSelectedItem}
-            onRowDoubleClick={(item) => handlePrint(item)}
-            masterLoading={loadingMaster}
-            detailTitle={
-              selectedItem
-                ? `Lịch sử đối soát công nợ: ${selectedItem.partnerName || ''} (Dư nợ hiện tại: ${formatCurrency(selectedItem.partnerDebtBalance)})`
-                : 'Chi tiết đối soát giao dịch'
-            }
-            detailColumns={detailColumns}
-            detailData={detailData}
-            detailLoading={loadingDetail}
-            page={page}
-            setPage={setPage}
-            pageSize={pageSize}
-            setPageSize={setPageSize}
-          />
+          {!loadingMaster && filteredList.length === 0 ? (
+            <div className={styles.emptyStateShell}>
+              <div className={styles.emptyStateCard}>
+                <div className={styles.emptyStateIcon} aria-hidden="true">
+                  <i className="fas fa-file-invoice-dollar"></i>
+                </div>
+                <h2>Không tìm thấy phiếu thu, chi</h2>
+                <p>
+                  {rawList.length > 0
+                    ? 'Không có chứng từ phù hợp với điều kiện tìm kiếm hoặc bộ lọc hiện tại.'
+                    : 'Chưa có chứng từ thu, chi khả dụng trong danh sách.'}
+                </p>
+                <button type="button" className={styles.emptyStateAction} onClick={handleReturnToList}>
+                  <i className="fas fa-arrow-left"></i> Quay lại danh sách
+                </button>
+              </div>
+            </div>
+          ) : (
+            <MasterDetailLayout
+              masterColumns={masterColumns}
+              masterData={filteredList}
+              selectedItem={selectedItem}
+              onSelectItem={setSelectedItem}
+              onRowDoubleClick={(item) => handlePrint(item)}
+              masterLoading={loadingMaster}
+              detailTitle={
+                selectedItem
+                  ? `Lịch sử đối soát công nợ: ${selectedItem.partnerName || ''} (Dư nợ hiện tại: ${formatCurrency(selectedItem.partnerDebtBalance)})`
+                  : 'Chi tiết đối soát giao dịch'
+              }
+              detailColumns={detailColumns}
+              detailData={detailData}
+              detailLoading={loadingDetail}
+              page={page}
+              setPage={setPage}
+              pageSize={pageSize}
+              setPageSize={setPageSize}
+              sharedPagination
+              showDetailSummary={false}
+            />
+          )}
         </div>
 
         {/* CONFIRM POST MODAL */}

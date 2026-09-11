@@ -670,6 +670,17 @@ export default function WarehouseWorkspacePage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className={styles.clearSearchButton}
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Xóa từ khóa tìm kiếm"
+                  title="Xóa tìm kiếm"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              )}
             </div>
 
             <select
@@ -717,6 +728,7 @@ export default function WarehouseWorkspacePage() {
             setPage={setPage}
             pageSize={pageSize}
             setPageSize={setPageSize}
+            sharedPagination
           />
         </div>
 

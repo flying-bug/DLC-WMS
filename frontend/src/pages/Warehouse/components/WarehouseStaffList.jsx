@@ -50,9 +50,11 @@ const WarehouseStaffList = ({ warehouseId }) => {
             if (roleId) params.roleId = roleId;
             
             const res = await warehouseStaffApi.getStaffList(warehouseId, params);
-            setStaffs(res.data.data.content || []);
-            setTotalPages(res.data.data.totalPages || 0);
-            setTotalItems(res.data.data.totalElements || 0);
+            const payload = res.data.data;
+            const totalItems = payload.totalElements || 0;
+            setStaffs(payload.content || []);
+            setTotalPages(Math.max(1, Math.ceil(totalItems / currentSize)));
+            setTotalItems(totalItems);
             setPage(pageIndex);
         } catch (error) {
             console.error('Lỗi tải danh sách nhân sự:', error);

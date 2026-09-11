@@ -35,9 +35,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--color-success-bg, #e6f8ec);
-  color: var(--color-success-deep, #166534);
-  border: 1px solid var(--color-success-border, #b3e6c8);
+  background: var(--color-primary-soft, #eaf4ff);
+  color: var(--color-primary, var(--wms-primary));
+  border: 1px solid var(--color-info-border-soft, var(--wms-border-base));
   padding: 3px 10px;
   border-radius: var(--border-radius-pill, 20px);
   font-size: 0.75rem;
@@ -85,6 +85,8 @@
   justify-content: center;
   font-size: 1rem;
   flex-shrink: 0;
+  background: var(--color-primary-soft, #eaf4ff);
+  color: var(--color-primary, var(--wms-primary));
 }
 
 .kpiContent {
@@ -172,6 +174,8 @@
   position: relative;
   display: flex;
   align-items: center;
+  order: -1;
+  flex-shrink: 0;
 }
 
 .searchIcon {
@@ -182,7 +186,7 @@
 }
 
 .searchInput {
-  padding: 5px 12px 5px 32px;
+  padding: 5px 34px 5px 32px;
   border: 1px solid var(--color-border-subtle, var(--wms-border-strong));
   border-radius: var(--border-radius-pill, 20px);
   font-size: 0.8125rem;
@@ -197,6 +201,28 @@
   border-color: var(--color-primary, var(--wms-primary));
   background: var(--color-surface, var(--color-white));
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.clearSearchButton {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted-2, var(--wms-text-subtle));
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.clearSearchButton:hover {
+  background: var(--color-bg-hover, var(--wms-bg-hover));
+  color: var(--color-primary, var(--wms-primary));
 }
 
 .filterField {
@@ -244,7 +270,7 @@
   padding: 6px 14px;
   border-radius: var(--border-radius-base, 6px);
   border: none;
-  background: var(--color-success-action, #2ca01c);
+  background: var(--color-primary, var(--wms-primary));
   color: var(--color-white);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -253,7 +279,7 @@
 }
 
 .btnPrimary:hover {
-  background: var(--color-success-action-hover, #35b624);
+  background: var(--color-primary-hover, var(--wms-primary-hover));
 }
 
 .btnSecondary {
@@ -283,7 +309,7 @@
   padding: 6px 14px;
   border-radius: var(--border-radius-base, 6px);
   border: none;
-  background: var(--wms-success);
+  background: var(--color-primary, var(--wms-primary));
   color: var(--color-white);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -292,7 +318,7 @@
 }
 
 .btnReceipt:hover {
-  background: var(--wms-success-hover);
+  background: var(--color-primary-hover, var(--wms-primary-hover));
 }
 
 .btnVoucher {
@@ -302,7 +328,7 @@
   padding: 6px 14px;
   border-radius: var(--border-radius-base, 6px);
   border: none;
-  background: #d97706;
+  background: var(--color-primary, var(--wms-primary));
   color: var(--color-white);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -311,7 +337,7 @@
 }
 
 .btnVoucher:hover {
-  background: var(--wms-warning-hover);
+  background: var(--color-primary-hover, var(--wms-primary-hover));
 }
 
 .btnPrint {
@@ -347,6 +373,94 @@
   min-height: 0;
 }
 
+.operationType {
+  color: var(--color-text-main, var(--wms-text-body));
+  font-weight: 600;
+}
+
+.paymentMethodText {
+  color: var(--color-primary, var(--wms-primary));
+  font-weight: 500;
+}
+
+.ledgerAmount {
+  display: block;
+  color: var(--color-text-strong, var(--wms-text-title));
+  font-weight: 600;
+  text-align: right;
+}
+
+.emptyStateShell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  padding: 24px;
+}
+
+.emptyStateCard {
+  width: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 32px 36px;
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-border-subtle, var(--wms-border-base));
+  border-radius: var(--border-radius-card, 10px);
+  box-shadow: var(--shadow-card-subtle, 0 2px 8px rgba(15, 23, 42, 0.06));
+}
+
+.emptyStateIcon {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--color-primary-soft, #eaf4ff);
+  color: var(--color-primary, var(--wms-primary));
+  font-size: 1.5rem;
+}
+
+.emptyStateCard h2 {
+  margin: 0;
+  color: var(--color-text-strong, var(--wms-text-title));
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.emptyStateCard p {
+  max-width: 430px;
+  margin: 10px 0 24px;
+  color: var(--color-text-subtle, var(--wms-text-muted));
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.emptyStateAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-primary, var(--wms-primary));
+  border-radius: var(--border-radius-base, 6px);
+  background: var(--color-primary, var(--wms-primary));
+  color: var(--color-white, #fff);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.emptyStateAction:hover {
+  border-color: var(--color-primary-hover, var(--wms-primary-hover));
+  background: var(--color-primary-hover, var(--wms-primary-hover));
+}
+
 /* BADGES */
 .badge {
   display: inline-flex;
@@ -359,9 +473,9 @@
 }
 
 .badgeSuccess {
-  background: var(--color-success-bg, #e6f8ec);
-  color: var(--color-success-deep, #166534);
-  border: 1px solid var(--color-success-border, #b3e6c8);
+  background: var(--color-primary-soft, #eaf4ff);
+  color: var(--color-primary, var(--wms-primary));
+  border: 1px solid var(--color-info-border-soft, var(--wms-border-base));
 }
 
 .badgeInfo {

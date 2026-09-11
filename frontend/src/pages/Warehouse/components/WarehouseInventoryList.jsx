@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import * as warehouseApi from '../../../api/warehouseApi';
+import Pagination from '../../../components/ui/Pagination/Pagination';
 import styles from './WarehouseInventoryList.module.css';
 
 const formatCurrency = (value) => {
@@ -17,7 +18,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     
     // State quản lý Expandable Table
     const [expandedVariants, setExpandedVariants] = useState({});
@@ -348,6 +349,16 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                         Sau
                     </button>
                 </div>
+            )}
+            {filteredInventory.length > 0 && (
+                <Pagination
+                    page={currentPage - 1}
+                    totalPages={totalPages}
+                    totalElements={filteredInventory.length}
+                    size={itemsPerPage}
+                    onPageChange={(page) => handlePageChange(page + 1)}
+                    onSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+                />
             )}
         </div>
     );
