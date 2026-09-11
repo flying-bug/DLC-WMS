@@ -146,7 +146,7 @@ function AnalyticsDashboard() {
 
     const handleRowClick = (transaction) => {
         if (!transaction.entityId) return;
-        switch(transaction.entityType) {
+        switch (transaction.entityType) {
             case 'IMPORT_DOCUMENT':
                 navigate(`/import-slips/${transaction.entityId}/edit`);
                 break;
@@ -544,8 +544,8 @@ function AnalyticsDashboard() {
                                             formatter={(value) => quantity(value)}
                                         />
                                         <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
-                                        <Bar dataKey="nhap" name="SL Nhap Kho" fill="var(--color-primary)" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                        <Bar dataKey="xuat" name="SL Xuat Kho" fill="var(--color-success-alt)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                        <Bar dataKey="nhap" name="SL Nhập kho" fill="var(--color-primary)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                        <Bar dataKey="xuat" name="SL Xuất kho" fill="var(--color-success-alt)" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (
@@ -652,7 +652,7 @@ function AnalyticsDashboard() {
                                 </thead>
                                 <tbody>
                                     {recentTransactions.length > 0 ? recentTransactions.map((transaction, index) => (
-                                        <tr 
+                                        <tr
                                             key={`${transaction.entityType}-${transaction.entityId}-${index}`}
                                             onClick={() => handleRowClick(transaction)}
                                             style={{ cursor: 'pointer' }}

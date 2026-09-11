@@ -57,8 +57,8 @@ const WarehouseListPage = () => {
             setWarehouses(content);
             
             // Spring Boot 3 serialization uses payload.page.totalElements, older uses payload.totalElements
-            const totalPages = payload.page?.totalPages ?? payload.totalPages ?? Math.ceil(content.length / currentSize) ?? 1;
             const totalElements = payload.page?.totalElements ?? payload.totalElements ?? payload.totalItems ?? content.length ?? 0;
+            const totalPages = Math.max(1, Math.ceil(totalElements / currentSize));
             
             setTotalPages(totalPages);
             setTotalElements(totalElements);

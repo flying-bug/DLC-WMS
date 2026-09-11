@@ -7,6 +7,7 @@ import { getMyWarehouses } from '../../api/warehouseApi';
 import { exportToExcel } from '../../utils/excelExport';
 import StocktakeInitModal from './components/StocktakeInitModal';
 import Toast from '../../components/ui/Toast/Toast';
+import Pagination from '../../components/ui/Pagination/Pagination';
 import styles from './StocktakeListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
@@ -43,6 +44,8 @@ function StocktakeListPage() {
   const [loading, setLoading] = useState(false);
   const [showInitModal, setShowInitModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });
@@ -118,6 +121,9 @@ function StocktakeListPage() {
     };
   });
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const paginatedRows = rows.slice(page * pageSize, (page + 1) * pageSize);
+
   const handleExport = () => {
     const headers = ['Ngày', 'Số', 'Kiểm kê kho', 'Mục đích', 'Kết luận', 'Trạng thái'];
     const data = rows.map(item => [
@@ -132,7 +138,7 @@ function StocktakeListPage() {
   };
 
   const handleSelectAll = (e) => {
-    setSelectedIds(e.target.checked ? rows.map(row => row.id) : []);
+    setSelectedIds(e.target.checked ? paginatedRows.map(row => row.id) : []);
   };
 
   const handleSelectRow = (e, id) => {
@@ -259,7 +265,7 @@ function StocktakeListPage() {
                   <input
                     type="checkbox"
                     className={styles.checkbox}
-                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length}
                     onChange={handleSelectAll}
                   />
                 </th>
@@ -273,7 +279,7 @@ function StocktakeListPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.length > 0 ? rows.map(st => (
+              {paginatedRows.length > 0 ? paginatedRows.map(st => (
                 <tr key={st.id} onClick={() => navigate(`/stocktakes/${st.id}`)}>
                   <td style={{ textAlign: 'center' }}>
                     <input
@@ -335,6 +341,17 @@ function StocktakeListPage() {
 
 
         
+        {!loading && rows.length > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={rows.length}
+            size={pageSize}
+            onPageChange={setPage}
+            onSizeChange={(size) => { setPageSize(size); setPage(0); }}
+          />
+        )}
+
         {showInitModal && (
           <StocktakeInitModal 
             onClose={() => setShowInitModal(false)} 

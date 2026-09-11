@@ -56,12 +56,14 @@
 
 /* Popover Dropdown Panel */
 .popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9000;
   width: 540px;
   max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
   background: var(--color-surface);
   border-radius: 8px;
   box-shadow: var(--shadow-dropdown);

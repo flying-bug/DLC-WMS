@@ -1,10 +1,11 @@
 /* Apex UI Pro - E-Invoice Management Styles */
 .page {
-  padding: 24px 32px;
+  padding: 24px;
   min-height: calc(100vh - 64px);
   background-color: var(--wms-bg-soft);
-  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   color: var(--wms-text-title);
+  box-sizing: border-box;
 }
 
 /* ─── Header Section ─── */
@@ -96,7 +97,7 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--wms-text-title);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: inherit;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
 }
@@ -122,6 +123,7 @@
 .searchBox {
   flex: 1;
   position: relative;
+  min-width: 0;
 }
 
 .searchBox i {
@@ -201,7 +203,7 @@
 }
 
 .tableWrapper {
-  overflow-x: auto;
+  overflow-x: hidden;
   width: 100%;
 }
 
@@ -209,8 +211,24 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  min-width: 1180px;
+  table-layout: fixed;
 }
+
+.table th,
+.table td { min-width: 0 !important; }
+
+/* Keep the full invoice list inside the content area at desktop widths. */
+.table th:nth-child(1), .table td:nth-child(1) { width: 4%; }
+.table th:nth-child(2), .table td:nth-child(2) { width: 8%; }
+.table th:nth-child(3), .table td:nth-child(3) { width: 7%; }
+.table th:nth-child(4), .table td:nth-child(4) { width: 8%; }
+.table th:nth-child(5), .table td:nth-child(5) { width: 17%; }
+.table th:nth-child(6), .table td:nth-child(6) { width: 9%; }
+.table th:nth-child(7), .table td:nth-child(7) { width: 9%; }
+.table th:nth-child(8), .table td:nth-child(8) { width: 10%; }
+.table th:nth-child(9), .table td:nth-child(9) { width: 11%; }
+.table th:nth-child(10), .table td:nth-child(10) { width: 9%; }
+.table th:nth-child(11), .table td:nth-child(11) { width: 8%; }
 
 .table th {
   background: var(--wms-bg-soft);
@@ -222,14 +240,16 @@
   padding: 12px 14px;
   border-bottom: 1px solid var(--wms-border-base);
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .table td {
-  padding: 12px 14px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--wms-bg-hover);
   color: var(--wms-text-body);
   vertical-align: middle;
+  overflow-wrap: anywhere;
 }
 
 .table tbody tr {
@@ -242,13 +262,13 @@
 
 /* ─── Cell Formatting ─── */
 .monoText {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: inherit;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .invoiceNum {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit;
   font-weight: 700;
   color: var(--color-info-hover);
   cursor: pointer;
@@ -275,7 +295,7 @@
 }
 
 .moneyText {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit;
   font-weight: 700;
   color: #166534;
   text-align: right;
@@ -350,7 +370,7 @@
   gap: 6px;
   align-items: center;
   justify-content: center;
-  white-space: nowrap;
+  flex-wrap: wrap;
 }
 
 .actionBtn {
@@ -369,6 +389,25 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+}
+
+@media (max-width: 1100px) {
+  .page { padding: 20px 16px; }
+  .filterCard { gap: 10px; padding: 12px; }
+  .table { font-size: 12px; }
+  .table th { padding: 10px 6px; font-size: 11px; }
+  .table td { padding: 9px 6px; }
+  .actionBtn { min-width: 0; padding: 5px 6px; }
+}
+
+@media (max-width: 760px) {
+  .header { margin-bottom: 18px; }
+  .title { font-size: 20px; }
+  .filterCard { align-items: stretch; flex-wrap: wrap; }
+  .searchBox { flex: 1 1 100%; }
+  .selectInput, .refreshBtn { flex: 1; min-width: 0; }
+  .tableWrapper { overflow-x: auto; }
+  .table { min-width: 980px; table-layout: auto; }
 }
 
 .actionBtn:hover {

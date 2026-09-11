@@ -71,7 +71,7 @@
     align-items: center;
 }
 
-.searchBox i:first-child {
+.searchBox > i:first-child {
     position: absolute;
     left: 14px;
     color: var(--color-text-placeholder);

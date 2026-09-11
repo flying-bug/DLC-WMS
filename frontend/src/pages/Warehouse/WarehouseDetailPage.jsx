@@ -118,8 +118,10 @@ const WarehouseDetailPage = () => {
         setLoadingLogs(true);
         try {
             const res = await warehouseApi.getWarehouseLogs(id, { page, size: 10 });
-            setLogs(res.data.data.content || []);
-            setLogsTotalPages(res.data.data.totalPages || 0);
+            const payload = res.data.data;
+            const totalElements = payload.totalElements ?? payload.content?.length ?? 0;
+            setLogs(payload.content || []);
+            setLogsTotalPages(Math.max(1, Math.ceil(totalElements / 10)));
             setLogsPage(page);
         } catch (error) {
             console.error('Lỗi tải lịch sử:', error);

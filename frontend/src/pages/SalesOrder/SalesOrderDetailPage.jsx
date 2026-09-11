@@ -28,21 +28,21 @@ const fmtDateTime = (v) => (v ? formatDateTime(v) : '—');
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Nháp', bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', icon: 'bi-pencil-square' },
-  APPROVED: { label: 'Đã duyệt', bg: 'var(--color-success-bg)', color: '#16a34a', icon: 'bi-check-circle-fill' },
-  POSTED: { label: 'Ghi sổ', bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
-  CANCELLED: { label: 'Đã hủy', bg: '#fef2f2', color: 'var(--wms-danger)', icon: 'bi-x-circle-fill' },
+  APPROVED: { label: 'Đã duyệt', bg: 'var(--color-success-bg)', color: 'var(--wms-success)', icon: 'bi-check-circle-fill' },
+  POSTED: { label: 'Ghi sổ', bg: 'var(--wms-primary-soft, var(--color-primary-soft))', color: 'var(--wms-primary)', icon: 'bi-bag-check-fill' },
+  CANCELLED: { label: 'Đã hủy', bg: 'var(--wms-danger-soft, var(--color-danger-bg))', color: 'var(--wms-danger)', icon: 'bi-x-circle-fill' },
 };
 
 const PAYMENT_STATUS_CONFIG = {
-  UNPAID: { label: 'Chưa thanh toán', bg: '#fee2e2', color: '#991b1b', icon: 'bi-dash-circle' },
-  PARTIAL: { label: 'Trả một phần', bg: '#fef08a', color: '#854d0e', icon: 'bi-pie-chart-fill' },
-  PAID: { label: 'Đã thanh toán', bg: 'var(--color-success-bg)', color: '#166534', icon: 'bi-check-circle-fill' },
+  UNPAID: { label: 'Chưa thanh toán', bg: 'var(--wms-danger-soft, var(--color-danger-bg))', color: 'var(--wms-danger-deep, var(--wms-danger))', icon: 'bi-dash-circle' },
+  PARTIAL: { label: 'Trả một phần', bg: 'var(--wms-warning-soft, var(--color-warning-bg))', color: 'var(--wms-warning-deep, var(--wms-warning))', icon: 'bi-pie-chart-fill' },
+  PAID: { label: 'Đã thanh toán', bg: 'var(--color-success-bg)', color: 'var(--wms-success-deep, var(--wms-success))', icon: 'bi-check-circle-fill' },
 };
 
 const RES_STATUS_CONFIG = {
-  HOLDING: { label: 'Đang giữ', bg: '#fef9c3', color: '#ca8a04' },
-  BACKORDERED: { label: 'Chờ nhập', bg: '#fee2e2', color: 'var(--wms-danger)' },
-  FULFILLED: { label: 'Đã xuất kho', bg: 'var(--color-success-bg)', color: '#16a34a' },
+  HOLDING: { label: 'Đang giữ', bg: 'var(--wms-warning-soft, var(--color-warning-bg))', color: 'var(--wms-warning-deep, var(--wms-warning))' },
+  BACKORDERED: { label: 'Chờ nhập', bg: 'var(--wms-danger-soft, var(--color-danger-bg))', color: 'var(--wms-danger)' },
+  FULFILLED: { label: 'Đã xuất kho', bg: 'var(--color-success-bg)', color: 'var(--wms-success)' },
   RELEASED: { label: 'Đã hủy', bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)' },
 };
 
@@ -369,15 +369,15 @@ function SalesOrderDetailPage() {
                   <span
                     className={styles.statusBadge}
                     style={{
-                      background: isCanceled ? '#fff1f2' : 'var(--color-success-bg)',
-                      color: isCanceled ? '#9f1239' : '#166534',
+                      background: isCanceled ? 'var(--wms-danger-soft, var(--color-danger-bg))' : 'var(--color-success-bg)',
+                      color: isCanceled ? 'var(--wms-danger-deep, var(--wms-danger))' : 'var(--wms-success-deep, var(--wms-success))',
                       cursor: 'pointer',
-                      border: `1px solid ${isCanceled ? '#fecdd3' : '#86efac'}`
+                      border: `1px solid ${isCanceled ? 'var(--wms-danger-border, var(--wms-border-base))' : 'var(--wms-success-border, var(--wms-border-base))'}`
                     }}
                     onClick={() => handleOpenEInvoicePreview(inv)}
                     title={isCanceled ? `HĐĐT ${inv.invoiceNumber} (Đã hủy: ${inv.cancelReason || '—'}). Nhấn để xem chi tiết` : 'Nhấn để xem HĐĐT'}
                   >
-                    <i className={`bi ${isCanceled ? 'bi-x-circle-fill' : 'bi-file-earmark-check-fill'}`} style={{ marginRight: 5, color: isCanceled ? '#f43f5e' : '#16a34a' }} />
+                    <i className={`bi ${isCanceled ? 'bi-x-circle-fill' : 'bi-file-earmark-check-fill'}`} style={{ marginRight: 5, color: isCanceled ? 'var(--wms-danger)' : 'var(--wms-success)' }} />
                     HĐĐT: {inv.invoiceNumber || 'Đã cấp'} ({inv.invoiceSeries}) {isCanceled ? '• Đã hủy' : ''}
                   </span>
                 );
@@ -388,10 +388,10 @@ function SalesOrderDetailPage() {
                   type="button"
                   className={styles.statusBadge}
                   style={{
-                    background: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'var(--color-success-bg)' : '#fff1f2',
-                    color: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#166534' : '#9f1239',
+                    background: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'var(--color-success-bg)' : 'var(--wms-danger-soft, var(--color-danger-bg))',
+                    color: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'var(--wms-success-deep, var(--wms-success))' : 'var(--wms-danger-deep, var(--wms-danger))',
                     cursor: 'pointer',
-                    border: `1px solid ${activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#86efac' : '#fecdd3'}`,
+                    border: `1px solid ${activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'var(--wms-success-border, var(--wms-border-base))' : 'var(--wms-danger-border, var(--wms-border-base))'}`,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6
@@ -401,7 +401,7 @@ function SalesOrderDetailPage() {
                 >
                   <i
                     className={`bi ${activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'bi-file-earmark-check-fill' : 'bi-x-circle-fill'}`}
-                    style={{ color: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#16a34a' : '#f43f5e' }}
+                    style={{ color: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'var(--wms-success)' : 'var(--wms-danger)' }}
                   />
                   <span>
                     {activeSoLevelInvoice
@@ -410,7 +410,7 @@ function SalesOrderDetailPage() {
                       ? `${activeExportLevelInvoices.length} HĐĐT hiệu lực`
                       : 'HĐĐT đã hủy'}
                   </span>
-                  <span style={{ fontSize: 11, background: 'rgba(0,0,0,0.06)', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
+                  <span style={{ fontSize: 11, background: 'var(--wms-bg-hover)', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
                     {einvoices.length} HĐ ▾
                   </span>
                 </button>
@@ -468,7 +468,7 @@ function SalesOrderDetailPage() {
                         >
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 13, color: isCanceled ? '#991b1b' : 'var(--color-info-hover)' }}>
+                              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 13, color: isCanceled ? 'var(--wms-danger-deep, var(--wms-danger))' : 'var(--color-info-hover)' }}>
                                 #{inv.invoiceNumber || 'Chưa cấp số'}
                               </span>
                               <span style={{ fontSize: 11, color: 'var(--wms-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
@@ -492,8 +492,8 @@ function SalesOrderDetailPage() {
                                 fontWeight: 600,
                                 padding: '2px 8px',
                                 borderRadius: 12,
-                                background: isCanceled ? '#fee2e2' : 'var(--wms-success-soft)',
-                                color: isCanceled ? '#991b1b' : '#065f46'
+                                background: isCanceled ? 'var(--wms-danger-soft, var(--color-danger-bg))' : 'var(--wms-success-soft)',
+                                color: isCanceled ? 'var(--wms-danger-deep, var(--wms-danger))' : 'var(--wms-success-deep, var(--wms-success))'
                               }}
                             >
                               {isCanceled ? 'Đã hủy' : 'Hiệu lực'}
@@ -514,7 +514,7 @@ function SalesOrderDetailPage() {
               <button
                 className={styles.btnPrimary}
                 onClick={() => setIssueModalTarget({ so, exportDoc: null })}
-                style={{ backgroundColor: 'var(--wms-success)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
                 <i className="bi bi-file-earmark-text" /> {canceledSoLevelInvoice ? 'Xuất lại HĐĐT mới' : 'Xuất Hóa Đơn Điện Tử'}
               </button>
@@ -633,11 +633,11 @@ function SalesOrderDetailPage() {
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Tổng cộng:</span>
-                <span className={styles.infoValue} style={{ fontWeight: 700, color: '#16a34a' }}>{money(totalAmount)}</span>
+                <span className={styles.infoValue} style={{ fontWeight: 700, color: 'var(--wms-success)' }}>{money(totalAmount)}</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Đã thanh toán:</span>
-                <span className={styles.infoValue} style={{ color: '#16a34a', fontWeight: 600 }}>{money(so.paidAmount)}</span>
+                <span className={styles.infoValue} style={{ color: 'var(--wms-success)', fontWeight: 600 }}>{money(so.paidAmount)}</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Còn nợ:</span>
@@ -697,7 +697,7 @@ function SalesOrderDetailPage() {
                 </tr>
                 <tr>
                   <td colSpan={9} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tổng thanh toán:</td>
-                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#16a34a', fontSize: 15 }}>{money(totalAmount)}</td>
+                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: 'var(--wms-success)', fontSize: 15 }}>{money(totalAmount)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -824,7 +824,7 @@ function SalesOrderDetailPage() {
                         <td>{doc.warehouseName || (doc.warehouseId ? `Kho #${doc.warehouseId}` : '—')}</td>
                         <td style={{ textAlign: 'center', fontWeight: 600 }}>{Number(qtyTotal).toLocaleString('vi-VN')}</td>
                         <td>
-                          <span className={styles.statusBadge} style={{ background: isPosted ? 'var(--color-success-bg)' : '#fef3c7', color: isPosted ? '#166534' : '#92400e' }}>
+                          <span className={styles.statusBadge} style={{ background: isPosted ? 'var(--color-success-bg)' : 'var(--wms-warning-soft, var(--color-warning-bg))', color: isPosted ? 'var(--wms-success-deep, var(--wms-success))' : 'var(--wms-warning-deep, var(--wms-warning))' }}>
                             {isPosted ? 'Đã ghi sổ' : (doc.status === 'SUBMITTED' ? 'Chờ duyệt' : 'Bản nháp')}
                           </span>
                         </td>
@@ -834,7 +834,7 @@ function SalesOrderDetailPage() {
                               <span
                                 style={{
                                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                                  background: 'var(--wms-success-soft)', color: '#065f46', border: '1px solid var(--wms-success-border)',
+                                  background: 'var(--wms-success-soft)', color: 'var(--wms-success-deep, var(--wms-success))', border: '1px solid var(--wms-success-border)',
                                   padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600
                                 }}
                               >
@@ -881,8 +881,8 @@ function SalesOrderDetailPage() {
                               {canceledDocInv && (
                                 <span
                                   style={{
-                                    fontSize: 11, color: 'var(--wms-danger)', background: '#fee2e2',
-                                    padding: '2px 6px', borderRadius: 4, border: '1px solid #fecaca', cursor: 'pointer'
+                                    fontSize: 11, color: 'var(--wms-danger)', background: 'var(--wms-danger-soft, var(--color-danger-bg))',
+                                    padding: '2px 6px', borderRadius: 4, border: '1px solid var(--wms-danger-border, var(--wms-border-base))', cursor: 'pointer'
                                   }}
                                   onClick={() => handleOpenEInvoicePreview(canceledDocInv)}
                                   title="HĐ cũ đã hủy"
@@ -895,7 +895,7 @@ function SalesOrderDetailPage() {
                                 className={styles.btnPrimary}
                                 onClick={() => setIssueModalTarget({ so, exportDoc: doc })}
                                 style={{
-                                  backgroundColor: 'var(--wms-success)', fontSize: 12, padding: '3px 10px',
+                                  backgroundColor: 'var(--wms-primary, var(--color-primary))', fontSize: 12, padding: '3px 10px',
                                   display: 'inline-flex', alignItems: 'center', gap: 4
                                 }}
                               >
@@ -987,7 +987,7 @@ function SalesOrderDetailPage() {
                           <div style={{ fontWeight: 600 }}>{inv.buyerLegalName || inv.buyerName || 'Khách lẻ'}</div>
                           {inv.buyerTaxCode && <div style={{ fontSize: 11, color: 'var(--wms-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>MST: {inv.buyerTaxCode}</div>}
                         </td>
-                        <td style={{ textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isCanceled ? '#9f1239' : '#166534' }}>
+                        <td style={{ textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isCanceled ? 'var(--wms-danger-deep, var(--wms-danger))' : 'var(--wms-success-deep, var(--wms-success))' }}>
                           {money(inv.totalAmount)}
                         </td>
                         <td>
@@ -998,16 +998,16 @@ function SalesOrderDetailPage() {
                         <td>
                           {isCanceled ? (
                             <div>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff1f2', color: '#9f1239', border: '1px solid #fecdd3', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#f43f5e' }} /> Đã hủy
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--wms-danger-soft, var(--color-danger-bg))', color: 'var(--wms-danger-deep, var(--wms-danger))', border: '1px solid var(--wms-danger-border, var(--wms-border-base))', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--wms-danger)' }} /> Đã hủy
                               </span>
-                              <div style={{ fontSize: 11, color: '#9f1239', marginTop: 3 }}>
+                              <div style={{ fontSize: 11, color: 'var(--wms-danger-deep, var(--wms-danger))', marginTop: 3 }}>
                                 <strong>Lý do:</strong> {inv.cancelReason || '—'}
                               </div>
                               {inv.canceledByName && <div style={{ fontSize: 10, color: 'var(--wms-text-muted)' }}>Bởi: {inv.canceledByName}</div>}
                             </div>
                           ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--wms-success-soft)', color: '#065f46', border: '1px solid var(--wms-success-border)', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--wms-success-soft)', color: 'var(--wms-success-deep, var(--wms-success))', border: '1px solid var(--wms-success-border)', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
                               <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-success-alt)', boxShadow: '0 0 6px var(--color-success-alt)' }} /> Đã phát hành
                             </span>
                           )}
@@ -1048,7 +1048,7 @@ function SalesOrderDetailPage() {
         />
         {paymentModalOpen && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#fff', borderRadius: 8, padding: 20, width: 400, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+            <div style={{ background: 'var(--color-surface, var(--color-white))', borderRadius: 8, padding: 20, width: 400, boxShadow: 'var(--wms-shadow-lg, 0 4px 6px rgba(0,0,0,0.1))' }}>
               <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 18 }}>Ghi nhận thanh toán</h3>
               <p style={{ marginBottom: 15, fontSize: 14, color: 'var(--wms-text-muted)' }}>
                 Còn nợ: <b style={{ color: 'var(--wms-danger)' }}>{money(totalAmount - (so.paidAmount || 0))}</b>
@@ -1078,7 +1078,7 @@ function SalesOrderDetailPage() {
         )}
         {emailModalOpen && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: showEmailPreview ? 760 : 480, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', transition: 'all 0.3s ease' }}>
+            <div style={{ background: 'var(--color-surface, var(--color-white))', borderRadius: 12, padding: 24, width: showEmailPreview ? 760 : 480, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--wms-shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1))', transition: 'all 0.3s ease' }}>
               <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 18, color: 'var(--wms-text-title)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <i className="bi bi-envelope-paper" style={{ color: 'var(--color-info-hover)' }} /> Gửi Email Báo Giá
               </h3>
@@ -1124,7 +1124,7 @@ function SalesOrderDetailPage() {
                       <p style={{ margin: '0 0 12px 0' }}>Chúng tôi xin gửi đến Quý khách chi tiết bảng báo giá đơn hàng với nội dung cụ thể như sau:</p>
 
                       {emailMessage && emailMessage.trim() && (
-                        <div style={{ background: 'var(--wms-bg-hover)', borderLeft: '4px solid #007bff', padding: '8px 12px', margin: '10px 0', fontStyle: 'italic', borderRadius: '0 4px 4px 0' }}>
+                        <div style={{ background: 'var(--wms-bg-hover)', borderLeft: '4px solid var(--wms-primary, var(--color-primary))', padding: '8px 12px', margin: '10px 0', fontStyle: 'italic', borderRadius: '0 4px 4px 0' }}>
                           <strong>Lời nhắn:</strong> {emailMessage.trim()}
                         </div>
                       )}

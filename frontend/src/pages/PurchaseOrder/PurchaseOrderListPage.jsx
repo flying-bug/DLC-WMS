@@ -12,6 +12,7 @@ import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import { exportToExcel } from '../../utils/excelExport';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 
 
 const STATUS_LABELS = {
@@ -220,6 +221,9 @@ function PurchaseOrderListPage() {
   const totalItems = orders.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const showPaymentDueDate = orders.some(order => Boolean(order.paymentDueDate));
+  const showExpectedDeliveryDate = orders.some(order => Boolean(order.expectedDeliveryDate));
+  const visibleColumnCount = 7 + Number(showPaymentDueDate) + Number(showExpectedDeliveryDate);
 
   return (
     <AdminLayout>
@@ -309,10 +313,10 @@ function PurchaseOrderListPage() {
                 <tr>
                   <th style={{ width: 45 }}>#</th>
                   <th style={{ width: 110 }}>Mã đơn</th>
-                  <th style={{ width: 95 }}>Ngày lập</th>
+                  <th style={{ width: 115 }}>Ngày lập</th>
                   <th>Nhà cung cấp</th>
-                  <th style={{ width: 125 }}>Hạn công nợ</th>
-                  <th style={{ width: 130 }}>Ngày giao DK</th>
+                  {showPaymentDueDate && <th style={{ width: 125 }}>Hạn công nợ</th>}
+                  {showExpectedDeliveryDate && <th style={{ width: 130 }}>Ngày giao DK</th>}
                   <th style={{ width: 125, textAlign: 'right' }}>Tổng tiền</th>
                   <th style={{ width: 100 }}>Trạng thái</th>
                   <th style={{ width: 120, textAlign: 'center' }}>Thao tác</th>
@@ -336,10 +340,10 @@ function PurchaseOrderListPage() {
                           {po.poCode}
                         </a>
                       </td>
-                      <td>{fmtDate(po.poDate)}</td>
+                      <td className={styles.dateOnlyCell}>{fmtDate(po.poDate)}</td>
                       <td>{po.partnerName || `#${po.partnerId}`}</td>
-                      <td>{renderPaymentDueDateBadge(po)}</td>
-                      <td>{renderDeliveryDateBadge(po)}</td>
+                      {showPaymentDueDate && <td>{renderPaymentDueDateBadge(po)}</td>}
+                      {showExpectedDeliveryDate && <td>{renderDeliveryDateBadge(po)}</td>}
                       <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>
                         {money(po.totalAmount)}
                       </td>
@@ -395,7 +399,7 @@ function PurchaseOrderListPage() {
                   );
                 }) : (
                   <tr>
-                    <td colSpan={9} className={styles.textCenter} style={{ padding: 40 }}>
+                    <td colSpan={visibleColumnCount} className={styles.textCenter} style={{ padding: 40 }}>
                       {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy đơn mua hàng nào'}
                     </td>
                   </tr>
@@ -440,6 +444,17 @@ function PurchaseOrderListPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className={styles.sharedPagination}>
+          <Pagination
+            page={currentPage - 1}
+            totalPages={Math.max(1, totalPages)}
+            totalElements={totalItems}
+            size={pageSize}
+            onPageChange={(page) => setCurrentPage(page + 1)}
+            onSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          />
         </div>
 
         {/* Modals */}

@@ -9,6 +9,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
 import { formatDateOnly } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 
 
 const STATUS_LABELS = {
@@ -445,6 +446,15 @@ function WarrantyListPage() {
             )}
           </div>
         </div>
+
+        <Pagination
+          page={currentPage - 1}
+          totalPages={Math.max(1, totalPages)}
+          totalElements={totalItems}
+          size={pageSize}
+          onPageChange={(page) => setCurrentPage(page + 1)}
+          onSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+        />
 
         {showSettingsModal && (
           <Modal

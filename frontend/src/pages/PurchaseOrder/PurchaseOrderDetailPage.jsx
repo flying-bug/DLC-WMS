@@ -384,13 +384,13 @@ function PurchaseOrderDetailPage() {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'right', fontWeight: 600, padding: '12px 8px', fontSize: 14 }}>
+                  <td colSpan={9} className={styles.totalLabel}>
                     TỔNG CỘNG:
                   </td>
-                  <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-link)', fontSize: 15, padding: '12px 8px' }}>
+                  <td className={styles.totalAmount}>
                     {money(po.totalAmount)}
                   </td>
-                  <td />
+                  <td className={styles.totalNoteCell} />
                 </tr>
               </tfoot>
             </table>

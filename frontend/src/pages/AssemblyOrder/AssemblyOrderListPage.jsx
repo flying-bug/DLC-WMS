@@ -11,6 +11,7 @@ import { formatDateOnly } from '../../utils/dateFormat';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import styles from './AssemblyOrderListPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 
 
 const STATUS_META = {
@@ -446,6 +447,15 @@ function AssemblyOrderListPage() {
                     </div>
                 </div>
             </div>
+            <Pagination
+                page={page - 1}
+                totalPages={Math.max(1, totalPages)}
+                totalElements={totalElements}
+                size={pageSize}
+                onPageChange={(nextPage) => setPage(nextPage + 1)}
+                onSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            />
+
             <Modal
                 isOpen={showSettingsModal}
                 onClose={() => setShowSettingsModal(false)}

@@ -20,6 +20,7 @@ import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import styles from './ExportSlipPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import { canViewPricing } from '../../auth/session';
 
 
@@ -568,16 +569,12 @@ function ExportSlipPage() {
                       </td>
                     )}
                     <td className={styles.textCenter}>
-                      <div style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className={styles.misaActionLink}
-                          onClick={() => setOpenDropdownId(openDropdownId === slip.id ? null : slip.id)}
-                        >
-                          Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
-                        </button>
-                        {openDropdownId === slip.id && (
-                          <div className={styles.actionDropdownMenu}>
+                      <RowActionMenu
+                        open={openDropdownId === slip.id}
+                        onToggle={() => setOpenDropdownId(openDropdownId === slip.id ? null : slip.id)}
+                        buttonClassName={styles.misaActionLink}
+                        menuClassName={styles.actionDropdownMenu}
+                      >
                             <button
                               type="button"
                               className={styles.dropdownItem}
@@ -614,9 +611,7 @@ function ExportSlipPage() {
                                 <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
                               </button>
                             )}
-                          </div>
-                        )}
-                      </div>
+                      </RowActionMenu>
                     </td>
 
                   </tr>

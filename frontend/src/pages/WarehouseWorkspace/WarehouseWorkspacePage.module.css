@@ -116,6 +116,8 @@
   position: relative;
   display: flex;
   align-items: center;
+  order: -1;
+  flex-shrink: 0;
 }
 
 .searchIcon {
@@ -126,7 +128,7 @@
 }
 
 .searchInput {
-  padding: 5px 12px 5px 32px;
+  padding: 5px 34px 5px 32px;
   border: 1px solid var(--color-border-subtle, var(--wms-border-strong));
   border-radius: var(--border-radius-pill, 20px);
   font-size: 0.8125rem;
@@ -141,6 +143,28 @@
   border-color: var(--color-primary, var(--wms-primary));
   background: var(--color-surface, var(--color-white));
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.clearSearchButton {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted-2, var(--wms-text-subtle));
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.clearSearchButton:hover {
+  background: var(--color-bg-hover, var(--wms-bg-hover));
+  color: var(--color-text-strong, var(--wms-text-title));
 }
 
 .periodSelect {

@@ -8,6 +8,7 @@ import styles from './ProductCategoryPage.module.css';
 
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 
 
 const STATUS_LABELS = {
@@ -55,7 +56,8 @@ const ProductCategoryPage = () => {
             if (filters.status) params.status = filters.status; // Currently API doesn't filter by status, but we send it anyway
 
             const res = await axiosClient.get('/product-categories', { params });
-            let data = res.data.content || [];
+            const payload = res.data?.data ?? res.data;
+            let data = payload?.content || [];
 
             // Client-side fallback filter for status if API doesn't support it
             if (filters.status) {
@@ -63,8 +65,9 @@ const ProductCategoryPage = () => {
             }
 
             setCategories(data);
-            setTotalPages(res.data.totalPages || 1);
-            setTotalElements(res.data.totalElements || data.length);
+            const total = filters.status ? data.length : (payload?.totalElements ?? data.length);
+            setTotalPages(Math.max(1, Math.ceil(total / pageSize)));
+            setTotalElements(total);
         } catch (error) {
             console.error('Lỗi tải danh mục sản phẩm:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh mục sản phẩm');
@@ -438,6 +441,14 @@ const ProductCategoryPage = () => {
                     onClose={hideToast}
                 />
             )}
+        <Pagination
+          page={currentPage - 1}
+          totalPages={Math.max(1, totalPages)}
+          totalElements={totalElements}
+          size={pageSize}
+          onPageChange={(page) => setCurrentPage(page + 1)}
+          onSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+        />
         </AdminLayout>
     );
 };
