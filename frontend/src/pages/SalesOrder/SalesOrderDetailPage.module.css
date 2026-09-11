@@ -173,7 +173,7 @@
 
 .infoRow {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: baseline;
   gap: 8px;
 }
@@ -188,7 +188,7 @@
 .infoValue {
   font-size: 13px;
   color: var(--color-text-heading);
-  text-align: right;
+  text-align: left;
   word-break: break-word;
 }
 

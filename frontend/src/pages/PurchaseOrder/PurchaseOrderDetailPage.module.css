@@ -91,7 +91,7 @@
 
 .infoRow {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: flex-start;
   padding: 6px 0;
   border-bottom: 1px solid var(--wms-bg-hover);
@@ -131,7 +131,7 @@
 .infoValue {
   font-size: 13px;
   color: var(--wms-text-strong);
-  text-align: right;
+  text-align: left;
   word-break: break-word;
 }
 
