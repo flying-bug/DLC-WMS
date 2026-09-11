@@ -128,6 +128,11 @@
   flex-shrink: 0;
 }
 
+.infoLabel::after {
+  content: ':';
+  margin-left: 2px;
+}
+
 .infoValue {
   font-size: 13px;
   color: var(--wms-text-strong);
@@ -190,6 +195,27 @@
   background: var(--wms-bg-soft);
   border-top: 2px solid var(--wms-border-base);
   border-bottom: none;
+}
+
+.linesTable tfoot .totalLabel {
+  padding: 12px 10px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wms-text-strong);
+}
+
+.linesTable tfoot .totalAmount {
+  padding: 12px 10px;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-primary-link);
+}
+
+.linesTable tfoot .totalNoteCell {
+  padding: 12px 10px;
 }
 
 /* Action buttons */

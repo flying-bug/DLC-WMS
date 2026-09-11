@@ -709,12 +709,102 @@
 .miniBtnAppend:hover { background-color: var(--wms-primary); }
 
 .table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  position: static;
+  top: auto;
+  z-index: auto;
   background-color: var(--wms-bg-soft);
+  box-shadow: 0 1px 0 var(--color-border);
+}
+
+.table thead {
+  position: static;
+  z-index: auto;
+}
+
+.table tbody {
+  position: static;
+  z-index: auto;
 }
 .textRight {
   text-align: right !important;
+}
+
+/* Keep the total row aligned with the 12-column detail table. */
+.table tfoot td {
+  height: 42px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.itemPaginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.itemPagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.itemPageNav {
+  min-width: 40px;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.itemPageNav:hover:not(:disabled) {
+  border-color: var(--color-border-muted);
+  background-color: var(--wms-bg-soft);
+  color: var(--color-text);
+}
+
+.itemPageNav:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.itemPageInput {
+  width: 34px;
+  height: 28px;
+  padding: 0 4px;
+  border: 1px solid var(--wms-primary);
+  border-radius: 4px;
+  background-color: #fff;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+}
+
+.itemPageInput:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wms-primary) 18%, transparent);
+}
+
+.itemPageTotal {
+  min-width: 22px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .itemPaginationBar {
+    flex-wrap: wrap;
+  }
 }
 
