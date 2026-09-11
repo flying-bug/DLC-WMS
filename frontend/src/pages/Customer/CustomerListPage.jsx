@@ -63,8 +63,9 @@ const CustomerListPage = () => {
             const payload = response.data?.data ?? response.data;
             if (payload) {
                 setCustomers(payload.content || []);
-                setTotalPages(payload.totalPages || 0);
-                setTotalElements(payload.totalElements || 0);
+                const total = payload.totalElements ?? payload.content?.length ?? 0;
+                setTotalPages(Math.max(1, Math.ceil(total / currentSize)));
+                setTotalElements(total);
             }
             setSelectedIds([]);
         } catch (error) {

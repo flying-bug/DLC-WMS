@@ -17,6 +17,7 @@ import Modal from '../../components/ui/Modal/Modal';
 import ProductDetailModal from './components/ProductDetailModal';
 import ProductVariantConfigurator from './components/ProductVariantConfigurator';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
 
 const defaultFormData = {
@@ -886,10 +887,11 @@ const ProductPage = () => {
             if (productsResult.status === 'rejected') throw productsResult.reason;
 
             const res = productsResult.value;
-            const content = res.data.content || [];
+            const payload = res.data?.data ?? res.data;
+            const content = payload?.content || [];
             setProducts(content);
-            setTotalPages(res.data.totalPages || 0);
-            setTotalElements(res.data.totalElements || 0);
+            setTotalPages(payload?.totalPages || 0);
+            setTotalElements(payload?.totalElements ?? content.length);
 
             if (stockSummaryResult.status === 'fulfilled') {
                 const summary = stockSummaryResult.value.data || {};
@@ -1820,6 +1822,17 @@ const ProductPage = () => {
                             </button>
                         </div>
                     )}
+                </div>
+
+                <div className={styles.sharedPagination}>
+                    <Pagination
+                        page={page}
+                        totalPages={Math.max(1, totalPages)}
+                        totalElements={totalElements}
+                        size={size}
+                        onPageChange={setPage}
+                        onSizeChange={(nextSize) => { setSize(nextSize); setPage(0); }}
+                    />
                 </div>
 
                 {showModal && (
