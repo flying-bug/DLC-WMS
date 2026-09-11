@@ -12,6 +12,7 @@ import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets
 import { exportToExcel } from '../../utils/excelExport';
 import { printQuotation } from '../../utils/printQuotation';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 
 
 const STATUS_LABELS = {
@@ -425,6 +426,17 @@ function SalesOrderListPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className={styles.sharedPagination}>
+          <Pagination
+            page={currentPage - 1}
+            totalPages={Math.max(1, totalPages)}
+            totalElements={totalItems}
+            size={pageSize}
+            onPageChange={(page) => setCurrentPage(page + 1)}
+            onSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          />
         </div>
 
         {/* Modals */}

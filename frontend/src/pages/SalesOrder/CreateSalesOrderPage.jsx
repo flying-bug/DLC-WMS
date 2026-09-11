@@ -752,13 +752,11 @@ function CreateSalesOrderPage() {
                               partnerId: opt?.value || null,
                               deliveryAddress: cust ? cust.address || '' : ''
                             }));
-                            if (cust) {
-                              setDirectCustomer({
-                                phone: cust.phone || '',
-                                name: cust.name || '',
-                                address: cust.address || '',
-                              });
-                            }
+                            setDirectCustomer(cust ? {
+                              phone: cust.phone || '',
+                              name: cust.name || '',
+                              address: cust.address || '',
+                            } : { phone: '', name: '', address: '' });
                           }}
                           placeholder={mode === 'direct' ? "Chọn khách hàng (hoặc để trống nếu là khách vãng lai)..." : "Chọn khách hàng..."}
                           isClearable
@@ -776,7 +774,7 @@ function CreateSalesOrderPage() {
                     </div>
                   </div>
 
-                  {mode === 'direct' && !form.partnerId && (
+                  {mode === 'direct' && (
                     <>
                       <div className={styles.directGrid}>
                         <div className={styles.fieldRow}>
@@ -830,7 +828,7 @@ function CreateSalesOrderPage() {
                     <label className={styles.label}>Ghi chú / Diễn giải</label>
                     <textarea
                       className={styles.textarea}
-                      rows={mode === 'direct' && form.partnerId ? 4 : 2}
+                      rows={2}
                       value={form.note}
                       onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
                       placeholder="Ghi chú thêm về đơn hàng..."

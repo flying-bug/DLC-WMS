@@ -131,7 +131,7 @@
 
 .btnSecondary {
   padding: 7px 12px;
-  background: #fff;
+  background: var(--color-surface, var(--color-white));
   border: 1px solid var(--color-border-muted);
   border-radius: 7px;
   font-size: 13px;
@@ -150,7 +150,7 @@
 
 /* ── Card ── */
 .card {
-  background: #fff;
+  background: var(--color-surface, var(--color-white));
   border: 1px solid var(--wms-border-base);
   border-radius: 10px;
   padding: 18px 20px;
@@ -233,7 +233,7 @@
 .table tbody tr:hover { background: var(--wms-bg-soft); }
 
 .table tfoot td {
-  background: #fafbfc;
+  background: var(--wms-bg-soft, var(--color-bg-subtle));
   border-top: 2px solid var(--wms-border-base);
   border-bottom: none;
 }

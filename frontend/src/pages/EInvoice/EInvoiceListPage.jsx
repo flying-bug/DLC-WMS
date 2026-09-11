@@ -291,7 +291,7 @@ export default function EInvoiceListPage() {
                           </div>
                           {inv.cqtCode && (
                             <div
-                              style={{ fontSize: '10px', color: 'var(--wms-text-muted)', fontFamily: 'JetBrains Mono, monospace', marginTop: '2px', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              style={{ fontSize: '10px', color: 'var(--wms-text-muted)', fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums', marginTop: '2px', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                               title={inv.cqtCode}
                             >
                               {inv.cqtCode}
