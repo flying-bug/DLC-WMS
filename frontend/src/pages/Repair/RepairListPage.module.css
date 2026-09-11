@@ -401,7 +401,7 @@
 
 /* Pagination */
 .pagination {
-  display: flex;
+  display: none;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;

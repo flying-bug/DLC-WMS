@@ -416,7 +416,7 @@
 
 /* Pagination */
 .pagination {
-  display: flex;
+  display: none;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
@@ -881,7 +881,7 @@
   flex: 1;
 }
 
-.searchBox i:first-child {
+.searchBox > i:first-child {
   position: absolute;
   left: 12px;
   color: var(--color-text-muted);
@@ -890,7 +890,7 @@
 
 .searchInput {
   width: 100%;
-  padding: 8px 36px 8px 36px;
+  padding: 8px 48px 8px 36px;
   border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   font-size: 14px;
@@ -906,7 +906,9 @@
 
 .clearSearchBtn {
   position: absolute;
-  right: 10px;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--color-text-muted);
@@ -914,10 +916,16 @@
   padding: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  z-index: 2;
   font-size: 14px;
 }
 
 .clearSearchBtn:hover {
+  background-color: var(--color-bg-hover, var(--wms-bg-hover));
   color: var(--color-danger);
 }
 

@@ -124,7 +124,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
     }}>
       <div style={{
-        background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '680px',
+        background: 'var(--color-surface, var(--color-white))', borderRadius: '12px', width: '100%', maxWidth: '680px',
         maxHeight: '90vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
       }}>
@@ -132,7 +132,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
         <div style={{
           padding: '16px 20px', borderBottom: '1px solid var(--wms-border-base)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: 'linear-gradient(to right, var(--wms-success), var(--wms-success-hover))', color: '#fff'
+          background: 'linear-gradient(to right, var(--wms-success), var(--wms-success-hover))', color: 'var(--color-white)'
         }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -140,7 +140,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
             </h3>
             <span style={{ fontSize: '12px', opacity: 0.9 }}>Chuẩn Nghị định 123/2020/NĐ-CP & Thông tư 78/2021/TT-BTC</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#fff' }}>&times;</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--color-white)' }}>&times;</button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
@@ -188,8 +188,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                   border: buyerType === 'COMPANY' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
-                  background: buyerType === 'COMPANY' ? 'var(--wms-success-soft)' : '#fff',
-                  color: buyerType === 'COMPANY' ? '#065f46' : 'var(--wms-text-muted)',
+                  background: buyerType === 'COMPANY' ? 'var(--wms-success-soft)' : 'var(--color-surface, var(--color-white))',
+                  color: buyerType === 'COMPANY' ? 'var(--wms-success-deep, var(--wms-success-hover))' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -202,8 +202,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                   border: buyerType === 'INDIVIDUAL' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
-                  background: buyerType === 'INDIVIDUAL' ? 'var(--wms-success-soft)' : '#fff',
-                  color: buyerType === 'INDIVIDUAL' ? '#065f46' : 'var(--wms-text-muted)',
+                  background: buyerType === 'INDIVIDUAL' ? 'var(--wms-success-soft)' : 'var(--color-surface, var(--color-white))',
+                  color: buyerType === 'INDIVIDUAL' ? 'var(--wms-success-deep, var(--wms-success-hover))' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -216,8 +216,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                   border: buyerType === 'ANONYMOUS' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
-                  background: buyerType === 'ANONYMOUS' ? 'var(--wms-success-soft)' : '#fff',
-                  color: buyerType === 'ANONYMOUS' ? '#065f46' : 'var(--wms-text-muted)',
+                  background: buyerType === 'ANONYMOUS' ? 'var(--wms-success-soft)' : 'var(--color-surface, var(--color-white))',
+                  color: buyerType === 'ANONYMOUS' ? 'var(--wms-success-deep, var(--wms-success-hover))' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -247,7 +247,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                     onClick={handleLookupTax}
                     disabled={lookingUpTax || !buyerTaxCode?.trim()}
                     style={{
-                      padding: '0 12px', background: 'var(--color-info-hover)', color: '#fff', border: 'none',
+                      padding: '0 12px', background: 'var(--color-info-hover)', color: 'var(--color-white)', border: 'none',
                       borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                       display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap'
                     }}
@@ -259,8 +259,8 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 {taxLookupMsg.text && (
                   <div style={{
                     marginTop: '4px', fontSize: '12px',
-                    color: taxLookupMsg.type === 'success' ? '#166534' : 'var(--wms-danger)',
-                    background: taxLookupMsg.type === 'success' ? 'var(--color-success-bg-soft)' : '#fef2f2',
+                    color: taxLookupMsg.type === 'success' ? 'var(--wms-success-deep, var(--wms-success))' : 'var(--wms-danger)',
+                    background: taxLookupMsg.type === 'success' ? 'var(--color-success-bg-soft)' : 'var(--wms-danger-soft, var(--color-danger-bg, #fef2f2))',
                     padding: '4px 8px', borderRadius: '4px'
                   }}>
                     {taxLookupMsg.text}
@@ -295,7 +295,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onChange={(e) => setBuyerName(e.target.value)}
                 disabled={buyerType === 'ANONYMOUS'}
                 placeholder="Họ tên người mua..."
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : '#fff' }}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : 'var(--color-surface, var(--color-white))', color: 'var(--wms-text-strong)' }}
               />
             </div>
 
@@ -325,7 +325,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                   onChange={(e) => setBuyerPhone(e.target.value)}
                   disabled={buyerType === 'ANONYMOUS'}
                   placeholder="Số điện thoại..."
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : '#fff' }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : 'var(--color-surface, var(--color-white))', color: 'var(--wms-text-strong)' }}
                 />
               </div>
             )}
@@ -340,7 +340,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onChange={(e) => setBuyerEmail(e.target.value)}
                 disabled={buyerType === 'ANONYMOUS'}
                 placeholder="email@example.com..."
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : '#fff' }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: buyerType === 'ANONYMOUS' ? 'var(--wms-bg-hover)' : 'var(--color-surface, var(--color-white))', color: 'var(--wms-text-strong)' }}
               />
             </div>
 
@@ -354,7 +354,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                   value={buyerAddress}
                   onChange={(e) => setBuyerAddress(e.target.value)}
                   placeholder="Địa chỉ..."
-                  style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', backgroundColor: 'var(--color-surface, var(--color-white))', color: 'var(--wms-text-strong)' }}
                 />
               </div>
             )}
@@ -367,7 +367,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
               onClick={onClose}
               disabled={loading}
               style={{
-                padding: '8px 16px', background: '#fff', border: '1px solid var(--wms-border-strong)',
+                padding: '8px 16px', background: 'var(--color-surface, var(--color-white))', border: '1px solid var(--wms-border-strong)',
                 borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--wms-text-muted)'
               }}
             >
@@ -378,7 +378,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
               disabled={loading}
               style={{
                 padding: '8px 18px', background: 'var(--wms-success)', border: 'none',
-                borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#fff',
+                borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--color-white)',
                 display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}
             >

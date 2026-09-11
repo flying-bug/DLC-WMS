@@ -8,6 +8,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
@@ -825,6 +826,15 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       </div>
 
       {/* MODAL LẬP / SỬA PHIẾU THU CHI */}
+      <Pagination
+        page={safePage - 1}
+        totalPages={Math.max(1, totalPages)}
+        totalElements={totalItems}
+        size={pageSize}
+        onPageChange={(page) => setCurrentPage(page + 1)}
+        onSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+      />
+
       {showFormModal && (
         <div className={styles.modalOverlay} onClick={() => setShowFormModal(false)}>
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>

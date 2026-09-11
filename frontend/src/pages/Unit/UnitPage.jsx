@@ -8,6 +8,7 @@ import styles from './UnitPage.module.css';
 
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 
 
 const STATUS_LABELS = {
@@ -45,14 +46,17 @@ const UnitPage = () => {
             if (filters.status) params.status = filters.status;
             
             const res = await axiosClient.get('/units', { params });
-            if (res.data && res.data.content) {
-                setUnits(res.data.content);
-                setTotalPages(res.data.totalPages);
-                setTotalElements(res.data.totalElements);
+            const payload = res.data?.data ?? res.data;
+            if (payload && payload.content) {
+                const total = payload.totalElements ?? payload.content.length;
+                setUnits(payload.content);
+                setTotalPages(Math.max(1, Math.ceil(total / pageSize)));
+                setTotalElements(total);
             } else {
-                setUnits(res.data || []);
+                const content = Array.isArray(payload) ? payload : [];
+                setUnits(content);
                 setTotalPages(1);
-                setTotalElements(res.data?.length || 0);
+                setTotalElements(content.length);
             }
         } catch (error) {
             console.error('Lỗi tải danh sách đơn vị tính:', error);
@@ -401,6 +405,14 @@ const UnitPage = () => {
                     onClose={hideToast}
                 />
             )}
+        <Pagination
+          page={currentPage - 1}
+          totalPages={Math.max(1, totalPages)}
+          totalElements={totalElements}
+          size={pageSize}
+          onPageChange={(page) => setCurrentPage(page + 1)}
+          onSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+        />
         </AdminLayout>
     );
 };

@@ -287,10 +287,16 @@ export default function WarehouseDocumentFormPage() {
     return (
       <AdminLayout>
         <div className={styles.emptyContainer}>
-          <h3>Không tìm thấy chứng từ kho.</h3>
-          <button type="button" className={styles.btnSecondary} onClick={() => navigate('/warehouse-workspace')}>
-            <i className="fas fa-arrow-left"></i> Quay lại danh sách
-          </button>
+          <div className={styles.emptyStateCard}>
+            <div className={styles.emptyStateIcon} aria-hidden="true">
+              <i className="fas fa-file-invoice"></i>
+            </div>
+            <h2>Không tìm thấy chứng từ kho</h2>
+            <p>Chứng từ không tồn tại hoặc không còn khả dụng. Hãy quay lại danh sách để chọn chứng từ khác.</p>
+            <button type="button" className={styles.emptyStateAction} onClick={() => navigate('/warehouse-workspace')}>
+              <i className="fas fa-arrow-left"></i> Quay lại danh sách
+            </button>
+          </div>
         </div>
       </AdminLayout>
     );

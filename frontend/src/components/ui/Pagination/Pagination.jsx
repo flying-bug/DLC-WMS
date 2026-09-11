@@ -11,10 +11,17 @@ const Pagination = ({
     onSizeChange,
     sizeOptions = [10, 20, 50, 100]
 }) => {
+    // Always derive the page count from the record count and selected page size.
+    // Some endpoints return a stale/inconsistent totalPages value after filtering.
+    const calculatedTotalPages = totalElements > 0
+        ? Math.max(1, Math.ceil(totalElements / size))
+        : 1;
+    const effectiveTotalPages = calculatedTotalPages;
+
     // Calculate which page numbers to show
     const getVisiblePages = () => {
         const pages = [];
-        const maxPages = Math.max(1, totalPages);
+        const maxPages = effectiveTotalPages;
         if (maxPages <= 7) {
             for (let i = 0; i < maxPages; i++) pages.push(i);
         } else {
@@ -53,7 +60,7 @@ const Pagination = ({
                             <option key={opt} value={opt}>{opt}</option>
                         ))}
                     </select>
-                    <span>bản ghi / trang (Tổng số <strong>{totalElements}</strong> bản ghi)</span>
+                    <span>trên tổng số {totalElements} bản ghi</span>
                 </div>
             </div>
             
@@ -85,7 +92,7 @@ const Pagination = ({
                                     if (e.key === 'Enter') {
                                         let newPage = parseInt(e.target.value, 10);
                                         if (!isNaN(newPage)) {
-                                            newPage = Math.max(1, Math.min(totalPages, newPage));
+                                            newPage = Math.max(1, Math.min(effectiveTotalPages, newPage));
                                             onPageChange(newPage - 1);
                                             e.target.blur();
                                         } else {
@@ -107,8 +114,8 @@ const Pagination = ({
                 </div>
 
                 <button 
-                    disabled={page >= totalPages - 1} 
-                    onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+                    disabled={page >= effectiveTotalPages - 1}
+                    onClick={() => onPageChange(Math.min(effectiveTotalPages - 1, page + 1))}
                     className={styles.pageNavBtn}
                     style={{ width: 'auto', padding: '0 12px', gap: '6px', border: 'none', background: 'none' }}
                 >
