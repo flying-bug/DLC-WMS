@@ -18,6 +18,10 @@ export const updateAssemblyBom = (id, data) => {
     return axiosClient.put(`/assembly-boms/${id}`, data);
 };
 
+export const submitAssemblyBom = (id) => axiosClient.post(`/assembly-boms/${id}/submit`);
+export const approveAssemblyBom = (id) => axiosClient.post(`/assembly-boms/${id}/approve`);
+export const rejectAssemblyBom = (id, reason) => axiosClient.post(`/assembly-boms/${id}/reject`, { reason });
+
 // ─── Assembly Order APIs ──────────────────────────────────────────────────────
 
 export const getAssemblyOrders = (params = {}) => {
@@ -43,6 +47,13 @@ export const updateAssemblyOrder = (id, data) => {
 export const updateAssemblyOrderNote = (id, note) => {
     return axiosClient.patch(`/assembly-orders/${id}/note`, { note });
 };
+
+export const submitAssemblyOrder = (id) => axiosClient.post(`/assembly-orders/${id}/submit`);
+export const approveAssemblyOrder = (id) => axiosClient.post(`/assembly-orders/${id}/approve`);
+export const rejectAssemblyOrder = (id, reason) => axiosClient.post(`/assembly-orders/${id}/reject`, { reason });
+export const requestAssemblyOrderCancel = (id, reason) => axiosClient.post(`/assembly-orders/${id}/cancel-request`, { reason });
+export const confirmAssemblyOrderCancel = (id) => axiosClient.post(`/assembly-orders/${id}/cancel-confirm`);
+export const getAssemblyOrderDocuments = (id) => axiosClient.get(`/assembly-orders/${id}/inventory-documents`);
 
 /**
  * Cập nhật trạng thái lệnh (Duyệt / Hủy…)

@@ -35,7 +35,7 @@ function PermissionDetailPage() {
 
         // Kỹ thuật & Lắp ráp
         assembly_config: { full: false, view: false, add: false, edit: false },
-        assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false, submit: false, approve: false, execute: false, complete: false },
         warranty: { full: false, view: false, add: false, edit: false },
         repair: { full: false, view: false, add: false, edit: false, delete: false },
 
@@ -75,17 +75,19 @@ function PermissionDetailPage() {
             'transfer:view', 'transfer:add', 'transfer:edit', 'transfer:delete', 'transfer:export', 'transfer:print',
             'stocktake:view', 'stocktake:add', 'stocktake:edit', 'stocktake:delete', 'stocktake:export', 'stocktake:print',
             'product:view', 'unit:view', 'brand:view',
+            'assembly:view', 'assembly:execute', 'assembly:complete',
             'report_balance:view', 'report_balance:export', 'report_ledger:view', 'report_ledger:export', 'report_transfer:view', 'report_transfer:export',
             'ai_chat:view'
         ],
         ROLE_TECHNICIAN: [
             'assembly_config:view', 'assembly_config:add', 'assembly_config:edit',
-            'assembly:view', 'assembly:add', 'assembly:edit', 'assembly:delete', 'assembly:export', 'assembly:print',
+            'assembly:view', 'assembly:add', 'assembly:edit', 'assembly:delete', 'assembly:export', 'assembly:print', 'assembly:submit',
             'warranty:view', 'warranty:add', 'warranty:edit',
             'repair:view', 'repair:add', 'repair:edit', 'repair:delete',
-            'product:view', 'export:view', 'ai_chat:view'
+            'warehouse_master:view', 'product:view', 'report_balance:view', 'export:view', 'ai_chat:view'
         ],
         ROLE_ACCOUNTANT: [
+            'assembly_config:view', 'assembly:view', 'assembly:approve',
             'import:view', 'import:add', 'import:edit', 'import:export', 'import:print',
             'sales_order:view', 'sales_order:add', 'sales_order:edit', 'sales_order:export', 'sales_order:print',
             'purchase_order:view', 'purchase_order:add', 'purchase_order:edit',
@@ -270,6 +272,10 @@ function PermissionDetailPage() {
             <td>{renderCheckbox(module, 'delete', name)}</td>
             <td>{renderCheckbox(module, 'export', name)}</td>
             <td>{renderCheckbox(module, 'print', name)}</td>
+            <td>{renderCheckbox(module, 'submit', name)}</td>
+            <td>{renderCheckbox(module, 'approve', name)}</td>
+            <td>{renderCheckbox(module, 'execute', name)}</td>
+            <td>{renderCheckbox(module, 'complete', name)}</td>
         </tr>
     );
 
@@ -344,108 +350,112 @@ function PermissionDetailPage() {
 
     return (
         <SuperAdminLayout>
-        <div className={styles.page}>
-            {/* Main */}
-            <div className={styles.main}>
-                <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-                    <button type="button" className={styles.breadcrumbItem} onClick={() => navigate('/users')}>Quản lý người dùng</button>
-                    <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
-                    <span className={styles.breadcrumbItem}>{userName}</span>
-                    <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
-                    <span className={styles.breadcrumbActive}>Phân quyền chi tiết</span>
-                </nav>
-                <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
-                <p className={styles.pageSubtitle}>Vai trò hiện tại: {userRolesDisplay}</p>
-
-                <div className={styles.layout}>
-                    {/* Sidebar */}
-                    <nav className={styles.sidebar} aria-label="Danh mục module">
-                        <div className={styles.sidebarHeader}>DANH MỤC MODULE</div>
-                        <button type="button" aria-pressed={activeCategory === 'warehouse'} className={`${styles.menuItem} ${activeCategory === 'warehouse' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('warehouse')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> 1. Quản lý kho</div>
-                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                        </button>
-                        <button type="button" aria-pressed={activeCategory === 'technical'} className={`${styles.menuItem} ${activeCategory === 'technical' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('technical')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-tools"></i> 2. Kỹ thuật & Lắp ráp</div>
-                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                        </button>
-                        <button type="button" aria-pressed={activeCategory === 'business'} className={`${styles.menuItem} ${activeCategory === 'business' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('business')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-receipt"></i> 3. Kinh doanh & Thu chi</div>
-                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                        </button>
-                        <button type="button" aria-pressed={activeCategory === 'master_data'} className={`${styles.menuItem} ${activeCategory === 'master_data' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('master_data')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-database"></i> 4. Danh mục & Đối tác</div>
-                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                        </button>
-                        <button type="button" aria-pressed={activeCategory === 'reports'} className={`${styles.menuItem} ${activeCategory === 'reports' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('reports')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> 5. Báo cáo & Thống kê</div>
-                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                        </button>
-                        <button type="button" aria-pressed={activeCategory === 'system'} className={`${styles.menuItem} ${activeCategory === 'system' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('system')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> 6. Quản trị hệ thống</div>
-                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                        </button>
+            <div className={styles.page}>
+                {/* Main */}
+                <div className={styles.main}>
+                    <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+                        <button type="button" className={styles.breadcrumbItem} onClick={() => navigate('/users')}>Quản lý người dùng</button>
+                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
+                        <span className={styles.breadcrumbItem}>{userName}</span>
+                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
+                        <span className={styles.breadcrumbActive}>Phân quyền chi tiết</span>
                     </nav>
+                    <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
+                    <p className={styles.pageSubtitle}>Vai trò hiện tại: {userRolesDisplay}</p>
 
-                    {/* Matrix Content */}
-                    <div className={styles.matrixPanel}>
-                        <div className={styles.matrixScrollControls} aria-label="Điều khiển cuộn ngang ma trận phân quyền">
-                            <span className={styles.matrixScrollHint}>Vuốt ngang hoặc dùng nút</span>
-                            <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(-1)} aria-label="Cuộn ma trận sang trái">
-                                <i className="bi bi-chevron-left" aria-hidden="true" />
+                    <div className={styles.layout}>
+                        {/* Sidebar */}
+                        <nav className={styles.sidebar} aria-label="Danh mục module">
+                            <div className={styles.sidebarHeader}>DANH MỤC MODULE</div>
+                            <button type="button" aria-pressed={activeCategory === 'warehouse'} className={`${styles.menuItem} ${activeCategory === 'warehouse' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('warehouse')}>
+                                <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> 1. Quản lý kho</div>
+                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                             </button>
-                            <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(1)} aria-label="Cuộn ma trận sang phải">
-                                <i className="bi bi-chevron-right" aria-hidden="true" />
+                            <button type="button" aria-pressed={activeCategory === 'technical'} className={`${styles.menuItem} ${activeCategory === 'technical' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('technical')}>
+                                <div className={styles.menuItemLeft}><i className="bi bi-tools"></i> 2. Kỹ thuật & Lắp ráp</div>
+                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                             </button>
-                        </div>
+                            <button type="button" aria-pressed={activeCategory === 'business'} className={`${styles.menuItem} ${activeCategory === 'business' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('business')}>
+                                <div className={styles.menuItemLeft}><i className="bi bi-receipt"></i> 3. Kinh doanh & Thu chi</div>
+                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
+                            </button>
+                            <button type="button" aria-pressed={activeCategory === 'master_data'} className={`${styles.menuItem} ${activeCategory === 'master_data' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('master_data')}>
+                                <div className={styles.menuItemLeft}><i className="bi bi-database"></i> 4. Danh mục & Đối tác</div>
+                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
+                            </button>
+                            <button type="button" aria-pressed={activeCategory === 'reports'} className={`${styles.menuItem} ${activeCategory === 'reports' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('reports')}>
+                                <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> 5. Báo cáo & Thống kê</div>
+                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
+                            </button>
+                            <button type="button" aria-pressed={activeCategory === 'system'} className={`${styles.menuItem} ${activeCategory === 'system' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('system')}>
+                                <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> 6. Quản trị hệ thống</div>
+                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
+                            </button>
+                        </nav>
 
-                        <div ref={matrixRef} className={styles.matrixContent}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>CHỨC NĂNG CHI TIẾT</th>
-                                        <th>Toàn quyền</th>
-                                        <th>Xem</th>
-                                        <th>Thêm</th>
-                                        <th>Sửa</th>
-                                        <th>Xóa</th>
-                                        <th>Xuất Excel</th>
-                                        <th>In</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {renderTableBody()}
-                                </tbody>
-                            </table>
+                        {/* Matrix Content */}
+                        <div className={styles.matrixPanel}>
+                            <div className={styles.matrixScrollControls} aria-label="Điều khiển cuộn ngang ma trận phân quyền">
+                                <span className={styles.matrixScrollHint}>Vuốt ngang hoặc dùng nút</span>
+                                <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(-1)} aria-label="Cuộn ma trận sang trái">
+                                    <i className="bi bi-chevron-left" aria-hidden="true" />
+                                </button>
+                                <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(1)} aria-label="Cuộn ma trận sang phải">
+                                    <i className="bi bi-chevron-right" aria-hidden="true" />
+                                </button>
+                            </div>
 
-                            <div className={styles.legend}>
-                                <div className={styles.legendLeft}>
-                                    <div className={styles.legendItem}>
-                                        <div className={`${styles.legendIcon} ${styles.legendIconSelected}`}></div>
-                                        <span>Đã chọn</span>
+                            <div ref={matrixRef} className={styles.matrixContent}>
+                                <table className={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>CHỨC NĂNG CHI TIẾT</th>
+                                            <th>Toàn quyền</th>
+                                            <th>Xem</th>
+                                            <th>Thêm</th>
+                                            <th>Sửa</th>
+                                            <th>Xóa</th>
+                                            <th>Xuất Excel</th>
+                                            <th>In</th>
+                                            <th>Gửi duyệt</th>
+                                            <th>Phê duyệt</th>
+                                            <th>Thực thi</th>
+                                            <th>Hoàn thành</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {renderTableBody()}
+                                    </tbody>
+                                </table>
+
+                                <div className={styles.legend}>
+                                    <div className={styles.legendLeft}>
+                                        <div className={styles.legendItem}>
+                                            <div className={`${styles.legendIcon} ${styles.legendIconSelected}`}></div>
+                                            <span>Đã chọn</span>
+                                        </div>
+                                        <div className={styles.legendItem}>
+                                            <div className={`${styles.legendIcon} ${styles.legendIconUnselected}`}></div>
+                                            <span>Chưa chọn</span>
+                                        </div>
                                     </div>
-                                    <div className={styles.legendItem}>
-                                        <div className={`${styles.legendIcon} ${styles.legendIconUnselected}`}></div>
-                                        <span>Chưa chọn</span>
+                                    <div className={styles.legendRight}>
+                                        <i className="bi bi-info-circle"></i> Đối với nghiệp vụ nào không cho sử dụng sẽ làm mờ và không thể tick
                                     </div>
-                                </div>
-                                <div className={styles.legendRight}>
-                                    <i className="bi bi-info-circle"></i> Đối với nghiệp vụ nào không cho sử dụng sẽ làm mờ và không thể tick
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Footer Actions */}
-            <div className={styles.footer}>
-                <button type="button" className="btnDefault" onClick={() => navigate('/users')}>Hủy</button>
-                <button type="button" className="btnPrimary" onClick={handleSave}>
-                    <i className="bi bi-save"></i> Lưu thay đổi
-                </button>
+                {/* Footer Actions */}
+                <div className={styles.footer}>
+                    <button type="button" className="btnDefault" onClick={() => navigate('/users')}>Hủy</button>
+                    <button type="button" className="btnPrimary" onClick={handleSave}>
+                        <i className="bi bi-save"></i> Lưu thay đổi
+                    </button>
+                </div>
             </div>
-        </div>
         </SuperAdminLayout>
     );
 }

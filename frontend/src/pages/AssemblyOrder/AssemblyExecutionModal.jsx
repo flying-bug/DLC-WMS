@@ -162,7 +162,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
         if (isUsed) { showToast('error', `Mã "${code}" đã được dùng cho bộ khác!`); return false; }
 
         try {
-            const res = await checkSerialExists(code);
+            const res = await checkSerialExists(code, order.targetVariantId);
             const exists = res.data?.data === true;
             if (order.orderType === 'ASSEMBLY' && exists) {
                 showToast('error', `Serial thành phẩm "${code}" đã tồn tại trong hệ thống.`);

@@ -29,6 +29,8 @@ public class ProductVariantRequest {
 
     private String manufacturerPartNumber;
     private String specsJson;
+    private String trackingMode;
+    private BigDecimal minStockQty;
     private Boolean active;
     private Integer warrantyMonths;
 }

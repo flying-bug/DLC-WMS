@@ -6,10 +6,14 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.time.LocalDate;
+import java.util.Locale;
+import java.util.UUID;
 
 @Entity
-@Table(name = "SERIAL_NUMBERS", uniqueConstraints = {@UniqueConstraint(columnNames = {"variant_id", "serial_number"})})
+@Table(name = "SERIAL_NUMBERS", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_serial_variant_normalized", columnNames = {"variant_id", "normalized_serial_number"}),
+        @UniqueConstraint(name = "uk_serial_asset_tag", columnNames = "asset_tag")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,6 +36,12 @@ public class SerialNumber {
 
     @Column(name = "serial_number", nullable = false, length = 100)
     private String serialNumber;
+
+    @Column(name = "normalized_serial_number", nullable = false, length = 100)
+    private String normalizedSerialNumber;
+
+    @Column(name = "asset_tag", nullable = false, length = 40)
+    private String assetTag;
 
     @Column(name = "status", nullable = false, length = 30)
     private String status;
@@ -60,4 +70,19 @@ public class SerialNumber {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_order_line_id", insertable = false, updatable = false)
     private SalesOrderLine salesOrderLine;
+
+    @PrePersist
+    @PreUpdate
+    void normalizeIdentity() {
+        normalizedSerialNumber = normalizeSerial(serialNumber);
+        if (assetTag == null || assetTag.isBlank()) {
+            assetTag = "DLC-" + UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
+        } else {
+            assetTag = assetTag.trim().toUpperCase(Locale.ROOT);
+        }
+    }
+
+    public static String normalizeSerial(String value) {
+        return value == null ? null : value.trim().toUpperCase(Locale.ROOT);
+    }
 }

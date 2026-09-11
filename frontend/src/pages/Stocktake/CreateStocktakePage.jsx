@@ -551,7 +551,8 @@ function CreateStocktakePage() {
 
   // Navigation for Export/Import Slips
   const handleCreateExportSlip = () => {
-    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0);
+    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0
+      || (l.serials || []).some(s => s.scanStatus === 'MISSING'));
     if (diffLackLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
@@ -563,22 +564,29 @@ function CreateStocktakePage() {
           code: formData.code,
           warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
           reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
-          lines: diffLackLines.map(l => ({
-            variantId: l.variantId,
-            sku: l.sku,
-            productName: l.itemName,
-            quantity: Math.abs(Number(l.diffQty)),
-            serials: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
-            serialNumbers: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
-            note: `Hàng thiếu từ kiểm kê ${formData.code}`
-          }))
+          lines: diffLackLines.map(l => {
+            const serials = (l.serials || [])
+              .filter(s => s.scanStatus === 'MISSING' || !s.scanStatus)
+              .map(s => (typeof s === 'string' ? s : s.serialNumber))
+              .filter(Boolean);
+            return {
+              variantId: l.variantId,
+              sku: l.sku,
+              productName: l.itemName,
+              quantity: serials.length || Math.abs(Number(l.diffQty)),
+              serials,
+              serialNumbers: serials,
+              note: `Hàng thiếu từ kiểm kê ${formData.code}`
+            };
+          })
         }
       }
     });
   };
 
   const handleCreateImportSlip = () => {
-    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0);
+    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0
+      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED'));
     if (diffSurplusLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
@@ -590,15 +598,21 @@ function CreateStocktakePage() {
           code: formData.code,
           warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
           reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
-          lines: diffSurplusLines.map(l => ({
-            variantId: l.variantId,
-            sku: l.sku,
-            productName: l.itemName,
-            quantity: Number(l.diffQty),
-            serials: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
-            serialNumbers: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
-            note: `Hàng thừa từ kiểm kê ${formData.code}`
-          }))
+          lines: diffSurplusLines.map(l => {
+            const serials = (l.serials || [])
+              .filter(s => s.scanStatus === 'UNEXPECTED' || !s.scanStatus)
+              .map(s => (typeof s === 'string' ? s : s.serialNumber))
+              .filter(Boolean);
+            return {
+              variantId: l.variantId,
+              sku: l.sku,
+              productName: l.itemName,
+              quantity: serials.length || Number(l.diffQty),
+              serials,
+              serialNumbers: serials,
+              note: `Hàng thừa từ kiểm kê ${formData.code}`
+            };
+          })
         }
       }
     });

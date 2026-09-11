@@ -363,7 +363,8 @@ function StocktakeDetailPage() {
   };
 
   const handleCreateExportSlip = () => {
-    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0);
+    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0
+      || (l.serials || []).some(s => s.scanStatus === 'MISSING'));
     if (diffLackLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
@@ -387,7 +388,7 @@ function StocktakeDetailPage() {
               variantId: l.variantId,
               sku: l.sku,
               productName: l.itemName,
-              quantity: Math.abs(Number(l.diffQty)),
+              quantity: missingSerials.length || Math.abs(Number(l.diffQty)),
               serials: serialList,
               serialNumbers: serialList,
               note: `Hàng thiếu từ kiểm kê ${formData.code}`
@@ -399,7 +400,8 @@ function StocktakeDetailPage() {
   };
 
   const handleCreateImportSlip = () => {
-    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0);
+    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0
+      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED'));
     if (diffSurplusLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
@@ -423,7 +425,7 @@ function StocktakeDetailPage() {
               variantId: l.variantId,
               sku: l.sku,
               productName: l.itemName,
-              quantity: Number(l.diffQty),
+              quantity: surplusSerials.length || Number(l.diffQty),
               serials: serialList,
               serialNumbers: serialList,
               note: `Hàng thừa từ kiểm kê ${formData.code}`
@@ -817,18 +819,21 @@ function StocktakeDetailPage() {
                 <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
                   <i className="bi bi-pencil"></i> Sửa
                 </button>
-                {lines.some(l => Number(l.diffQty || 0) < 0) && (
+                {lines.some(l => Number(l.diffQty || 0) < 0
+                  || (l.serials || []).some(s => s.scanStatus === 'MISSING')) && (
                   <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
                     <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
                   </button>
                 )}
-                {lines.some(l => Number(l.diffQty || 0) > 0) && (
+                {lines.some(l => Number(l.diffQty || 0) > 0
+                  || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED')) && (
                   <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
                     <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
                   </button>
                 )}
-                {!lines.some(l => Number(l.diffQty || 0) !== 0) && (
-                  <button className={styles.btnViewPrimary} style={{ backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }} onClick={handleComplete}>
+                {!lines.some(l => Number(l.diffQty || 0) !== 0
+                  || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED')) && (
+                  <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
                     <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
                   </button>
                 )}
@@ -853,8 +858,9 @@ function StocktakeDetailPage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>
               <i className="bi bi-box-arrow-right"></i> Lưu và Đóng
             </button>
-            {!lines.some(l => Number(l.diffQty || 0) !== 0) && (
-              <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }} onClick={handleComplete}>
+            {!lines.some(l => Number(l.diffQty || 0) !== 0
+              || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED')) && (
+              <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
                 <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
               </button>
             )}

@@ -17,8 +17,9 @@ const listFrom = (payload) => payload?.content ?? payload ?? [];
 
 const STATUS_META = {
     DRAFT: { label: 'Nháp', tone: 'info' },
+    PENDING_APPROVAL: { label: 'Chờ duyệt', tone: 'warning' },
     APPROVED: { label: 'Đã duyệt', tone: 'success' },
-    INACTIVE: { label: 'Ngừng dùng', tone: 'danger' }
+    REJECTED: { label: 'Từ chối', tone: 'danger' }
 };
 
 const COLUMN_OPTIONS = [
@@ -90,7 +91,7 @@ function AssemblyBomPage() {
         total: boms.length,
         approved: boms.filter((item) => item.status === 'APPROVED').length,
         draft: boms.filter((item) => item.status === 'DRAFT').length,
-        inactive: boms.filter((item) => item.status === 'INACTIVE').length
+        inactive: boms.filter((item) => item.status === 'REJECTED').length
     }), [boms]);
 
     const openCreate = () => {
@@ -215,15 +216,15 @@ function AssemblyBomPage() {
                         </div>
                     </div>
                     <div
-                        className={`${styles.summaryCard} ${statusFilter === 'INACTIVE' ? styles.activeCardDanger : ''}`}
-                        onClick={() => { setStatusFilter(statusFilter === 'INACTIVE' ? '' : 'INACTIVE'); setPage(1); }}
+                        className={`${styles.summaryCard} ${statusFilter === 'REJECTED' ? styles.activeCardDanger : ''}`}
+                        onClick={() => { setStatusFilter(statusFilter === 'REJECTED' ? '' : 'REJECTED'); setPage(1); }}
                     >
                         <div className={styles.iconDanger}>
                             <i className="bi bi-x-circle-fill"></i>
                         </div>
                         <div className={styles.cardInfo}>
                             <h3>{stats.inactive}</h3>
-                            <p>Ngừng dùng</p>
+                            <p>Bị từ chối</p>
                         </div>
                     </div>
                 </div>

@@ -305,7 +305,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                 String code = perm.getCode();
                 if (Arrays.asList("assembly_config", "assembly", "warranty", "repair").contains(mod)) {
                     techPerms.add(perm);
-                } else if (Arrays.asList("product", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                } else if (Arrays.asList("product", "export", "warehouse_master", "report_balance", "ai_chat").contains(mod)
+                        && code.endsWith(":view")) {
                     techPerms.add(perm);
                 }
             }

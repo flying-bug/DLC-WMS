@@ -15,8 +15,12 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'secondary' },
+    PENDING_APPROVAL: { label: 'Chờ duyệt', code: 'warning' },
+    REJECTED: { label: 'Từ chối', code: 'danger' },
     APPROVED: { label: 'Đã duyệt', code: 'primary' },
-    SUBMITTED: { label: 'Hoàn thành', code: 'success' }
+    IN_PROGRESS: { label: 'Đang thực hiện', code: 'warning' },
+    COMPLETED: { label: 'Hoàn thành', code: 'success' },
+    CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
 const TYPE_META = {
@@ -264,8 +268,8 @@ function AssemblyOrderListPage() {
                     </div>
 
                     <div className={styles.filterActions}>
-                        <button 
-                            className={styles.iconBtn} 
+                        <button
+                            className={styles.iconBtn}
                             onClick={() => { setFilters(DEFAULT_FILTERS); setPage(1); loadOrders(DEFAULT_FILTERS); }}
                             title="Tải lại"
                         >
@@ -355,7 +359,7 @@ function AssemblyOrderListPage() {
                                                     title="Cập nhật lệnh"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (item.status === 'SUBMITTED') {
+                                                        if (!['DRAFT', 'REJECTED'].includes(item.status)) {
                                                             showToast('error', 'Lệnh đã hoàn thành không được phép chỉnh sửa.');
                                                         } else {
                                                             navigate(`/assembly-orders/${item.id}?mode=edit`);

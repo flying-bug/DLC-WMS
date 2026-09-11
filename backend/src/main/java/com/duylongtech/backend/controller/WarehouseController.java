@@ -140,8 +140,10 @@ public class WarehouseController {
 
     @GetMapping("/serials/check")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Boolean>> checkSerialExists(@RequestParam String serialNumber) {
-        return ResponseEntity.ok(ApiResponse.success(warehouseService.checkSerialExists(serialNumber)));
+    public ResponseEntity<ApiResponse<Boolean>> checkSerialExists(
+            @RequestParam(required = false) Long variantId,
+            @RequestParam String serialNumber) {
+        return ResponseEntity.ok(ApiResponse.success(warehouseService.checkSerialExists(variantId, serialNumber)));
     }
 
     // ──────────────────────────────────────────────────────────

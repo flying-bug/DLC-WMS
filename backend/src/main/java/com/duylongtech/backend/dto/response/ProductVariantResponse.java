@@ -34,6 +34,9 @@ public class ProductVariantResponse {
     private BigDecimal vatRate;
     private String manufacturerPartNumber;
     private String specsJson;
+    private String trackingMode;
+    private Boolean trackLot;
+    private BigDecimal minStockQty;
     private Boolean active;
     private Integer warrantyMonths;
     private java.util.List<ProductUnitConversionResponse> unitConversions;

@@ -11,6 +11,7 @@ import com.duylongtech.backend.dto.response.StockAlertSummaryResponse;
 import com.duylongtech.backend.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@Slf4j
 public class ProductController {
     private final ProductService productService;
 
@@ -141,14 +143,49 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('product:add')")
-    @Auditable(action = AuditAction.CREATE, entityName = "Product", actionDescription = "Tạo mới sản phẩm")
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest dto) {
-        ProductResponse created = productService.createProduct(dto);
-        return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
-                .success(true)
-                .userMessage("Tạo hàng hóa/dịch vụ thành công")
-                .data(created)
-                .build());
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+        String ip = getClientIp(servletRequest);
+        String actor = getCurrentUser();
+        try {
+            ProductResponse created = productService.createProduct(dto);
+            try {
+                String detailJson = auditLogService.buildChangeDetail(null, created, "Tao moi san pham");
+                int variantCount = created.getVariants() != null ? created.getVariants().size() : 0;
+                auditLogService.logEvent(
+                    actor,
+                    "CREATE",
+                    "Product",
+                    created.getId(),
+                    "SUCCESS",
+                    "Them moi san pham " + created.getProductCode() + " voi " + variantCount + " SKU",
+                    ip,
+                    detailJson
+                );
+            } catch (Exception auditException) {
+                log.warn("Audit create product failed for product {}", created.getId(), auditException);
+            }
+            return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
+                    .success(true)
+                    .userMessage("Tạo hàng hóa/dịch vụ thành công")
+                    .data(created)
+                    .build());
+        } catch (Exception e) {
+            try {
+                auditLogService.logEvent(
+                    actor,
+                    "CREATE",
+                    "Product",
+                    null,
+                    "FAILED",
+                    "Them moi san pham " + dto.getProductCode() + " that bai: " + e.getMessage(),
+                    ip,
+                    null
+                );
+            } catch (Exception auditException) {
+                log.warn("Audit failed create product failed", auditException);
+            }
+            throw e;
+        }
     }
 
     @PutMapping("/{id}")
