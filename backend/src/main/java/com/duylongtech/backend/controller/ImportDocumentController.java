@@ -150,7 +150,7 @@ public class ImportDocumentController {
 
     @GetMapping("/{id}/logs")
     @Operation(summary = "Get all audit logs for this import document")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('import:edit') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('import:view') or hasAuthority('import:edit') or hasRole('SUPER_ADMIN')")
     public ApiResponse<List<com.duylongtech.backend.dto.response.AuditLogResponse>> getImportLogs(@PathVariable Long id) {
         org.springframework.data.domain.Page<com.duylongtech.backend.entity.AuditLog> page = auditLogService.getLogsForEntity("ImportSlip", id, 0, 100);
         List<com.duylongtech.backend.dto.response.AuditLogResponse> logs = page.getContent().stream()

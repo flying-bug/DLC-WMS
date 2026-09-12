@@ -33,7 +33,7 @@ public class EmailSettingsController {
      * Redirect user đến Google consent screen để kết nối Gmail.
      */
     @GetMapping("/google/connect")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     @Operation(summary = "Lấy URL để redirect đến Google OAuth consent screen")
     public ApiResponse<Map<String, String>> getConnectUrl() {
         String state = UUID.randomUUID().toString();
@@ -77,7 +77,7 @@ public class EmailSettingsController {
      * Trả về trạng thái kết nối Gmail hiện tại.
      */
     @GetMapping("/status")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     @Operation(summary = "Lấy trạng thái kết nối Gmail")
     public ApiResponse<GmailConnectionStatusDto> getStatus() {
         return ApiResponse.success(gmailOAuthService.getConnectionStatus());
@@ -87,7 +87,7 @@ public class EmailSettingsController {
      * Gửi email test qua Gmail API đã kết nối.
      */
     @PostMapping("/test")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     @Operation(summary = "Gửi email test qua Gmail đã kết nối")
     public ApiResponse<Map<String, String>> sendTestEmail(@RequestBody SendTestEmailRequest request) {
         gmailOAuthService.sendTestEmail(request.getToEmail());
@@ -98,7 +98,7 @@ public class EmailSettingsController {
      * Ngắt kết nối Gmail, xóa credentials khỏi hệ thống.
      */
     @PostMapping("/google/disconnect")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     @Operation(summary = "Ngắt kết nối Gmail OAuth")
     public ApiResponse<Map<String, String>> disconnectGmail() {
         gmailOAuthService.disconnect();

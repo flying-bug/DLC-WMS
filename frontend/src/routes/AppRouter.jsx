@@ -11,6 +11,7 @@ import ChangePasswordPage from '../pages/ChangePassword/ChangePasswordPage';
 import UsersPage from '../pages/UsersPage';
 import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
 import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
+import RolePermissionsPage from '../pages/Permissions/RolePermissionsPage';
 import ExportSlipPage from '../pages/ExportSlip/ExportSlipPage';
 import CreateExportSlipPage from '../pages/ExportSlip/CreateExportSlipPage';
 import UpdateExportSlipPage from '../pages/ExportSlip/UpdateExportSlipPage';
@@ -112,7 +113,7 @@ const NotFoundRedirect = () => {
 // Root route redirect based on role
 const RootRedirect = () => {
     if (!isValidToken()) return <Navigate to="/login" replace />;
-    const userRole = sessionStorage.getItem('role') || 'STAFF';
+    const userRole = sessionStorage.getItem('role') || '';
     const isSuperAdmin = ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN'].includes(userRole.toUpperCase());
     return isSuperAdmin ? <Navigate to="/dashboard" replace /> : <Navigate to="/main-dashboard" replace />;
 };
@@ -207,6 +208,7 @@ function AppRouter() {
                     <Route path="/users" element={<UsersPage />} />
                     <Route path="/users/create" element={<CreateEmployeePage />} />
                     <Route path="/users/:id/permissions" element={<PermissionDetailPage />} />
+                    <Route path="/roles/permissions" element={<RolePermissionsPage />} />
                     <Route path="/audit-log" element={<AuditLogPage />} />
                     <Route path="/operations" element={<OperationsCenterPage />} />
                     <Route path="/email-settings" element={<EmailSettingsRedirect />} />

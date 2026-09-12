@@ -4,9 +4,12 @@ import com.duylongtech.backend.dto.StockTransferDispatchDTO;
 import com.duylongtech.backend.dto.StockTransferReceiptDTO;
 import com.duylongtech.backend.dto.StockTransferRequestDTO;
 import com.duylongtech.backend.dto.StockTransferResponseDTO;
+import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.service.StockTransferService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,10 +24,8 @@ public class StockTransferController {
     @Autowired
     private StockTransferService stockTransferService;
 
-    // A dummy userId for demonstration. In a real app, you would get this from Spring Security Context.
-    private final Long currentUserId = 1L;
-
     @GetMapping("/next-code")
+    @PreAuthorize("hasAuthority('transfer:view') or hasAuthority('transfer:add')")
     public ResponseEntity<com.duylongtech.backend.dto.response.ApiResponse<String>> getNextTransferCode() {
         String nextCode = stockTransferService.generateNextTransferCode();
         return ResponseEntity.ok(com.duylongtech.backend.dto.response.ApiResponse.<String>builder()
@@ -34,6 +35,7 @@ public class StockTransferController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('transfer:view')")
     public ResponseEntity<List<StockTransferResponseDTO>> getTransferHistory(
             @RequestParam(required = false) String transferCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -44,38 +46,48 @@ public class StockTransferController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('transfer:view')")
     public ResponseEntity<StockTransferResponseDTO> getTransferDetail(@PathVariable("id") Long transferId) {
         StockTransferResponseDTO response = stockTransferService.getTransferDetail(transferId);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping
-    public ResponseEntity<StockTransferResponseDTO> createTransferRequest(@RequestBody StockTransferRequestDTO requestDTO) {
-        StockTransferResponseDTO response = stockTransferService.createTransferRequest(requestDTO, currentUserId);
+    @PreAuthorize("hasAuthority('transfer:add')")
+    public ResponseEntity<StockTransferResponseDTO> createTransferRequest(
+            @RequestBody StockTransferRequestDTO requestDTO,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        StockTransferResponseDTO response = stockTransferService.createTransferRequest(requestDTO, userPrincipal.getId());
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('transfer:edit')")
     public ResponseEntity<StockTransferResponseDTO> updateTransferRequest(
             @PathVariable("id") Long transferId,
-            @RequestBody StockTransferRequestDTO requestDTO) {
-        StockTransferResponseDTO response = stockTransferService.updateTransferRequest(transferId, requestDTO, currentUserId);
+            @RequestBody StockTransferRequestDTO requestDTO,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        StockTransferResponseDTO response = stockTransferService.updateTransferRequest(transferId, requestDTO, userPrincipal.getId());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/dispatch")
+    @PreAuthorize("hasAuthority('transfer:edit')")
     public ResponseEntity<StockTransferResponseDTO> dispatchTransfer(
             @PathVariable("id") Long transferId,
-            @RequestBody StockTransferDispatchDTO dispatchDTO) {
-        StockTransferResponseDTO response = stockTransferService.dispatchTransfer(transferId, dispatchDTO, currentUserId);
+            @RequestBody StockTransferDispatchDTO dispatchDTO,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        StockTransferResponseDTO response = stockTransferService.dispatchTransfer(transferId, dispatchDTO, userPrincipal.getId());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/receive")
+    @PreAuthorize("hasAuthority('transfer:edit')")
     public ResponseEntity<StockTransferResponseDTO> receiveTransfer(
             @PathVariable("id") Long transferId,
-            @RequestBody StockTransferReceiptDTO receiptDTO) {
-        StockTransferResponseDTO response = stockTransferService.receiveTransfer(transferId, receiptDTO, currentUserId);
+            @RequestBody StockTransferReceiptDTO receiptDTO,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        StockTransferResponseDTO response = stockTransferService.receiveTransfer(transferId, receiptDTO, userPrincipal.getId());
         return ResponseEntity.ok(response);
     }
 

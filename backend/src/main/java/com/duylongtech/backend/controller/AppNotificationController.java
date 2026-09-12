@@ -27,7 +27,7 @@ public class AppNotificationController {
         Long userId = currentUser != null ? currentUser.getId() : null;
         List<String> roles = currentUser != null
                 ? currentUser.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList())
-                : List.of("ROLE_STAFF");
+                : List.of();
         List<AppNotification> list = notificationService.getNotifications(userId, roles);
         return ResponseEntity.ok(ApiResponse.success(list));
     }
@@ -38,7 +38,7 @@ public class AppNotificationController {
         Long userId = currentUser != null ? currentUser.getId() : null;
         List<String> roles = currentUser != null
                 ? currentUser.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList())
-                : List.of("ROLE_STAFF");
+                : List.of();
         long count = notificationService.getUnreadCount(userId, roles);
         return ResponseEntity.ok(ApiResponse.success(Map.of("unreadCount", count)));
     }
@@ -55,7 +55,7 @@ public class AppNotificationController {
         Long userId = currentUser != null ? currentUser.getId() : null;
         List<String> roles = currentUser != null
                 ? currentUser.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList())
-                : List.of("ROLE_STAFF");
+                : List.of();
         notificationService.markAllAsRead(userId, roles);
         return ResponseEntity.ok(ApiResponse.success(null));
     }

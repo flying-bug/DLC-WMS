@@ -20,14 +20,14 @@ public class BusinessSettingsController {
     private final SystemSettingsService settingsService;
 
     @GetMapping
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     @Operation(summary = "Lấy cấu hình nghiệp vụ và thuế VAT")
     public ApiResponse<BusinessSettingsDto> getBusinessSettings() {
         return ApiResponse.success(settingsService.getBusinessSettings());
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     @Operation(summary = "Lưu cấu hình nghiệp vụ và thuế VAT")
     public ApiResponse<Map<String, String>> saveBusinessSettings(@RequestBody BusinessSettingsDto dto) {
         settingsService.saveBusinessSettings(dto);

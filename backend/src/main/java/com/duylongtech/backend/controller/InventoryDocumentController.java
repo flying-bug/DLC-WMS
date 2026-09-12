@@ -141,7 +141,7 @@ public class InventoryDocumentController {
 
     @GetMapping("/{id}/logs")
     @Operation(summary = "Get all audit logs for this export document")
-    @PreAuthorize("hasAuthority('export:view') or hasAuthority('export:edit') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('export:view') or hasAuthority('export:edit') or hasRole('SUPER_ADMIN')")
     public ApiResponse<List<com.duylongtech.backend.dto.response.AuditLogResponse>> getExportLogs(@PathVariable Long id) {
         org.springframework.data.domain.Page<com.duylongtech.backend.entity.AuditLog> page = auditLogService.getLogsForEntity("ExportSlip", id, 0, 100);
         List<com.duylongtech.backend.dto.response.AuditLogResponse> logs = page.getContent().stream()

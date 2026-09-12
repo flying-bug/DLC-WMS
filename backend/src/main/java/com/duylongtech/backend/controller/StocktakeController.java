@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ public class StocktakeController {
 
 
     @GetMapping("/next-code")
+    @PreAuthorize("hasAuthority('stocktake:view') or hasAuthority('stocktake:add')")
     public ResponseEntity<ApiResponse<String>> getNextStocktakeCode() {
         String nextCode = stocktakeService.generateNextStocktakeCode();
         return ResponseEntity.ok(ApiResponse.<String>builder()
@@ -37,6 +39,7 @@ public class StocktakeController {
     }
 
     @GetMapping("/available-serials")
+    @PreAuthorize("hasAuthority('stocktake:view') or hasAuthority('stocktake:add')")
     public ResponseEntity<ApiResponse<List<SerialNumber>>> getAvailableSerials(
             @RequestParam Long warehouseId,
             @RequestParam Long variantId) {
@@ -50,6 +53,7 @@ public class StocktakeController {
 
 
     @GetMapping
+    @PreAuthorize("hasAuthority('stocktake:view')")
     public ResponseEntity<ApiResponse<Page<StocktakeResponse>>> searchStocktakes(
             @RequestParam(required = false) String stocktakeCode,
             @RequestParam(required = false) String status,
@@ -69,6 +73,7 @@ public class StocktakeController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('stocktake:view')")
     public ResponseEntity<ApiResponse<StocktakeResponse>> getStocktakeDetail(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
@@ -81,6 +86,7 @@ public class StocktakeController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('stocktake:add')")
     public ResponseEntity<ApiResponse<StocktakeResponse>> createStocktake(
             @RequestBody StocktakeRequest request,
             @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
@@ -96,6 +102,7 @@ public class StocktakeController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('stocktake:edit')")
     public ResponseEntity<ApiResponse<StocktakeResponse>> updateStocktake(
             @PathVariable Long id,
             @RequestBody StocktakeRequest request,
@@ -112,6 +119,7 @@ public class StocktakeController {
     }
 
     @PostMapping("/{id}/post")
+    @PreAuthorize("hasAuthority('stocktake:edit')")
     public ResponseEntity<ApiResponse<StocktakeResponse>> postStocktake(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetailsImpl userPrincipal) {

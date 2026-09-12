@@ -68,7 +68,6 @@ function UsersPage() {
         const rolesList = u.roles || [];
         const isSuperAdmin = rolesList.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
         const isManager = rolesList.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
-        const systemRole = isSuperAdmin ? 'admin' : 'user';
         const initials = u.fullName ? u.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
 
         const colorClasses = [styles.bgBlue, styles.bgOrange, styles.bgGray];
@@ -110,7 +109,6 @@ function UsersPage() {
             startDate: u.startDate || 'Chưa cập nhật',
             contractType: u.contractType || 'Chưa cập nhật',
             imageUrl: u.imageUrl || u.avatarUrl || u.avatar || null,
-            systemRole,
             roles: rolesList
         };
     };
@@ -223,7 +221,9 @@ function UsersPage() {
 
     const handleSaveUser = async (updatedData) => {
         try {
-            const targetRoleCode = updatedData.systemRole === 'admin' ? 'MANAGER' : 'STAFF';
+            // EmployeeDrawer giờ quản lý đầy đủ danh sách role (multi-select, giống màn
+            // Tạo nhân viên) nên chỉ cần gửi thẳng danh sách đã chọn, không suy luận lại.
+            const targetRoles = Array.isArray(updatedData.roles) ? updatedData.roles : [];
             await axiosClient.put(`/users/${updatedData.id}`, {
                 username: updatedData.username || updatedData.code,
                 fullName: updatedData.name,
@@ -237,7 +237,7 @@ function UsersPage() {
                 department: updatedData.department === 'Chưa xác định' ? null : updatedData.department,
                 address: updatedData.address === 'Chưa cập nhật' ? null : updatedData.address,
                 status: updatedData.status,
-                roles: [targetRoleCode]
+                roles: targetRoles
             });
             await fetchUsers();
             showToast('success', 'Cập nhật thành công.');
@@ -325,9 +325,14 @@ function UsersPage() {
                         <h1 className={styles.pageTitle}>Quản lý tài khoản & Phân quyền</h1>
                         <p className={styles.pageSubtitle}>Quản lý vai trò, quyền hạn và trạng thái của nhân viên Duy Long Computer.</p>
                     </div>
-                    <button type="button" className="btnPrimary" onClick={() => navigate('/users/create')}>
-                        <i className="bi bi-person-plus" /> Thêm nhân viên
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button type="button" className="btnDefault" onClick={() => navigate('/roles/permissions')}>
+                            <i className="bi bi-shield-lock" /> Phân quyền theo vai trò
+                        </button>
+                        <button type="button" className="btnPrimary" onClick={() => navigate('/users/create')}>
+                            <i className="bi bi-person-plus" /> Thêm nhân viên
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stat Cards */}

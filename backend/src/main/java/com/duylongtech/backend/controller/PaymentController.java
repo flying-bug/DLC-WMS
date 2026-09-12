@@ -47,14 +47,14 @@ public class PaymentController {
     }
 
     @PostMapping("/{id}/post")
-    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Post a DRAFT receipt/voucher (Restricted to Cashier and Admins)")
     public ResponseEntity<PaymentResponse> postPayment(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.postPayment(id));
     }
 
     @PostMapping("/{id}/unpost")
-    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Unpost a POSTED receipt/voucher (Rolls back ledger, returns to DRAFT)")
     public ResponseEntity<PaymentResponse> unpostPayment(
             @PathVariable Long id,
@@ -70,7 +70,7 @@ public class PaymentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('payment:delete') or hasAuthority('payment:edit')")
+    @PreAuthorize("hasAuthority('payment:edit')")
     @Operation(summary = "Delete a DRAFT receipt/voucher")
     public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
         paymentService.deletePayment(id);

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,4 +25,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @EntityGraph(attributePaths = {"roles"})
     Optional<User> findWithRolesById(Long id);
+
+    /**
+     * Lấy toàn bộ user đang giữ 1 role - dùng để force-logout khi quyền mặc định của
+     * role đó bị đổi (đăng nhập lại để nhận đúng authorities mới).
+     */
+    List<User> findByRoles_Id(Long roleId);
 }

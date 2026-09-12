@@ -60,23 +60,23 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
-                            "/api/v1/auth/login",
-                            "/api/v1/auth/login-google",
-                            "/api/v1/auth/forgot-password/**",
-                            "/api/v1/imports/ocr-session/**",
-                            "/api/v1/einvoices/preview/**",
-                            "/api/v1/email/google/callback",
-                            "/error",
-                            "/v3/api-docs",
-                            "/v3/api-docs/**",
-                            "/swagger-resources",
-                            "/swagger-resources/**",
-                            "/configuration/ui",
-                            "/configuration/security",
-                            "/swagger-ui/**",
-                            "/swagger-ui.html",
-                            "/webjars/**"
-                        ).permitAll()
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/login-google",
+                                "/api/v1/auth/forgot-password/**",
+                                "/api/v1/imports/ocr-session/**",
+                                "/api/v1/einvoices/preview/**",
+                                "/api/v1/email/google/callback",
+                                "/error",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-resources",
+                                "/swagger-resources/**",
+                                "/configuration/ui",
+                                "/configuration/security",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/webjars/**")
+                        .permitAll()
                         .requestMatchers("/api/v1/ai/**").authenticated()
                         .anyRequest().authenticated());
 

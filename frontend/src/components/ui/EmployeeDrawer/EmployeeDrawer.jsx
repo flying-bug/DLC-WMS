@@ -1,17 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Modal from '../Modal/Modal';
 import { formatDateOnly } from '../../../utils/dateFormat';
 import styles from './EmployeeDrawer.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-
 
 function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('general');
     const [isEditMode, setIsEditMode] = useState(false);
     const [formData, setFormData] = useState(() => user ? { ...user } : null);
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
     const drawerRef = useRef(null);
@@ -20,10 +17,8 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     // Sync formData when user prop changes
     useEffect(() => {
         if (user) {
-             
             setFormData({ ...user });
         }
-         
     }, [user?.id]);
 
     // Reset state when closed
@@ -32,7 +27,6 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
             const timer = setTimeout(() => {
                 setIsEditMode(false);
                 setActiveTab('general');
-                setShowConfirmModal(false);
                 setSaveError('');
             }, 0);
             return () => clearTimeout(timer);
@@ -55,7 +49,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     }, [isOpen]);
 
     useEffect(() => {
-        if (!isOpen || showConfirmModal) return undefined;
+        if (!isOpen) return undefined;
 
         const handleKeyDown = (event) => {
             if (event.key === 'Escape') {
@@ -86,7 +80,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose, showConfirmModal]);
+    }, [isOpen, onClose]);
 
     if (!user || !formData) return null;
 
@@ -110,7 +104,6 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                 });
             }
             setIsEditMode(false);
-            setShowConfirmModal(false);
             onClose();
         } catch (error) {
             setSaveError(error?.response?.data?.userMessage || error?.message || 'Không lưu được thay đổi.');
@@ -120,20 +113,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     };
 
     const handleInitialSave = async () => {
-        if (formData.systemRole !== user.systemRole) {
-            setShowConfirmModal(true);
-            return;
-        }
         await saveCurrentForm();
-    };
-
-    const handleConfirmAdmin = async () => {
-        await saveCurrentForm();
-    };
-
-    const handleConfirmUser = async () => {
-        await saveCurrentForm();
-        navigate(`/users/${formData.id}/permissions`);
     };
 
     const handleCancel = () => {
@@ -325,58 +305,6 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
         </div>
     );
 
-    const renderRoleTab = () => (
-        <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Phân quyền hệ thống</h3>
-            {isEditMode ? (
-                <>
-                    <p className={styles.roleText}>Chọn vai trò phù hợp cho nhân viên này để thiết lập các quyền hạn truy cập tương ứng.</p>
-
-                    <label className={`${styles.roleCard} ${formData.systemRole === 'admin' ? styles.roleCardActive : ''}`}>
-                        <input type="radio" name="systemRole" value="admin" checked={formData.systemRole === 'admin'} onChange={handleChange} className={styles.roleRadio} />
-                        <div className={styles.roleContent}>
-                            <span className={styles.roleTitle}>Quản lý hệ thống</span>
-                            <span className={styles.roleDesc}>Toàn quyền sử dụng tất cả các tính năng và nghiệp vụ trên hệ thống.</span>
-                        </div>
-                    </label>
-
-                    <label className={`${styles.roleCard} ${formData.systemRole === 'user' ? styles.roleCardActive : ''}`}>
-                        <input type="radio" name="systemRole" value="user" checked={formData.systemRole === 'user'} onChange={handleChange} className={styles.roleRadio} />
-                        <div className={styles.roleContent}>
-                            <span className={styles.roleTitle}>Người sử dụng hệ thống</span>
-                            <span className={styles.roleDesc}>Người dùng chỉ sử dụng một số tính năng, nghiệp vụ được phân quyền cụ thể.</span>
-                        </div>
-                    </label>
-                </>
-            ) : (
-                <>
-                    {formData.systemRole === 'admin' ? (
-                        <div className={`${styles.roleCard} ${styles.roleCardActive}`} style={{ cursor: 'default' }}>
-                            <i className="bi bi-shield-check" style={{ color: 'var(--color-primary-navy)', fontSize: '18px', marginTop: '2px' }}></i>
-                            <div className={styles.roleContent}>
-                                <span className={styles.roleTitle}>Quản lý hệ thống</span>
-                                <span className={styles.roleDesc}>Toàn quyền sử dụng tất cả các tính năng và nghiệp vụ trên hệ thống.</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className={`${styles.roleCard} ${styles.roleCardActive}`} style={{ cursor: 'default' }}>
-                            <i className="bi bi-person-check" style={{ color: 'var(--color-primary-navy)', fontSize: '18px', marginTop: '2px' }}></i>
-                            <div className={styles.roleContent}>
-                                <span className={styles.roleTitle}>Người sử dụng hệ thống</span>
-                                <span className={styles.roleDesc}>Được cấp quyền sử dụng các tính năng cơ bản.</span>
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
-
-            <div className={styles.roleNotice}>
-                <i className="bi bi-info-circle"></i>
-                <span>Vai trò {formData.systemRole === 'admin' ? 'Quản lý hệ thống' : 'Người sử dụng hệ thống'} cho phép người dùng này truy cập các module tương ứng.</span>
-            </div>
-        </div>
-    );
-
     return (
         <>
             <div className={`${styles.overlay} ${isOpen ? styles.overlayOpen : ''}`} onClick={onClose} aria-hidden="true" />
@@ -423,7 +351,6 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <div className={styles.tabs} role="tablist" aria-label="Nhóm thông tin nhân viên">
                         <button id="drawer-tab-general" type="button" role="tab" aria-selected={activeTab === 'general'} className={`${styles.tabBtn} ${activeTab === 'general' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('general')}>Thông tin chung</button>
                         <button id="drawer-tab-employee" type="button" role="tab" aria-selected={activeTab === 'employee'} className={`${styles.tabBtn} ${activeTab === 'employee' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('employee')}>Thông tin nhân viên</button>
-                        <button id="drawer-tab-role" type="button" role="tab" aria-selected={activeTab === 'role'} className={`${styles.tabBtn} ${activeTab === 'role' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('role')}>Chức năng/Vai trò</button>
                     </div>
                 </div>
 
@@ -436,7 +363,6 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     )}
                     {activeTab === 'general' && renderGeneralTab()}
                     {activeTab === 'employee' && renderEmployeeInfoTab()}
-                    {activeTab === 'role' && renderRoleTab()}
                 </div>
 
                 <div className={styles.footer}>
@@ -450,43 +376,6 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     )}
                 </div>
             </div>
-
-            {/* Confirmation Modal */}
-            <Modal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} dialogClassName={styles.confirmDialog}>
-                {formData.systemRole === 'admin' ? (
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <div className={`${styles.modalIcon} ${styles.modalIconWarning}`}>
-                                <i className="bi bi-exclamation-triangle"></i>
-                            </div>
-                            <h3 className={styles.modalTitle}>Xác nhận cấp quyền Quản trị tối cao</h3>
-                        </div>
-                        <p className={styles.modalText}>
-                            Bạn đang cấp Toàn quyền quản lý hệ thống cho nhân viên <strong>{formData.name}</strong>. Người này sẽ có quyền xem, sửa, xóa mọi dữ liệu và thay đổi cấu hình hệ thống. Bạn có chắc chắn muốn thực hiện không?
-                        </p>
-                        <div className={styles.modalActions}>
-                            <button className="btnDefault" onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className="btnDanger" onClick={handleConfirmAdmin} disabled={saving}>Xác nhận cấp quyền</button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <div className={`${styles.modalIcon} ${styles.modalIconInfo}`}>
-                                <i className="bi bi-question-circle"></i>
-                            </div>
-                            <h3 className={styles.modalTitle}>Xác nhận chuyển sang thiết lập quyền chi tiết</h3>
-                        </div>
-                        <p className={styles.modalText}>
-                            Bạn đã chọn vai trò Người sử dụng hệ thống. Hệ thống sẽ chuyển sang màn hình thiết lập quyền hạn chi tiết cho từng chức năng. Bạn có muốn tiếp tục không?
-                        </p>
-                        <div className={styles.modalActions}>
-                            <button className="btnDefault" onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className="btnPrimary" onClick={handleConfirmUser} disabled={saving}>Tiếp tục</button>
-                        </div>
-                    </div>
-                )}
-            </Modal>
         </>
     );
 }

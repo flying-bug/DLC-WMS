@@ -211,14 +211,13 @@ public class UserServiceImpl  implements UserService {
         }
         user.setIdCard(idCard);
 
-        Set<RoleEntity> roles = new HashSet<>();
-        if (userDto.getRoles() != null && !userDto.getRoles().isEmpty()) {
-            userDto.getRoles().forEach(roleCode -> {
-                findRoleByCode(roleCode).ifPresent(roles::add);
-            });
-        } else {
-            findRoleByCode("STAFF").ifPresent(roles::add);
+        if (userDto.getRoles() == null || userDto.getRoles().isEmpty()) {
+            throw new BusinessException(SystemMessage.ROLE_REQUIRED);
         }
+        Set<RoleEntity> roles = new HashSet<>();
+        userDto.getRoles().forEach(roleCode -> {
+            findRoleByCode(roleCode).ifPresent(roles::add);
+        });
         user.setRoles(roles);
 
         User savedUser = userRepository.save(user);
@@ -313,6 +312,9 @@ public class UserServiceImpl  implements UserService {
             userDto.getRoles().forEach(roleCode -> {
                 findRoleByCode(roleCode).ifPresent(roles::add);
             });
+            if (roles.isEmpty()) {
+                throw new BusinessException(SystemMessage.ROLE_REQUIRED);
+            }
             user.setRoles(roles);
         }
         userMapper.updateEntity(user, userDto);

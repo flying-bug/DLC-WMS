@@ -1,246 +1,248 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
-import styles from './PermissionDetailPage.module.css';
+import { ROLE_OPTIONS, normalizeRoleCode } from '../../utils/roleOptions';
+import {
+    PERMISSION_CATEGORIES,
+    PERMISSION_ACTIONS,
+    buildPermissionsFromCodes,
+    extractCodesFromPermissions
+} from '../../utils/permissionMatrixConfig';
+import styles from './RolePermissionsPage.module.css';
 
 function PermissionDetailPage() {
     const navigate = useNavigate();
     const { id } = useParams();
-    const [user, setUser] = useState(null);
-    const [activeCategory, setActiveCategory] = useState('warehouse');
     const { showToast } = useToast();
-    const matrixRef = useRef(null);
 
-    const scrollMatrix = (direction) => {
-        const matrix = matrixRef.current;
-        if (!matrix) return;
+    const [user, setUser] = useState(null);
+    const [allSystemRoles, setAllSystemRoles] = useState([]);
+    const [originalUserRoles, setOriginalUserRoles] = useState([]);
+    
+    const [activeCategory, setActiveCategory] = useState('warehouse');
+    const [permissions, setPermissions] = useState(() => buildPermissionsFromCodes([]));
+    
+    const [initialCodes, setInitialCodes] = useState([]);
+    const [hasCustomPermissions, setHasCustomPermissions] = useState(false);
+    
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
-        const distance = Math.max(matrix.clientWidth * 0.75, 180);
-        matrix.scrollTo({
-            left: matrix.scrollLeft + direction * distance,
-            behavior: 'smooth',
+    const loadData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const userRes = await axiosClient.get(`/users/${id}`);
+            const userData = userRes.data?.data;
+            setUser(userData);
+            
+            const rolesRes = await axiosClient.get('/roles');
+            const allRoles = rolesRes.data?.data || [];
+            setAllSystemRoles(allRoles);
+
+            if (userData) {
+                const isSuperAdmin = userData.roles && userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+                if (isSuperAdmin) {
+                    showToast('warning', "Tài khoản Super Admin có toàn quyền hệ thống mặc định.");
+                    setTimeout(() => navigate('/users'), 1500);
+                    return;
+                }
+
+                setOriginalUserRoles(userData.roles || []);
+
+                // Lấy quyền mặc định của (các) role mà user đang có
+                let defaultCodes = [];
+                if (userData.roles && userData.roles.length > 0) {
+                    const userRoleCodes = new Set(
+                        userData.roles.map(r => normalizeRoleCode(r))
+                    );
+                    const codeSet = new Set();
+                    allRoles
+                        .filter(r => userRoleCodes.has(normalizeRoleCode(r.code)))
+                        .forEach(r => (r.permissions || []).forEach(p => codeSet.add(p.code)));
+                    defaultCodes = Array.from(codeSet);
+                }
+
+                const hasCustom = userData.permissions && userData.permissions.length > 0;
+                setHasCustomPermissions(hasCustom);
+                
+                const codesToApply = hasCustom ? userData.permissions : defaultCodes;
+                setInitialCodes(codesToApply);
+                setPermissions(buildPermissionsFromCodes(codesToApply));
+            }
+        } catch (error) {
+            console.error("Lỗi lấy thông tin phân quyền:", error);
+            showToast('error', 'Có lỗi xảy ra. Vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
+    }, [id, navigate, showToast]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const currentCodes = useMemo(() => {
+        return extractCodesFromPermissions(permissions);
+    }, [permissions]);
+
+    const permissionsChanged = useMemo(() => {
+        if (!initialCodes) return false;
+        const setA = new Set(initialCodes);
+        const setB = new Set(currentCodes);
+        if (setA.size !== setB.size) return true;
+        for (const code of setA) {
+            if (!setB.has(code)) return true;
+        }
+        return false;
+    }, [initialCodes, currentCodes]);
+    
+    const rolesChanged = useMemo(() => {
+        if (!user || !originalUserRoles) return false;
+        const currentRoles = user.roles || [];
+        if (currentRoles.length !== originalUserRoles.length) return true;
+        
+        const setA = new Set(originalUserRoles.map(normalizeRoleCode));
+        const setB = new Set(currentRoles.map(normalizeRoleCode));
+        for (const role of setA) {
+            if (!setB.has(role)) return true;
+        }
+        return false;
+    }, [user, originalUserRoles]);
+
+    const hasAnyUnsavedChanges = permissionsChanged || rolesChanged;
+
+    // Trả về tập mã quyền mặc định của 1 role cụ thể (dựa trên dữ liệu role đã tải)
+    const getDefaultCodesForRole = (roleCode) => {
+        const role = allSystemRoles.find(r => normalizeRoleCode(r.code) === roleCode);
+        return new Set((role?.permissions || []).map(p => p.code));
+    };
+
+    const handleToggleRole = (roleCode) => {
+        if (!user) return;
+
+        const currentRoles = user.roles || [];
+        const isCurrentlySelected = currentRoles.some(r => normalizeRoleCode(r) === roleCode);
+        const nextRoles = isCurrentlySelected
+            ? currentRoles.filter(r => normalizeRoleCode(r) !== roleCode)
+            : [...currentRoles, roleCode];
+
+        setUser(prevUser => ({ ...prevUser, roles: nextRoles }));
+
+        // Cập nhật ngay ma trận checkbox đang hiển thị: thêm role -> tick thêm đúng các
+        // quyền mặc định của role đó; bỏ role -> chỉ bỏ tick những quyền CHỈ thuộc role vừa
+        // gỡ (không đụng tới quyền do role khác đang giữ cấp, hay do admin tự tick tay thêm).
+        // Áp dụng luôn cho cả trường hợp nhân viên đã có quyền tùy chỉnh riêng, vì trước đây
+        // chỉ cập nhật khi CHƯA có tùy chỉnh khiến chọn thêm/bớt role không thấy hiệu lực gì.
+        setPermissions(prevPermissions => {
+            const currentCodes = new Set(extractCodesFromPermissions(prevPermissions));
+            const toggledRoleCodes = getDefaultCodesForRole(roleCode);
+
+            if (!isCurrentlySelected) {
+                toggledRoleCodes.forEach(c => currentCodes.add(c));
+            } else {
+                const stillCoveredCodes = new Set();
+                nextRoles.forEach(r => getDefaultCodesForRole(normalizeRoleCode(r)).forEach(c => stillCoveredCodes.add(c)));
+                toggledRoleCodes.forEach(c => {
+                    if (!stillCoveredCodes.has(c)) currentCodes.delete(c);
+                });
+            }
+
+            return buildPermissionsFromCodes(Array.from(currentCodes));
         });
     };
 
-    // Initial state matching the UC list
-    const [permissions, setPermissions] = useState({
-        // Quản lý kho
-        warehouse_master: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        import: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-
-        // Kỹ thuật & Lắp ráp
-        assembly_config: { full: false, view: false, add: false, edit: false },
-        assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false, submit: false, approve: false, execute: false, complete: false },
-        warranty: { full: false, view: false, add: false, edit: false },
-        repair: { full: false, view: false, add: false, edit: false, delete: false },
-
-        // Kinh doanh & Kế toán
-        purchase_order: { full: false, view: false, add: false, edit: false },
-        sales_order: { full: false, view: false, add: false, edit: false, export: false, print: false },
-        einvoice: { full: false, view: false, add: false, edit: false, export: false, print: false },
-        payment: { full: false, view: false, add: false, edit: false },
-
-        // Danh mục
-        product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        product_category: { full: false, view: false, add: false, edit: false, delete: false },
-        brand: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        unit: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        customer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        supplier: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-
-        // Báo cáo
-        report_balance: { full: false, view: false, export: false },
-        report_ledger: { full: false, view: false, export: false },
-        report_transfer: { full: false, view: false, export: false },
-        report_debt: { full: false, view: false, export: false },
-        report_summary: { full: false, view: false, export: false },
-        report_sales: { full: false, view: false, export: false },
-
-        // Quản trị hệ thống
-        ai_chat: { full: false, view: false },
-        account: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        auth: { full: false, view: false, edit: false },
-        audit: { full: false, view: false, export: false }
-    });
-
-    const ROLE_DEFAULT_PERMS = {
-        ROLE_WAREHOUSE_CONTROLLER: [
-            'warehouse_master:view', 'import:view', 'import:edit', 'import:print',
-            'export:view', 'export:add', 'export:edit', 'export:export', 'export:print',
-            'transfer:view', 'transfer:add', 'transfer:edit', 'transfer:delete', 'transfer:export', 'transfer:print',
-            'stocktake:view', 'stocktake:add', 'stocktake:edit', 'stocktake:delete', 'stocktake:export', 'stocktake:print',
-            'product:view', 'unit:view', 'brand:view',
-            'assembly:view', 'assembly:execute', 'assembly:complete',
-            'report_balance:view', 'report_balance:export', 'report_ledger:view', 'report_ledger:export', 'report_transfer:view', 'report_transfer:export',
-            'ai_chat:view'
-        ],
-        ROLE_TECHNICIAN: [
-            'assembly_config:view', 'assembly_config:add', 'assembly_config:edit',
-            'assembly:view', 'assembly:add', 'assembly:edit', 'assembly:delete', 'assembly:export', 'assembly:print', 'assembly:submit',
-            'warranty:view', 'warranty:add', 'warranty:edit',
-            'repair:view', 'repair:add', 'repair:edit', 'repair:delete',
-            'warehouse_master:view', 'product:view', 'report_balance:view', 'export:view', 'ai_chat:view'
-        ],
-        ROLE_ACCOUNTANT: [
-            'assembly_config:view', 'assembly:view', 'assembly:approve',
-            'import:view', 'import:add', 'import:edit', 'import:export', 'import:print',
-            'sales_order:view', 'sales_order:add', 'sales_order:edit', 'sales_order:export', 'sales_order:print',
-            'purchase_order:view', 'purchase_order:add', 'purchase_order:edit',
-            'einvoice:view', 'einvoice:add', 'einvoice:edit', 'einvoice:export', 'einvoice:print',
-            'customer:view', 'customer:add', 'customer:edit', 'customer:delete', 'customer:export', 'customer:print',
-            'supplier:view', 'supplier:add', 'supplier:edit', 'supplier:delete', 'supplier:export', 'supplier:print',
-            'report_debt:view', 'report_debt:export', 'report_sales:view', 'report_sales:export', 'report_summary:view', 'report_summary:export',
-            'payment:view', 'export:view', 'ai_chat:view'
-        ],
-        ROLE_CASHIER_CONTROLLER: [
-            'payment:view', 'payment:add', 'payment:edit',
-            'sales_order:view', 'customer:view', 'ai_chat:view'
-        ],
-        ROLE_STAFF: [
-            'import:view', 'import:add', 'import:edit', 'export:view', 'export:add', 'export:edit',
-            'purchase_order:view', 'sales_order:view', 'payment:view',
-            'transfer:view', 'stocktake:view', 'assembly_config:view', 'assembly:view', 'warranty:view', 'repair:view',
-            'product:view', 'report_balance:view', 'report_sales:view', 'ai_chat:view'
-        ]
-    };
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                // Fetch user
-                const userRes = await axiosClient.get(`/users/${id}`);
-                const userData = userRes.data?.data;
-                setUser(userData);
-
-                // Check permissions access
-                if (userData) {
-                    const isSuperAdmin = userData.roles && userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
-                    if (isSuperAdmin) {
-                        showToast('warning', "Tài khoản Super Admin có toàn quyền hệ thống mặc định.");
-                        setTimeout(() => navigate('/users'), 1500);
-                        return;
-                    }
-
-                    setPermissions(prev => {
-                        const newPerms = {};
-                        // Deep clone prev
-                        Object.keys(prev).forEach(m => {
-                            newPerms[m] = { ...prev[m] };
-                        });
-
-                        // 1. If user already has explicit custom permissions, populate them
-                        if (userData.permissions && userData.permissions.length > 0) {
-                            userData.permissions.forEach(code => {
-                                const [mod, act] = code.split(':');
-                                if (newPerms[mod] && newPerms[mod][act] !== undefined) {
-                                    newPerms[mod][act] = true;
-                                }
-                            });
-                        } else if (userData.roles) {
-                            // 2. Otherwise fallback to union of default permissions based on all assigned roles
-                            const hasManager = userData.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
-
-                            if (hasManager) {
-                                Object.keys(newPerms).forEach(mod => {
-                                    const isSystem = ['account', 'auth', 'audit'].includes(mod);
-                                    Object.keys(newPerms[mod]).forEach(act => {
-                                        newPerms[mod][act] = !isSystem;
-                                    });
-                                });
-                            } else {
-                                userData.roles.forEach(roleCode => {
-                                    const normalized = roleCode.startsWith('ROLE_') ? roleCode : `ROLE_${roleCode}`;
-                                    const defaults = ROLE_DEFAULT_PERMS[normalized] || [];
-                                    defaults.forEach(code => {
-                                        const [mod, act] = code.split(':');
-                                        if (newPerms[mod] && newPerms[mod][act] !== undefined) {
-                                            newPerms[mod][act] = true;
-                                        }
-                                    });
-                                });
-                            }
-                        }
-
-                        // For each module, determine if all actions are checked to set 'full' checkbox
-                        Object.keys(newPerms).forEach(mod => {
-                            const allOthersChecked = Object.keys(newPerms[mod])
-                                .filter(key => key !== 'full')
-                                .every(key => newPerms[mod][key]);
-                            newPerms[mod].full = allOthersChecked;
-                        });
-
-                        return newPerms;
-                    });
-                }
-            } catch (error) {
-                console.error("Lỗi lấy thông tin phân quyền:", error);
-                showToast('error', 'Có lỗi xảy ra. Vui lòng thử lại.');
-            }
-        };
-
-        loadData();
-    }, [id, navigate]);
-
-    const handleCheck = (module, action, checked) => {
+    const handleCheck = (moduleKey, actionKey, checked) => {
         setPermissions(prev => {
-            const modulePerms = { ...prev[module] };
+            const modulePerms = { ...prev[moduleKey] };
 
-            if (action === 'full') {
+            if (actionKey === 'full') {
                 Object.keys(modulePerms).forEach(key => {
                     modulePerms[key] = checked;
                 });
             } else {
-                modulePerms[action] = checked;
-
+                modulePerms[actionKey] = checked;
                 if (!checked) {
                     modulePerms.full = false;
                 } else {
                     const allOthersChecked = Object.keys(modulePerms)
                         .filter(key => key !== 'full')
                         .every(key => modulePerms[key]);
-
                     if (allOthersChecked) {
                         modulePerms.full = true;
                     }
                 }
             }
 
-            return { ...prev, [module]: modulePerms };
+            return { ...prev, [moduleKey]: modulePerms };
         });
     };
 
     const handleSave = async () => {
         try {
-            // Compile list of ticked permission codes
-            const tickedCodes = [];
-            Object.keys(permissions).forEach(mod => {
-                Object.keys(permissions[mod]).forEach(act => {
-                    // Skip the 'full' helper checkbox
-                    if (act !== 'full' && permissions[mod][act]) {
-                        tickedCodes.push(`${mod}:${act}`);
-                    }
+            setSaving(true);
+            
+            if (rolesChanged) {
+                await axiosClient.put(`/users/${id}`, {
+                    ...user,
+                    phone: (user.phone || '').replace(/[\s.-]/g, '')
                 });
-            });
-
+            }
+            
+            const tickedCodes = extractCodesFromPermissions(permissions);
             await axiosClient.put(`/users/${id}/permissions`, tickedCodes);
-            showToast('success', 'Phân quyền thành công.');
-            setTimeout(() => navigate('/users'), 1500);
+            
+            showToast('success', 'Cập nhật phân quyền thành công.');
+            await loadData();
         } catch (error) {
             console.error('Lỗi lưu phân quyền:', error);
-            showToast('error', 'Thao tác thất bại.');
+            showToast('error', 'Thao tác thất bại. Vui lòng kiểm tra lại thông tin.');
+        } finally {
+            setSaving(false);
         }
     };
 
-    const renderCheckbox = (module, action, featureName) => {
-        if (permissions[module][action] === undefined) {
+    const handleCancel = () => {
+        if (initialCodes) {
+            setPermissions(buildPermissionsFromCodes(initialCodes));
+        }
+        if (user && originalUserRoles) {
+            setUser(prev => ({ ...prev, roles: [...originalUserRoles] }));
+        }
+        showToast('info', 'Đã hủy các thay đổi chưa lưu.');
+    };
+
+    const handleConfirmReset = async () => {
+        try {
+            setSaving(true);
+            // Để xóa tùy chỉnh riêng, gửi mảng rỗng
+            await axiosClient.put(`/users/${id}/permissions`, []);
+            showToast('success', 'Đã xóa tùy chỉnh cá nhân, tài khoản sẽ áp dụng theo quyền của vai trò.');
+            setIsResetModalOpen(false);
+            
+            await loadData();
+        } catch (error) {
+            console.error('Lỗi xóa tùy chỉnh quyền:', error);
+            showToast('error', 'Thao tác thất bại.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Luôn hiện đủ toàn bộ danh mục/chức năng (giống RolePermissionsPage) - không ẩn bớt
+    // theo quyền hiện có, để admin luôn cấp được chức năng MỚI mà role/nhân viên chưa từng
+    // có (vd: thêm "Phiếu Nhập kho" cho Kế toán dù trước đó Kế toán chưa có quyền nào ở đây).
+    const currentCategoryObj = useMemo(() => {
+        return PERMISSION_CATEGORIES.find(c => c.key === activeCategory) || PERMISSION_CATEGORIES[0];
+    }, [activeCategory]);
+
+    const renderCheckbox = (moduleKey, actionKey, featureName) => {
+        if (permissions[moduleKey]?.[actionKey] === undefined) {
             return (
                 <label className={styles.checkboxTarget}>
-                    <input type="checkbox" className={styles.checkbox} disabled aria-label={`${action} cho ${featureName} không khả dụng`} />
+                    <input type="checkbox" className={styles.checkbox} disabled aria-label={`${actionKey} cho ${featureName} không khả dụng`} />
                 </label>
             );
         }
@@ -249,212 +251,209 @@ function PermissionDetailPage() {
                 <input
                     type="checkbox"
                     className={styles.checkbox}
-                    checked={permissions[module][action]}
-                    onChange={(e) => handleCheck(module, action, e.target.checked)}
-                    aria-label={`${action} cho ${featureName}`}
+                    checked={permissions[moduleKey][actionKey]}
+                    onChange={(e) => handleCheck(moduleKey, actionKey, e.target.checked)}
+                    aria-label={`${actionKey} cho ${featureName}`}
                 />
             </label>
         );
     };
 
-    const renderRow = (module, name, icon) => (
-        <tr className={styles.tableRow} key={module}>
-            <td>
-                <div className={styles.featureName}>
-                    <div className={styles.featureIcon}><i className={`bi ${icon}`}></i></div>
-                    {name}
-                </div>
-            </td>
-            <td>{renderCheckbox(module, 'full', name)}</td>
-            <td>{renderCheckbox(module, 'view', name)}</td>
-            <td>{renderCheckbox(module, 'add', name)}</td>
-            <td>{renderCheckbox(module, 'edit', name)}</td>
-            <td>{renderCheckbox(module, 'delete', name)}</td>
-            <td>{renderCheckbox(module, 'export', name)}</td>
-            <td>{renderCheckbox(module, 'print', name)}</td>
-            <td>{renderCheckbox(module, 'submit', name)}</td>
-            <td>{renderCheckbox(module, 'approve', name)}</td>
-            <td>{renderCheckbox(module, 'execute', name)}</td>
-            <td>{renderCheckbox(module, 'complete', name)}</td>
-        </tr>
-    );
-
-    const renderTableBody = () => {
-        switch (activeCategory) {
-            case 'warehouse':
-                return (
-                    <>
-                        {renderRow('warehouse_master', 'Quản lý danh sách Kho', 'bi-houses')}
-                        {renderRow('import', 'Phiếu Nhập kho', 'bi-box-arrow-in-right')}
-                        {renderRow('export', 'Phiếu Xuất kho', 'bi-box-arrow-right')}
-                        {renderRow('transfer', 'Phiếu Chuyển kho', 'bi-arrow-left-right')}
-                        {renderRow('stocktake', 'Phiếu Kiểm kê kho', 'bi-clipboard2-check')}
-                    </>
-                );
-            case 'technical':
-                return (
-                    <>
-                        {renderRow('assembly_config', 'Định mức Cấu hình PC (BOM)', 'bi-diagram-3')}
-                        {renderRow('assembly', 'Lệnh Lắp ráp / Tháo dỡ PC', 'bi-box-seam')}
-                        {renderRow('warranty', 'Tiếp nhận & Quản lý Bảo hành', 'bi-shield-check')}
-                        {renderRow('repair', 'Phiếu Sửa chữa Dịch vụ', 'bi-tools')}
-                    </>
-                );
-            case 'business':
-                return (
-                    <>
-                        {renderRow('sales_order', 'Đơn Bán hàng (SO)', 'bi-cart3')}
-                        {renderRow('purchase_order', 'Đơn Mua hàng NCC (PO)', 'bi-bag-plus')}
-                        {renderRow('einvoice', 'Hóa đơn Điện tử', 'bi-receipt-cutoff')}
-                        {renderRow('payment', 'Sổ quỹ & Thu chi tiền mặt', 'bi-cash-coin')}
-                    </>
-                );
-            case 'master_data':
-                return (
-                    <>
-                        {renderRow('product', 'Sản phẩm & Linh kiện', 'bi-tags')}
-                        {renderRow('product_category', 'Danh mục ngành hàng', 'bi-folder')}
-                        {renderRow('brand', 'Thương hiệu', 'bi-bookmark-star')}
-                        {renderRow('unit', 'Đơn vị tính', 'bi-rulers')}
-                        {renderRow('customer', 'Danh bạ Khách hàng', 'bi-person-vcard')}
-                        {renderRow('supplier', 'Danh bạ Nhà cung cấp', 'bi-truck')}
-                    </>
-                );
-            case 'reports':
-                return (
-                    <>
-                        {renderRow('report_balance', 'Báo cáo tồn kho hiện tại', 'bi-bar-chart')}
-                        {renderRow('report_ledger', 'Sổ chi tiết vật tư hàng hóa', 'bi-journal-text')}
-                        {renderRow('report_transfer', 'Báo cáo luân chuyển kho', 'bi-arrow-left-right')}
-                        {renderRow('report_debt', 'Báo cáo công nợ đối tác', 'bi-receipt')}
-                        {renderRow('report_summary', 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', 'bi-file-earmark-bar-graph')}
-                        {renderRow('report_sales', 'Báo cáo doanh số bán hàng', 'bi-currency-dollar')}
-                    </>
-                );
-            case 'system':
-                return (
-                    <>
-                        {renderRow('ai_chat', 'Trợ lý AI Gemini', 'bi-robot')}
-                        {renderRow('account', 'Quản lý người dùng', 'bi-people')}
-                        {renderRow('auth', 'Ma trận phân quyền', 'bi-shield-lock')}
-                        {renderRow('audit', 'Nhật ký hệ thống (Audit Log)', 'bi-journal-medical')}
-                    </>
-                );
-            default:
-                return null;
-        }
-    };
-
     const userName = user ? user.fullName : "Đang tải...";
-    const userRolesDisplay = user && user.roles ? user.roles.join(', ') : 'Chưa có vai trò';
 
     return (
         <SuperAdminLayout>
             <div className={styles.page}>
-                {/* Main */}
                 <div className={styles.main}>
                     <nav className={styles.breadcrumb} aria-label="Breadcrumb">
-                        <button type="button" className={styles.breadcrumbItem} onClick={() => navigate('/users')}>Quản lý người dùng</button>
-                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
+                        <button type="button" className={styles.breadcrumbItem} onClick={() => navigate('/users')}>
+                            Quản lý người dùng
+                        </button>
+                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" /></span>
                         <span className={styles.breadcrumbItem}>{userName}</span>
-                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
+                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" /></span>
                         <span className={styles.breadcrumbActive}>Phân quyền chi tiết</span>
                     </nav>
-                    <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
-                    <p className={styles.pageSubtitle}>Vai trò hiện tại: {userRolesDisplay}</p>
+
+                    <div className={styles.pageHeader}>
+                        <div>
+                            <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
+                            <p className={styles.pageSubtitle}>
+                                Click vào các thẻ bên dưới để gán hoặc gỡ vai trò cho nhân viên này. 
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {/* Role Selector Grid */}
+                    <div className={styles.roleSelectorGrid}>
+                        {allSystemRoles.map(role => {
+                            const normalized = normalizeRoleCode(role.code);
+                            // Hide SUPER ADMIN from normal assignment UI to prevent accidental clicks
+                            if (normalized === 'ROLE_SUPER_ADMIN' || normalized === 'SUPER_ADMIN') return null;
+                            
+                            const opt = ROLE_OPTIONS.find(o => o.value === normalized);
+                            // Chỉ hiển thị các role được định nghĩa chính thức trong ROLE_OPTIONS
+                            if (!opt) return null;
+                            
+                            const isSelected = user?.roles?.some(r => normalizeRoleCode(r) === normalized) || false;
+                            const permCount = role.permissions ? role.permissions.length : 0;
+
+                            return (
+                                <button
+                                    key={role.id}
+                                    type="button"
+                                    className={`${styles.roleCard} ${isSelected ? styles.roleCardActive : ''}`}
+                                    onClick={() => handleToggleRole(normalized)}
+                                    aria-pressed={isSelected}
+                                >
+                                    <div className={styles.roleCardHeader}>
+                                        <div className={styles.roleCardIcon}>
+                                            <i className={`bi ${opt.icon || 'bi-shield'}`} />
+                                        </div>
+                                        <span className={styles.roleBadge}>{permCount} quyền mặc định</span>
+                                    </div>
+                                    <div className={styles.roleCardName}>{role.name}</div>
+                                    <div className={styles.roleCardDesc}>{role.description || opt.desc || role.code}</div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    
+                    {/* Info Banner */}
+                    <div className={styles.infoBanner}>
+                        {hasCustomPermissions ? (
+                            <>
+                                <i className="bi bi-person-gear" style={{ color: '#d97706' }} />
+                                <div style={{ color: '#d97706' }}>
+                                    <strong>Nhân viên này đang sử dụng quyền tùy chỉnh riêng.</strong> 
+                                    {rolesChanged ? " Việc thay đổi vai trò ở trên sẽ được lưu lại, nhưng quyền hạn thao tác (ma trận bên dưới) vẫn đang áp dụng theo bộ quyền tùy chỉnh." 
+                                    : " Các quyền mặc định của vai trò đã bị ghi đè. Bạn có thể xóa tùy chỉnh để sử dụng lại quyền mặc định của vai trò."}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <i className="bi bi-info-circle-fill" />
+                                <div>
+                                    <strong>Đang áp dụng quyền mặc định của vai trò:</strong> Bất kỳ thay đổi nào bạn thực hiện trên ma trận bên dưới và lưu lại sẽ ghi đè lên quyền mặc định và trở thành quyền tùy chỉnh riêng cho nhân viên này.
+                                </div>
+                            </>
+                        )}
+                    </div>
 
                     <div className={styles.layout}>
-                        {/* Sidebar */}
                         <nav className={styles.sidebar} aria-label="Danh mục module">
                             <div className={styles.sidebarHeader}>DANH MỤC MODULE</div>
-                            <button type="button" aria-pressed={activeCategory === 'warehouse'} className={`${styles.menuItem} ${activeCategory === 'warehouse' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('warehouse')}>
-                                <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> 1. Quản lý kho</div>
-                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                            </button>
-                            <button type="button" aria-pressed={activeCategory === 'technical'} className={`${styles.menuItem} ${activeCategory === 'technical' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('technical')}>
-                                <div className={styles.menuItemLeft}><i className="bi bi-tools"></i> 2. Kỹ thuật & Lắp ráp</div>
-                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                            </button>
-                            <button type="button" aria-pressed={activeCategory === 'business'} className={`${styles.menuItem} ${activeCategory === 'business' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('business')}>
-                                <div className={styles.menuItemLeft}><i className="bi bi-receipt"></i> 3. Kinh doanh & Thu chi</div>
-                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                            </button>
-                            <button type="button" aria-pressed={activeCategory === 'master_data'} className={`${styles.menuItem} ${activeCategory === 'master_data' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('master_data')}>
-                                <div className={styles.menuItemLeft}><i className="bi bi-database"></i> 4. Danh mục & Đối tác</div>
-                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                            </button>
-                            <button type="button" aria-pressed={activeCategory === 'reports'} className={`${styles.menuItem} ${activeCategory === 'reports' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('reports')}>
-                                <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> 5. Báo cáo & Thống kê</div>
-                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                            </button>
-                            <button type="button" aria-pressed={activeCategory === 'system'} className={`${styles.menuItem} ${activeCategory === 'system' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('system')}>
-                                <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> 6. Quản trị hệ thống</div>
-                                <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                            </button>
+                            {PERMISSION_CATEGORIES.map(cat => {
+                                const isActive = activeCategory === cat.key;
+                                return (
+                                    <button
+                                        key={cat.key}
+                                        type="button"
+                                        aria-pressed={isActive}
+                                        className={`${styles.menuItem} ${isActive ? styles.menuItemActive : ''}`}
+                                        onClick={() => setActiveCategory(cat.key)}
+                                    >
+                                        <div className={styles.menuItemLeft}>
+                                            <i className={`bi ${cat.icon}`} /> {cat.name}
+                                        </div>
+                                        <i className="bi bi-chevron-right" style={{ fontSize: '12px' }} />
+                                    </button>
+                                );
+                            })}
                         </nav>
 
-                        {/* Matrix Content */}
                         <div className={styles.matrixPanel}>
-                            <div className={styles.matrixScrollControls} aria-label="Điều khiển cuộn ngang ma trận phân quyền">
-                                <span className={styles.matrixScrollHint}>Vuốt ngang hoặc dùng nút</span>
-                                <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(-1)} aria-label="Cuộn ma trận sang trái">
-                                    <i className="bi bi-chevron-left" aria-hidden="true" />
-                                </button>
-                                <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(1)} aria-label="Cuộn ma trận sang phải">
-                                    <i className="bi bi-chevron-right" aria-hidden="true" />
-                                </button>
-                            </div>
-
-                            <div ref={matrixRef} className={styles.matrixContent}>
-                                <table className={styles.table}>
-                                    <thead>
-                                        <tr>
-                                            <th>CHỨC NĂNG CHI TIẾT</th>
-                                            <th>Toàn quyền</th>
-                                            <th>Xem</th>
-                                            <th>Thêm</th>
-                                            <th>Sửa</th>
-                                            <th>Xóa</th>
-                                            <th>Xuất Excel</th>
-                                            <th>In</th>
-                                            <th>Gửi duyệt</th>
-                                            <th>Phê duyệt</th>
-                                            <th>Thực thi</th>
-                                            <th>Hoàn thành</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {renderTableBody()}
-                                    </tbody>
-                                </table>
-
-                                <div className={styles.legend}>
-                                    <div className={styles.legendLeft}>
-                                        <div className={styles.legendItem}>
-                                            <div className={`${styles.legendIcon} ${styles.legendIconSelected}`}></div>
-                                            <span>Đã chọn</span>
-                                        </div>
-                                        <div className={styles.legendItem}>
-                                            <div className={`${styles.legendIcon} ${styles.legendIconUnselected}`}></div>
-                                            <span>Chưa chọn</span>
-                                        </div>
+                            <div className={styles.matrixContent}>
+                                {currentCategoryObj ? (
+                                    <table className={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th>CHỨC NĂNG ({currentCategoryObj.name})</th>
+                                                {PERMISSION_ACTIONS.map(action => (
+                                                    <th key={action.key}>{action.label.toUpperCase()}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {currentCategoryObj.modules.map(mod => (
+                                                <tr key={mod.key} className={styles.tableRow}>
+                                                    <td>
+                                                        <div className={styles.featureName}>
+                                                            <div className={styles.featureIcon}>
+                                                                <i className={`bi ${mod.icon}`} />
+                                                            </div>
+                                                            {mod.name}
+                                                        </div>
+                                                    </td>
+                                                    {PERMISSION_ACTIONS.map(action => (
+                                                        <td key={action.key}>
+                                                            {renderCheckbox(mod.key, action.key, mod.name)}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>
+                                        <i className="bi bi-shield-lock" style={{ fontSize: '48px', color: '#e2e8f0', marginBottom: '16px', display: 'block' }}></i>
+                                        Không có chức năng nào được cấp phép cho vai trò hiện tại.
                                     </div>
-                                    <div className={styles.legendRight}>
-                                        <i className="bi bi-info-circle"></i> Đối với nghiệp vụ nào không cho sử dụng sẽ làm mờ và không thể tick
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Footer Actions */}
-                <div className={styles.footer}>
-                    <button type="button" className="btnDefault" onClick={() => navigate('/users')}>Hủy</button>
-                    <button type="button" className="btnPrimary" onClick={handleSave}>
-                        <i className="bi bi-save"></i> Lưu thay đổi
-                    </button>
-                </div>
+                <footer className={styles.footer}>
+                    <div className={styles.footerLeft}>
+                        <button type="button" className="btnDefault" onClick={() => navigate('/users')}>
+                            <i className="bi bi-arrow-left" /> Quay lại danh sách
+                        </button>
+                        {hasAnyUnsavedChanges && (
+                            <span className={styles.unsavedBadge}>
+                                <i className="bi bi-exclamation-circle-fill" /> Có thay đổi chưa lưu
+                            </span>
+                        )}
+                    </div>
+                    <div className={styles.footerRight}>
+                        {hasCustomPermissions && (
+                            <button type="button" className="btnDefault" disabled={saving} onClick={() => setIsResetModalOpen(true)}>
+                                <i className="bi bi-arrow-counterclockwise" /> Dùng quyền theo vai trò (Xóa tùy chỉnh)
+                            </button>
+                        )}
+                        <button type="button" className="btnDefault" disabled={!hasAnyUnsavedChanges || saving} onClick={handleCancel}>
+                            Hủy thay đổi
+                        </button>
+                        <button type="button" className="btnPrimary" disabled={!hasAnyUnsavedChanges || saving} onClick={handleSave}>
+                            {saving ? (
+                                <><span className="spinner-border spinner-border-sm me-2" role="status" /> Đang lưu...</>
+                            ) : (
+                                <><i className="bi bi-check2-circle" /> Lưu thay đổi</>
+                            )}
+                        </button>
+                    </div>
+                </footer>
+
+                {isResetModalOpen && (
+                    <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+                        <div className={styles.modalContent}>
+                            <div className={styles.modalHeader}>
+                                <div className={styles.modalIconWarn}>
+                                    <i className="bi bi-exclamation-triangle" />
+                                </div>
+                                <h3 className={styles.modalTitle}>Xóa tùy chỉnh quyền?</h3>
+                            </div>
+                            <div className={styles.modalBody}>
+                                Bạn có chắc chắn muốn xóa các phân quyền riêng của nhân viên <strong>{userName}</strong> không? Sau khi xóa, nhân viên sẽ sử dụng lại bộ quyền mặc định của các vai trò đang giữ.
+                            </div>
+                            <div className={styles.modalActions}>
+                                <button type="button" className="btnDefault" disabled={saving} onClick={() => setIsResetModalOpen(false)}>Hủy bỏ</button>
+                                <button type="button" className="btnPrimary" disabled={saving} onClick={handleConfirmReset}>{saving ? 'Đang thực hiện...' : 'Xác nhận xóa'}</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </SuperAdminLayout>
     );

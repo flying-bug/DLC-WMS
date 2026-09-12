@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,6 +20,7 @@ public class WarehouseStaffController {
     private final WarehouseStaffService warehouseStaffService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('warehouse_master:view')")
     public ApiResponse<Page<WarehouseStaffResponse>> getStaffList(
             @PathVariable Long warehouseId,
             @RequestParam(required = false) Long roleId,
@@ -33,6 +35,7 @@ public class WarehouseStaffController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('warehouse_master:edit')")
     public ApiResponse<Void> assignRoles(
             @PathVariable Long warehouseId,
             @RequestBody @Valid AssignRolesRequest request
@@ -42,6 +45,7 @@ public class WarehouseStaffController {
     }
 
     @DeleteMapping("/{userId}")
+    @PreAuthorize("hasAuthority('warehouse_master:edit')")
     public ApiResponse<Void> revokeAccess(
             @PathVariable Long warehouseId,
             @PathVariable Long userId

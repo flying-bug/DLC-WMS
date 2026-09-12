@@ -61,7 +61,7 @@ public class BrandController {
      */
     @GetMapping
     @Operation(summary = "Xem danh sách thương hiệu (UC-36)")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasAuthority('brand:view')")
+    @PreAuthorize("hasAuthority('brand:view')")
     public ApiResponse<List<BrandResponse>> getAllBrands(
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(required = false) String keyword
@@ -81,7 +81,7 @@ public class BrandController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Xem chi tiết thương hiệu (UC-37)")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasAuthority('brand:view')")
+    @PreAuthorize("hasAuthority('brand:view')")
     public ApiResponse<BrandResponse> getBrandById(@PathVariable Long id) {
         return ApiResponse.success(brandService.getBrandById(id));
     }
@@ -110,7 +110,7 @@ public class BrandController {
      */
     @PostMapping
     @Operation(summary = "Tạo mới thương hiệu (UC-38)")
-    @PreAuthorize("hasRole('MANAGER') or hasAuthority('brand:add')")
+    @PreAuthorize("hasAuthority('brand:add')")
     @Auditable(action = AuditAction.CREATE, entityName = "Brand", actionDescription = "Tạo thương hiệu")
     public ApiResponse<BrandResponse> createBrand(@Valid @RequestBody BrandRequest req) {
         return ApiResponse.success(brandService.createBrand(req));
@@ -141,7 +141,7 @@ public class BrandController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật thương hiệu (UC-39)")
-    @PreAuthorize("hasRole('MANAGER') or hasAuthority('brand:edit')")
+    @PreAuthorize("hasAuthority('brand:edit')")
     @Auditable(action = AuditAction.UPDATE, entityName = "Brand", actionDescription = "Cập nhật thương hiệu")
     public ApiResponse<BrandResponse> updateBrand(
             @PathVariable Long id,
@@ -174,7 +174,7 @@ public class BrandController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Xóa thương hiệu (UC-40)")
-    @PreAuthorize("hasRole('MANAGER') or hasAuthority('brand:delete')")
+    @PreAuthorize("hasAuthority('brand:delete')")
     @Auditable(action = AuditAction.DELETE, entityName = "Brand", actionDescription = "Xóa thương hiệu")
     public org.springframework.http.ResponseEntity<ApiResponse<Void>> deleteBrand(@PathVariable Long id) {
         boolean isHardDeleted = brandService.deleteBrand(id);

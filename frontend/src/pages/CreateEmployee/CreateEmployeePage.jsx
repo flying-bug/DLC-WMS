@@ -5,6 +5,7 @@ import styles from './CreateEmployeePage.module.css';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { ROLE_OPTIONS } from '../../utils/roleOptions';
 
 
 const parseDisplayDateToIso = (value) => {
@@ -24,15 +25,6 @@ const parseDisplayDateToIso = (value) => {
     }
     return `${year}-${month}-${day}`;
 };
-
-const ROLE_OPTIONS = [
-    { value: 'ROLE_WAREHOUSE_CONTROLLER', label: 'Thủ kho (Warehouse Controller)', icon: 'bi-box-seam', desc: 'Nhập / Xuất / Chuyển kho / Kiểm kê, Quét mã Scanner' },
-    { value: 'ROLE_TECHNICIAN', label: 'Kỹ thuật viên (Technician)', icon: 'bi-tools', desc: 'Lắp ráp PC theo BOM, Tiếp nhận Bảo hành & Sửa chữa' },
-    { value: 'ROLE_ACCOUNTANT', label: 'Kế toán (Accountant)', icon: 'bi-receipt', desc: 'Phiếu nhập dự kiến, Đơn bán SO, Hóa đơn & Công nợ' },
-    { value: 'ROLE_CASHIER_CONTROLLER', label: 'Thủ quỹ / Thu ngân (Cashier Controller)', icon: 'bi-cash-stack', desc: 'Lập Phiếu thu, Phiếu chi, Quản lý quỹ tiền mặt' },
-    { value: 'ROLE_MANAGER', label: 'Quản lý điều hành (Manager)', icon: 'bi-person-badge', desc: 'Toàn quyền nghiệp vụ, phê duyệt đơn, xem Dashboard' },
-    { value: 'ROLE_SUPER_ADMIN', label: 'Quản trị hệ thống (Super Admin)', icon: 'bi-shield-lock', desc: 'Quản lý tài khoản, Phân quyền ma trận, Backup CSDL' }
-];
 
 function CreateEmployeePage() {
     const navigate = useNavigate();

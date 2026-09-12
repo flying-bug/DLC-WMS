@@ -33,7 +33,7 @@ public class PurchaseOrderReminderJob {
     private static final DecimalFormat MONEY_FMT = new DecimalFormat("#,##0");
 
     private static final List<String> DEBT_ROLES = List.of("ROLE_ACCOUNTANT", "ROLE_MANAGER", "ROLE_SUPER_ADMIN");
-    private static final List<String> DELIVERY_ROLES = List.of("ROLE_WAREHOUSE", "ROLE_STAFF", "ROLE_MANAGER", "ROLE_SUPER_ADMIN");
+    private static final List<String> DELIVERY_ROLES = List.of("ROLE_WAREHOUSE_CONTROLLER", "ROLE_MANAGER", "ROLE_SUPER_ADMIN");
 
     /**
      * Chạy định kỳ lúc 08:00 mỗi sáng và sau khi khởi động hệ thống.

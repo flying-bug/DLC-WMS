@@ -2,6 +2,7 @@ package com.duylongtech.backend.component;
 
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.repository.*;
+import com.duylongtech.backend.service.impl.RoleServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -31,6 +32,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PartnerRepository partnerRepository;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
+    private final SystemSettingRepository systemSettingRepository;
     private final JdbcTemplate jdbcTemplate;
 
     @Override
@@ -80,7 +82,6 @@ public class DatabaseSeeder implements CommandLineRunner {
         RoleEntity technicianRole = createRoleIfNotFound("ROLE_TECHNICIAN", "Kỹ thuật viên");
         RoleEntity accountantRole = createRoleIfNotFound("ROLE_ACCOUNTANT", "Kế toán");
         RoleEntity cashierRole = createRoleIfNotFound("ROLE_CASHIER_CONTROLLER", "Thủ quỹ");
-        RoleEntity staffRole = createRoleIfNotFound("ROLE_STAFF", "Nhân viên");
 
         // 2. Seed Permissions
         seedPermissions();
@@ -89,7 +90,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         associatePermissionsWithRoles();
 
         // 4. Seed Users mẫu cho 6 Roles
-        seedUsers(superAdminRole, managerRole, whControllerRole, technicianRole, accountantRole, cashierRole, staffRole);
+        seedUsers(superAdminRole, managerRole, whControllerRole, technicianRole, accountantRole, cashierRole);
 
         // 5. Seed Dữ liệu kinh doanh (Đã comment ra để hệ thống trắng)
         // seedWarehouses();
@@ -211,7 +212,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly_config", new String[]{"view", "add", "edit"});
         moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
-        moduleActions.put("warranty", new String[]{"view"});
+        moduleActions.put("warranty", new String[]{"view", "add", "edit"});
         moduleActions.put("repair", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("product_category", new String[]{"view", "add", "edit", "delete"});
@@ -249,130 +250,49 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void associatePermissionsWithRoles() {
+        boolean isInitialized = systemSettingRepository.findBySettingKey("system.roles_permissions_initialized")
+                .map(s -> "true".equalsIgnoreCase(s.getSettingValue()))
+                .orElse(false);
+
+        List<RoleEntity> allRoles = roleRepository.findAll();
+        // Nếu đã khởi tạo và các role đều đã có quyền, bỏ qua hoàn toàn để không ghi đè quyền admin chỉnh sửa
+        if (isInitialized) {
+            boolean hasEmptyRole = allRoles.stream().anyMatch(r -> r.getPermissions() == null || r.getPermissions().isEmpty());
+            if (!hasEmptyRole) {
+                return;
+            }
+        }
+
         Set<PermissionEntity> allPerms = new HashSet<>(permissionRepository.findAll());
 
-        // 1. SUPER_ADMIN
-        roleRepository.findByCode("ROLE_SUPER_ADMIN").ifPresent(role -> {
-            Set<PermissionEntity> superAdminPerms = new HashSet<>();
-            for (PermissionEntity perm : allPerms) {
-                if (Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
-                    superAdminPerms.add(perm);
+        for (RoleEntity role : allRoles) {
+            if (!isInitialized || role.getPermissions() == null || role.getPermissions().isEmpty()) {
+                Set<PermissionEntity> defaultPerms = RoleServiceImpl.getDefaultPermissionsForRole(role.getCode(), allPerms);
+                if (!defaultPerms.isEmpty()) {
+                    role.setPermissions(defaultPerms);
+                    roleRepository.save(role);
                 }
             }
-            role.setPermissions(superAdminPerms);
-            roleRepository.save(role);
-        });
+        }
 
-        // 2. MANAGER
-        roleRepository.findByCode("ROLE_MANAGER").ifPresent(role -> {
-            Set<PermissionEntity> managerPerms = new HashSet<>();
-            for (PermissionEntity perm : allPerms) {
-                if (!Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
-                    managerPerms.add(perm);
-                }
-            }
-            role.setPermissions(managerPerms);
-            roleRepository.save(role);
-        });
-
-        // 3. WAREHOUSE_CONTROLLER (Thủ kho)
-        roleRepository.findByCode("ROLE_WAREHOUSE_CONTROLLER").ifPresent(role -> {
-            Set<PermissionEntity> whPerms = new HashSet<>();
-            for (PermissionEntity perm : allPerms) {
-                String mod = perm.getModule();
-                String code = perm.getCode();
-                if (Arrays.asList("transfer", "stocktake").contains(mod)) {
-                    whPerms.add(perm);
-                } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print").contains(code)) {
-                    whPerms.add(perm);
-                } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
-                    whPerms.add(perm);
-                } else if (Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
-                    whPerms.add(perm);
-                } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_summary").contains(mod)) {
-                    whPerms.add(perm);
-                }
-            }
-            role.setPermissions(whPerms);
-            roleRepository.save(role);
-        });
-
-        // 4. TECHNICIAN (Kỹ thuật viên)
-        roleRepository.findByCode("ROLE_TECHNICIAN").ifPresent(role -> {
-            Set<PermissionEntity> techPerms = new HashSet<>();
-            for (PermissionEntity perm : allPerms) {
-                String mod = perm.getModule();
-                String code = perm.getCode();
-                if (Arrays.asList("assembly_config", "assembly", "warranty", "repair").contains(mod)) {
-                    techPerms.add(perm);
-                } else if (Arrays.asList("product", "export", "warehouse_master", "report_balance", "ai_chat").contains(mod)
-                        && code.endsWith(":view")) {
-                    techPerms.add(perm);
-                }
-            }
-            role.setPermissions(techPerms);
-            roleRepository.save(role);
-        });
-
-        // 5. ACCOUNTANT (Kế toán)
-        roleRepository.findByCode("ROLE_ACCOUNTANT").ifPresent(role -> {
-            Set<PermissionEntity> accPerms = new HashSet<>();
-            for (PermissionEntity perm : allPerms) {
-                String mod = perm.getModule();
-                String code = perm.getCode();
-                if (Arrays.asList("sales_order", "purchase_order", "einvoice", "customer", "supplier").contains(mod)) {
-                    accPerms.add(perm);
-                } else if ("import".equals(mod) && Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code)) {
-                    accPerms.add(perm);
-                } else if (Arrays.asList("report_debt", "report_sales", "report_summary").contains(mod)) {
-                    accPerms.add(perm);
-                } else if ("payment".equals(mod)) {
-                    accPerms.add(perm);
-                } else if (Arrays.asList("export", "ai_chat").contains(mod) && code.endsWith(":view")) {
-                    accPerms.add(perm);
-                }
-            }
-            role.setPermissions(accPerms);
-            roleRepository.save(role);
-        });
-
-        // 6. CASHIER_CONTROLLER (Thủ quỹ / Thu ngân)
-        roleRepository.findByCode("ROLE_CASHIER_CONTROLLER").ifPresent(role -> {
-            Set<PermissionEntity> cashierPerms = new HashSet<>();
-            for (PermissionEntity perm : allPerms) {
-                String mod = perm.getModule();
-                String code = perm.getCode();
-                if ("payment".equals(mod)) {
-                    cashierPerms.add(perm);
-                } else if (Arrays.asList("sales_order", "customer", "ai_chat").contains(mod) && code.endsWith(":view")) {
-                    cashierPerms.add(perm);
-                } else if (Arrays.asList("report_debt").contains(mod)) {
-                    cashierPerms.add(perm);
-                }
-            }
-            role.setPermissions(cashierPerms);
-            roleRepository.save(role);
-        });
-
-        // 7. Legacy STAFF role
-        roleRepository.findByCode("ROLE_STAFF").ifPresent(role -> {
-            Set<PermissionEntity> staffPerms = new HashSet<>();
-            for (PermissionEntity perm : allPerms) {
-                if (Arrays.asList(
-                        "import", "export", "purchase_order", "sales_order", "payment",
-                        "transfer", "stocktake", "assembly_config", "assembly", "warranty", "repair",
-                        "product", "report_balance", "report_sales", "ai_chat"
-                ).contains(perm.getModule())) {
-                    staffPerms.add(perm);
-                }
-            }
-            role.setPermissions(staffPerms);
-            roleRepository.save(role);
-        });
+        if (!isInitialized) {
+            systemSettingRepository.findBySettingKey("system.roles_permissions_initialized")
+                    .ifPresentOrElse(
+                            s -> {
+                                s.setSettingValue("true");
+                                systemSettingRepository.save(s);
+                            },
+                            () -> systemSettingRepository.save(SystemSetting.builder()
+                                    .settingKey("system.roles_permissions_initialized")
+                                    .settingValue("true")
+                                    .description("Đánh dấu quyền vai trò đã được khởi tạo lần đầu")
+                                    .build())
+                    );
+        }
     }
 
     private void seedUsers(RoleEntity superAdminRole, RoleEntity managerRole, RoleEntity whControllerRole,
-                           RoleEntity technicianRole, RoleEntity accountantRole, RoleEntity cashierRole, RoleEntity staffRole) {
+                           RoleEntity technicianRole, RoleEntity accountantRole, RoleEntity cashierRole) {
         Set<PermissionEntity> allPermissions = new HashSet<>(permissionRepository.findAll());
         Set<PermissionEntity> adminPermissions = new HashSet<>();
         for (PermissionEntity perm : allPermissions) {

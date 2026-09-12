@@ -21,18 +21,18 @@ public class AppNotificationServiceImpl  implements AppNotificationService {
 
     @Transactional(readOnly = true)
     public List<AppNotification> getNotifications(Long userId, List<String> roles) {
-        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_ADMIN") || r.equalsIgnoreCase("ADMIN")));
+        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_SUPER_ADMIN") || r.equalsIgnoreCase("SUPER_ADMIN")));
         if (roles == null || roles.isEmpty()) {
-            roles = Collections.singletonList("ROLE_STAFF");
+            roles = Collections.emptyList();
         }
         return notificationRepository.findForUserAndRoles(userId, roles, isAdmin);
     }
 
     @Transactional(readOnly = true)
     public long getUnreadCount(Long userId, List<String> roles) {
-        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_ADMIN") || r.equalsIgnoreCase("ADMIN")));
+        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_SUPER_ADMIN") || r.equalsIgnoreCase("SUPER_ADMIN")));
         if (roles == null || roles.isEmpty()) {
-            roles = Collections.singletonList("ROLE_STAFF");
+            roles = Collections.emptyList();
         }
         return notificationRepository.countUnreadForUserAndRoles(userId, roles, isAdmin);
     }
@@ -44,9 +44,9 @@ public class AppNotificationServiceImpl  implements AppNotificationService {
 
     @Transactional
     public void markAllAsRead(Long userId, List<String> roles) {
-        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_ADMIN") || r.equalsIgnoreCase("ADMIN")));
+        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_SUPER_ADMIN") || r.equalsIgnoreCase("SUPER_ADMIN")));
         if (roles == null || roles.isEmpty()) {
-            roles = Collections.singletonList("ROLE_STAFF");
+            roles = Collections.emptyList();
         }
         notificationRepository.markAllAsRead(userId, roles, isAdmin);
     }
