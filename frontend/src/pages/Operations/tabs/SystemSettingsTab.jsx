@@ -4,7 +4,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useAiFeature } from '../../../contexts/AiFeatureContext';
 import styles from './SystemSettingsTab.module.css';
 
-function SystemSettingsTab() {
+function SystemSettingsTab({ onNavigateTab }) {
     const { setAiEnabled: updateGlobalAiState } = useAiFeature();
     const [settings, setSettings] = useState({
         backupPath: '/tmp/backups',
@@ -422,6 +422,21 @@ function SystemSettingsTab() {
                                 <p className={styles.hint}>Email sẽ nhận thông báo khi backup thành công hoặc thất bại. SMTP đã được cấu hình sẵn trong application.yaml.</p>
                             </div>
                         )}
+
+                        <div style={{ marginTop: '8px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: '12px', color: '#475569', lineHeight: 1.4 }}>
+                                <strong>Cấu hình Gmail OAuth:</strong> Kết nối tài khoản Google để gửi email tự động toàn hệ thống (báo giá, hóa đơn, thông báo...).
+                            </div>
+                            {onNavigateTab && (
+                                <button
+                                    type="button"
+                                    onClick={() => onNavigateTab('email')}
+                                    style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '12px', fontWeight: 600, color: 'var(--color-primary, #1e3f7a)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                                >
+                                    <i className="bi bi-envelope-at-fill" /> Cấu hình Email &rarr;
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

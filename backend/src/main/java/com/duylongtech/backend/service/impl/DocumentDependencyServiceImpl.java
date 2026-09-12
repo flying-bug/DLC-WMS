@@ -22,6 +22,9 @@ public class DocumentDependencyServiceImpl  implements DocumentDependencyService
     private final InventoryBalanceRepository balanceRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final ProductVariantRepository variantRepository;
+    private final EInvoiceRepository eInvoiceRepository;
+    private final WarrantyRepository warrantyRepository;
+    private final RepairRepository repairRepository;
 
     /**
      * Kiểm tra an toàn trước khi Bỏ ghi sổ (Unpost) Phiếu nhập kho.
@@ -104,6 +107,12 @@ public class DocumentDependencyServiceImpl  implements DocumentDependencyService
 
     /**
      * Kiểm tra an toàn trước khi Bỏ ghi sổ (Unpost) Phiếu xuất kho.
+     * Với phiếu xuất, bỏ ghi sổ nghĩa là cộng lại hàng vào kho và trả serial về AVAILABLE -
+     * nhưng hàng thực tế có thể đã rời kho và giao cho khách rồi. Nếu đã phát sinh chứng từ
+     * pháp lý/nghiệp vụ dựa trên lần xuất này (hóa đơn điện tử, bảo hành, sửa chữa), việc
+     * hoàn tác sẽ làm sai lệch tồn kho (ảo tăng so với thực tế đã giao) và để lại chứng từ
+     * "mồ côi" tham chiếu tới một lần xuất không còn tồn tại. Do đó phải chặn, buộc người
+     * dùng xử lý qua nghiệp vụ Nhập trả hàng (RETURN) thay vì bỏ ghi sổ.
      */
     @Transactional(readOnly = true)
     public DependencyCheckResponse checkExportSlipUnpostable(Long docId) {
@@ -118,8 +127,59 @@ public class DocumentDependencyServiceImpl  implements DocumentDependencyService
                     .build();
         }
 
-        // Với phiếu xuất, bỏ ghi sổ nghĩa là cộng lại hàng vào kho (không gây âm kho),
-        // tuy nhiên cần kiểm tra nếu Serial đã bị khách kích hoạt bảo hành/sửa chữa sâu.
+        List<String> conflicts = new ArrayList<>();
+        List<String> conflictingSerials = new ArrayList<>();
+        List<String> conflictingDocs = new ArrayList<>();
+
+        // 1. Đã xuất hóa đơn điện tử cho lần xuất này chưa bị hủy?
+        eInvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(docId, "CANCELED")
+                .ifPresent(inv -> {
+                    String invCode = (inv.getInvoiceSeries() != null ? inv.getInvoiceSeries() : "")
+                            + (inv.getInvoiceNumber() != null ? "-" + inv.getInvoiceNumber() : "");
+                    conflicts.add(String.format(
+                            "Chứng từ đã có Hóa đơn điện tử [%s] (trạng thái: %s) - không thể bỏ ghi sổ vì sẽ làm sai lệch hàng hóa/công nợ đã xuất hóa đơn!",
+                            invCode.isBlank() ? "#" + inv.getId() : invCode, inv.getStatus()));
+                    conflictingDocs.add(invCode.isBlank() ? "EInvoice#" + inv.getId() : invCode);
+                });
+
+        // 2. Từng serial trong phiếu đã phát sinh Bảo hành hoặc Lệnh sửa chữa chưa?
+        for (InventoryDocumentLine line : doc.getLines()) {
+            if (line.getVariantId() == null) continue;
+            if (line.getSerialNumbersText() == null || line.getSerialNumbersText().isBlank()) continue;
+
+            String[] rawSerials = line.getSerialNumbersText().split("[,;\\s\\n]+");
+            for (String sn : rawSerials) {
+                String cleanSn = sn.trim();
+                if (cleanSn.isEmpty()) continue;
+
+                Optional<SerialNumber> snOpt = serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), cleanSn);
+                if (snOpt.isEmpty()) continue;
+                Long serialNumberId = snOpt.get().getId();
+
+                if (warrantyRepository.existsBySerialNumberId(serialNumberId)) {
+                    conflictingSerials.add(cleanSn);
+                    conflicts.add(String.format(
+                            "Serial [%s] đã được đăng ký Bảo hành cho khách hàng - không thể bỏ ghi sổ!", cleanSn));
+                }
+                if (repairRepository.existsBySerialNumberId(serialNumberId)) {
+                    conflictingSerials.add(cleanSn);
+                    conflicts.add(String.format(
+                            "Serial [%s] đã có Lệnh sửa chữa liên quan - không thể bỏ ghi sổ!", cleanSn));
+                }
+            }
+        }
+
+        if (!conflicts.isEmpty()) {
+            return DependencyCheckResponse.builder()
+                    .canUnpost(false)
+                    .level("HAS_DEPENDENCIES")
+                    .message("Không thể bỏ ghi sổ trực tiếp vì đã phát sinh hóa đơn/bảo hành/sửa chữa dựa trên lần xuất này! Nếu hàng đã giao cho khách, vui lòng dùng nghiệp vụ Nhập trả hàng (RETURN) để hoàn tác thay vì bỏ ghi sổ.")
+                    .details(conflicts)
+                    .conflictingSerials(conflictingSerials)
+                    .conflictingDocuments(conflictingDocs)
+                    .build();
+        }
+
         return DependencyCheckResponse.builder()
                 .canUnpost(true)
                 .level("CLEAN")

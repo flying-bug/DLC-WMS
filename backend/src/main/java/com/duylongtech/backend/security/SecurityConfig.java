@@ -65,6 +65,7 @@ public class SecurityConfig {
                             "/api/v1/auth/forgot-password/**",
                             "/api/v1/imports/ocr-session/**",
                             "/api/v1/einvoices/preview/**",
+                            "/api/v1/email/google/callback",
                             "/error",
                             "/v3/api-docs",
                             "/v3/api-docs/**",

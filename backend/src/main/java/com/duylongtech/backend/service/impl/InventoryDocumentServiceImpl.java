@@ -1868,6 +1868,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
                         lr.setBarcode(v.getBarcode());
                         if (v.getProduct() != null) {
                             lr.setProductName(v.getProduct().getProductName());
+                            lr.setTrackSerial(Boolean.TRUE.equals(v.getProduct().getTrackSerial()));
                         } else {
                             lr.setProductName(v.getVariantName());
                         }

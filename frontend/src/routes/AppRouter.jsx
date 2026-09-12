@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '../constants';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
@@ -60,8 +60,13 @@ import WarehouseWorkspacePage from '../pages/WarehouseWorkspace/WarehouseWorkspa
 import WarehouseDocumentFormPage from '../pages/WarehouseWorkspace/WarehouseDocumentFormPage';
 import CashierWorkspacePage from '../pages/CashierWorkspace/CashierWorkspacePage';
 
-
-
+// Chuyển hướng /email-settings sang /operations?tab=email, giữ nguyên query params (nếu có từ OAuth callback)
+const EmailSettingsRedirect = () => {
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    params.set('tab', 'email');
+    return <Navigate to={`/operations?${params.toString()}`} replace />;
+};
 
 // Helper to check valid token
 const isValidToken = () => {
@@ -204,6 +209,7 @@ function AppRouter() {
                     <Route path="/users/:id/permissions" element={<PermissionDetailPage />} />
                     <Route path="/audit-log" element={<AuditLogPage />} />
                     <Route path="/operations" element={<OperationsCenterPage />} />
+                    <Route path="/email-settings" element={<EmailSettingsRedirect />} />
                 </Route>
 
                 {/* Mobile Scanner (lightweight page for phone camera) */}

@@ -36,6 +36,7 @@ import java.util.Properties;
 public class EmailServiceImpl  implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final GmailOAuthServiceImpl gmailOAuthService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${spring.mail.username:computerduylong@gmail.com}")
@@ -65,22 +66,36 @@ public class EmailServiceImpl  implements EmailService {
         String displayName = (senderDisplayName != null && !senderDisplayName.isBlank())
                 ? senderDisplayName : "DLC-WMS System";
 
-        // 1. Try Google Gmail REST API (HTTPS - Port 443 - Không bao giờ bị DigitalOcean chặn)
+        // 1. Ưu tiên Gmail OAuth đã kết nối qua UI (token lưu trong DB, đã mã hóa)
+        if (gmailOAuthService.isConnectedViaUI()) {
+            try {
+                String accessToken = gmailOAuthService.getValidAccessToken();
+                String connectedEmail = gmailOAuthService.getConnectionStatus().getConnectedEmail();
+                String senderEmail = (connectedEmail != null && !connectedEmail.isBlank()) ? connectedEmail : fromEmail;
+                sendViaGmailApi(toEmail.trim(), subject, htmlMsg, displayName, accessToken, senderEmail);
+                log.info("Email sent to {} via Gmail API (UI-connected: {})", toEmail, senderEmail);
+                return;
+            } catch (Exception e) {
+                log.error("Gmail API (UI-connected) send failed to {}: {}", toEmail, e.getMessage(), e);
+            }
+        }
+
+        // 2. Fallback: dùng hardcoded refresh token từ application.yaml (legacy)
         if (gmailRefreshToken != null && !gmailRefreshToken.isBlank()
                 && gmailClientId != null && !gmailClientId.isBlank()
                 && gmailClientSecret != null && !gmailClientSecret.isBlank()) {
             try {
-                sendViaGmailApi(toEmail.trim(), subject, htmlMsg, displayName);
-                log.info("Email sent successfully to {} via Google Gmail REST API (port 443)", toEmail);
+                sendViaGmailApiLegacy(toEmail.trim(), subject, htmlMsg, displayName);
+                log.info("Email sent successfully to {} via Google Gmail REST API (legacy config)", toEmail);
                 return;
             } catch (Exception e) {
-                log.error("Google Gmail API send failed to {}: {}", toEmail, e.getMessage(), e);
+                log.error("Google Gmail API (legacy) send failed to {}: {}", toEmail, e.getMessage(), e);
             }
         } else {
             log.warn("Gmail OAuth credentials not configured, falling back to SMTP...");
         }
 
-        // 2. Fallback to standard SMTP (JavaMailSender)
+        // 3. Fallback to standard SMTP (JavaMailSender)
         try {
             sendViaSmtp(toEmail.trim(), subject, htmlMsg, displayName);
             log.info("Email sent successfully to {} via SMTP", toEmail);
@@ -125,13 +140,16 @@ public class EmailServiceImpl  implements EmailService {
         return accessToken;
     }
 
-    private void sendViaGmailApi(String toEmail, String subject, String htmlMsg, String senderDisplayName) throws Exception {
+    private void sendViaGmailApiLegacy(String toEmail, String subject, String htmlMsg, String senderDisplayName) throws Exception {
         String accessToken = getValidAccessToken();
+        sendViaGmailApi(toEmail, subject, htmlMsg, senderDisplayName, accessToken, fromEmail);
+    }
 
+    private void sendViaGmailApi(String toEmail, String subject, String htmlMsg, String senderDisplayName, String accessToken, String senderEmail) throws Exception {
         Session session = Session.getDefaultInstance(new Properties(), null);
         MimeMessage message = new MimeMessage(session);
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(fromEmail, senderDisplayName);
+        helper.setFrom(senderEmail, senderDisplayName);
         helper.setTo(toEmail);
         helper.setSubject(subject);
         helper.setText(htmlMsg, true);

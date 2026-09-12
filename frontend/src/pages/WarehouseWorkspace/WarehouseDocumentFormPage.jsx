@@ -168,6 +168,17 @@ export default function WarehouseDocumentFormPage() {
         showToast('warning', `Dòng ${i + 1} (${l.productName}): Số lượng thực tế không được âm.`);
         return false;
       }
+      // So khớp số serial đã quét với SL THỰC NHẬN (actualQty), không phải SL dự kiến -
+      // vì actualQty đã được thủ kho chỉnh sửa để phản ánh đúng thực tế khi hàng về thừa/thiếu.
+      if (l.trackSerial && act > 0) {
+        const snCount = (l.serialList || []).length;
+        if (snCount !== act) {
+          setSelectedLineIdx(i);
+          setSerialModalOpen(true);
+          showToast('warning', `Dòng ${i + 1} (${l.productName}): Vui lòng quét đủ ${act} mã serial (hiện có ${snCount}).`);
+          return false;
+        }
+      }
     }
     return true;
   };

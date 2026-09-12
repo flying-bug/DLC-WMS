@@ -46,7 +46,7 @@ const customSelectStyles = {
   menu: base => ({ ...base, zIndex: 9999, fontSize: 12.5 }),
 };
 
-const emptyLine = () => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '', showNote: false });
+const emptyLine = () => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 8, serialNumbers: [], note: '', showNote: false });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -193,7 +193,7 @@ function CreateSalesOrderPage() {
           unitPrice: price,
           unitName: matchProd.unitName || 'Cái',
           warrantyMonths: Number(matchProd.warrantyMonths || 0),
-          vatRate: Number(matchProd.vatPercent || matchProd.vatRate || 0),
+          vatRate: Number(matchProd.vatPercent ?? matchProd.vatRate ?? 8),
           serialNumbers: [],
           note: '',
         }]);
@@ -227,7 +227,7 @@ function CreateSalesOrderPage() {
           unitPrice: Number(l.unitPrice),
           unitName: l.unitName || '',
           warrantyMonths: l.warrantyMonths || 0,
-          vatRate: l.vatRate || 0,
+          vatRate: l.vatRate !== undefined && l.vatRate !== null ? Number(l.vatRate) : 8,
           note: l.note || '',
         })));
       } catch {
@@ -297,7 +297,7 @@ function CreateSalesOrderPage() {
       unitPrice: Number(selected.salePrice || 0),
       unitName: selected.unitName || 'Cái',
       warrantyMonths: Number(selected.warrantyMonths || 0),
-      vatRate: Number(selected.vatPercent || selected.vatRate || 0),
+      vatRate: Number(selected.vatPercent ?? selected.vatRate ?? 8),
     });
   };
 
@@ -358,7 +358,7 @@ function CreateSalesOrderPage() {
           unitPrice: Number(createdVariant.salePrice || 0),
           unitName: createdVariant.unitName || 'Cái',
           warrantyMonths: Number(createdVariant.warrantyMonths || 0),
-          vatRate: Number(createdVariant.vatPercent || createdVariant.vatRate || 0),
+          vatRate: Number(createdVariant.vatPercent ?? createdVariant.vatRate ?? 8),
         });
         showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
       } else {
@@ -949,7 +949,7 @@ function CreateSalesOrderPage() {
                       <th style={{ width: '68px', minWidth: '65px', textAlign: 'center' }}>BH (T)</th>
                       <th style={{ width: '125px', minWidth: '120px', textAlign: 'right' }}>Đơn giá</th>
                       <th style={{ width: '130px', minWidth: '125px', textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ width: '62px', minWidth: '60px', textAlign: 'center' }}>% VAT</th>
+                      <th style={{ width: '76px', minWidth: '72px', textAlign: 'center' }}>% VAT</th>
                       <th style={{ width: '36px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -1095,29 +1095,18 @@ function CreateSalesOrderPage() {
                               {money(lineTotal)} đ
                             </td>
                             <td>
-                              <input
+                              <select
                                 id={`so-line-vat-${idx}`}
-                                type="text"
-                                inputMode="numeric"
                                 className={styles.lineInput}
-                                style={{ width: '100%', textAlign: 'center', padding: '0 2px' }}
-                                value={line.vatRate ?? ''}
-                                onChange={e => {
-                                  const val = digitsOnly(e.target.value);
-                                  if (val === '') {
-                                    updateLine(idx, 'vatRate', '');
-                                  } else {
-                                    updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(val))));
-                                  }
-                                }}
-                                onBlur={() => {
-                                  if (line.vatRate === '' || line.vatRate == null) {
-                                    updateLine(idx, 'vatRate', 0);
-                                  } else {
-                                    updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(line.vatRate))));
-                                  }
-                                }}
-                              />
+                                style={{ width: '100%', textAlign: 'center', padding: '0 4px', cursor: 'pointer', height: '28px', background: '#fff' }}
+                                value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
+                                onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
+                              >
+                                <option value={0}>0%</option>
+                                <option value={5}>5%</option>
+                                <option value={8}>8%</option>
+                                <option value={10}>10%</option>
+                              </select>
                             </td>
                             <td style={{ textAlign: 'center' }}>
                               {lines.length > 1 && (

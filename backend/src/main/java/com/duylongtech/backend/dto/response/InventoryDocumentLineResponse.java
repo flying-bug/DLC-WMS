@@ -22,6 +22,7 @@ public class InventoryDocumentLineResponse {
     private Long lotBatchId;
     private Long serialNumberId;
     private List<String> serialNumbers;
+    private Boolean trackSerial;
     private Integer warrantyMonths;
     private String note;
     private BigDecimal vatPercent;

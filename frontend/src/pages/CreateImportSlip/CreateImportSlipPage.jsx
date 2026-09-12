@@ -776,7 +776,11 @@ function CreateImportSlipPage() {
         return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
       }
       const product = productById.get(String(item.variantId));
-      if (product?.trackSerial) {
+      // Kế toán chỉ lập phiếu nhập dự kiến (số lượng, đơn giá, VAT theo hóa đơn NCC) - hàng
+      // thường chưa về kho nên chưa có serial thực tế để quét. Việc quét đủ serial là trách
+      // nhiệm của thủ kho khi nhận hàng thực tế, nên chỉ bắt buộc khi ghi sổ ngay tại đây
+      // (thời điểm tồn kho thực sự tăng), không áp dụng khi chỉ lưu tạm (DRAFT).
+      if (product?.trackSerial && shouldPost) {
         const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
         if (serialCount !== qty) {
           setSerialModalItemId(item.localId);

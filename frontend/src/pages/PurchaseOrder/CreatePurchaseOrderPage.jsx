@@ -42,7 +42,7 @@ const emptyLine = (defaultWh = null) => ({
   quantity: 1,
   unitPrice: 0,
   unitName: '',
-  vatRate: 0,
+  vatRate: 8,
   note: '',
 });
 
@@ -156,7 +156,7 @@ function CreatePurchaseOrderPage() {
           quantity: Number(item.quantity) || 1,
           unitPrice: Number(item.unitPrice) || (matchedVariant ? Number(matchedVariant.importPrice || matchedVariant.costPrice || 0) : 0),
           unitName: item.unitName || matchedVariant?.unitName || 'Cái',
-          vatRate: item.vatRate !== undefined && item.vatRate !== null ? Number(item.vatRate) : Number(matchedVariant?.vatPercent || matchedVariant?.vatRate || 0),
+          vatRate: item.vatRate !== undefined && item.vatRate !== null ? Number(item.vatRate) : Number(matchedVariant?.vatPercent ?? matchedVariant?.vatRate ?? 8),
           note: item.rawProductName && item.rawProductName !== item.matchedVariantName ? `Tên gốc: ${item.rawProductName}` : '',
           _ocrRawName: item.rawProductName,
         };
@@ -234,7 +234,7 @@ function CreatePurchaseOrderPage() {
           quantity: qty,
           unitPrice: price,
           unitName: matchProd.unitName || 'Cái',
-          vatRate: Number(matchProd.vatPercent || matchProd.vatRate || 0),
+          vatRate: Number(matchProd.vatPercent ?? matchProd.vatRate ?? 8),
           note: '',
         }]);
       }
@@ -265,7 +265,7 @@ function CreatePurchaseOrderPage() {
           quantity:    Number(l.quantity),
           unitPrice:   Number(l.unitPrice),
           unitName:    l.unitName || '',
-          vatRate:     l.vatRate  || 0,
+          vatRate:     l.vatRate !== undefined && l.vatRate !== null ? Number(l.vatRate) : 8,
           note:        l.note     || '',
         })));
       } catch {
@@ -307,7 +307,7 @@ function CreatePurchaseOrderPage() {
       variantId: selected.id,
       warehouseId: currentWh,
       unitName: selected.unitName || 'Cái',
-      vatRate: Number(selected.vatPercent || selected.vatRate || 0),
+      vatRate: Number(selected.vatPercent ?? selected.vatRate ?? 8),
     });
   };
 
@@ -325,7 +325,7 @@ function CreatePurchaseOrderPage() {
           variantId: createdVariant.id,
           warehouseId: lines[quickAddLineIndex]?.warehouseId || defaultWarehouseId,
           unitName: createdVariant.unitName || 'Cái',
-          vatRate: Number(createdVariant.vatPercent || createdVariant.vatRate || 0),
+          vatRate: Number(createdVariant.vatPercent ?? createdVariant.vatRate ?? 8),
         });
         showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
       } else if (createdVariant && ocrQuickAddPreviewIndex !== null) {
@@ -789,31 +789,18 @@ function CreatePurchaseOrderPage() {
                             />
                           </td>
                           <td>
-                            <input
+                            <select
                               id={`po-line-vat-${idx}`}
-                              type="number"
                               className={styles.cellInput}
-                              style={{ textAlign: 'center' }}
-                              min="0"
-                              max="10"
-                              step="1"
-                              value={line.vatRate}
-                              onChange={e => {
-                                const val = e.target.value;
-                                if (val === '') {
-                                  updateLine(idx, 'vatRate', '');
-                                } else {
-                                  updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(val))));
-                                }
-                              }}
-                              onBlur={() => {
-                                if (line.vatRate === '' || line.vatRate == null) {
-                                  updateLine(idx, 'vatRate', 0);
-                                } else {
-                                  updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(line.vatRate))));
-                                }
-                              }}
-                            />
+                              style={{ textAlign: 'center', cursor: 'pointer', padding: '0 4px', height: '28px', background: '#fff' }}
+                              value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
+                              onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
+                            >
+                              <option value={0}>0%</option>
+                              <option value={5}>5%</option>
+                              <option value={8}>8%</option>
+                              <option value={10}>10%</option>
+                            </select>
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary-link)', fontSize: 13, whiteSpace: 'nowrap' }}>
                             {money(lineTotal + vatAmt)} đ

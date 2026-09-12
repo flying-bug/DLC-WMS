@@ -2,7 +2,7 @@ spring:
   application:
     name: backend
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/duylongcomputer?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8}
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -42,6 +42,10 @@ google:
   client-id: ${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}
   client-secret: ${GMAIL_CLIENT_SECRET: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}
   refresh-token: ${GMAIL_REFRESH_TOKEN:1//04KBPq7hKygPUCgYIARAAGAQSNgF-L9Irb_g6d0iM3EJgsq6OGRXOQ-oPiugQgXmRjf5eylrUB013TdaOuRW5Fy-KdPNb--XHXQ}
+  oauth:
+    redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI:http://localhost:8080/api/v1/email/google/callback}
+    scopes: ${GOOGLE_OAUTH_SCOPES:https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/userinfo.email}
+  encryption-key: ${TOKEN_ENCRYPTION_KEY:}
 
 cloudinary:
   url: ${CLOUDINARY_URL:}
@@ -73,3 +77,7 @@ einvoice:
     client-id: ${XINVOICE_CLIENT_ID:demo-client-id}
     api-key: ${XINVOICE_API_KEY:demo-api-key}
     auth-token: ${XINVOICE_AUTH_TOKEN:demo-auth-token}
+
+app:
+  frontend-url: ${FRONTEND_URL:https://dlc-wms.vercel.app}
+

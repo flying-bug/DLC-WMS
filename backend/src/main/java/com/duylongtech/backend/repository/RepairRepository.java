@@ -21,6 +21,8 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
 
     List<Repair> findByWarrantyId(Long warrantyId);
 
+    boolean existsBySerialNumberId(Long serialNumberId);
+
     /**
      * Tìm kiếm danh sách lệnh sửa chữa có phân trang và lọc theo keyword/status.
      */

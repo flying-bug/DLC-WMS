@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import DashboardTab from './tabs/DashboardTab';
 import BackupCenterTab from './tabs/BackupCenterTab';
 import SystemMonitorTab from './tabs/SystemMonitorTab';
 import SystemSettingsTab from './tabs/SystemSettingsTab';
+import EmailSettingsTab from './tabs/EmailSettingsTab';
 import styles from './OperationsCenterPage.module.css';
 
 const TABS = [
@@ -32,18 +32,30 @@ const TABS = [
         icon: 'bi bi-gear-wide-connected',
         desc: 'Drive, Encryption & Alerts'
     },
+    {
+        id: 'email',
+        label: 'Cấu hình Email',
+        icon: 'bi bi-envelope-at-fill',
+        desc: 'Gmail OAuth & SMTP'
+    },
 ];
 
 function OperationsCenterPage() {
-    const navigate   = useNavigate();
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'dashboard';
+
+    const handleTabChange = (tabId) => {
+        setSearchParams({ tab: tabId });
+    };
 
     const renderTab = () => {
         switch (activeTab) {
             case 'dashboard': return <DashboardTab />;
             case 'backup':    return <BackupCenterTab />;
             case 'monitor':   return <SystemMonitorTab />;
-            case 'settings':  return <SystemSettingsTab />;
+            case 'settings':  return <SystemSettingsTab onNavigateTab={handleTabChange} />;
+            case 'email':     return <EmailSettingsTab />;
             default:          return <DashboardTab />;
         }
     };
@@ -63,7 +75,7 @@ function OperationsCenterPage() {
                         <button
                             key={tab.id}
                             className={`${styles.tabBtn} ${activeTab === tab.id ? styles.tabBtnActive : ''}`}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabChange(tab.id)}
                         >
                             <i className={tab.icon} />
                             <span>{tab.label}</span>
