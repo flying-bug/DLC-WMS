@@ -170,9 +170,9 @@ public class StockTransferService {
 
         stockTransfer.updateTransferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : stockTransfer.getTransferDate());
         if (requestDTO.getStatus() != null && !stockTransfer.getStatus().equals(requestDTO.getStatus())) {
-            if ("CANCELLED".equals(requestDTO.getStatus())) {
+            if (DocumentStatus.CANCELLED.name().equals(requestDTO.getStatus())) {
                 stockTransfer.cancel();
-            } else if ("APPROVED".equals(requestDTO.getStatus()) || "SUBMITTED".equals(requestDTO.getStatus())) {
+            } else if (DocumentStatus.APPROVED.name().equals(requestDTO.getStatus()) || DocumentStatus.SUBMITTED.name().equals(requestDTO.getStatus())) {
                 stockTransfer.approve(userId); // Use approve to transition out of DRAFT
             }
         }
@@ -225,7 +225,7 @@ public class StockTransferService {
         StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
 
-        if (!"IN_TRANSIT".equals(stockTransfer.getStatus())) {
+        if (!DocumentStatus.IN_TRANSIT.name().equals(stockTransfer.getStatus())) {
             throw new BusinessException(SystemMessage.INV_INVALID_STATE);
         }
 

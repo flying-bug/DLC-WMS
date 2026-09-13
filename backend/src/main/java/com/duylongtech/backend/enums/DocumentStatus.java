@@ -8,6 +8,7 @@ public enum DocumentStatus {
     REJECTED,
     POSTED,
     UNPOSTED,
+    IN_TRANSIT,
     CANCEL_REQUESTED,
     CANCELLED,
     CANCELED,

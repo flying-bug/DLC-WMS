@@ -257,7 +257,7 @@ public class EmailService {
             throw new BusinessException(SystemMessage.EMAIL_ERR_002.getMessage());
         }
 
-        String typeName = "POSTED".equals(so.getStatus()) ? "Hóa Đơn" : "Báo Giá";
+        String typeName = com.duylongtech.backend.enums.DocumentStatus.POSTED.name().equals(so.getStatus()) ? "Hóa Đơn" : "Báo Giá";
         java.text.NumberFormat nf = java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN"));
 
         StringBuilder tableRows = new StringBuilder();

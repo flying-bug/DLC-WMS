@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.duylongtech.backend.enums.DocumentStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -103,7 +104,7 @@ public class StockTransfer {
         this.fromWarehouseId = fromWh;
         this.toWarehouseId = toWh;
         this.transferDate = transferDate != null ? transferDate : LocalDate.now();
-        this.status = "DRAFT"; // Sử dụng DRAFT (hoặc DocumentStatus.DRAFT.name())
+        this.status = DocumentStatus.DRAFT.name();
     }
 
     public void updateTransferDate(LocalDate transferDate) {
@@ -133,22 +134,22 @@ public class StockTransfer {
     }
 
     public void approve(Long approverId) {
-        if (!"DRAFT".equals(this.status)) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ có thể duyệt khi phiếu chuyển ở trạng thái DRAFT");
         }
-        this.status = "APPROVED";
+        this.status = DocumentStatus.APPROVED.name();
         this.approvedBy = approverId;
     }
 
     public void cancel() {
-        if ("POSTED".equals(this.status)) {
+        if (DocumentStatus.POSTED.name().equals(this.status)) {
             throw new IllegalStateException("Không thể hủy phiếu chuyển kho đã ghi sổ");
         }
-        this.status = "CANCELLED";
+        this.status = DocumentStatus.CANCELLED.name();
     }
 
     public void changeWarehouses(Long fromWh, Long toWh) {
-        if (!"DRAFT".equals(this.status) && !"SUBMITTED".equals(this.status)) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status) && !DocumentStatus.SUBMITTED.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được đổi kho khi ở trạng thái DRAFT hoặc SUBMITTED");
         }
         if (fromWh == null || toWh == null || fromWh.equals(toWh)) {
@@ -159,10 +160,10 @@ public class StockTransfer {
     }
 
     public void dispatch() {
-        this.status = "IN_TRANSIT";
+        this.status = DocumentStatus.IN_TRANSIT.name();
     }
 
     public void complete() {
-        this.status = "POSTED";
+        this.status = DocumentStatus.POSTED.name();
     }
 }
