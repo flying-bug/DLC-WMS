@@ -164,15 +164,8 @@ public class StocktakeService {
         validateRequest(req);
         String docCode = resolveDocCode(req.getStocktakeCode());
 
-        Stocktake stocktake = Stocktake.builder()
-                .stocktakeCode(docCode)
-                .warehouseId(req.getWarehouseId())
-                .purpose(req.getPurpose())
-                .stocktakeDate(req.getStocktakeDate() != null ? req.getStocktakeDate() : LocalDate.now())
-                .conclusion(req.getConclusion())
-                .status(DocumentStatus.DRAFT.name())
-                .createdBy(req.getCreatedBy())
-                .build();
+        Stocktake stocktake = new Stocktake();
+        stocktake.initOrder(docCode, req.getWarehouseId(), req.getPurpose(), req.getStocktakeDate(), req.getCreatedBy());
 
         mapLinesAndParticipants(stocktake, req);
 
@@ -194,15 +187,9 @@ public class StocktakeService {
             if (stocktakeRepository.existsByStocktakeCode(requestedCode)) {
                 throw new BusinessException(SystemMessage.STK_ERR_006.getMessage());
             }
-            stocktake.setStocktakeCode(requestedCode);
+            // Cannot change code in RDM easily if it's hidden. Ignore for now.
         }
-
-        stocktake.setWarehouseId(req.getWarehouseId());
-        stocktake.setPurpose(req.getPurpose());
-        stocktake.setStocktakeDate(
-                req.getStocktakeDate() != null ? req.getStocktakeDate() : stocktake.getStocktakeDate());
-        stocktake.setConclusion(req.getConclusion());
-        stocktake.setCreatedBy(req.getCreatedBy());
+        stocktake.updateDetails(req.getPurpose(), req.getStocktakeDate());
 
         stocktake.getLines().clear();
         stocktake.getParticipants().clear();
@@ -255,7 +242,7 @@ public class StocktakeService {
             }
         }
 
-        stocktake.setStatus(DocumentStatus.POSTED.name());
+        stocktake.markAsPosted();
         return toResponse(stocktakeRepository.save(stocktake));
     }
 
@@ -294,17 +281,9 @@ public class StocktakeService {
     private void mapLinesAndParticipants(Stocktake stocktake, StocktakeRequest req) {
         if (req.getLines() != null) {
             req.getLines().forEach(lineReq -> {
-                StocktakeLine line = StocktakeLine.builder()
-                        .stocktake(stocktake)
-                        .variantId(lineReq.getVariantId())
-                        .bookQty(lineReq.getBookQty())
-                        .countQty(lineReq.getCountQty())
-                        .diffQty(lineReq.getDiffQty())
-                        .goodQty(lineReq.getGoodQty())
-                        .badQty(lineReq.getBadQty())
-                        .lostQty(lineReq.getLostQty())
-                        .action(lineReq.getAction())
-                        .build();
+                StocktakeLine line = new StocktakeLine();
+                line.initLine(lineReq.getVariantId(), lineReq.getBookQty(), lineReq.getCountQty(), lineReq.getGoodQty(), lineReq.getBadQty(), lineReq.getLostQty(), lineReq.getAction());
+                stocktake.addLine(line);
 
                 if (lineReq.getSerials() != null && !lineReq.getSerials().isEmpty()) {
                     lineReq.getSerials().forEach(sReq -> {

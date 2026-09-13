@@ -799,7 +799,7 @@ public class InventoryPostingService {
                     boolean exportDone = !hasShortage || stocktake.getReferenceExportId() != null;
 
                     if (importDone && exportDone) {
-                        stocktake.setStatus(DocumentStatus.POSTED.name());
+                        stocktake.markAsPosted();
                     }
                 }
                 stocktakeRepository.save(stocktake);

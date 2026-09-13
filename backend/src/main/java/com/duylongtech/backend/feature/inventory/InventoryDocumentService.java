@@ -322,7 +322,7 @@ public class InventoryDocumentService {
                     boolean exportDone = !hasShortage || stocktake.getReferenceExportId() != null;
 
                     if (importDone && exportDone) {
-                        stocktake.setStatus("POSTED");
+                        stocktake.markAsPosted();
                     }
                 }
                 stocktakeRepository.save(stocktake);
