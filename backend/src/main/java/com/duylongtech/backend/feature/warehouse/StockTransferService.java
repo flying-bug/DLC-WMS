@@ -120,21 +120,16 @@ public class StockTransferService {
             transferCode = generateNextTransferCode();
         }
 
-        StockTransfer stockTransfer = StockTransfer.builder()
-                .transferCode(transferCode)
-                .fromWarehouseId(requestDTO.getFromWarehouseId())
-                .toWarehouseId(requestDTO.getToWarehouseId())
-                .transferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : java.time.LocalDate.now())
-                .status(requestDTO.getStatus() != null ? requestDTO.getStatus() : DocumentStatus.DRAFT.name())
-                .note(requestDTO.getNote())
-                .deliverer(requestDTO.getDeliverer())
-                .attachedDocument(requestDTO.getAttachedDocument())
-                .referenceId(requestDTO.getReferenceId())
-                .referenceType(requestDTO.getReferenceType())
-                .referenceCode(requestDTO.getReferenceCode())
-                .createdBy(userId)
-                .lines(new ArrayList<>())
-                .build();
+        StockTransfer stockTransfer = new StockTransfer();
+        stockTransfer.initDraft(transferCode, requestDTO.getFromWarehouseId(), requestDTO.getToWarehouseId());
+        stockTransfer.setTransferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : java.time.LocalDate.now());
+        stockTransfer.setNote(requestDTO.getNote());
+        stockTransfer.setDeliverer(requestDTO.getDeliverer());
+        stockTransfer.setAttachedDocument(requestDTO.getAttachedDocument());
+        stockTransfer.setReferenceId(requestDTO.getReferenceId());
+        stockTransfer.setReferenceType(requestDTO.getReferenceType());
+        stockTransfer.setReferenceCode(requestDTO.getReferenceCode());
+        stockTransfer.assignCreator(userId);
 
         for (StockTransferLineDTO lineDTO : requestDTO.getLines()) {
             String serialsJson = null;
@@ -148,14 +143,13 @@ public class StockTransferService {
 
             BigDecimal unitCost = resolveTransferUnitCost(requestDTO.getFromWarehouseId(), lineDTO.getVariantId(), lineDTO.getUnitCost());
             StockTransferLine line = StockTransferLine.builder()
-                    .stockTransfer(stockTransfer)
                     .variantId(lineDTO.getVariantId())
                     .quantity(lineDTO.getQuantity())
                     .unitCost(unitCost)
                     .serialNumbersText(serialsJson)
                     .note(lineDTO.getNote())
                     .build();
-            stockTransfer.getLines().add(line);
+            stockTransfer.addLine(line);
         }
 
         stockTransfer = stockTransferRepository.save(stockTransfer);
@@ -179,11 +173,17 @@ public class StockTransferService {
             throw new BusinessException(SystemMessage.INV_DIFF_WAREHOUSE_REQUIRED);
         }
 
-        stockTransfer.setFromWarehouseId(requestDTO.getFromWarehouseId());
-        stockTransfer.setToWarehouseId(requestDTO.getToWarehouseId());
+        if (requestDTO.getFromWarehouseId() != null && requestDTO.getToWarehouseId() != null) {
+            stockTransfer.changeWarehouses(requestDTO.getFromWarehouseId(), requestDTO.getToWarehouseId());
+        }
+
         stockTransfer.setTransferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : stockTransfer.getTransferDate());
-        if (requestDTO.getStatus() != null) {
-            stockTransfer.setStatus(requestDTO.getStatus());
+        if (requestDTO.getStatus() != null && !stockTransfer.getStatus().equals(requestDTO.getStatus())) {
+            if ("CANCELLED".equals(requestDTO.getStatus())) {
+                stockTransfer.cancel();
+            } else if ("APPROVED".equals(requestDTO.getStatus()) || "SUBMITTED".equals(requestDTO.getStatus())) {
+                stockTransfer.approve(userId); // Use approve to transition out of DRAFT
+            }
         }
         stockTransfer.setNote(requestDTO.getNote());
         stockTransfer.setDeliverer(requestDTO.getDeliverer());
@@ -193,7 +193,7 @@ public class StockTransferService {
         stockTransfer.setReferenceCode(requestDTO.getReferenceCode());
 
         stockTransferLineRepository.deleteAll(stockTransfer.getLines());
-        stockTransfer.getLines().clear();
+        stockTransfer.clearLines();
 
         for (StockTransferLineDTO lineDTO : requestDTO.getLines()) {
             String serialsJson = null;
@@ -207,14 +207,13 @@ public class StockTransferService {
 
             BigDecimal unitCost = resolveTransferUnitCost(requestDTO.getFromWarehouseId(), lineDTO.getVariantId(), lineDTO.getUnitCost());
             StockTransferLine line = StockTransferLine.builder()
-                    .stockTransfer(stockTransfer)
                     .variantId(lineDTO.getVariantId())
                     .quantity(lineDTO.getQuantity())
                     .unitCost(unitCost)
                     .serialNumbersText(serialsJson)
                     .note(lineDTO.getNote())
                     .build();
-            stockTransfer.getLines().add(line);
+            stockTransfer.addLine(line);
         }
 
         stockTransfer = stockTransferRepository.save(stockTransfer);
@@ -232,7 +231,7 @@ public class StockTransferService {
 
         createAndPostExport(stockTransfer, userId);
 
-        stockTransfer.setStatus("IN_TRANSIT");
+        stockTransfer.dispatch();
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
         return mapToResponseDTO(stockTransfer);
@@ -264,7 +263,7 @@ public class StockTransferService {
 
         createAndPostImport(stockTransfer, exportedCosts, userId);
 
-        stockTransfer.setStatus(DocumentStatus.POSTED.name());
+        stockTransfer.complete();
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
         return mapToResponseDTO(stockTransfer);

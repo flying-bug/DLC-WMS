@@ -22,18 +22,22 @@ public class StockTransfer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "transfer_code", nullable = false, length = 50, unique = true)
     private String transferCode;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "from_warehouse_id", nullable = false)
     private Long fromWarehouseId;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "to_warehouse_id", nullable = false)
     private Long toWarehouseId;
 
     @Column(name = "transfer_date", nullable = false)
     private LocalDate transferDate;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "status", nullable = false, length = 30)
     private String status;
 
@@ -72,4 +76,72 @@ public class StockTransfer {
     @OneToMany(mappedBy = "stockTransfer", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<StockTransferLine> lines = new ArrayList<>();
+
+    // --- DOMAIN METHODS ---
+
+    public void initDraft(String code, Long fromWh, Long toWh) {
+        if (fromWh == null || toWh == null || fromWh.equals(toWh)) {
+            throw new IllegalArgumentException("Kho xuất và kho nhập phải khác nhau và không được để trống");
+        }
+        if (this.transferCode == null) {
+            this.transferCode = code;
+        }
+        this.fromWarehouseId = fromWh;
+        this.toWarehouseId = toWh;
+        this.status = "DRAFT"; // Sử dụng DRAFT (hoặc DocumentStatus.DRAFT.name())
+    }
+
+    public void assignCreator(Long userId) {
+        if (this.createdBy == null) {
+            this.createdBy = userId;
+        }
+    }
+
+    public void clearLines() {
+        if (this.lines != null) {
+            this.lines.clear();
+        }
+    }
+
+    public void addLine(StockTransferLine line) {
+        if (this.lines == null) {
+            this.lines = new ArrayList<>();
+        }
+        line.setStockTransfer(this);
+        this.lines.add(line);
+    }
+
+    public void approve(Long approverId) {
+        if (!"DRAFT".equals(this.status)) {
+            throw new IllegalStateException("Chỉ có thể duyệt khi phiếu chuyển ở trạng thái DRAFT");
+        }
+        this.status = "APPROVED";
+        this.approvedBy = approverId;
+    }
+
+    public void cancel() {
+        if ("POSTED".equals(this.status)) {
+            throw new IllegalStateException("Không thể hủy phiếu chuyển kho đã ghi sổ");
+        }
+        this.status = "CANCELLED";
+    }
+
+    public void changeWarehouses(Long fromWh, Long toWh) {
+        if (!"DRAFT".equals(this.status) && !"SUBMITTED".equals(this.status)) {
+            throw new IllegalStateException("Chỉ được đổi kho khi ở trạng thái DRAFT hoặc SUBMITTED");
+        }
+        if (fromWh == null || toWh == null || fromWh.equals(toWh)) {
+            throw new IllegalArgumentException("Kho xuất và kho nhập phải khác nhau và không được để trống");
+        }
+        this.fromWarehouseId = fromWh;
+        this.toWarehouseId = toWh;
+    }
+
+    public void dispatch() {
+        this.status = "IN_TRANSIT";
+    }
+
+    public void complete() {
+        this.status = "POSTED";
+    }
 }
