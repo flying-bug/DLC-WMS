@@ -526,8 +526,8 @@ public class RepairWorkflowService {
                 throw new BusinessException(String.format(SystemMessage.REP_ERR_006.getMessage(), replacementSerial, targetSerial));
             }
 
-            currentMapping.setStatus(COMPONENT_STATUS_REPLACED);
-            currentMapping.setReplacedBySerial(replacementSerial);
+            currentMapping.markAsRemoved(repair.getId(), null, "Tháo dỡ thay thế linh kiện");
+            currentMapping.markAsReplaced(replacementSerial);
             markRemovedByRepair(currentMapping, repair, now);
             currentMapping.setNote(appendNote(currentMapping.getNote(),
                     "Thay thế bởi serial " + replacementSerial + " từ phiếu sửa " + repair.getRepairCode()));
@@ -547,8 +547,8 @@ public class RepairWorkflowService {
                 throw new BusinessException(String.format(SystemMessage.REP_ERR_007.getMessage(), removedSerial, targetSerial));
             }
 
-            currentMapping.setStatus(COMPONENT_STATUS_REMOVED);
-            currentMapping.setReplacedBySerial(null);
+            currentMapping.markAsRemoved(repair.getId(), null, "Tháo dỡ thay thế linh kiện");
+            currentMapping.markAsReplaced(null);
             markRemovedByRepair(currentMapping, repair, now);
             currentMapping.setNote(appendNote(currentMapping.getNote(),
                     "Loại bỏ từ phiếu sửa " + repair.getRepairCode()));
@@ -620,8 +620,7 @@ public class RepairWorkflowService {
     }
 
     private void markRemovedByRepair(DeviceComponentSerial mapping, Repair repair, LocalDateTime removedAt) {
-        mapping.setRemovedAt(removedAt);
-        mapping.setRemovedByRepairId(repair.getId());
+        mapping.markAsRemoved(repair.getId(), null, null);
     }
 
     private List<RepairLine> getLinesForStockOut(Long repairId) {

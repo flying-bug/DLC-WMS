@@ -1340,8 +1340,7 @@ public class InventoryDocumentService {
             List<AssemblyOrderSerial> active = assemblyOrderSerialRepository
                     .findByTargetVariantIdAndTargetSerialsIn(order.getTargetVariant().getId(), targetSerials);
             active.forEach(mapping -> {
-                mapping.setStatus("REMOVED");
-                mapping.setRemovedAt(LocalDateTime.now());
+                mapping.markAsRemoved(null, "Hủy nhập/xuất kho");
             });
             assemblyOrderSerialRepository.saveAll(active);
         }

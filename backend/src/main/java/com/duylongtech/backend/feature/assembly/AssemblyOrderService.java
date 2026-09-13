@@ -182,13 +182,8 @@ public class AssemblyOrderService {
             if (assemblyBomRepository.existsByBomCodeAndIdNot(bomCode, id)) {
                 throw new BusinessException(SystemMessage.ASM_ERR_012.getMessage());
             }
-            bom.setBomCode(bomCode);
         }
-        bom.setProduct(product);
-        bom.setBomName(trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName());
-        bom.setVersionNo(request.getVersionNo() != null ? request.getVersionNo() : bom.getVersionNo());
-        bom.setStatus(normalizeBomStatus(request.getStatus(), bom.getStatus()));
-        bom.setUpdatedAt(LocalDateTime.now());
+        bom.updateDetails(product, null, trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName(), request.getVersionNo() != null ? request.getVersionNo() : bom.getVersionNo());
         rebuildBomLines(bom, request.getLines());
         return toBomResponse(assemblyBomRepository.save(bom));
     }
@@ -463,17 +458,8 @@ public class AssemblyOrderService {
         for (AssemblyBomLineRequest requestLine : lines) {
             ProductVariant component = productVariantRepository.findById(requestLine.getComponentVariantId())
                     .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện " + requestLine.getComponentVariantId()));
-            AssemblyBomLine line = AssemblyBomLine.builder()
-                    .assemblyBom(bom)
-                    .componentVariant(component)
-                    .quantity(requestLine.getQuantity())
-                    .componentRole(requestLine.getComponentRole())
-                    .note(requestLine.getNote())
-                    .unitPrice(requestLine.getUnitPrice() != null ? requestLine.getUnitPrice() : component.getSalePrice())
-                    .componentSku(requestLine.getComponentSku() != null ? requestLine.getComponentSku() : component.getSku())
-                    .componentName(requestLine.getComponentName() != null ? requestLine.getComponentName() : variantName(component))
-                    .warrantyMonths(requestLine.getWarrantyMonths() != null ? requestLine.getWarrantyMonths() : ((component.getWarrantyMonths() == null || component.getWarrantyMonths() <= 0) && component.getProduct() != null ? component.getProduct().getWarrantyPeriodMonths() : component.getWarrantyMonths()))
-                    .build();
+            AssemblyBomLine line = new AssemblyBomLine();
+            line.initLine(component, requestLine.getQuantity(), requestLine.getComponentRole(), requestLine.getNote(), requestLine.getUnitPrice() != null ? requestLine.getUnitPrice() : component.getSalePrice(), requestLine.getComponentSku() != null ? requestLine.getComponentSku() : component.getSku(), requestLine.getComponentName() != null ? requestLine.getComponentName() : variantName(component), requestLine.getWarrantyMonths() != null ? requestLine.getWarrantyMonths() : ((component.getWarrantyMonths() == null || component.getWarrantyMonths() <= 0) && component.getProduct() != null ? component.getProduct().getWarrantyPeriodMonths() : component.getWarrantyMonths()));
             bom.getLines().add(line);
         }
     }
@@ -913,18 +899,12 @@ public class AssemblyOrderService {
             ProductVariant compVar = productVariantRepository.findById(req.getComponentVariantId())
                     .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
             
-            return AssemblyOrderSerial.builder()
-                    .assemblyOrder(order)
-                    .targetVariant(targetVar)
-                    .targetSerial(req.getTargetSerial())
-                    .componentVariant(compVar)
-                    .componentSerial(req.getComponentSerial())
-                    .status(ASSEMBLY.equals(order.getOrderType()) ? COMPONENT_STATUS_ACTIVE : COMPONENT_STATUS_REMOVED)
-                    .installedAt(ASSEMBLY.equals(order.getOrderType()) ? now : null)
-                    .removedAt(DISASSEMBLY.equals(order.getOrderType()) ? now : null)
-                    .note(DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null)
-                    .createdBy(order.getCreatedBy())
-                    .build();
+            AssemblyOrderSerial serial = new AssemblyOrderSerial();
+            serial.initSerial(order, targetVar, req.getTargetSerial(), compVar, req.getComponentSerial(), order.getCreatedBy());
+            if ("DISASSEMBLY".equals(order.getOrderType())) {
+                serial.markAsRemoved(null, DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null);
+            }
+            return serial;
         }).collect(Collectors.toList());
         
         assemblyOrderSerialRepository.saveAll(newSerials);
@@ -951,19 +931,13 @@ public class AssemblyOrderService {
             throw new BusinessException(String.format(SystemMessage.ASM_ERR_004.getMessage(), componentSerial));
         }
 
-        return DeviceComponentSerial.builder()
-                .sourceAssemblyOrder(order)
-                .removedByAssemblyOrder(DISASSEMBLY.equals(order.getOrderType()) ? order : null)
-                .targetVariant(targetVar)
-                .targetSerial(req.getTargetSerial())
-                .componentVariant(compVar)
-                .componentSerial(componentSerial)
-                .status(ASSEMBLY.equals(order.getOrderType()) ? COMPONENT_STATUS_ACTIVE : COMPONENT_STATUS_REMOVED)
-                .installedAt(ASSEMBLY.equals(order.getOrderType()) ? now : null)
-                .removedAt(DISASSEMBLY.equals(order.getOrderType()) ? now : null)
-                .note(DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null)
-                .createdBy(userId)
-                .build();
+        DeviceComponentSerial ds = new DeviceComponentSerial();
+        if ("DISASSEMBLY".equals(order.getOrderType())) {
+            ds.initDisassemblySerial(order, targetVar, req.getTargetSerial(), compVar, componentSerial, userId, DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null);
+        } else {
+            ds.initSerial(order, targetVar, req.getTargetSerial(), compVar, componentSerial, userId);
+        }
+        return ds;
     }
 
     @Transactional
@@ -1067,18 +1041,12 @@ public class AssemblyOrderService {
             ProductVariant compVar = productVariantRepository.findById(req.getComponentVariantId())
                     .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
             
-            return AssemblyOrderSerial.builder()
-                    .assemblyOrder(order)
-                    .targetVariant(targetVar)
-                    .targetSerial(req.getTargetSerial())
-                    .componentVariant(compVar)
-                    .componentSerial(req.getComponentSerial())
-                    .status(ASSEMBLY.equals(order.getOrderType()) ? COMPONENT_STATUS_ACTIVE : COMPONENT_STATUS_REMOVED)
-                    .installedAt(ASSEMBLY.equals(order.getOrderType()) ? now : null)
-                    .removedAt(DISASSEMBLY.equals(order.getOrderType()) ? now : null)
-                    .note(DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null)
-                    .createdBy(userId)
-                    .build();
+            AssemblyOrderSerial serial = new AssemblyOrderSerial();
+            serial.initSerial(order, targetVar, req.getTargetSerial(), compVar, req.getComponentSerial(), userId);
+            if ("DISASSEMBLY".equals(order.getOrderType())) {
+                serial.markAsRemoved(null, DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null);
+            }
+            return serial;
         }).collect(Collectors.toList());
         
         assemblyOrderSerialRepository.saveAll(newSerials);
@@ -1177,30 +1145,17 @@ public class AssemblyOrderService {
                 DeviceComponentSerial currentMapping = findActiveDeviceMapping(
                         currentMappings, req.getComponentVariantId(), componentSerial);
                 if (currentMapping != null) {
-                    currentMapping.setStatus(COMPONENT_STATUS_REMOVED);
-                    currentMapping.setRemovedAt(now);
-                    currentMapping.setRemovedByAssemblyOrder(order);
-                    currentMapping.setReplacedBySerial(null);
-                    currentMapping.setNote(appendNote(currentMapping.getNote(),
+                    currentMapping.markAsRemoved(null, order, appendNote(currentMapping.getNote(),
                             "Tháo dỡ từ lệnh " + order.getOrderCode()));
+                    currentMapping.markAsReplaced(null);
                     changedMappings.add(currentMapping);
                     continue;
                 }
 
                 ProductVariant componentVariant = productVariantRepository.findById(req.getComponentVariantId())
                         .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
-                DeviceComponentSerial recoveredMapping = DeviceComponentSerial.builder()
-                        .sourceAssemblyOrder(sourceOrder)
-                        .removedByAssemblyOrder(order)
-                        .targetVariant(targetVariant)
-                        .targetSerial(targetSerial)
-                        .componentVariant(componentVariant)
-                        .componentSerial(componentSerial)
-                        .status(COMPONENT_STATUS_REMOVED)
-                        .removedAt(now)
-                        .note("Thu hồi ngoài cấu hình hiện tại từ lệnh " + order.getOrderCode())
-                        .createdBy(userId)
-                        .build();
+                DeviceComponentSerial recoveredMapping = new DeviceComponentSerial();
+                recoveredMapping.initDisassemblySerial(order, targetVariant, targetSerial, componentVariant, componentSerial, userId, "Thu hồi ngoài cấu hình hiện tại từ lệnh " + order.getOrderCode());
                 currentMappings.add(recoveredMapping);
                 changedMappings.add(recoveredMapping);
             }
@@ -1254,9 +1209,7 @@ public class AssemblyOrderService {
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
         requireState(bom.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED");
         validateBomEntity(bom);
-        bom.setStatus("PENDING_APPROVAL");
-        bom.setSubmittedBy(actorId);
-        bom.setSubmittedAt(LocalDateTime.now());
+        bom.submitForApproval(actorId);
         notifyRole("ROLE_ACCOUNTANT", "BOM chß╗¥ duyß╗çt: " + bom.getBomCode(),
                 "Kß╗╣ thuß║¡t vi├¬n ─æ├ú gß╗¡i BOM " + bom.getBomCode() + " ─æß╗â duyß╗çt.", "ASSEMBLY_BOM", bom.getId(),
                 "/assembly-boms/" + bom.getId());
@@ -1269,9 +1222,7 @@ public class AssemblyOrderService {
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
         requireState(bom.getStatus(), "PENDING_APPROVAL");
         validateBomEntity(bom);
-        bom.setStatus(DocumentStatus.APPROVED.name());
-        bom.setApprovedBy(actorId);
-        bom.setApprovedAt(LocalDateTime.now());
+        bom.approve(actorId);
         notifyUser(bom.getSubmittedBy(), "BOM ─æ├ú ─æ╞░ß╗úc duyß╗çt: " + bom.getBomCode(),
                 "Kß║┐ to├ín ─æ├ú duyß╗çt BOM " + bom.getBomCode() + ".", "ASSEMBLY_BOM", bom.getId(),
                 "/assembly-boms/" + bom.getId());
@@ -1284,10 +1235,7 @@ public class AssemblyOrderService {
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
         requireState(bom.getStatus(), "PENDING_APPROVAL");
         String normalizedReason = requireReason(reason);
-        bom.setStatus("REJECTED");
-        bom.setRejectedBy(actorId);
-        bom.setRejectedAt(LocalDateTime.now());
-        bom.setRejectionReason(normalizedReason);
+        bom.reject(actorId, normalizedReason);
         notifyUser(bom.getSubmittedBy(), "BOM bß╗ï tß╗½ chß╗æi: " + bom.getBomCode(), normalizedReason,
                 "ASSEMBLY_BOM", bom.getId(), "/assembly-boms/" + bom.getId());
         return toBomResponse(assemblyBomRepository.save(bom));

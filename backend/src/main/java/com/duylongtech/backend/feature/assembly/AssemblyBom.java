@@ -29,16 +29,20 @@ public class AssemblyBom {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "bom_code", nullable = false, unique = true, length = 50)
     private String bomCode;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "bom_name", nullable = false, length = 150)
     private String bomName;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "version_no", nullable = false, precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal versionNo = BigDecimal.ONE;
 
+    @Setter(AccessLevel.NONE)
     @Column(nullable = false, length = 30)
     @Builder.Default
     private String status = DocumentStatus.DRAFT.name();
@@ -74,5 +78,61 @@ public class AssemblyBom {
 
     @OneToMany(mappedBy = "assemblyBom", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @Setter(AccessLevel.NONE)
     private List<AssemblyBomLine> lines = new ArrayList<>();
+
+    public void initBom(Product product, String bomCode, String bomName, BigDecimal versionNo, Long submitterId) {
+        this.product = product;
+        this.bomCode = bomCode;
+        this.bomName = bomName;
+        this.versionNo = versionNo != null ? versionNo : BigDecimal.ONE;
+        this.status = DocumentStatus.DRAFT.name();
+    }
+
+    public void updateDetails(Product product, String bomCode, String bomName, BigDecimal versionNo) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status) && !"REJECTED".equals(this.status)) {
+            throw new IllegalStateException("Chỉ được sửa BOM khi ở trạng thái DRAFT hoặc REJECTED");
+        }
+        if (product != null) this.product = product;
+        if (bomCode != null) this.bomCode = bomCode;
+        if (bomName != null) this.bomName = bomName;
+        if (versionNo != null) this.versionNo = versionNo;
+    }
+
+    public void submitForApproval(Long submitterId) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status) && !"REJECTED".equals(this.status)) {
+            throw new IllegalStateException("Chỉ được trình duyệt BOM khi ở trạng thái DRAFT hoặc REJECTED");
+        }
+        this.status = "PENDING_APPROVAL";
+        this.submittedBy = submitterId;
+        this.submittedAt = LocalDateTime.now();
+    }
+
+    public void approve(Long approverId) {
+        if (!"PENDING_APPROVAL".equals(this.status)) {
+            throw new IllegalStateException("Chỉ được duyệt BOM khi đang ở trạng thái PENDING_APPROVAL");
+        }
+        this.status = DocumentStatus.APPROVED.name();
+        this.approvedBy = approverId;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    public void reject(Long rejectorId, String reason) {
+        if (!"PENDING_APPROVAL".equals(this.status)) {
+            throw new IllegalStateException("Chỉ được từ chối BOM khi đang ở trạng thái PENDING_APPROVAL");
+        }
+        this.status = "REJECTED";
+        this.rejectedBy = rejectorId;
+        this.rejectedAt = LocalDateTime.now();
+        this.rejectionReason = reason;
+    }
+
+    public void addLine(AssemblyBomLine line) {
+        line.setAssemblyBom(this);
+        this.lines.add(line);
+    }
+
+    public void clearLines() {
+        this.lines.clear();
+    }
 }
