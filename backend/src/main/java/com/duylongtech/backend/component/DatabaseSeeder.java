@@ -4,7 +4,7 @@ import com.duylongtech.backend.enums.DocumentStatus;
 
 import com.duylongtech.backend.feature.brand.Brand;
 import com.duylongtech.backend.feature.brand.BrandRepository;
-import com.duylongtech.backend.feature.auth.RoleServiceImpl;
+import com.duylongtech.backend.feature.auth.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -298,7 +298,7 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         for (RoleEntity role : allRoles) {
             if (!isInitialized || role.getPermissions() == null || role.getPermissions().isEmpty()) {
-                Set<PermissionEntity> defaultPerms = RoleServiceImpl.getDefaultPermissionsForRole(role.getCode(), allPerms);
+                Set<PermissionEntity> defaultPerms = RoleService.getDefaultPermissionsForRole(role.getCode(), allPerms);
                 if (!defaultPerms.isEmpty()) {
                     role.setPermissions(defaultPerms);
                     roleRepository.save(role);
