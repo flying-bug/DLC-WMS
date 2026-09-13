@@ -15,8 +15,6 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Stocktake {
 
     @Id
@@ -64,11 +62,9 @@ public class Stocktake {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Builder.Default
     @OneToMany(mappedBy = "stocktake", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StocktakeLine> lines = new ArrayList<>();
 
-    @Builder.Default
     @OneToMany(mappedBy = "stocktake", cascade = CascadeType.ALL, orphanRemoval = true)
     @Setter(AccessLevel.NONE)
     private List<StocktakeParticipant> participants = new ArrayList<>();

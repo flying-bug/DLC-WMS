@@ -12,8 +12,6 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class RepairLine {
 
     @Id
@@ -54,32 +52,26 @@ public class RepairLine {
 
     @Setter(AccessLevel.NONE)
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal unitPrice = BigDecimal.ZERO;
 
     @Column(name = "is_warranty_covered", nullable = false)
-    @Builder.Default
     private Boolean isWarrantyCovered = false;
 
     @Setter(AccessLevel.NONE)
     @Column(name = "is_free_warranty", nullable = false)
-    @Builder.Default
     private Boolean isFreeWarranty = false;
 
     @Setter(AccessLevel.NONE)
     @Column(name = "vat_percent", precision = 5, scale = 2)
-    @Builder.Default
     private BigDecimal vatPercent = BigDecimal.ZERO;
 
     @Column(columnDefinition = "TEXT")
     private String note;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "updated_at")
-    @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     public void initLine(Long componentVariantId, String actionType, BigDecimal quantity, BigDecimal unitPrice, Boolean isFreeWarranty, Long serialNumberId, String serialNumberText, Long replacementSerialNumberId, String replacementSerialNumberText, BigDecimal vatPercent, String note) {

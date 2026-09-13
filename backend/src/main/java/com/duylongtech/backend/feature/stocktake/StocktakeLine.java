@@ -12,8 +12,6 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class StocktakeLine {
 
     @Id
@@ -54,7 +52,6 @@ public class StocktakeLine {
     @Column(name = "action", length = 100)
     private String action;
 
-    @Builder.Default
     @OneToMany(mappedBy = "stocktakeLine", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StocktakeLineSerial> serials = new ArrayList<>();
 

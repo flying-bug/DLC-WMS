@@ -21,9 +21,7 @@ import java.util.Set;
 @Entity
 @Table(name = "BRANDS")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-@Builder
+@NoArgsConstructor
 public class Brand {
 
     @Id
@@ -37,7 +35,6 @@ public class Brand {
     private String name;
 
     @Column(nullable = false, length = 20)
-    @Builder.Default
     private String status = DocumentStatus.APPROVED.name();
 
     @Column(columnDefinition = "TEXT")
@@ -58,6 +55,15 @@ public class Brand {
     private LocalDateTime updatedAt;
 
     // --- Domain Business Logic ---
+
+    public void initBrand(String code, String name, String status, String description, String hotline, String contactEmail) {
+        this.code = code;
+        this.name = name;
+        this.status = status != null ? status : DocumentStatus.APPROVED.name();
+        this.description = description;
+        this.hotline = hotline;
+        this.contactEmail = contactEmail;
+    }
 
     /**
      * Khởi tạo Brand mới với các ràng buộc cơ bản

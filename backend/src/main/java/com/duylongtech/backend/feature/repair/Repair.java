@@ -25,8 +25,6 @@ import com.duylongtech.backend.feature.warranty.Warranty;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Repair {
 
     @Id
@@ -53,7 +51,6 @@ public class Repair {
     private ProductVariant productVariant;
 
     @Column(name = "product_quantity")
-    @Builder.Default
     private Integer productQuantity = 1;
 
     @Column(name = "product_unit", length = 50)
@@ -116,7 +113,6 @@ public class Repair {
 
     // Có đang trong hạn bảo hành máy không
     @Column(name = "under_warranty", nullable = false)
-    @Builder.Default
     private Boolean underWarranty = false;
 
     // Hạn bảo hành sau sửa chữa (nếu có)
@@ -125,17 +121,14 @@ public class Repair {
 
     // Phương thức xuất hóa đơn
     @Column(name = "invoice_method", nullable = false, length = 30)
-    @Builder.Default
     private String invoiceMethod = "after_repair";
 
     @Setter(AccessLevel.NONE)
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     // Chi phí sửa chữa cũ (backward compat)
     @Column(name = "repair_cost", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal repairCost = BigDecimal.ZERO;
 
     // Người chịu trách nhiệm (Kỹ thuật viên)
@@ -149,7 +142,6 @@ public class Repair {
     private Long createdBy;
 
     @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
     private java.util.List<RepairLine> repairLines = new java.util.ArrayList<>();
     @Column(name = "approved_by")
     private Long approvedBy;
@@ -167,14 +159,12 @@ public class Repair {
      */
     @Version
     @Column(name = "version", nullable = false)
-    @Builder.Default
     private Integer version = 0;
 
 
 
     // Quan hệ với REPAIR_FEES
     @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
     private List<RepairFee> fees = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)

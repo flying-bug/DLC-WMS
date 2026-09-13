@@ -391,14 +391,8 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (brandOpt.isPresent()) {
             return brandOpt.get();
         }
-        Brand newBrand = Brand.builder()
-                .code(code)
-                .name(name)
-                .status("APPROVED")
-                .description(description)
-                .hotline(hotline)
-                .contactEmail(email)
-                .build();
+        Brand newBrand = new Brand();
+        newBrand.initBrand(code, name, "APPROVED", description, hotline, email);
         return brandRepository.save(newBrand);
     }
 

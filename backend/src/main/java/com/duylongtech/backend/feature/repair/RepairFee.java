@@ -17,8 +17,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class RepairFee {
 
     @Id
@@ -37,19 +35,16 @@ public class RepairFee {
     // Số tiền phí (= 0 nếu is_free_warranty = TRUE)
     @Setter(AccessLevel.NONE)
     @Column(name = "fee_amount", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
     private BigDecimal feeAmount = BigDecimal.ZERO;
 
     // Miễn phí do bảo hành
     @Setter(AccessLevel.NONE)
     @Column(name = "is_free_warranty", nullable = false)
-    @Builder.Default
     private Boolean isFreeWarranty = false;
 
     // Số lượng
     @Setter(AccessLevel.NONE)
     @Column(name = "quantity", precision = 15, scale = 4)
-    @Builder.Default
     private BigDecimal quantity = BigDecimal.ONE;
 
     // Đơn vị tính
@@ -60,7 +55,6 @@ public class RepairFee {
     // Thuế suất GTGT (%)
     @Setter(AccessLevel.NONE)
     @Column(name = "vat_percent", precision = 5, scale = 2)
-    @Builder.Default
     private BigDecimal vatPercent = BigDecimal.ZERO;
 
     @Column(name = "note", columnDefinition = "TEXT")

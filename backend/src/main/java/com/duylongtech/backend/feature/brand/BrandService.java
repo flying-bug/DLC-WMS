@@ -106,14 +106,9 @@ public class BrandService {
         // Resolve và validate mã NSX
         String code = resolveCode(req.getCode());
 
-        Brand brand = Brand.builder()
-                .code(code)
-                .name(req.getName() != null ? req.getName().trim() : null)
-                .status(APPROVED)
-                .description(trimToNull(req.getDescription()))
-                .hotline(trimToNull(req.getHotline()))
-                .contactEmail(trimToNull(req.getContactEmail()))
-                .build();
+        Brand brand = new Brand();
+        brand.initBrand(code, req.getName() != null ? req.getName().trim() : null, APPROVED,
+                trimToNull(req.getDescription()), trimToNull(req.getHotline()), trimToNull(req.getContactEmail()));
 
         return brandMapper.toResponse(brandRepository.save(brand));
     }

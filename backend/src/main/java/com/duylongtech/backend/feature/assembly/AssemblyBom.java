@@ -16,7 +16,6 @@ import com.duylongtech.backend.feature.product.Product;
 @Entity
 @Table(name = "ASSEMBLY_BOMS")
 @Getter
-@Setter
 @NoArgsConstructor
 public class AssemblyBom {
     @Id
@@ -27,19 +26,15 @@ public class AssemblyBom {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "bom_code", nullable = false, unique = true, length = 50)
     private String bomCode;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "bom_name", nullable = false, length = 150)
     private String bomName;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "version_no", nullable = false, precision = 5, scale = 2)
         private BigDecimal versionNo = BigDecimal.ONE;
 
-    @Setter(AccessLevel.NONE)
     @Column(nullable = false, length = 30)
         private String status = DocumentStatus.DRAFT.name();
 
@@ -73,7 +68,6 @@ public class AssemblyBom {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "assemblyBom", cascade = CascadeType.ALL, orphanRemoval = true)
-        @Setter(AccessLevel.NONE)
     private List<AssemblyBomLine> lines = new ArrayList<>();
 
     public void initBom(Product product, String bomCode, String bomName, BigDecimal versionNo, Long submitterId) {
