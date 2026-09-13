@@ -191,8 +191,8 @@ public class StocktakeService {
         }
         stocktake.updateDetails(req.getPurpose(), req.getStocktakeDate());
 
-        stocktake.getLines().clear();
-        stocktake.getParticipants().clear();
+        stocktake.clearLines();
+        stocktake.clearParticipants();
 
         mapLinesAndParticipants(stocktake, req);
 
@@ -287,27 +287,18 @@ public class StocktakeService {
 
                 if (lineReq.getSerials() != null && !lineReq.getSerials().isEmpty()) {
                     lineReq.getSerials().forEach(sReq -> {
-                        line.getSerials().add(StocktakeLineSerial.builder()
-                                .stocktakeLine(line)
-                                .serialNumberId(sReq.getSerialNumberId())
-                                .serialNumber(sReq.getSerialNumber())
-                                .scanStatus(sReq.getScanStatus() != null ? sReq.getScanStatus() : "MATCHED")
-                                .note(sReq.getNote())
-                                .build());
+                        StocktakeLineSerial serial = new StocktakeLineSerial();
+                        serial.initSerial(sReq.getSerialNumberId(), sReq.getSerialNumber(), sReq.getScanStatus(), sReq.getNote());
+                        line.addSerial(serial);
                     });
                 }
-
-                stocktake.getLines().add(line);
             });
         }
         if (req.getParticipants() != null) {
             req.getParticipants().forEach(partReq -> {
-                stocktake.getParticipants().add(StocktakeParticipant.builder()
-                        .stocktake(stocktake)
-                        .fullName(partReq.getFullName())
-                        .title(partReq.getTitle())
-                        .represent(partReq.getRepresent())
-                        .build());
+                StocktakeParticipant participant = new StocktakeParticipant();
+                participant.initParticipant(partReq.getFullName(), partReq.getTitle(), partReq.getRepresent());
+                stocktake.addParticipant(participant);
             });
         }
     }

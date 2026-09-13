@@ -69,6 +69,11 @@ public class StocktakeLine {
         calculateDiff();
     }
 
+    public void addSerial(StocktakeLineSerial serial) {
+        serial.setStocktakeLine(this);
+        this.serials.add(serial);
+    }
+
     public void updateCount(BigDecimal countQty, BigDecimal goodQty, BigDecimal badQty, BigDecimal lostQty, String action) {
         this.countQty = countQty;
         this.goodQty = goodQty;

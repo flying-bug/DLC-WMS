@@ -6,10 +6,7 @@ import lombok.*;
 @Entity
 @Table(name = "STOCKTAKE_PARTICIPANTS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class StocktakeParticipant {
 
     @Id
@@ -28,4 +25,14 @@ public class StocktakeParticipant {
 
     @Column(name = "represent", length = 100)
     private String represent;
+
+    public void initParticipant(String fullName, String title, String represent) {
+        this.fullName = fullName;
+        this.title = title;
+        this.represent = represent;
+    }
+
+    void setStocktake(Stocktake stocktake) {
+        this.stocktake = stocktake;
+    }
 }

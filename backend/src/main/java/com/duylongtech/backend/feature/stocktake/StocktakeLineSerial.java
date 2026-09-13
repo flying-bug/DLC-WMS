@@ -2,15 +2,11 @@ package com.duylongtech.backend.feature.stocktake;
 
 import jakarta.persistence.*;
 import lombok.*;
-import com.duylongtech.backend.feature.product.SerialNumber;
 
 @Entity
 @Table(name = "STOCKTAKE_LINE_SERIALS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class StocktakeLineSerial {
 
     @Id
@@ -32,4 +28,15 @@ public class StocktakeLineSerial {
 
     @Column(name = "note", length = 255)
     private String note;
+
+    public void initSerial(Long serialNumberId, String serialNumber, String scanStatus, String note) {
+        this.serialNumberId = serialNumberId;
+        this.serialNumber = serialNumber;
+        this.scanStatus = scanStatus != null ? scanStatus : "MATCHED";
+        this.note = note;
+    }
+
+    void setStocktakeLine(StocktakeLine stocktakeLine) {
+        this.stocktakeLine = stocktakeLine;
+    }
 }

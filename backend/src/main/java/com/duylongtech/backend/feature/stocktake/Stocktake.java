@@ -98,6 +98,15 @@ public class Stocktake {
     public void clearLines() {
         this.lines.clear();
     }
+
+    public void addParticipant(StocktakeParticipant participant) {
+        participant.setStocktake(this);
+        this.participants.add(participant);
+    }
+
+    public void clearParticipants() {
+        this.participants.clear();
+    }
     
     public void startCounting() {
         if (!"DRAFT".equals(this.status)) {
