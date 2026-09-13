@@ -1,4 +1,4 @@
-package com.duylongtech.backend.dto.response;
+package com.duylongtech.backend.feature.brand;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -332,7 +332,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         }
 
         InventoryDocument doc = new InventoryDocument();
-        doc.setDocCode(docCode);
+        doc.assignInitialCode(docCode);
         doc.setDocType(docType);
         doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
         doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
@@ -343,9 +343,9 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         doc.setSalesOrderId(soId);
         doc.setPartnerId(req.getPartnerId());
         doc.setDocDate(req.getDocDate());
-        doc.setStatus(normalizeEditableStatus(req.getStatus(), DEFAULT_STATUS));
+        doc.updateStatus(normalizeEditableStatus(req.getStatus(), DEFAULT_STATUS));
         doc.setNote(req.getNote());
-        doc.setCreatedBy(req.getCreatedBy());
+        doc.assignCreator(req.getCreatedBy());
         doc.setRecipientName(req.getRecipientName());
         doc.setRecipientAddress(req.getRecipientAddress());
         doc.setSalespersonId(req.getSalespersonId());
@@ -370,7 +370,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
             if (inventoryDocumentRepository.existsByDocCodeAndIdNot(requestedCode, id)) {
                 throw new BusinessException(duplicateMessage);
             }
-            doc.setDocCode(requestedCode);
+            doc.updateCode(requestedCode);
         }
         Long soId = req.getSalesOrderId();
         if (soId == null && ("SALES_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))
@@ -392,7 +392,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
         doc.setReferenceId(req.getReferenceId());
         doc.setDocDate(req.getDocDate());
-        doc.setStatus(importDocument
+        doc.updateStatus(importDocument
                 ? normalizeEditableImportStatus(req.getStatus(), doc.getStatus())
                 : normalizeEditableStatus(req.getStatus(), doc.getStatus()));
         doc.setNote(req.getNote());
@@ -983,7 +983,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         }
 
         InventoryDocument doc = new InventoryDocument();
-        doc.setDocCode(resolveCreateDocCode(null));
+        doc.assignInitialCode(resolveCreateDocCode(null));
         doc.setDocType(EXPORT_DOC_TYPE);
         doc.setDocDate(LocalDate.now());
         doc.setPartnerId(so.getPartnerId());
@@ -991,8 +991,8 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         doc.setReferenceType("SALES_ORDER");
         doc.setReferenceId(so.getId());
         doc.setSalesOrderId(so.getId());
-        doc.setCreatedBy(actorUserId);
-        doc.setStatus(DEFAULT_STATUS);
+        doc.assignCreator(actorUserId);
+        doc.updateStatus(DEFAULT_STATUS);
         doc.setIssuePurpose(ISSUE_PURPOSE_SALES);
 
         for (SalesOrderLine soLine : so.getLines()) {
@@ -1230,10 +1230,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
 
 
     private void markUnposted(InventoryDocument doc, String reason, Long currentUserId) {
-        doc.setStatus("UNPOSTED");
-        doc.setUnpostReason(trimToNull(reason));
-        doc.setUnpostedBy(currentUserId);
-        doc.setUnpostedAt(LocalDateTime.now());
+        doc.unpost(currentUserId, trimToNull(reason));
         doc.setUpdatedAt(LocalDateTime.now());
     }
 

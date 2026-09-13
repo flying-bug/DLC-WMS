@@ -4,6 +4,8 @@ import com.duylongtech.backend.enums.DocumentStatus;
 
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.repository.*;
+import com.duylongtech.backend.feature.brand.Brand;
+import com.duylongtech.backend.feature.brand.BrandRepository;
 import com.duylongtech.backend.service.impl.RoleServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;

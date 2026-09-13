@@ -350,8 +350,7 @@ public class InventoryPostingServiceImpl implements com.duylongtech.backend.serv
             }
         }
 
-        doc.setStatus(DocumentStatus.POSTED.name());
-        doc.setPostedAt(LocalDateTime.now());
+        doc.post(null);
         doc.setUpdatedAt(LocalDateTime.now());
 
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
@@ -439,8 +438,7 @@ public class InventoryPostingServiceImpl implements com.duylongtech.backend.serv
             createImportedSerialsIfNeeded(savedDoc, line, unitCost, effectiveWarehouseId);
         }
 
-        savedDoc.setStatus(DocumentStatus.POSTED.name());
-        savedDoc.setPostedAt(LocalDateTime.now());
+        savedDoc.post(null);
         savedDoc.setUpdatedAt(LocalDateTime.now());
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);
@@ -624,11 +622,8 @@ public class InventoryPostingServiceImpl implements com.duylongtech.backend.serv
             });
         }
 
-        // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i chÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
-        doc.setStatus("UNPOSTED");
-        doc.setUnpostedBy(currentUserId);
-        doc.setUnpostedAt(LocalDateTime.now());
-        doc.setUnpostReason(reason != null && !reason.isBlank() ? reason.trim() : "BÃƒÂ¡Ã‚Â»Ã‚Â ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u nhÃƒÂ¡Ã‚ÂºÃ‚Â­p");
+        // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
+        doc.unpost(currentUserId, reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu nhập");
         doc.setUpdatedAt(LocalDateTime.now());
 
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
@@ -638,7 +633,7 @@ public class InventoryPostingServiceImpl implements com.duylongtech.backend.serv
                     ? userRepository.findById(currentUserId).map(User::getUsername).orElse(null)
                     : null;
             auditLogService.logEvent(username, "UNPOST_IMPORT", "InventoryDocument", doc.getId(), "SUCCESS",
-                    "BÃƒÂ¡Ã‚Â»Ã‚Â ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho " + doc.getDocCode() + ". LÃƒÆ’Ã‚Â½ do: " + doc.getUnpostReason(), null, null);
+                    "BÃƒÂ¡Ã‚Â»Ã‚Â  ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho " + doc.getDocCode() + ". LÃƒÆ’Ã‚Â½ do: " + doc.getUnpostReason(), null, null);
         } catch (Exception ignored) {
         }
 
@@ -648,7 +643,7 @@ public class InventoryPostingServiceImpl implements com.duylongtech.backend.serv
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findExportOrThrow(id);
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
-            throw new BusinessException("ChÃƒÂ¡Ã‚Â»Ã¢â‚¬Â° cÃƒÆ’Ã‚Â³ thÃƒÂ¡Ã‚Â»Ã†â€™ bÃƒÂ¡Ã‚Â»Ã‚Â ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ chÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â« Ãƒâ€žÃ¢â‚¬Ëœang ÃƒÂ¡Ã‚Â»Ã…Â¸ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i Ãƒâ€žÃ‚ÂÃƒÆ’Ã†â€™ GHI SÃƒÂ¡Ã‚Â»Ã¢â‚¬Â (POSTED).");
+            throw new BusinessException("ChÃƒÂ¡Ã‚Â»Ã¢â‚¬Â° cÃƒÆ’Ã‚Â³ thÃƒÂ¡Ã‚Â»Ã†â€™ bÃƒÂ¡Ã‚Â»Ã‚Â  ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ chÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â« Ãƒâ€žÃ¢â‚¬Ëœang ÃƒÂ¡Ã‚Â»Ã…Â¸ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i Ãƒâ€žÃ‚Â ÃƒÆ’Ã†â€™ GHI SÃƒÂ¡Ã‚Â»Ã¢â‚¬Â  (POSTED).");
         }
 
         com.duylongtech.backend.dto.response.DependencyCheckResponse check = documentDependencyService
@@ -698,7 +693,7 @@ public class InventoryPostingServiceImpl implements com.duylongtech.backend.serv
             }
         }
 
-        // 2. ChuyÃƒÂ¡Ã‚Â»Ã†â€™n trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i SO nÃƒÂ¡Ã‚ÂºÃ‚Â¿u cÃƒÆ’Ã‚Â³
+        // 2. ChuyÃƒÂ¡Ã‚Â»Ã†â€™n trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚ÂºÃ‚Â¿i SO nÃƒÂ¡Ã‚ÂºÃ‚Â¿u cÃƒÆ’Ã‚Â³
         if (doc.getSalesOrderId() != null) {
             salesOrderRepository.findById(doc.getSalesOrderId()).ifPresent(so -> {
                 if (DocumentStatus.POSTED.name().equals(so.getStatus())) {
@@ -708,11 +703,8 @@ public class InventoryPostingServiceImpl implements com.duylongtech.backend.serv
             });
         }
 
-        // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i chÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
-        doc.setStatus("UNPOSTED");
-        doc.setUnpostedBy(currentUserId);
-        doc.setUnpostedAt(LocalDateTime.now());
-        doc.setUnpostReason(reason != null && !reason.isBlank() ? reason.trim() : "BÃƒÂ¡Ã‚Â»Ã‚Â ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t");
+        // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
+        doc.unpost(currentUserId, reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu xuất");
         doc.setUpdatedAt(LocalDateTime.now());
 
         InventoryDocument saved = inventoryDocumentRepository.save(doc);

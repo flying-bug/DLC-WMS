@@ -1,4 +1,4 @@
-package com.duylongtech.backend.dto.request;
+package com.duylongtech.backend.feature.brand;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

@@ -1,6 +1,5 @@
-package com.duylongtech.backend.repository;
+package com.duylongtech.backend.feature.brand;
 
-import com.duylongtech.backend.entity.Brand;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

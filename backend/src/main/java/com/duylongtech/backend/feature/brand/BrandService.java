@@ -1,16 +1,9 @@
-package com.duylongtech.backend.service.impl;
+package com.duylongtech.backend.feature.brand;
 
 import com.duylongtech.backend.enums.DocumentStatus;
-
-import com.duylongtech.backend.service.*;
-
 import com.duylongtech.backend.constant.SystemMessage;
-import com.duylongtech.backend.dto.request.BrandRequest;
-import com.duylongtech.backend.dto.response.BrandResponse;
-import com.duylongtech.backend.entity.Brand;
 import com.duylongtech.backend.exception.BusinessException;
-import com.duylongtech.backend.mapper.BrandMapper;
-import com.duylongtech.backend.repository.BrandRepository;
+import com.duylongtech.backend.service.CodeGeneratorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +35,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class BrandServiceImpl  implements BrandService {
+public class BrandService {
 
     private static final String APPROVED = DocumentStatus.APPROVED.name();
     private static final String INACTIVE  = com.duylongtech.backend.enums.EntityStatus.INACTIVE.name();
@@ -113,14 +106,14 @@ public class BrandServiceImpl  implements BrandService {
         // Resolve và validate mã NSX
         String code = resolveCode(req.getCode());
 
-        Brand brand = brandMapper.toEntity(req);
-        brand.setCode(code);
-        brand.setStatus(APPROVED);
-        
-        if (brand.getName() != null) brand.setName(brand.getName().trim());
-        if (brand.getDescription() != null) brand.setDescription(trimToNull(brand.getDescription()));
-        if (brand.getHotline() != null) brand.setHotline(trimToNull(brand.getHotline()));
-        if (brand.getContactEmail() != null) brand.setContactEmail(trimToNull(brand.getContactEmail()));
+        Brand brand = Brand.builder()
+                .code(code)
+                .name(req.getName() != null ? req.getName().trim() : null)
+                .status(APPROVED)
+                .description(trimToNull(req.getDescription()))
+                .hotline(trimToNull(req.getHotline()))
+                .contactEmail(trimToNull(req.getContactEmail()))
+                .build();
 
         return brandMapper.toResponse(brandRepository.save(brand));
     }
@@ -149,35 +142,22 @@ public class BrandServiceImpl  implements BrandService {
         Brand brand = findBrandOrThrow(id);
 
         // FR 3.7.4: Mã NSX không được thay đổi sau khi tạo
-        // Nếu client gửi kèm code khác với code hiện tại → báo lỗi
         String requestedCode = trimToNull(req.getCode());
         if (requestedCode != null && !requestedCode.equalsIgnoreCase(brand.getCode())) {
             throw new BusinessException(SystemMessage.BRAND_CODE_NOT_MODIFIABLE);
         }
 
-        // Cập nhật tên thương hiệu (bắt buộc)
-        if (req.getName() != null && !req.getName().isBlank()) {
-            brand.setName(req.getName().trim());
-        }
+        // Cập nhật thông tin chi tiết qua domain method
+        brand.updateDetails(
+            req.getName(),
+            req.getDescription(),
+            req.getHotline(),
+            req.getContactEmail()
+        );
 
         // Cập nhật trạng thái nếu được gửi
         if (req.getStatus() != null) {
-            brand.setStatus(resolveStatus(req.getStatus()));
-        }
-
-        // Cập nhật mô tả
-        if (req.getDescription() != null) {
-            brand.setDescription(trimToNull(req.getDescription()));
-        }
-
-        // Cập nhật hotline
-        if (req.getHotline() != null) {
-            brand.setHotline(trimToNull(req.getHotline()));
-        }
-
-        // Cập nhật email liên hệ
-        if (req.getContactEmail() != null) {
-            brand.setContactEmail(trimToNull(req.getContactEmail()));
+            brand.changeStatus(resolveStatus(req.getStatus()));
         }
 
         return brandMapper.toResponse(brandRepository.save(brand));
@@ -208,8 +188,8 @@ public class BrandServiceImpl  implements BrandService {
         long linkedProductCount = brandRepository.countLinkedProducts(brand.getId());
 
         if (linkedProductCount > 0) {
-            // Có sản phẩm liên kết → chuyển status sang INACTIVE thay vì xóa vật lý
-            brand.setStatus(INACTIVE);
+            // Có sản phẩm liên kết → chuyển status sang INACTIVE thay vì xóa vật lý qua domain method
+            brand.deactivate();
             brandRepository.save(brand);
             return false; // Soft deleted
         } else {

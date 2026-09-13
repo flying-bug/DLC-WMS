@@ -1,10 +1,6 @@
-package com.duylongtech.backend.mapper;
+package com.duylongtech.backend.feature.brand;
 
-import com.duylongtech.backend.dto.request.BrandRequest;
-import com.duylongtech.backend.dto.response.BrandResponse;
-import com.duylongtech.backend.entity.Brand;
 import org.mapstruct.Mapper;
-import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
@@ -15,5 +11,4 @@ public interface BrandMapper {
 
     Brand toEntity(BrandRequest request);
 
-    void updateEntity(@MappingTarget Brand brand, BrandRequest request);
 }

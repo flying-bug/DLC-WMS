@@ -1376,7 +1376,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         }
         boolean exportPosted = documents.stream()
                 .anyMatch(d -> "EX_SO".equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
-        documents.stream().filter(d -> DocumentStatus.DRAFT.name().equals(d.getStatus())).forEach(d -> d.setStatus(DocumentStatus.CANCELLED.name()));
+        documents.stream().filter(d -> DocumentStatus.DRAFT.name().equals(d.getStatus())).forEach(d -> d.updateStatus(DocumentStatus.CANCELLED.name()));
         inventoryDocumentRepository.saveAll(documents);
         order.setStatus(DocumentStatus.CANCELLED.name());
         order.setCancelConfirmedBy(actorId);

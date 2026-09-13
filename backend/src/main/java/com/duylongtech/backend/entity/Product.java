@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.duylongtech.backend.feature.brand.Brand;
+
 @Entity
 @Table(name = "PRODUCTS")
 @Getter
