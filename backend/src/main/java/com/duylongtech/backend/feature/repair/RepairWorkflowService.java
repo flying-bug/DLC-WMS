@@ -133,9 +133,12 @@ public class RepairWorkflowService {
 
         // Cập nhật trạng thái
         String previousStatus = repair.getRepairStatus();
-        repair.setRepairStatus(normalizedTarget);
-        if ("DONE".equals(normalizedTarget)) {
-            repair.setCompletedDate(LocalDate.now());
+        switch (normalizedTarget) {
+            case "QUOTATION" -> repair.moveToQuotation();
+            case "CONFIRMED" -> repair.confirm();
+            case "UNDER_REPAIR" -> repair.startRepair();
+            case "DONE" -> repair.complete();
+            case "CANCELLED" -> repair.cancel();
         }
 
         Repair saved = repairRepository.save(repair);

@@ -33,6 +33,7 @@ public class Repair {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "repair_code", nullable = false, unique = true, length = 50)
     private String repairCode;
 
@@ -93,6 +94,7 @@ public class Repair {
     private LocalDate completedDate;
 
     // Trạng thái state machine
+    @Setter(AccessLevel.NONE)
     @Column(name = "repair_status", nullable = false, length = 30)
     private String repairStatus;
 
@@ -126,7 +128,7 @@ public class Repair {
     @Builder.Default
     private String invoiceMethod = "after_repair";
 
-    // Tổng chi phí (linh kiện + phí dịch vụ)
+    @Setter(AccessLevel.NONE)
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 4)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
@@ -175,8 +177,160 @@ public class Repair {
     @Builder.Default
     private List<RepairFee> fees = new ArrayList<>();
 
-    // Lazy-load partner, warranty (optional read)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "warranty_id", insertable = false, updatable = false)
     private Warranty warranty;
+
+    public void initOrder(String repairCode, Long partnerId, Long productId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, Boolean underWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note, Long createdBy) {
+        this.repairCode = repairCode;
+        this.partnerId = partnerId;
+        this.productId = productId;
+        this.productQuantity = productQuantity != null ? productQuantity : 1;
+        this.productUnit = productUnit;
+        this.warehouseId = warehouseId;
+        this.serialNumberId = serialNumberId;
+        this.warrantyId = warrantyId;
+        this.referenceType = referenceType;
+        this.referenceId = referenceId;
+        this.referenceCode = referenceCode;
+        this.receivedDate = receivedDate != null ? receivedDate : LocalDate.now();
+        this.expectedDate = expectedDate;
+        this.repairStatus = com.duylongtech.backend.enums.DocumentStatus.DRAFT.name();
+        this.issueDescription = issueDescription;
+        this.diagnosisNote = diagnosisNote;
+        this.underWarranty = underWarranty != null ? underWarranty : false;
+        this.repairWarrantyEndDate = repairWarrantyEndDate;
+        this.invoiceMethod = invoiceMethod != null ? invoiceMethod : "after_repair";
+        this.responsiblePerson = responsiblePerson;
+        this.note = note;
+        this.createdBy = createdBy;
+        this.totalAmount = BigDecimal.ZERO;
+        this.repairCost = BigDecimal.ZERO;
+    }
+
+    public void updateDetails(Long partnerId, Long productId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, String internalNotes, Boolean newWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note) {
+        if (partnerId != null) this.partnerId = partnerId;
+        if (productId != null) this.productId = productId;
+        if (productQuantity != null) this.productQuantity = productQuantity;
+        if (productUnit != null) this.productUnit = productUnit;
+        if (warehouseId != null) this.warehouseId = warehouseId;
+        if (serialNumberId != null) this.serialNumberId = serialNumberId;
+        if (warrantyId != null) this.warrantyId = warrantyId;
+        if (referenceType != null) this.referenceType = referenceType;
+        if (referenceId != null) this.referenceId = referenceId;
+        if (referenceCode != null) this.referenceCode = referenceCode;
+        if (receivedDate != null) this.receivedDate = receivedDate;
+        if (expectedDate != null) this.expectedDate = expectedDate;
+        if (issueDescription != null) this.issueDescription = issueDescription;
+        if (diagnosisNote != null) this.diagnosisNote = diagnosisNote;
+        if (internalNotes != null) this.internalNotes = internalNotes;
+        if (newWarranty != null) {
+            boolean oldWarranty = Boolean.TRUE.equals(this.underWarranty);
+            this.underWarranty = newWarranty;
+            if (!oldWarranty && newWarranty) {
+                applyWarrantyZeroPrice();
+            }
+        }
+        if (repairWarrantyEndDate != null) this.repairWarrantyEndDate = repairWarrantyEndDate;
+        if (invoiceMethod != null) this.invoiceMethod = invoiceMethod;
+        if (responsiblePerson != null) this.responsiblePerson = responsiblePerson;
+        if (note != null) this.note = note;
+    }
+
+    public void recalculateTotalAmount() {
+        BigDecimal lineTotal = this.repairLines.stream()
+                .filter(l -> "ADD".equals(l.getActionType()) || "REPLACE".equals(l.getActionType()))
+                .map(l -> {
+                    BigDecimal qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal amount = l.getUnitPrice().multiply(qty);
+                    BigDecimal vat = l.getVatPercent() != null ? l.getVatPercent() : BigDecimal.ZERO;
+                    BigDecimal vatAmount = amount.multiply(vat).divide(BigDecimal.valueOf(100));
+                    return amount.add(vatAmount);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal feeTotal = this.fees.stream()
+                .map(f -> {
+                    BigDecimal qty = f.getQuantity() != null ? f.getQuantity() : BigDecimal.ONE;
+                    BigDecimal amount = f.getFeeAmount().multiply(qty);
+                    BigDecimal vat = f.getVatPercent() != null ? f.getVatPercent() : BigDecimal.ZERO;
+                    BigDecimal vatAmount = amount.multiply(vat).divide(BigDecimal.valueOf(100));
+                    return amount.add(vatAmount);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        this.totalAmount = lineTotal.add(feeTotal);
+    }
+
+    public void applyWarrantyZeroPrice() {
+        if (this.repairLines != null) {
+            for (RepairLine line : this.repairLines) {
+                line.applyWarrantyZeroPrice();
+            }
+        }
+        if (this.fees != null) {
+            for (RepairFee fee : this.fees) {
+                fee.applyWarrantyZeroPrice();
+            }
+        }
+        recalculateTotalAmount();
+    }
+
+    public void addLine(RepairLine line) {
+        this.repairLines.add(line);
+        recalculateTotalAmount();
+    }
+
+    public void removeLine(RepairLine line) {
+        this.repairLines.remove(line);
+        recalculateTotalAmount();
+    }
+
+    public void addFee(RepairFee fee) {
+        this.fees.add(fee);
+        recalculateTotalAmount();
+    }
+
+    public void removeFee(RepairFee fee) {
+        this.fees.remove(fee);
+        recalculateTotalAmount();
+    }
+
+    public void moveToQuotation() {
+        if (!com.duylongtech.backend.enums.DocumentStatus.DRAFT.name().equals(this.repairStatus)
+                && !"CONFIRMED".equals(this.repairStatus)
+                && !"UNDER_REPAIR".equals(this.repairStatus)) {
+            throw new IllegalStateException("Không thể chuyển trạng thái sang Báo Giá");
+        }
+        this.repairStatus = "QUOTATION";
+    }
+
+    public void confirm() {
+        if (!com.duylongtech.backend.enums.DocumentStatus.DRAFT.name().equals(this.repairStatus)
+                && !"QUOTATION".equals(this.repairStatus)) {
+            throw new IllegalStateException("Không thể xác nhận ở trạng thái hiện tại");
+        }
+        this.repairStatus = "CONFIRMED";
+    }
+
+    public void startRepair() {
+        if (!"CONFIRMED".equals(this.repairStatus)) {
+            throw new IllegalStateException("Chỉ có thể tiến hành sửa chữa khi lệnh đã được xác nhận");
+        }
+        this.repairStatus = "UNDER_REPAIR";
+    }
+
+    public void complete() {
+        if (!"UNDER_REPAIR".equals(this.repairStatus)) {
+            throw new IllegalStateException("Chỉ có thể hoàn thành khi đang sửa chữa");
+        }
+        this.repairStatus = "DONE";
+        this.completedDate = LocalDate.now();
+    }
+
+    public void cancel() {
+        if ("DONE".equals(this.repairStatus) || com.duylongtech.backend.enums.DocumentStatus.CANCELLED.name().equals(this.repairStatus)) {
+            throw new IllegalStateException("Không thể hủy lệnh đã hoàn thành hoặc đã hủy");
+        }
+        this.repairStatus = com.duylongtech.backend.enums.DocumentStatus.CANCELLED.name();
+    }
 }
