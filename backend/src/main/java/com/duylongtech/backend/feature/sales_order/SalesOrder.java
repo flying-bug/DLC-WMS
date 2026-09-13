@@ -17,10 +17,7 @@ import com.duylongtech.backend.feature.warehouse.Warehouse;
 @Entity
 @Table(name = "SALES_ORDERS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class SalesOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,39 +37,28 @@ public class SalesOrder {
     @JoinColumn(name = "warehouse_id", insertable = false, updatable = false)
     private Warehouse warehouse;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "so_code", nullable = false, unique = true, length = 50)
     private String soCode;
 
     @Column(name = "so_date", nullable = false)
     private LocalDate soDate;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "status", nullable = false, length = 30)
     private String status;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "sub_total_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal subTotalAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "tax_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal taxAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
-    private BigDecimal totalAmount;
+    private BigDecimal totalAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "paid_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "payment_status", length = 20)
-    @Builder.Default
     private String paymentStatus = "UNPAID";
 
     @Column(name = "payment_due_date")
@@ -84,7 +70,6 @@ public class SalesOrder {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
@@ -101,29 +86,42 @@ public class SalesOrder {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "salesOrder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
     private List<SalesOrderLine> lines = new ArrayList<>();
 
     // --- Domain Logic ---
 
-    public void assignCreator(Long userId) {
-        if (this.createdBy == null) {
-            this.createdBy = userId;
-        }
-    }
-
-    public void assignInitialCode(String code) {
+    public void initOrder(String code, Long partnerId, Long warehouseId, LocalDate soDate, LocalDate paymentDueDate, String deliveryAddress, String note, Long creatorId) {
         if (this.soCode != null) {
             throw new com.duylongtech.backend.exception.BusinessException("Không được phép thay đổi mã chứng từ sau khi khởi tạo.");
         }
         this.soCode = code;
-    }
-
-    public void initDraftStatus() {
+        this.partnerId = partnerId;
+        this.warehouseId = warehouseId;
+        this.soDate = soDate;
+        this.paymentDueDate = paymentDueDate;
+        this.deliveryAddress = deliveryAddress;
+        this.note = note;
+        this.createdBy = creatorId;
         this.status = com.duylongtech.backend.enums.DocumentStatus.DRAFT.name();
         this.paymentStatus = "UNPAID";
         this.paidAmount = BigDecimal.ZERO;
+        this.subTotalAmount = BigDecimal.ZERO;
+        this.taxAmount = BigDecimal.ZERO;
+        this.totalAmount = BigDecimal.ZERO;
     }
+
+    public void updateDetails(Long partnerId, Long warehouseId, LocalDate soDate, LocalDate paymentDueDate, String deliveryAddress, String note) {
+        if (!com.duylongtech.backend.enums.DocumentStatus.DRAFT.name().equals(this.status)) {
+            throw new com.duylongtech.backend.exception.BusinessException("Chỉ được thay đổi thông tin khi đơn ở trạng thái DRAFT");
+        }
+        if (partnerId != null) this.partnerId = partnerId;
+        if (warehouseId != null) this.warehouseId = warehouseId;
+        if (soDate != null) this.soDate = soDate;
+        this.paymentDueDate = paymentDueDate;
+        this.deliveryAddress = deliveryAddress;
+        this.note = note;
+    }
+
 
     public void clearLines() {
         if (!com.duylongtech.backend.enums.DocumentStatus.DRAFT.name().equals(this.status)) {

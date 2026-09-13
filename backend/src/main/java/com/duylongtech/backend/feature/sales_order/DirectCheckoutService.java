@@ -171,58 +171,33 @@ public class DirectCheckoutService {
     private SalesOrder createPostedSalesOrder(DirectCheckoutRequest request, Partner customer, User actorUser,
             LocalDate checkoutDate) {
         String soCode = generateNextSoCode();
-        BigDecimal subTotal = ZERO;
-        BigDecimal taxAmount = ZERO;
-        List<SalesOrderLine> lines = new ArrayList<>();
+        SalesOrder order = new SalesOrder();
+        order.initOrder(soCode, customer.getId(), request.getWarehouseId(), checkoutDate, checkoutDate, trimToNull(request.getCustomerAddress()), trimToNull(request.getNote()), actorUser.getId());
 
+        List<SalesOrderLine> lines = new ArrayList<>();
         for (DirectCheckoutRequest.Line reqLine : request.getLines()) {
             BigDecimal qty = reqLine.getQuantity();
-            BigDecimal lineSubtotal = qty.multiply(reqLine.getUnitPrice()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal vatRate = reqLine.getVatRate() != null ? reqLine.getVatRate() : ZERO;
-            BigDecimal lineVat = lineSubtotal.multiply(vatRate).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-
-            subTotal = subTotal.add(lineSubtotal);
-            taxAmount = taxAmount.add(lineVat);
             Long lineWh = reqLine.getWarehouseId() != null ? reqLine.getWarehouseId() : request.getWarehouseId();
-            lines.add(SalesOrderLine.builder()
-                    .salesOrderId(0L)
-                    .variantId(reqLine.getVariantId())
-                    .warehouseId(lineWh)
-                    .quantity(qty)
-                    .unitPrice(reqLine.getUnitPrice())
-                    .vatRate(vatRate)
-                    .vatAmount(lineVat)
-                    .warrantyMonths(reqLine.getWarrantyMonths())
-                    .lineAmount(lineSubtotal)
-                    .note(reqLine.getNote())
-                    .build());
+            
+            SalesOrderLine line = new SalesOrderLine();
+            line.initLine(reqLine.getVariantId(), qty, reqLine.getUnitPrice(), vatRate, lineWh, reqLine.getWarrantyMonths(), reqLine.getNote());
+            order.addLine(line);
+            lines.add(line);
         }
 
-        BigDecimal total = subTotal.add(taxAmount);
+        BigDecimal total = order.getTotalAmount();
         BigDecimal paidAmount = normalizePaymentAmount(request.getPaymentAmount(), total);
         ensureDebtAllowedForCustomer(customer, paidAmount, total);
 
-        SalesOrder order = SalesOrder.builder()
-                .partnerId(customer.getId())
-                .warehouseId(request.getWarehouseId())
-                .soCode(soCode)
-                .soDate(checkoutDate)
-                .status(DocumentStatus.POSTED.name())
-                .subTotalAmount(subTotal)
-                .taxAmount(taxAmount)
-                .totalAmount(total)
-                .paidAmount(paidAmount)
-                .paymentStatus(resolvePaymentStatus(paidAmount, total))
-                .deliveryAddress(trimToNull(request.getCustomerAddress()))
-                .note(trimToNull(request.getNote()))
-                .createdBy(actorUser.getId())
-                .build();
-
-        order.setLines(new ArrayList<>());
+        order.approve();
+        order.markAsPosted();
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            order.recordPayment(paidAmount);
+        }
         SalesOrder saved = salesOrderRepository.save(order);
         lines.forEach(line -> line.setSalesOrderId(saved.getId()));
-        saved.getLines().addAll(lines);
-        return salesOrderRepository.save(saved);
+        return saved;
     }
 
     private InventoryDocumentResponse createAndPostExport(DirectCheckoutRequest request, SalesOrder order,

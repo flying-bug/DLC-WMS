@@ -23,10 +23,7 @@ import com.duylongtech.backend.feature.partner.Partner;
 @Entity
 @Table(name = "PURCHASE_ORDERS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class PurchaseOrder {
 
     @Id
@@ -40,41 +37,28 @@ public class PurchaseOrder {
     @JoinColumn(name = "partner_id", insertable = false, updatable = false)
     private Partner partner;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "po_code", nullable = false, unique = true, length = 50)
     private String poCode;
 
     @Column(name = "po_date", nullable = false)
     private LocalDate poDate;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "status", nullable = false, length = 30)
-    @Builder.Default
     private String status = DocumentStatus.DRAFT.name(); // DRAFT | APPROVED | POSTED | CANCELLED
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "sub_total_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal subTotalAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "tax_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal taxAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "paid_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "payment_status", length = 20)
-    @Builder.Default
     private String paymentStatus = "UNPAID"; // UNPAID | PARTIAL | PAID
 
     @Column(name = "payment_due_date")
@@ -105,28 +89,43 @@ public class PurchaseOrder {
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL,
                orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
     private List<PurchaseOrderLine> lines = new ArrayList<>();
 
     // --- DOMAIN METHODS ---
 
-    public void assignCreator(Long userId) {
-        if (this.createdBy == null) {
-            this.createdBy = userId;
+    public void initOrder(String code, Long partnerId, LocalDate poDate, LocalDate paymentDueDate, LocalDate expectedDeliveryDate, String note, Long creatorId) {
+        if (this.poCode != null) {
+            throw new com.duylongtech.backend.exception.BusinessException("Mã đơn hàng đã được khởi tạo");
         }
-    }
-
-    public void assignInitialCode(String code) {
-        if (this.poCode == null) {
-            this.poCode = code;
-        }
-    }
-
-    public void initDraftStatus() {
+        this.poCode = code;
+        this.partnerId = partnerId;
+        this.poDate = poDate;
+        this.paymentDueDate = paymentDueDate;
+        this.expectedDeliveryDate = expectedDeliveryDate;
+        this.note = note;
+        this.createdBy = creatorId;
         this.status = DocumentStatus.DRAFT.name();
         this.paymentStatus = "UNPAID";
         this.paidAmount = BigDecimal.ZERO;
+        this.subTotalAmount = BigDecimal.ZERO;
+        this.taxAmount = BigDecimal.ZERO;
+        this.totalAmount = BigDecimal.ZERO;
     }
+
+    public void updateDetails(Long partnerId, LocalDate poDate, LocalDate paymentDueDate, LocalDate expectedDeliveryDate, String note) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status)) {
+            throw new IllegalStateException("Chỉ được cập nhật thông tin khi đơn mua hàng ở trạng thái DRAFT");
+        }
+        if (partnerId != null) this.partnerId = partnerId;
+        if (poDate != null) this.poDate = poDate;
+        this.paymentDueDate = paymentDueDate;
+        this.expectedDeliveryDate = expectedDeliveryDate;
+        this.note = note;
+    }
+
+    // --- DOMAIN METHODS ---
+
+
 
     public void clearLines() {
         if (this.lines != null) {

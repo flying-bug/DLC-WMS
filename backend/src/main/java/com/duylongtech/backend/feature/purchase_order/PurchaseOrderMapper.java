@@ -30,5 +30,4 @@ public interface PurchaseOrderMapper {
     @Mapping(source = "warehouse.name", target = "warehouseName")
     PurchaseOrderLineResponse toLineResponse(PurchaseOrderLine line);
 
-    PurchaseOrderLine toLineEntity(PurchaseOrderLineRequest dto);
 }

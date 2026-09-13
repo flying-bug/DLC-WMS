@@ -41,6 +41,4 @@ public interface SalesOrderMapper {
     @Mapping(source = "warehouse.code", target = "warehouseCode")
     @Mapping(source = "warehouse.name", target = "warehouseName")
     SalesOrderLineResponse toLineResponse(SalesOrderLine line);
-    
-    SalesOrderLine toLineEntity(SalesOrderLineRequest dto);
 }

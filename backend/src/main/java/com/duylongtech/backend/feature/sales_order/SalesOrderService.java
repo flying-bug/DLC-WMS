@@ -165,9 +165,8 @@ public class SalesOrderService {
             BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
             Long lineWh = lr.getWarehouseId() != null ? lr.getWarehouseId() : fallbackWh;
             
-            SalesOrderLine line = salesOrderMapper.toLineEntity(lr);
-            line.setWarehouseId(lineWh);
-            line.setVatRate(vatRate);
+            SalesOrderLine line = new SalesOrderLine();
+            line.initLine(lr.getVariantId(), lr.getQuantity(), lr.getUnitPrice(), vatRate, lineWh, lr.getWarrantyMonths(), lr.getNote());
             return line;
         }).collect(Collectors.toList());
 
@@ -177,18 +176,8 @@ public class SalesOrderService {
         }
         BigDecimal totalAmount = subTotalAmount.add(taxAmount);
 
-        SalesOrder so = SalesOrder.builder()
-                .partnerId(request.getPartnerId())
-                .warehouseId(headerWh)
-                .soDate(request.getSoDate())
-                .paymentDueDate(request.getPaymentDueDate())
-                .deliveryAddress(request.getDeliveryAddress())
-                .note(request.getNote())
-                .build();
-        
-        so.initDraftStatus();
-        so.assignCreator(actorUser.getId());
-        so.assignInitialCode(soCode);
+        SalesOrder so = new SalesOrder();
+        so.initOrder(soCode, request.getPartnerId(), headerWh, request.getSoDate(), request.getPaymentDueDate(), request.getDeliveryAddress(), request.getNote(), actorUser.getId());
 
         lines.forEach(l -> so.addLine(l));
         SalesOrder saved = salesOrderRepository.save(so);
@@ -226,12 +215,7 @@ public class SalesOrderService {
             headerWh = request.getLines().get(0).getWarehouseId();
         }
 
-        so.setPartnerId(request.getPartnerId());
-        so.setWarehouseId(headerWh);
-        so.setSoDate(request.getSoDate());
-        so.setPaymentDueDate(request.getPaymentDueDate());
-        so.setDeliveryAddress(request.getDeliveryAddress());
-        so.setNote(request.getNote());
+        so.updateDetails(request.getPartnerId(), headerWh, request.getSoDate(), request.getPaymentDueDate(), request.getDeliveryAddress(), request.getNote());
 
         so.clearLines();
         final Long fallbackWh = headerWh;
@@ -239,9 +223,8 @@ public class SalesOrderService {
             BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
             Long lineWh = lr.getWarehouseId() != null ? lr.getWarehouseId() : fallbackWh;
             
-            SalesOrderLine line = salesOrderMapper.toLineEntity(lr);
-            line.setWarehouseId(lineWh);
-            line.setVatRate(vatRate);
+            SalesOrderLine line = new SalesOrderLine();
+            line.initLine(lr.getVariantId(), lr.getQuantity(), lr.getUnitPrice(), vatRate, lineWh, lr.getWarrantyMonths(), lr.getNote());
             
             so.addLine(line);
         }

@@ -10,10 +10,7 @@ import com.duylongtech.backend.feature.warehouse.Warehouse;
 @Entity
 @Table(name = "PURCHASE_ORDER_LINES")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class PurchaseOrderLine {
 
     @Id
@@ -40,17 +37,13 @@ public class PurchaseOrderLine {
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitPrice;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "line_amount", nullable = false, precision = 15, scale = 2)
-    private BigDecimal lineAmount;
+    private BigDecimal lineAmount = BigDecimal.ZERO;
 
     @Column(name = "vat_rate", precision = 5, scale = 2)
-    @Builder.Default
     private BigDecimal vatRate = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "vat_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal vatAmount = BigDecimal.ZERO;
 
     @Column(name = "warehouse_id")
@@ -62,6 +55,23 @@ public class PurchaseOrderLine {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    public void initLine(Long variantId, BigDecimal quantity, BigDecimal unitPrice, BigDecimal vatRate, Long warehouseId, String note) {
+        this.variantId = variantId;
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+        this.vatRate = vatRate != null ? vatRate : BigDecimal.ZERO;
+        this.warehouseId = warehouseId;
+        this.note = note;
+    }
+
+    void setPurchaseOrder(PurchaseOrder purchaseOrder) {
+        this.purchaseOrder = purchaseOrder;
+    }
+
+    void setPurchaseOrderId(Long purchaseOrderId) {
+        this.purchaseOrderId = purchaseOrderId;
+    }
 
     public void calculateAmounts() {
         if (this.quantity == null) this.quantity = BigDecimal.ZERO;

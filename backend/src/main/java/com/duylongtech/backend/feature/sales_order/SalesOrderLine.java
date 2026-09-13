@@ -10,10 +10,7 @@ import com.duylongtech.backend.feature.warehouse.Warehouse;
 @Entity
 @Table(name = "SALES_ORDER_LINES")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class SalesOrderLine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,20 +36,17 @@ public class SalesOrderLine {
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitPrice;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "line_amount", nullable = false, precision = 15, scale = 2)
-    private BigDecimal lineAmount;
+    private BigDecimal lineAmount = BigDecimal.ZERO;
 
     @Column(name = "cost_amount", precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal costAmount = BigDecimal.ZERO;
 
     @Column(name = "vat_rate", precision = 5, scale = 2)
-    private BigDecimal vatRate;
+    private BigDecimal vatRate = BigDecimal.ZERO;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "vat_amount", precision = 15, scale = 2)
-    private BigDecimal vatAmount;
+    private BigDecimal vatAmount = BigDecimal.ZERO;
 
     @Column(name = "warranty_months")
     private Integer warrantyMonths;
@@ -68,6 +62,28 @@ public class SalesOrderLine {
     private String note;
 
     // --- Domain Logic ---
+
+    public void initLine(Long variantId, BigDecimal quantity, BigDecimal unitPrice, BigDecimal vatRate, Long warehouseId, Integer warrantyMonths, String note) {
+        this.variantId = variantId;
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+        this.vatRate = vatRate != null ? vatRate : BigDecimal.ZERO;
+        this.warehouseId = warehouseId;
+        this.warrantyMonths = warrantyMonths;
+        this.note = note;
+    }
+
+    void setSalesOrder(SalesOrder salesOrder) {
+        this.salesOrder = salesOrder;
+    }
+
+    void setSalesOrderId(Long salesOrderId) {
+        this.salesOrderId = salesOrderId;
+    }
+
+    void setCostAmount(BigDecimal costAmount) {
+        this.costAmount = costAmount;
+    }
 
     public void calculateAmounts() {
         if (this.quantity == null) this.quantity = BigDecimal.ZERO;

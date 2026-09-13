@@ -114,18 +114,11 @@ public class PurchaseOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy người dùng hiện tại"));
 
         PurchaseOrder po = new PurchaseOrder();
-        po.assignInitialCode(poCode);
-        po.initDraftStatus();
-        po.setPartnerId(request.getPartnerId());
-        po.setPoDate(request.getPoDate());
-        po.setPaymentDueDate(request.getPaymentDueDate());
-        po.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
-        po.setNote(request.getNote());
-        po.assignCreator(actorUser.getId());
+        po.initOrder(poCode, request.getPartnerId(), request.getPoDate(), request.getPaymentDueDate(), request.getExpectedDeliveryDate(), request.getNote(), actorUser.getId());
 
         for (PurchaseOrderRequest.PurchaseOrderLineRequest lr : request.getLines()) {
-            PurchaseOrderLine line = purchaseOrderMapper.toLineEntity(lr);
-            line.setVatRate(lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO);
+            PurchaseOrderLine line = new PurchaseOrderLine();
+            line.initLine(lr.getVariantId(), lr.getQuantity(), lr.getUnitPrice(), lr.getVatRate(), lr.getWarehouseId(), lr.getNote());
             po.addLine(line);
         }
 
@@ -152,17 +145,13 @@ public class PurchaseOrderService {
             throw new BusinessException(SystemMessage.PO_ERR_003.getMessage());
         }
 
-        po.setPartnerId(request.getPartnerId());
-        po.setPoDate(request.getPoDate());
-        po.setPaymentDueDate(request.getPaymentDueDate());
-        po.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
-        po.setNote(request.getNote());
+        po.updateDetails(request.getPartnerId(), request.getPoDate(), request.getPaymentDueDate(), request.getExpectedDeliveryDate(), request.getNote());
 
         po.clearLines();
 
         for (PurchaseOrderRequest.PurchaseOrderLineRequest lr : request.getLines()) {
-            PurchaseOrderLine line = purchaseOrderMapper.toLineEntity(lr);
-            line.setVatRate(lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO);
+            PurchaseOrderLine line = new PurchaseOrderLine();
+            line.initLine(lr.getVariantId(), lr.getQuantity(), lr.getUnitPrice(), lr.getVatRate(), lr.getWarehouseId(), lr.getNote());
             po.addLine(line);
         }
 
