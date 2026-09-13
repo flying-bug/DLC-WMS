@@ -39,6 +39,7 @@ public class SalesOrderLine {
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitPrice;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "line_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal lineAmount;
 
@@ -49,6 +50,7 @@ public class SalesOrderLine {
     @Column(name = "vat_rate", precision = 5, scale = 2)
     private BigDecimal vatRate;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "vat_amount", precision = 15, scale = 2)
     private BigDecimal vatAmount;
 
@@ -64,4 +66,20 @@ public class SalesOrderLine {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    // --- Domain Logic ---
+
+    public void calculateAmounts() {
+        if (this.quantity == null) this.quantity = BigDecimal.ZERO;
+        if (this.unitPrice == null) this.unitPrice = BigDecimal.ZERO;
+        
+        this.lineAmount = this.unitPrice.multiply(this.quantity);
+        
+        if (this.vatRate != null && this.vatRate.compareTo(BigDecimal.ZERO) > 0) {
+            this.vatAmount = this.lineAmount.multiply(this.vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        } else {
+            this.vatAmount = BigDecimal.ZERO;
+        }
+    }
 }
+

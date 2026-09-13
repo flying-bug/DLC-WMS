@@ -755,7 +755,7 @@ public class InventoryPostingService {
         if (doc.getSalesOrderId() != null) {
             salesOrderRepository.findById(doc.getSalesOrderId()).ifPresent(so -> {
                 if (DocumentStatus.POSTED.name().equals(so.getStatus())) {
-                    so.setStatus(DocumentStatus.APPROVED.name());
+                    so.revertToApproved();
                     salesOrderRepository.save(so);
                 }
             });

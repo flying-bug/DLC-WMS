@@ -70,7 +70,7 @@ public class StockReservationExpiryJob {
             if (allReleased && !hasAnyHolding) {
                 salesOrderRepository.findById(soId).ifPresent(so -> {
                     if (DocumentStatus.APPROVED.name().equals(so.getStatus())) {
-                        so.setStatus(DocumentStatus.CANCELLED.name());
+                        so.cancel();
                         salesOrderRepository.save(so);
                         log.info("[ReservationExpiryJob] SO {} tự động hủy do reservation hết hạn", so.getSoCode());
                     }

@@ -166,11 +166,8 @@ public class SalesOrderService {
             Long lineWh = lr.getWarehouseId() != null ? lr.getWarehouseId() : fallbackWh;
             
             SalesOrderLine line = salesOrderMapper.toLineEntity(lr);
-            line.setSalesOrderId(0L); // sẽ được set sau khi save
             line.setWarehouseId(lineWh);
             line.setVatRate(vatRate);
-            line.setVatAmount(vatAmount);
-            line.setLineAmount(lineAmount);
             return line;
         }).collect(Collectors.toList());
 
@@ -183,27 +180,18 @@ public class SalesOrderService {
         SalesOrder so = SalesOrder.builder()
                 .partnerId(request.getPartnerId())
                 .warehouseId(headerWh)
-                .soCode(soCode)
                 .soDate(request.getSoDate())
-                .status(DocumentStatus.DRAFT.name())
-                .subTotalAmount(subTotalAmount)
-                .taxAmount(taxAmount)
-                .totalAmount(totalAmount)
-                .paidAmount(BigDecimal.ZERO)
-                .paymentStatus("UNPAID")
                 .paymentDueDate(request.getPaymentDueDate())
                 .deliveryAddress(request.getDeliveryAddress())
                 .note(request.getNote())
-                .createdBy(actorUser.getId())
                 .build();
+        
+        so.initDraftStatus();
+        so.assignCreator(actorUser.getId());
+        so.assignInitialCode(soCode);
 
-        so.setLines(new java.util.ArrayList<>());
+        lines.forEach(l -> so.addLine(l));
         SalesOrder saved = salesOrderRepository.save(so);
-
-        // Gán ID cho các dòng và lưu lại
-        lines.forEach(l -> l.setSalesOrderId(saved.getId()));
-        saved.getLines().addAll(lines);
-        salesOrderRepository.save(saved);
 
         log.info("Tạo đơn bán hàng {} bởi {}", saved.getSoCode(), actor);
         return toSummaryResponse(saved);
@@ -245,33 +233,18 @@ public class SalesOrderService {
         so.setDeliveryAddress(request.getDeliveryAddress());
         so.setNote(request.getNote());
 
-        // Rebuild lines
-        so.getLines().clear();
-        BigDecimal subTotalAmount = BigDecimal.ZERO;
-        BigDecimal taxAmount = BigDecimal.ZERO;
+        so.clearLines();
         final Long fallbackWh = headerWh;
-        
         for (SalesOrderRequest.SalesOrderLineRequest lr : request.getLines()) {
-            BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
             BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
-            BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
             Long lineWh = lr.getWarehouseId() != null ? lr.getWarehouseId() : fallbackWh;
             
-            subTotalAmount = subTotalAmount.add(lineAmount);
-            taxAmount = taxAmount.add(vatAmount);
-            
             SalesOrderLine line = salesOrderMapper.toLineEntity(lr);
-            line.setSalesOrderId(so.getId());
             line.setWarehouseId(lineWh);
             line.setVatRate(vatRate);
-            line.setVatAmount(vatAmount);
-            line.setLineAmount(lineAmount);
             
-            so.getLines().add(line);
+            so.addLine(line);
         }
-        so.setSubTotalAmount(subTotalAmount);
-        so.setTaxAmount(taxAmount);
-        so.setTotalAmount(subTotalAmount.add(taxAmount));
 
         SalesOrder updated = salesOrderRepository.save(so);
         log.info("Cập nhật đơn bán hàng {} bởi {}", updated.getSoCode(), actor);
@@ -347,7 +320,7 @@ public class SalesOrderService {
             inventoryBalanceRepository.save(balance);
         }
 
-        so.setStatus(DocumentStatus.APPROVED.name());
+        so.approve();
         SalesOrder approved = salesOrderRepository.save(so);
         log.info("Duyệt đơn bán hàng {} bởi {}", approved.getSoCode(), actor);
 
@@ -379,7 +352,7 @@ public class SalesOrderService {
         // Release tất cả reservations HOLDING
         releaseReservations(so.getId(), so.getWarehouseId());
 
-        so.setStatus(DocumentStatus.CANCELLED.name());
+        so.cancel();
         SalesOrder cancelled = salesOrderRepository.save(so);
         log.info("Hủy đơn bán hàng {} bởi {}", cancelled.getSoCode(), actor);
         return toSummaryResponse(cancelled);
@@ -485,7 +458,7 @@ public class SalesOrderService {
         boolean allFulfilled = all.stream().allMatch(r -> "FULFILLED".equals(r.getStatus()));
         if (allFulfilled) {
             salesOrderRepository.findById(salesOrderId).ifPresent(so -> {
-                so.setStatus(DocumentStatus.POSTED.name());
+                // so.setStatus(DocumentStatus.POSTED.name()); // Will be updated by InventoryPostingService instead
                 salesOrderRepository.save(so);
             });
         }
@@ -552,25 +525,7 @@ public class SalesOrderService {
             throw new BusinessException(SystemMessage.SO_ERR_003.getMessage());
         }
 
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(SystemMessage.SO_ERR_002.getMessage());
-        }
-
-        BigDecimal currentPaidAmount = so.getPaidAmount() != null ? so.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal newPaidAmount = currentPaidAmount.add(amount);
-        if (newPaidAmount.compareTo(so.getTotalAmount()) > 0) {
-            throw new BusinessException(SystemMessage.SO_ERR_001.getMessage());
-        }
-
-        so.setPaidAmount(newPaidAmount);
-        
-        if (newPaidAmount.compareTo(so.getTotalAmount()) >= 0) {
-            so.setPaymentStatus("PAID");
-        } else if (newPaidAmount.compareTo(BigDecimal.ZERO) > 0) {
-            so.setPaymentStatus("PARTIAL");
-        } else {
-            so.setPaymentStatus("UNPAID");
-        }
+        so.recordPayment(amount);
 
         salesOrderRepository.save(so);
         
