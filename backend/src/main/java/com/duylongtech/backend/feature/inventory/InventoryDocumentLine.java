@@ -11,8 +11,6 @@ import com.duylongtech.backend.feature.warranty.Warranty;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class InventoryDocumentLine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,7 +38,6 @@ public class InventoryDocumentLine {
     @Column(name = "vat_rate", precision = 5, scale = 2)
     private BigDecimal vatRate;
 
-    @Setter(AccessLevel.NONE)
     @Column(name = "line_amount", precision = 15, scale = 2)
     private BigDecimal lineAmount;
 

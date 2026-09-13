@@ -257,21 +257,19 @@ public class RepairWorkflowService {
             return;
         }
 
-        InventoryDocument exportDoc = InventoryDocument.builder()
-                .docCode(docCode)
-                .docType(REPAIR_DOC_TYPE_EXPORT)
-                .issuePurpose("REPAIR")
-                .referenceType("REPAIR")
-                .referenceId(repair.getId())
-                .warehouseId(warehouseId)
-                .partnerId(repair.getPartnerId())
-                .docDate(LocalDate.now())
-                .status(DocumentStatus.DRAFT.name()) // Lưu tạm trước khi post
-                .note("Phiếu xuất linh kiện sửa chữa - Lệnh " + repair.getRepairCode())
-                .createdBy(currentUserId)
-                .salespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId)
-                .recipientName(repair.getResponsiblePerson())
-                .build();
+        InventoryDocument exportDoc = new InventoryDocument();
+        exportDoc.initExportDocument(docCode);
+        exportDoc.setIssuePurpose("REPAIR");
+        exportDoc.setReferenceType("REPAIR");
+        exportDoc.setReferenceId(repair.getId());
+        exportDoc.setWarehouseId(warehouseId);
+        exportDoc.setPartnerId(repair.getPartnerId());
+        exportDoc.setDocDate(LocalDate.now());
+        exportDoc.updateStatus(DocumentStatus.DRAFT.name()); // Lưu tạm trước khi post
+        exportDoc.setNote("Phiếu xuất linh kiện sửa chữa - Lệnh " + repair.getRepairCode());
+        exportDoc.assignCreator(currentUserId);
+        exportDoc.setSalespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId);
+        exportDoc.setRecipientName(repair.getResponsiblePerson());
 
         for (RepairLine rLine : addLines) {
             BigDecimal actualDoneQty = rLine.getQuantity();
@@ -286,19 +284,18 @@ public class RepairWorkflowService {
                         .orElse(serialNumbersText);
             }
 
-            InventoryDocumentLine docLine = InventoryDocumentLine.builder()
-                    .inventoryDocument(exportDoc)
-                    .variantId(rLine.getComponentVariantId())
-                    .quantityIn(BigDecimal.ZERO)
-                    .quantityOut(actualDoneQty)
-                    .unitCost(BigDecimal.ZERO)
-                    .unitPrice(rLine.getUnitPrice())
-                    .lineAmount(rLine.getUnitPrice().multiply(actualDoneQty))
-                    .serialNumberId(stockOutSerialNumberId)
-                    .serialNumbersText(serialNumbersText)
-                    .note((ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
-                            + (rLine.getNote() != null ? rLine.getNote() : ""))
-                    .build();
+            InventoryDocumentLine docLine = new InventoryDocumentLine();
+            docLine.setInventoryDocument(exportDoc);
+            docLine.setVariantId(rLine.getComponentVariantId());
+            docLine.setQuantityIn(BigDecimal.ZERO);
+            docLine.setQuantityOut(actualDoneQty);
+            docLine.setUnitCost(BigDecimal.ZERO);
+            docLine.setUnitPrice(rLine.getUnitPrice());
+            docLine.setLineAmount(rLine.getUnitPrice().multiply(actualDoneQty));
+            docLine.setSerialNumberId(stockOutSerialNumberId);
+            docLine.setSerialNumbersText(serialNumbersText);
+            docLine.setNote((ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
+                    + (rLine.getNote() != null ? rLine.getNote() : ""));
             exportDoc.getLines().add(docLine);
         }
 
@@ -333,21 +330,19 @@ public class RepairWorkflowService {
             return;
         }
 
-        InventoryDocument scrapDoc = InventoryDocument.builder()
-                .docCode(scrapDocCode)
-                .docType(REPAIR_DOC_TYPE_IMPORT)
-                .issuePurpose("SCRAP")
-                .referenceType("REPAIR")
-                .referenceId(repair.getId())
-                .warehouseId(scrapWarehouseId)
-                .partnerId(repair.getPartnerId())
-                .docDate(LocalDate.now())
-                .status(DocumentStatus.DRAFT.name()) // Lưu tạm trước khi post
-                .note("Phiếu nhập kho phế liệu - Lệnh sửa chữa " + repair.getRepairCode())
-                .createdBy(currentUserId)
-                .salespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId)
-                .recipientName(repair.getResponsiblePerson())
-                .build();
+        InventoryDocument scrapDoc = new InventoryDocument();
+        scrapDoc.initImportDocument(scrapDocCode);
+        scrapDoc.setIssuePurpose("SCRAP");
+        scrapDoc.setReferenceType("REPAIR");
+        scrapDoc.setReferenceId(repair.getId());
+        scrapDoc.setWarehouseId(scrapWarehouseId);
+        scrapDoc.setPartnerId(repair.getPartnerId());
+        scrapDoc.setDocDate(LocalDate.now());
+        scrapDoc.updateStatus(DocumentStatus.DRAFT.name()); // Lưu tạm trước khi post
+        scrapDoc.setNote("Phiếu nhập kho phế liệu - Lệnh sửa chữa " + repair.getRepairCode());
+        scrapDoc.assignCreator(currentUserId);
+        scrapDoc.setSalespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId);
+        scrapDoc.setRecipientName(repair.getResponsiblePerson());
 
         for (RepairLine line : removeLines) {
             String serialNumbersText = line.getSerialNumberText();
@@ -357,18 +352,17 @@ public class RepairWorkflowService {
                         .orElse(serialNumbersText);
             }
 
-            InventoryDocumentLine scrapLine = InventoryDocumentLine.builder()
-                    .inventoryDocument(scrapDoc)
-                    .variantId(resolveRemovedComponentVariantId(line))
-                    .quantityIn(line.getQuantity())
-                    .quantityOut(BigDecimal.ZERO)
-                    .unitCost(BigDecimal.ZERO) // Linh kiện tháo ra ghi nhận giá vốn = 0 (phế liệu)
-                    .unitPrice(BigDecimal.ZERO)
-                    .lineAmount(BigDecimal.ZERO)
-                    .serialNumberId(line.getSerialNumberId())
-                    .serialNumbersText(serialNumbersText)
-                    .note("Linh kiện tháo ra từ lệnh sửa " + repair.getRepairCode())
-                    .build();
+            InventoryDocumentLine scrapLine = new InventoryDocumentLine();
+            scrapLine.setInventoryDocument(scrapDoc);
+            scrapLine.setVariantId(resolveRemovedComponentVariantId(line));
+            scrapLine.setQuantityIn(line.getQuantity());
+            scrapLine.setQuantityOut(BigDecimal.ZERO);
+            scrapLine.setUnitCost(BigDecimal.ZERO); // Linh kiện tháo ra ghi nhận giá vốn = 0 (phế liệu)
+            scrapLine.setUnitPrice(BigDecimal.ZERO);
+            scrapLine.setLineAmount(BigDecimal.ZERO);
+            scrapLine.setSerialNumberId(line.getSerialNumberId());
+            scrapLine.setSerialNumbersText(serialNumbersText);
+            scrapLine.setNote("Linh kiện tháo ra từ lệnh sửa " + repair.getRepairCode());
             scrapDoc.getLines().add(scrapLine);
         }
 

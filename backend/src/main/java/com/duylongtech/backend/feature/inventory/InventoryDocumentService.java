@@ -838,29 +838,29 @@ public class InventoryDocumentService {
             baseQty = quantityOut.multiply(ratio);
         }
 
-        return InventoryDocumentLine.builder()
-                .inventoryDocument(doc)
-                .variantId(lr.getVariantId())
-                .warehouseId(lineWarehouseId)
-                .targetWarehouseId(lr.getTargetWarehouseId())
-                .quantityIn(ZERO)
-                .quantityOut(quantityOut)
-                .unitCost(unitCost)
-                .unitPrice(unitPrice)
-                .vatRate(vatRate)
-                .vatPercent(vatRate)
-                .lineAmount(lineAmount)
-                .lotBatchId(lr.getLotBatchId())
-                .serialNumberId(serialNumberId)
-                .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
-                .warrantyMonths(warrantyMonths)
-                .note(lr.getNote())
-                .unitId(lr.getUnitId())
-                .baseUnitId(lr.getBaseUnitId())
-                .conversionOperator(op)
-                .conversionRatio(ratio)
-                .baseQuantity(baseQty)
-                .build();
+        InventoryDocumentLine line = new InventoryDocumentLine();
+        line.setInventoryDocument(doc);
+        line.setVariantId(lr.getVariantId());
+        line.setWarehouseId(lineWarehouseId);
+        line.setTargetWarehouseId(lr.getTargetWarehouseId());
+        line.setQuantityIn(ZERO);
+        line.setQuantityOut(quantityOut);
+        line.setUnitCost(unitCost);
+        line.setUnitPrice(unitPrice);
+        line.setVatRate(vatRate);
+        line.setVatPercent(vatRate);
+        line.setLineAmount(lineAmount);
+        line.setLotBatchId(lr.getLotBatchId());
+        line.setSerialNumberId(serialNumberId);
+        line.setSerialNumbersText(formatSerialNumbers(lr.getSerialNumbers()));
+        line.setWarrantyMonths(warrantyMonths);
+        line.setNote(lr.getNote());
+        line.setUnitId(lr.getUnitId());
+        line.setBaseUnitId(lr.getBaseUnitId());
+        line.setConversionOperator(op);
+        line.setConversionRatio(ratio);
+        line.setBaseQuantity(baseQty);
+        return line;
     }
 
     private InventoryDocumentLine toImportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr,
@@ -900,32 +900,32 @@ public class InventoryDocumentService {
             baseQty = quantityIn.multiply(ratio);
         }
 
-        return InventoryDocumentLine.builder()
-                .inventoryDocument(doc)
-                .variantId(lr.getVariantId())
-                .warehouseId(lineWarehouseId)
-                .targetWarehouseId(lr.getTargetWarehouseId())
-                .quantityIn(quantityIn)
-                .quantityOut(ZERO)
-                .unitCost(unitCost)
-                .unitPrice(unitCost)
-                .vatRate(vatRate)
-                .lineAmount(lineAmount)
-                .lotBatchId(lr.getLotBatchId())
-                .serialNumberId(lr.getSerialNumberId())
-                .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
-                .warrantyMonths(lr.getWarrantyMonths())
-                .note(lr.getNote())
-                .vatPercent(vatRate)
-                .expectedQuantity(expectedQty)
-                .rejectedQuantity(rejectedQty)
-                .discrepancyReason(reason)
-                .unitId(lr.getUnitId())
-                .baseUnitId(lr.getBaseUnitId())
-                .conversionOperator(op)
-                .conversionRatio(ratio)
-                .baseQuantity(baseQty)
-                .build();
+        InventoryDocumentLine line = new InventoryDocumentLine();
+        line.setInventoryDocument(doc);
+        line.setVariantId(lr.getVariantId());
+        line.setWarehouseId(lineWarehouseId);
+        line.setTargetWarehouseId(lr.getTargetWarehouseId());
+        line.setQuantityIn(quantityIn);
+        line.setQuantityOut(ZERO);
+        line.setUnitCost(unitCost);
+        line.setUnitPrice(unitCost);
+        line.setVatRate(vatRate);
+        line.setLineAmount(lineAmount);
+        line.setLotBatchId(lr.getLotBatchId());
+        line.setSerialNumberId(lr.getSerialNumberId());
+        line.setSerialNumbersText(formatSerialNumbers(lr.getSerialNumbers()));
+        line.setWarrantyMonths(lr.getWarrantyMonths());
+        line.setNote(lr.getNote());
+        line.setVatPercent(vatRate);
+        line.setExpectedQuantity(expectedQty);
+        line.setRejectedQuantity(rejectedQty);
+        line.setDiscrepancyReason(reason);
+        line.setUnitId(lr.getUnitId());
+        line.setBaseUnitId(lr.getBaseUnitId());
+        line.setConversionOperator(op);
+        line.setConversionRatio(ratio);
+        line.setBaseQuantity(baseQty);
+        return line;
     }
 
     private BigDecimal validateVatRate(BigDecimal value, String fieldName) {

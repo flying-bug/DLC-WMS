@@ -16,8 +16,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class InventoryDocument {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -88,7 +86,6 @@ public class InventoryDocument {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Builder.Default
     @OneToMany(mappedBy = "inventoryDocument", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InventoryDocumentLine> lines = new ArrayList<>();
 
