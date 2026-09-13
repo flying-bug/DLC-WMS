@@ -1,6 +1,7 @@
 package com.duylongtech.backend.job;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.StockReservationStatus;
 
 import com.duylongtech.backend.feature.inventory.StockReservation;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
@@ -52,7 +53,7 @@ public class StockReservationExpiryJob {
                         inventoryBalanceRepository.save(balance);
                     });
 
-            r.setStatus("RELEASED");
+            r.setStatus(StockReservationStatus.RELEASED.name());
             stockReservationRepository.save(r);
         }
 
@@ -63,9 +64,9 @@ public class StockReservationExpiryJob {
         for (Long soId : bySo.keySet()) {
             List<StockReservation> allSoReservations = stockReservationRepository.findBySalesOrderId(soId);
             boolean allReleased = allSoReservations.stream()
-                    .allMatch(r -> "RELEASED".equals(r.getStatus()) || "FULFILLED".equals(r.getStatus()));
+                    .allMatch(r -> StockReservationStatus.RELEASED.name().equals(r.getStatus()) || StockReservationStatus.FULFILLED.name().equals(r.getStatus()));
             boolean hasAnyHolding = allSoReservations.stream()
-                    .anyMatch(r -> "HOLDING".equals(r.getStatus()));
+                    .anyMatch(r -> StockReservationStatus.HOLDING.name().equals(r.getStatus()));
 
             if (allReleased && !hasAnyHolding) {
                 salesOrderRepository.findById(soId).ifPresent(so -> {

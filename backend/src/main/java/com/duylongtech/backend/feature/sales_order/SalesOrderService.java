@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.sales_order;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.StockReservationStatus;
 
 import com.duylongtech.backend.feature.sales_order.SalesOrderRequest;
 import com.duylongtech.backend.constant.SystemMessage;
@@ -271,7 +272,7 @@ public class SalesOrderService {
             if (available == null) available = BigDecimal.ZERO;
 
             // Xác định trạng thái reservation dựa trên số lượng khả dụng
-            String resStatus = (available.compareTo(line.getQuantity()) < 0) ? "BACKORDERED" : "HOLDING";
+            String resStatus = (available.compareTo(line.getQuantity()) < 0) ? StockReservationStatus.BACKORDERED.name() : StockReservationStatus.HOLDING.name();
 
             // Tạo reservation
             StockReservation reservation = new StockReservation();
@@ -352,7 +353,7 @@ public class SalesOrderService {
     @Transactional
     public void releaseReservations(Long salesOrderId, Long warehouseId) {
         List<StockReservation> holdings = stockReservationRepository
-                .findBySalesOrderIdAndStatus(salesOrderId, "HOLDING");
+                .findBySalesOrderIdAndStatus(salesOrderId, StockReservationStatus.HOLDING.name());
 
         for (StockReservation r : holdings) {
             Long whId = r.getWarehouseId() != null ? r.getWarehouseId() : warehouseId;
@@ -366,7 +367,7 @@ public class SalesOrderService {
                             inventoryBalanceRepository.save(balance);
                         });
             }
-            r.setStatus("RELEASED");
+            r.setStatus(StockReservationStatus.RELEASED.name());
             stockReservationRepository.save(r);
         }
     }
@@ -377,7 +378,7 @@ public class SalesOrderService {
     @Transactional
     public void fulfillReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityFulfilled, BigDecimal costAmountFulfilled) {
         List<StockReservation> reservations = stockReservationRepository.findBySalesOrderId(salesOrderId).stream()
-                .filter(r -> variantId.equals(r.getVariantId()) && ("HOLDING".equals(r.getStatus()) || "BACKORDERED".equals(r.getStatus())))
+                .filter(r -> variantId.equals(r.getVariantId()) && (StockReservationStatus.HOLDING.name().equals(r.getStatus()) || StockReservationStatus.BACKORDERED.name().equals(r.getStatus())))
                 .collect(Collectors.toList());
 
         BigDecimal remainingToFulfill = quantityFulfilled;
@@ -386,7 +387,7 @@ public class SalesOrderService {
             Long whId = r.getWarehouseId() != null ? r.getWarehouseId() : warehouseId;
             BigDecimal fulfillThis = remainingToFulfill.min(r.getQuantityReserved());
 
-            if (whId != null && "HOLDING".equals(r.getStatus())) {
+            if (whId != null && StockReservationStatus.HOLDING.name().equals(r.getStatus())) {
                 inventoryBalanceRepository
                         .findByWarehouseAndVariant(whId, variantId, "GOOD")
                         .ifPresent(balance -> {
@@ -398,7 +399,7 @@ public class SalesOrderService {
 
             BigDecimal remainingRes = r.getQuantityReserved().subtract(fulfillThis);
             if (remainingRes.compareTo(BigDecimal.ZERO) <= 0) {
-                r.setStatus("FULFILLED");
+                r.setStatus(StockReservationStatus.FULFILLED.name());
                 r.setQuantityReserved(BigDecimal.ZERO);
             } else {
                 r.setQuantityReserved(remainingRes);
@@ -425,7 +426,7 @@ public class SalesOrderService {
 
         // Kiểm tra nếu tất cả reservations đều FULFILLED → SO = POSTED
         List<StockReservation> all = stockReservationRepository.findBySalesOrderId(salesOrderId);
-        boolean allFulfilled = all.stream().allMatch(r -> "FULFILLED".equals(r.getStatus()));
+        boolean allFulfilled = all.stream().allMatch(r -> StockReservationStatus.FULFILLED.name().equals(r.getStatus()));
         if (allFulfilled) {
             salesOrderRepository.findById(salesOrderId).ifPresent(so -> {
                 // so.setStatus(DocumentStatus.POSTED.name()); // Will be updated by InventoryPostingService instead
@@ -475,7 +476,7 @@ public class SalesOrderService {
         for (StockReservation r : backorderedList) {
             BigDecimal needed = holdingSum.add(r.getQuantityReserved());
             if (onHand.compareTo(needed) >= 0) {
-                r.setStatus("HOLDING");
+                r.setStatus(StockReservationStatus.HOLDING.name());
                 r.setExpiresAt(newExpiresAt);
                 stockReservationRepository.save(r);
                 holdingSum = holdingSum.add(r.getQuantityReserved());
