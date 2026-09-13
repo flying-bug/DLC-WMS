@@ -1,11 +1,11 @@
 package com.duylongtech.backend.job;
 
-import com.duylongtech.backend.entity.PurchaseOrder;
-import com.duylongtech.backend.entity.PurchaseOrderLine;
-import com.duylongtech.backend.repository.AppNotificationRepository;
-import com.duylongtech.backend.repository.InventoryDocumentLineRepository;
-import com.duylongtech.backend.repository.PurchaseOrderRepository;
-import com.duylongtech.backend.service.AppNotificationService;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
+import com.duylongtech.backend.feature.notification.AppNotificationRepository;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRepository;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderRepository;
+import com.duylongtech.backend.feature.notification.AppNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

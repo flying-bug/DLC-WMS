@@ -1,6 +1,14 @@
 package com.duylongtech.backend.constant;
 
 import lombok.Getter;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.feature.brand.Brand;
+import com.duylongtech.backend.feature.product.Product;
+import com.duylongtech.backend.feature.product.Unit;
+import com.duylongtech.backend.feature.repair.Repair;
+import com.duylongtech.backend.feature.stocktake.Stocktake;
+import com.duylongtech.backend.feature.warehouse.Warehouse;
+import com.duylongtech.backend.feature.warranty.Warranty;
 
 @Getter
 public enum SystemMessage {

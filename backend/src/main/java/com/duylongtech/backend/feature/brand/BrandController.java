@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.duylongtech.backend.feature.auth.User;
 
 /**
  * Controller xử lý các API Quản lý Thương Hiệu / Nhà Sản Xuất (Brand Management).

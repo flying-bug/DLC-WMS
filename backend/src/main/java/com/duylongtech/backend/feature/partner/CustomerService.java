@@ -1,0 +1,57 @@
+package com.duylongtech.backend.feature.partner;
+
+import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.feature.partner.CustomerRequest;
+import com.duylongtech.backend.feature.partner.CustomerResponse;
+import com.duylongtech.backend.feature.sales_order.SalesHistoryResponse;
+import com.duylongtech.backend.feature.warranty.WarrantyHistoryResponse;
+import com.duylongtech.backend.feature.partner.ReceiptHistoryResponse;
+import com.duylongtech.backend.feature.partner.Partner;
+import com.duylongtech.backend.feature.warranty.Warranty;
+import com.duylongtech.backend.feature.repair.Repair;
+import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.feature.partner.PartnerRepository;
+import com.duylongtech.backend.feature.sales_order.SalesOrderLineRepository;
+import com.duylongtech.backend.feature.warranty.WarrantyRepository;
+import com.duylongtech.backend.feature.repair.RepairRepository;
+import com.duylongtech.backend.feature.partner.PartnerLedgerRepository;
+import com.duylongtech.backend.feature.partner.PartnerLedger;
+import java.math.BigDecimal;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Set;
+import org.springframework.web.multipart.MultipartFile;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import com.duylongtech.backend.feature.partner.CustomerRequest.CustomerExcelDTO;
+import com.duylongtech.backend.feature.partner.CustomerResponse.ImportPreviewResponse;
+
+public interface CustomerService {
+    Page<CustomerResponse> searchCustomers(String keyword, String status, String groupType, int page, int size);
+    CustomerResponse getCustomerById(Long id);
+    byte[] exportTemplateToExcel();
+    byte[] exportToExcel(List<Partner> customers);
+    ImportPreviewResponse previewImport(MultipartFile file);
+    java.util.List<Partner> getCustomersForExport(java.util.List<Long> ids, String keyword, String status, String groupType);
+    void confirmImport(com.duylongtech.backend.feature.partner.CustomerRequest.ImportConfirmRequest request, String actor);
+    Page<SalesHistoryResponse> getSalesHistory(Long customerId, int page, int size);
+    Page<WarrantyHistoryResponse> getWarrantyHistory(Long customerId, int page, int size);
+    ReceiptHistoryResponse getReceiptHistory(Long customerId, int page, int size);
+    CustomerResponse createCustomer(CustomerRequest req);
+    CustomerResponse updateCustomer(Long id, CustomerRequest req, String actor);
+    void deactivateCustomer(Long id);
+    void activateCustomer(Long id);
+}

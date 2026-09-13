@@ -1,0 +1,29 @@
+package com.duylongtech.backend.feature.repair;
+
+import lombok.Builder;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * Response DTO cho dòng phí dịch vụ trong Lệnh Sửa Chữa.
+ */
+@Data
+@Builder
+public class RepairFeeResponse {
+
+    private Long id;
+    private Long repairId;
+
+    private String feeName;
+    private BigDecimal feeAmount;
+    private BigDecimal quantity;
+    private String unitName;
+    private Boolean isFreeWarranty;
+    private BigDecimal vatPercent;
+    private String note;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

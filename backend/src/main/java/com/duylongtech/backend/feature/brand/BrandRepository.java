@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import com.duylongtech.backend.feature.product.Product;
 
 /**
  * Repository cho entity Brand (bảng BRANDS).

@@ -1,0 +1,24 @@
+package com.duylongtech.backend.feature.product;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductCategoryResponse {
+    private Long id;
+    private Long parentId;
+    private String parentName;
+    private String code;
+    private String name;
+    private String status;
+    private String description;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

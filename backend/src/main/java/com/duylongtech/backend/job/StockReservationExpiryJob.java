@@ -2,10 +2,10 @@ package com.duylongtech.backend.job;
 
 import com.duylongtech.backend.enums.DocumentStatus;
 
-import com.duylongtech.backend.entity.StockReservation;
-import com.duylongtech.backend.repository.InventoryBalanceRepository;
-import com.duylongtech.backend.repository.SalesOrderRepository;
-import com.duylongtech.backend.repository.StockReservationRepository;
+import com.duylongtech.backend.feature.inventory.StockReservation;
+import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
+import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
+import com.duylongtech.backend.feature.inventory.StockReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

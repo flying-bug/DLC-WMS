@@ -1,0 +1,156 @@
+package com.duylongtech.backend.feature.partner;
+
+import com.duylongtech.backend.annotation.Auditable;
+import com.duylongtech.backend.enums.AuditAction;
+import com.duylongtech.backend.feature.partner.SupplierRequest;
+import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.feature.partner.SupplierResponse;
+import com.duylongtech.backend.feature.partner.SupplierService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * Controller xử lý các API Quản lý Nhà Cung Cấp (Supplier Management).
+ *
+ * <p>Base URL: /api/v1/suppliers
+ *
+ * <p>Các endpoint:
+ * <ul>
+ *   <li>GET  /api/v1/suppliers          - UC-20: Xem danh sách NCC</li>
+ *   <li>GET  /api/v1/suppliers/{id}     - UC-21: Xem chi tiết NCC</li>
+ *   <li>POST /api/v1/suppliers          - UC-22: Tạo mới NCC</li>
+ *   <li>PUT  /api/v1/suppliers/{id}     - UC-23: Cập nhật NCC</li>
+ *   <li>DELETE /api/v1/suppliers/{id}   - UC-24: Xóa NCC</li>
+ * </ul>
+ *
+ * <p>Quyền truy cập (theo DATABASE.md):
+ * <ul>
+ *   <li>Manager: full quyền (view, add, edit, delete)</li>
+ *   <li>Staff: xem và thêm (supplier:view, supplier:add) tùy phân quyền</li>
+ * </ul>
+ *
+ * <p>BR-06: Mọi thao tác CUD đều được tự động ghi Audit Log.
+ */
+@RestController
+@RequestMapping("/api/v1/suppliers")
+@RequiredArgsConstructor
+@Tag(name = "Supplier Management", description = "API quản lý nhà cung cấp - UC20 đến UC24")
+public class SupplierController {
+
+    private final SupplierService supplierService;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // READ - UC-20, UC-21
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * UC-20: Xem danh sách nhà cung cấp.
+     * Hỗ trợ tìm kiếm theo keyword (tên hoặc mã NCC).
+     *
+     * @param keyword từ khóa tìm kiếm (optional)
+     * @return danh sách nhà cung cấp
+     */
+    @GetMapping
+    @Operation(summary = "Xem danh sách nhà cung cấp (UC-20)")
+    @PreAuthorize("hasAuthority('supplier:view')")
+    public ApiResponse<List<SupplierResponse>> getAllSuppliers(
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status
+    ) {
+        String actualKeyword = (search != null && !search.isBlank()) ? search : keyword;
+        return ApiResponse.success(supplierService.getAllSuppliers(actualKeyword, status));
+    }
+
+    /**
+     * UC-21: Xem chi tiết nhà cung cấp theo ID.
+     *
+     * @param id ID nhà cung cấp
+     * @return chi tiết nhà cung cấp
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "Xem chi tiết nhà cung cấp (UC-21)")
+    @PreAuthorize("hasAuthority('supplier:view')")
+    public ApiResponse<SupplierResponse> getSupplierById(@PathVariable Long id) {
+        return ApiResponse.success(supplierService.getSupplierById(id));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CREATE - UC-22
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * UC-22: Tạo mới nhà cung cấp.
+     * BR-06: Ghi Audit Log thành công / thất bại.
+     * BR-09: Mã NCC phải unique (validate trong service).
+     *
+     * @param req             dữ liệu nhà cung cấp mới
+     * @param servletRequest  HTTP request (lấy IP)
+     * @return nhà cung cấp vừa tạo
+     */
+    @PostMapping
+    @Operation(summary = "Tạo mới nhà cung cấp (UC-22)")
+    @PreAuthorize("hasAuthority('supplier:add')")
+    @Auditable(action = AuditAction.CREATE, entityName = "Supplier", actionDescription = "Tạo mới nhà cung cấp")
+    public ApiResponse<SupplierResponse> createSupplier(
+            @Valid @RequestBody SupplierRequest req
+    ) {
+        return ApiResponse.success(supplierService.createSupplier(req));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // UPDATE - UC-23
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * UC-23: Cập nhật thông tin nhà cung cấp.
+     * BR-06: Ghi Audit Log.
+     * BR-09: Nếu đổi mã, mã mới phải unique.
+     *
+     * @param id              ID nhà cung cấp cần cập nhật
+     * @param req             dữ liệu cập nhật
+     * @param servletRequest  HTTP request (lấy IP)
+     * @return nhà cung cấp sau khi cập nhật
+     */
+    @PutMapping("/{id}")
+    @Operation(summary = "Cập nhật nhà cung cấp (UC-23)")
+    @PreAuthorize("hasAuthority('supplier:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "Supplier", actionDescription = "Cập nhật nhà cung cấp")
+    public ApiResponse<SupplierResponse> updateSupplier(
+            @PathVariable Long id,
+            @Valid @RequestBody SupplierRequest req
+    ) {
+        return ApiResponse.success(supplierService.updateSupplier(id, req));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DELETE - UC-24
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * UC-24: Xóa nhà cung cấp.
+     * BR-06: Ghi Audit Log.
+     * BR-11: Nếu có giao dịch liên kết → chỉ đổi sang INACTIVE, không xóa vật lý.
+     *        Nếu chưa có giao dịch → xóa vật lý.
+     *
+     * @param id              ID nhà cung cấp cần xóa
+     * @param servletRequest  HTTP request (lấy IP)
+     * @return thông báo thành công
+     */
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Xóa nhà cung cấp (UC-24)")
+    @PreAuthorize("hasAuthority('supplier:delete')")
+    @Auditable(action = AuditAction.DELETE, entityName = "Supplier", actionDescription = "Xóa nhà cung cấp")
+    public ApiResponse<Void> deleteSupplier(
+            @PathVariable Long id
+    ) {
+        supplierService.deleteSupplier(id);
+        return ApiResponse.success(null);
+    }
+}

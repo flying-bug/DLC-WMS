@@ -2,7 +2,7 @@ package com.duylongtech.backend.aspect;
 
 import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditStatus;
-import com.duylongtech.backend.service.AuditLogService;
+import com.duylongtech.backend.feature.audit.AuditLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,0 +1,42 @@
+package com.duylongtech.backend.feature.repair;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import com.duylongtech.backend.feature.product.SerialNumber;
+
+/**
+ * Response DTO cho dòng linh kiện trong Lệnh Sửa Chữa.
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class RepairLineResponse {
+    private Long id;
+    private Long repairId;
+    private Long componentVariantId;
+    private String sku;
+    private String variantName;
+    private String componentName;
+    private String componentSku;
+    private String actionType;
+    private BigDecimal quantity;
+    private BigDecimal availableQuantity; // Số lượng tồn kho khả dụng
+    private BigDecimal unitPrice;
+    private BigDecimal lineAmount;
+    private Boolean isFreeWarranty;
+    private Long serialNumberId;
+    private String serialNumber;
+    private Long replacementSerialNumberId;
+    private String replacementSerialNumber;
+    private BigDecimal vatPercent;
+
+    private String note;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

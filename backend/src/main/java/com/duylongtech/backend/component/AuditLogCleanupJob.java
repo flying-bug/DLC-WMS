@@ -1,6 +1,6 @@
 package com.duylongtech.backend.component;
 
-import com.duylongtech.backend.repository.AuditLogRepository;
+import com.duylongtech.backend.feature.audit.AuditLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

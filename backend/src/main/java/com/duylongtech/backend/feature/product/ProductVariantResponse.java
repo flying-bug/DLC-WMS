@@ -1,0 +1,45 @@
+package com.duylongtech.backend.feature.product;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductVariantResponse {
+    private Long id;
+    private Long productId;
+    private String productCode;
+    private String productName;
+    private String productType;
+    private Boolean trackSerial;
+    private Long brandId;
+    private String brandName;
+    private Long categoryId;
+    private String categoryName;
+    private String categoryDescription;
+    private Long unitId;
+    private String unitName;
+    private String sku;
+    private String barcode;
+    private String variantName;
+    private BigDecimal costPrice;
+    private BigDecimal salePrice;
+    private BigDecimal vatRate;
+    private String manufacturerPartNumber;
+    private String specsJson;
+    private String trackingMode;
+    private Boolean trackLot;
+    private BigDecimal minStockQty;
+    private Boolean active;
+    private Integer warrantyMonths;
+    private java.util.List<ProductUnitConversionResponse> unitConversions;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

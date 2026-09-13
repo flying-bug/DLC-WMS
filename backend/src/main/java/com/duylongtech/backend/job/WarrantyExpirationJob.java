@@ -1,6 +1,6 @@
 package com.duylongtech.backend.job;
 
-import com.duylongtech.backend.repository.WarrantyRepository;
+import com.duylongtech.backend.feature.warranty.WarrantyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

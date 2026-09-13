@@ -1,0 +1,29 @@
+package com.duylongtech.backend.feature.inventory;
+
+import lombok.Builder;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import com.duylongtech.backend.feature.product.SerialNumber;
+
+@Data
+@Builder
+public class ScanResolveResponse {
+    private String type;
+    private String code;
+    private Long productId;
+    private Long variantId;
+    private Long serialNumberId;
+    private String productCode;
+    private String productName;
+    private String productType;
+    private String sku;
+    private String barcode;
+    private String serialNumber;
+    private String assetTag;
+    private String unitName;
+    private Boolean trackSerial;
+    private BigDecimal salePrice;
+    private BigDecimal costPrice;
+    private Integer warrantyMonths;
+}

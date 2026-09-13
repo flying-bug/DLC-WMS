@@ -2,8 +2,8 @@ package com.duylongtech.backend.security;
 
 import com.duylongtech.backend.enums.DocumentStatus;
 
-import com.duylongtech.backend.entity.User;
-import com.duylongtech.backend.entity.RoleEntity;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.feature.auth.RoleEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

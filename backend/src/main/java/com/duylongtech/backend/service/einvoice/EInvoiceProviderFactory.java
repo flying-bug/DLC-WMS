@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import com.duylongtech.backend.feature.einvoice.EInvoice;
 
 @Slf4j
 @Component

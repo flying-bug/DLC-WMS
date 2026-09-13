@@ -3,7 +3,7 @@ package com.duylongtech.backend.feature.brand;
 import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.exception.BusinessException;
-import com.duylongtech.backend.service.CodeGeneratorService;
+import com.duylongtech.backend.feature.system.CodeGeneratorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

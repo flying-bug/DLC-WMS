@@ -2,11 +2,9 @@ package com.duylongtech.backend.component;
 
 import com.duylongtech.backend.enums.DocumentStatus;
 
-import com.duylongtech.backend.entity.*;
-import com.duylongtech.backend.repository.*;
 import com.duylongtech.backend.feature.brand.Brand;
 import com.duylongtech.backend.feature.brand.BrandRepository;
-import com.duylongtech.backend.service.impl.RoleServiceImpl;
+import com.duylongtech.backend.feature.auth.RoleServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,6 +16,35 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import com.duylongtech.backend.feature.audit.AuditLog;
+import com.duylongtech.backend.feature.audit.AuditLogRepository;
+import com.duylongtech.backend.feature.auth.PermissionEntity;
+import com.duylongtech.backend.feature.auth.PermissionRepository;
+import com.duylongtech.backend.feature.auth.RoleEntity;
+import com.duylongtech.backend.feature.auth.RoleRepository;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.feature.auth.UserRepository;
+import com.duylongtech.backend.feature.brand.Brand;
+import com.duylongtech.backend.feature.brand.BrandRepository;
+import com.duylongtech.backend.feature.inventory.InventoryBalance;
+import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
+import com.duylongtech.backend.feature.partner.Partner;
+import com.duylongtech.backend.feature.partner.PartnerRepository;
+import com.duylongtech.backend.feature.product.Product;
+import com.duylongtech.backend.feature.product.ProductCategory;
+import com.duylongtech.backend.feature.product.ProductCategoryRepository;
+import com.duylongtech.backend.feature.product.ProductRepository;
+import com.duylongtech.backend.feature.product.ProductVariant;
+import com.duylongtech.backend.feature.product.ProductVariantRepository;
+import com.duylongtech.backend.feature.product.Unit;
+import com.duylongtech.backend.feature.product.UnitRepository;
+import com.duylongtech.backend.feature.repair.Repair;
+import com.duylongtech.backend.feature.stocktake.Stocktake;
+import com.duylongtech.backend.feature.system.SystemSetting;
+import com.duylongtech.backend.feature.system.SystemSettingRepository;
+import com.duylongtech.backend.feature.warehouse.Warehouse;
+import com.duylongtech.backend.feature.warehouse.WarehouseRepository;
+import com.duylongtech.backend.feature.warranty.Warranty;
 
 @Component
 @RequiredArgsConstructor
@@ -389,7 +416,6 @@ public class DatabaseSeeder implements CommandLineRunner {
         seedBrandIfNotFound("DELL", "Dell", "Hãng máy tính Hoa Kỳ", "18008182", "support@dell.com");
         seedBrandIfNotFound("GENERIC", "Khác", "Nhà sản xuất khác", null, null);
     }
-
 
     @SuppressWarnings("unused")
     private void seedAuditLogs() {

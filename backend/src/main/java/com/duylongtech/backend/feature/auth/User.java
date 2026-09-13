@@ -1,0 +1,91 @@
+package com.duylongtech.backend.feature.auth;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "USERS")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false, length = 50)
+    private String username;
+
+    @Column(name = "user_code", unique = true, length = 50)
+    private String userCode;
+
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
+    @Column(name = "full_name", nullable = false, length = 100)
+    private String fullName;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(unique = true, length = 100)
+    private String email;
+
+    @Column(unique = true, length = 20)
+    private String phone;
+
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
+    @Column(name = "id_card", length = 20)
+    private String idCard;
+
+    private java.time.LocalDate dob;
+
+    @Column(length = 10)
+    private String gender;
+
+    @Column(name = "start_date")
+    private java.time.LocalDate startDate;
+
+    @Column(length = 50)
+    private String position;
+
+    @Column(length = 50)
+    private String department;
+
+    @Column(nullable = false, length = 20)
+    private String status; // DRAFT, APPROVED, CANCELLED, INACTIVE
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "USER_ROLES",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<RoleEntity> roles = new HashSet<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "USER_PERMISSIONS",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    @Builder.Default
+    private Set<PermissionEntity> permissions = new HashSet<>();
+}

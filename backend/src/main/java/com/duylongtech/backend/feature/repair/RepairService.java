@@ -1,0 +1,63 @@
+package com.duylongtech.backend.feature.repair;
+
+import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.feature.repair.RepairFeeRequest;
+import com.duylongtech.backend.feature.repair.RepairLineRequest;
+import com.duylongtech.backend.feature.repair.RepairRequest;
+import com.duylongtech.backend.feature.repair.RepairFeeResponse;
+import com.duylongtech.backend.feature.repair.RepairLineResponse;
+import com.duylongtech.backend.feature.repair.RepairResponse;
+import com.duylongtech.backend.feature.partner.Partner;
+import com.duylongtech.backend.feature.product.ProductVariant;
+import com.duylongtech.backend.feature.repair.Repair;
+import com.duylongtech.backend.feature.repair.RepairFee;
+import com.duylongtech.backend.feature.repair.RepairLine;
+import com.duylongtech.backend.feature.product.SerialNumber;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.feature.partner.PartnerRepository;
+import com.duylongtech.backend.feature.product.ProductRepository;
+import com.duylongtech.backend.feature.product.ProductVariantRepository;
+import com.duylongtech.backend.feature.repair.RepairFeeRepository;
+import com.duylongtech.backend.feature.repair.RepairLineRepository;
+import com.duylongtech.backend.feature.repair.RepairRepository;
+import com.duylongtech.backend.feature.product.SerialNumberRepository;
+import com.duylongtech.backend.feature.auth.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
+import com.duylongtech.backend.feature.inventory.InventoryBalance;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+
+public interface RepairService {
+    Page<RepairResponse> getRepairs(String keyword, String status, LocalDate fromDate, LocalDate toDate, int page, int size);
+    RepairResponse getRepairById(Long id);
+    RepairResponse createRepair(RepairRequest request);
+    RepairResponse updateRepair(Long id, RepairRequest request);
+    RepairResponse updateInternalNotes(Long id, String notes);
+    RepairLineResponse addRepairLine(Long repairId, RepairLineRequest request);
+    RepairLineResponse updateRepairLine(Long repairId, Long lineId, RepairLineRequest request);
+    void deleteRepairLine(Long repairId, Long lineId);
+    RepairFeeResponse addRepairFee(Long repairId, RepairFeeRequest request);
+    void deleteRepairFee(Long repairId, Long feeId);
+    RepairFeeResponse updateRepairFee(Long repairId, Long feeId, RepairFeeRequest request);
+    void recalculateTotalAmount(Repair repair);
+    RepairResponse toDetailResponse(Repair repair);
+    RepairLineResponse toLineResponse(RepairLine line);
+    RepairFeeResponse toFeeResponse(RepairFee fee);
+    boolean checkCodeExists(String code);
+
+}

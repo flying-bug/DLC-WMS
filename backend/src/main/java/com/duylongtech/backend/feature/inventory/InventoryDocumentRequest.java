@@ -1,0 +1,30 @@
+package com.duylongtech.backend.feature.inventory;
+
+import jakarta.validation.Valid;
+import lombok.Data;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Data
+public class InventoryDocumentRequest {
+    private String docCode; // optional, system generates if null
+    private String issuePurpose;
+    private String referenceType;
+    private Long referenceId;
+    private Long warehouseId;
+    private Long sourceWarehouseId;
+    private Long purchaseOrderId;
+    private Long salesOrderId;
+    private Long partnerId;
+    private LocalDate docDate;
+    private String status;
+    private String note;
+    private Long createdBy;
+    private String recipientName;
+    private String recipientAddress;
+    private Long salespersonId;
+
+    @Valid
+    private List<InventoryDocumentLineRequest> lines;
+}

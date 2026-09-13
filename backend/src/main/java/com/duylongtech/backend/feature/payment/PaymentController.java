@@ -1,0 +1,101 @@
+package com.duylongtech.backend.feature.payment;
+
+import com.duylongtech.backend.feature.payment.PaymentRequest;
+import com.duylongtech.backend.feature.partner.PartnerLedgerResponse;
+import com.duylongtech.backend.feature.payment.PaymentResponse;
+import com.duylongtech.backend.feature.payment.PaymentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.List;
+import com.duylongtech.backend.feature.partner.Partner;
+
+@RestController
+@RequestMapping("/api/v1/payments")
+@RequiredArgsConstructor
+@Tag(name = "Payment Management", description = "Receipt, voucher and partner debt APIs")
+public class PaymentController {
+
+    private final PaymentService paymentService;
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('payment:view')")
+    @Operation(summary = "Get all payment receipts and vouchers")
+    public ResponseEntity<List<PaymentResponse>> getAllPayments(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(paymentService.getAllPayments(type, status));
+    }
+
+    @PostMapping("/receipts")
+
+    @PreAuthorize("hasAuthority('payment:add')")
+    @Operation(summary = "Create customer receipt")
+    public ResponseEntity<PaymentResponse> createReceipt(@RequestBody PaymentRequest request) {
+        return ResponseEntity.ok(paymentService.createPaymentReceipt(request));
+    }
+
+    @PostMapping("/vouchers")
+    @PreAuthorize("hasAuthority('payment:add')")
+    @Operation(summary = "Create supplier payment voucher")
+    public ResponseEntity<PaymentResponse> createVoucher(@RequestBody PaymentRequest request) {
+        return ResponseEntity.ok(paymentService.createPaymentVoucher(request));
+    }
+
+    @PostMapping("/{id}/post")
+    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "Post a DRAFT receipt/voucher (Restricted to Cashier and Admins)")
+    public ResponseEntity<PaymentResponse> postPayment(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.postPayment(id));
+    }
+
+    @PostMapping("/{id}/unpost")
+    @PreAuthorize("hasRole('CASHIER_CONTROLLER') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "Unpost a POSTED receipt/voucher (Rolls back ledger, returns to DRAFT)")
+    public ResponseEntity<PaymentResponse> unpostPayment(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(paymentService.unpostPayment(id, reason));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('payment:edit')")
+    @Operation(summary = "Update a DRAFT receipt/voucher")
+    public ResponseEntity<PaymentResponse> updatePayment(@PathVariable Long id, @RequestBody PaymentRequest request) {
+        return ResponseEntity.ok(paymentService.updatePayment(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('payment:edit')")
+    @Operation(summary = "Delete a DRAFT receipt/voucher")
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
+        paymentService.deletePayment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/balance/{partnerId}")
+    @PreAuthorize("hasAuthority('payment:view')")
+    @Operation(summary = "Get current partner debt balance")
+    public ResponseEntity<BigDecimal> getPartnerDebtBalance(@PathVariable Long partnerId) {
+        return ResponseEntity.ok(paymentService.getPartnerDebtBalance(partnerId));
+    }
+
+    @GetMapping("/history/{partnerId}")
+    @PreAuthorize("hasAuthority('payment:view')")
+    @Operation(summary = "Get receipt/voucher history for a partner")
+    public ResponseEntity<List<PaymentResponse>> getPartnerHistory(@PathVariable Long partnerId) {
+        return ResponseEntity.ok(paymentService.getPartnerPaymentHistory(partnerId));
+    }
+
+    @GetMapping("/ledger/{partnerId}")
+    @PreAuthorize("hasAuthority('payment:view')")
+    @Operation(summary = "Get full ledger details (invoices & payments) for a partner")
+    public ResponseEntity<List<PartnerLedgerResponse>> getPartnerLedger(@PathVariable Long partnerId) {
+        return ResponseEntity.ok(paymentService.getPartnerLedgerDetails(partnerId));
+    }
+}

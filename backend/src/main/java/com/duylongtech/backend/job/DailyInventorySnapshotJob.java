@@ -1,11 +1,11 @@
 package com.duylongtech.backend.job;
 
-import com.duylongtech.backend.entity.SystemSetting;
-import com.duylongtech.backend.entity.User;
-import com.duylongtech.backend.repository.InventoryDailySnapshotRepository;
-import com.duylongtech.backend.repository.SystemSettingRepository;
-import com.duylongtech.backend.repository.UserRepository;
-import com.duylongtech.backend.service.EmailService;
+import com.duylongtech.backend.feature.system.SystemSetting;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.feature.inventory.InventoryDailySnapshotRepository;
+import com.duylongtech.backend.feature.system.SystemSettingRepository;
+import com.duylongtech.backend.feature.auth.UserRepository;
+import com.duylongtech.backend.feature.system.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

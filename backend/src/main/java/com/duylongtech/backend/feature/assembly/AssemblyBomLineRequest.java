@@ -1,0 +1,27 @@
+package com.duylongtech.backend.feature.assembly;
+
+import lombok.Data;
+
+import java.math.BigDecimal;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+
+@Data
+public class AssemblyBomLineRequest {
+    @NotNull(message = "MSG02")
+    private Long componentVariantId;
+
+    @NotNull(message = "MSG02")
+    @DecimalMin(value = "0.0001", message = "Số lượng phải lớn hơn 0")
+    private BigDecimal quantity;
+
+    private String componentRole;
+
+    private String note;
+
+    private BigDecimal unitPrice;
+    private String componentSku;
+    private String componentName;
+    private Integer warrantyMonths;
+}

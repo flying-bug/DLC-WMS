@@ -1,7 +1,7 @@
 package com.duylongtech.backend.security;
 
-import com.duylongtech.backend.entity.User;
-import com.duylongtech.backend.repository.UserRepository;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.feature.auth.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

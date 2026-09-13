@@ -1,6 +1,6 @@
 package com.duylongtech.backend.dto;
 
-import com.duylongtech.backend.entity.BackupRecord;
+import com.duylongtech.backend.feature.system.BackupRecord;
 import lombok.*;
 
 import java.time.LocalDateTime;
