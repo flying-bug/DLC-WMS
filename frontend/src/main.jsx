@@ -10,7 +10,7 @@ import './styles/theme.css'
 import './styles/bootstrap-overrides.css'
 import './styles/global.css'
 
-const GOOGLE_CLIENT_ID = "889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

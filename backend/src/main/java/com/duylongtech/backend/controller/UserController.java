@@ -83,7 +83,7 @@ public class UserController {
         userService.updateStatus(id, status);
         UserDto after = userService.getUserById(id);
         realtimeSessionService.publishUserUpdated(after, "USER_STATUS_CHANGED");
-        if ("INACTIVE".equalsIgnoreCase(after.getStatus())) {
+        if (com.duylongtech.backend.enums.EntityStatus.INACTIVE.name().equalsIgnoreCase(after.getStatus())) {
             realtimeSessionService.forceLogoutUser(after.getId(), "ACCOUNT_LOCKED", "Tai khoan cua ban da bi khoa boi quan tri vien.");
         }
         return ApiResponse.success();
@@ -109,8 +109,8 @@ public class UserController {
         UserDto before = userService.getUserById(id);
         UserDto updated = userService.updateUser(id, userDto);
         realtimeSessionService.publishUserUpdated(updated, "USER_UPDATED");
-        boolean statusChangedToInactive = !"INACTIVE".equalsIgnoreCase(before.getStatus())
-                && "INACTIVE".equalsIgnoreCase(updated.getStatus());
+        boolean statusChangedToInactive = !com.duylongtech.backend.enums.EntityStatus.INACTIVE.name().equalsIgnoreCase(before.getStatus())
+                && com.duylongtech.backend.enums.EntityStatus.INACTIVE.name().equalsIgnoreCase(updated.getStatus());
         boolean rolesChanged = !java.util.Objects.equals(
                 before.getRoles() == null ? java.util.Set.of() : new java.util.HashSet<>(before.getRoles()),
                 updated.getRoles() == null ? java.util.Set.of() : new java.util.HashSet<>(updated.getRoles())

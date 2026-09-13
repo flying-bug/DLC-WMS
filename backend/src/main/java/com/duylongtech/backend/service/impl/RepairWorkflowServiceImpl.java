@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -48,18 +50,18 @@ public class RepairWorkflowServiceImpl  implements RepairWorkflowService {
     private static final String ACTION_ADD = "ADD";
     private static final String ACTION_REPLACE = "REPLACE";
     private static final String ACTION_REMOVE = "REMOVE";
-    private static final String COMPONENT_STATUS_ACTIVE = "ACTIVE";
+    private static final String COMPONENT_STATUS_ACTIVE = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
     private static final String COMPONENT_STATUS_REPLACED = "REPLACED";
     private static final String COMPONENT_STATUS_REMOVED = "REMOVED";
 
     // Định nghĩa các bước chuyển trạng thái hợp lệ
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
-            "DRAFT",       Set.of("QUOTATION", "CONFIRMED", "CANCELLED"),
-            "QUOTATION",   Set.of("CONFIRMED", "DRAFT", "CANCELLED"),
-            "CONFIRMED",   Set.of("UNDER_REPAIR", "QUOTATION", "CANCELLED"),
-            "UNDER_REPAIR", Set.of("DONE", "QUOTATION", "CANCELLED"),
+            DocumentStatus.DRAFT.name(),       Set.of("QUOTATION", "CONFIRMED", DocumentStatus.CANCELLED.name()),
+            "QUOTATION",   Set.of("CONFIRMED", DocumentStatus.DRAFT.name(), DocumentStatus.CANCELLED.name()),
+            "CONFIRMED",   Set.of("UNDER_REPAIR", "QUOTATION", DocumentStatus.CANCELLED.name()),
+            "UNDER_REPAIR", Set.of("DONE", "QUOTATION", DocumentStatus.CANCELLED.name()),
             "DONE",        Set.of(),      // Terminal state
-            "CANCELLED",   Set.of()       // Terminal state
+            DocumentStatus.CANCELLED.name(),   Set.of()       // Terminal state
     );
 
     private final RepairRepository repairRepository;
@@ -236,7 +238,7 @@ public class RepairWorkflowServiceImpl  implements RepairWorkflowService {
                 .warehouseId(warehouseId)
                 .partnerId(repair.getPartnerId())
                 .docDate(LocalDate.now())
-                .status("DRAFT") // Lưu tạm trước khi post
+                .status(DocumentStatus.DRAFT.name()) // Lưu tạm trước khi post
                 .note("Phiếu xuất linh kiện sửa chữa - Lệnh " + repair.getRepairCode())
                 .createdBy(currentUserId)
                 .salespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId)
@@ -312,7 +314,7 @@ public class RepairWorkflowServiceImpl  implements RepairWorkflowService {
                 .warehouseId(scrapWarehouseId)
                 .partnerId(repair.getPartnerId())
                 .docDate(LocalDate.now())
-                .status("DRAFT") // Lưu tạm trước khi post
+                .status(DocumentStatus.DRAFT.name()) // Lưu tạm trước khi post
                 .note("Phiếu nhập kho phế liệu - Lệnh sửa chữa " + repair.getRepairCode())
                 .createdBy(currentUserId)
                 .salespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId)

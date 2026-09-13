@@ -1,5 +1,7 @@
 package com.duylongtech.backend.entity;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -44,7 +46,7 @@ public class PurchaseOrder {
 
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private String status = "DRAFT"; // DRAFT | APPROVED | POSTED | CANCELLED
+    private String status = DocumentStatus.DRAFT.name(); // DRAFT | APPROVED | POSTED | CANCELLED
 
     @Column(name = "sub_total_amount", precision = 15, scale = 2)
     @Builder.Default

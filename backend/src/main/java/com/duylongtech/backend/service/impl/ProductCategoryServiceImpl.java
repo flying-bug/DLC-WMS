@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -59,7 +61,7 @@ public class ProductCategoryServiceImpl  implements ProductCategoryService {
 
         ProductCategory category = categoryMapper.toEntity(dto);
         if (category.getStatus() == null) {
-            category.setStatus("APPROVED");
+            category.setStatus(DocumentStatus.APPROVED.name());
         }
 
         ProductCategory saved = categoryRepository.save(category);

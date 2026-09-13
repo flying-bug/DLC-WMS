@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.request.PurchaseOrderRequest;
@@ -129,7 +131,7 @@ public class PurchaseOrderServiceImpl  implements PurchaseOrderService {
                 .partnerId(request.getPartnerId())
                 .poCode(poCode)
                 .poDate(request.getPoDate())
-                .status("DRAFT")
+                .status(DocumentStatus.DRAFT.name())
                 .subTotalAmount(subTotalAmount)
                 .taxAmount(taxAmount)
                 .totalAmount(totalAmount)
@@ -162,7 +164,7 @@ public class PurchaseOrderServiceImpl  implements PurchaseOrderService {
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
-        if (!"DRAFT".equals(po.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(po.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.PO_ERR_004.getMessage(), po.getStatus()));
         }
 
@@ -216,11 +218,11 @@ public class PurchaseOrderServiceImpl  implements PurchaseOrderService {
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
-        if (!"DRAFT".equals(po.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(po.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.PO_ERR_002.getMessage(), po.getStatus()));
         }
 
-        po.setStatus("APPROVED");
+        po.setStatus(DocumentStatus.APPROVED.name());
         PurchaseOrder approved = purchaseOrderRepository.save(po);
         log.info("Duyệt đơn mua hàng {} bởi {}", approved.getPoCode(), actor);
 
@@ -238,11 +240,11 @@ public class PurchaseOrderServiceImpl  implements PurchaseOrderService {
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
-        if ("POSTED".equals(po.getStatus()) || "CANCELLED".equals(po.getStatus()) || "APPROVED".equals(po.getStatus())) {
+        if (DocumentStatus.POSTED.name().equals(po.getStatus()) || DocumentStatus.CANCELLED.name().equals(po.getStatus()) || DocumentStatus.APPROVED.name().equals(po.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.PO_ERR_001.getMessage(), po.getStatus()));
         }
 
-        po.setStatus("CANCELLED");
+        po.setStatus(DocumentStatus.CANCELLED.name());
         PurchaseOrder cancelled = purchaseOrderRepository.save(po);
         log.info("Hủy đơn mua hàng {} bởi {}", cancelled.getPoCode(), actor);
 

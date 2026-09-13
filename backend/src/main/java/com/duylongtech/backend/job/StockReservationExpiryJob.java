@@ -1,5 +1,7 @@
 package com.duylongtech.backend.job;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.entity.StockReservation;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
 import com.duylongtech.backend.repository.SalesOrderRepository;
@@ -67,8 +69,8 @@ public class StockReservationExpiryJob {
 
             if (allReleased && !hasAnyHolding) {
                 salesOrderRepository.findById(soId).ifPresent(so -> {
-                    if ("APPROVED".equals(so.getStatus())) {
-                        so.setStatus("CANCELLED");
+                    if (DocumentStatus.APPROVED.name().equals(so.getStatus())) {
+                        so.setStatus(DocumentStatus.CANCELLED.name());
                         salesOrderRepository.save(so);
                         log.info("[ReservationExpiryJob] SO {} tự động hủy do reservation hết hạn", so.getSoCode());
                     }

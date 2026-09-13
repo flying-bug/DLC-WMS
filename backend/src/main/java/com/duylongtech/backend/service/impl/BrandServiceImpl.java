@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -42,8 +44,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BrandServiceImpl  implements BrandService {
 
-    private static final String APPROVED = "APPROVED";
-    private static final String INACTIVE  = "INACTIVE";
+    private static final String APPROVED = DocumentStatus.APPROVED.name();
+    private static final String INACTIVE  = com.duylongtech.backend.enums.EntityStatus.INACTIVE.name();
     private static final Set<String> VALID_STATUSES = Set.of(APPROVED, INACTIVE);
 
     /** Prefix tự động sinh mã Thương hiệu nếu client không truyền code. */

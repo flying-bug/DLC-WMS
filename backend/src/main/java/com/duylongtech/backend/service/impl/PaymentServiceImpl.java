@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.response.PartnerLedgerResponse;
@@ -71,7 +73,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .type(type)
                 .partnerId(partner.getId())
                 .amount(amount)
-                .status("DRAFT")
+                .status(DocumentStatus.DRAFT.name())
                 .paymentMethod(paymentMethod)
                 .note(trimToNull(request.getNote()))
                 .createdAt(LocalDateTime.now())
@@ -87,7 +89,7 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentTransaction payment = paymentTransactionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi với ID: " + id));
 
-        if (!"DRAFT".equals(payment.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(payment.getStatus())) {
             throw new BusinessException("Chỉ có thể chỉnh sửa phiếu ở trạng thái Lưu tạm (DRAFT)");
         }
 
@@ -106,7 +108,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setAmount(amount);
         payment.setPaymentMethod(paymentMethod);
         payment.setNote(request != null ? trimToNull(request.getNote()) : payment.getNote());
-        payment.setStatus("DRAFT");
+        payment.setStatus(DocumentStatus.DRAFT.name());
 
         PaymentTransaction saved = paymentTransactionRepository.save(payment);
         return toResponse(saved, partner);
@@ -118,7 +120,7 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentTransaction payment = paymentTransactionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi với ID: " + id));
 
-        if (!"DRAFT".equals(payment.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(payment.getStatus())) {
             throw new BusinessException("Chỉ có thể xóa phiếu ở trạng thái Lưu tạm (DRAFT)");
         }
 
@@ -136,15 +138,15 @@ public class PaymentServiceImpl implements PaymentService {
         Partner partner = partnerRepository.findById(payment.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác"));
 
-        if ("POSTED".equals(payment.getStatus())) {
+        if (DocumentStatus.POSTED.name().equals(payment.getStatus())) {
             return toResponse(payment, partner);
         }
-        if (!"DRAFT".equals(payment.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(payment.getStatus())) {
             throw new BusinessException(SystemMessage.PAY_ERR_004.getMessage());
         }
 
         ensurePaymentDoesNotExceedDebt(payment.getPartnerId(), payment.getAmount());
-        payment.setStatus("POSTED");
+        payment.setStatus(DocumentStatus.POSTED.name());
         PaymentTransaction saved = paymentTransactionRepository.save(payment);
         recordPostedPaymentLedger(saved, saved.getNote());
         return toResponse(saved, partner);
@@ -161,7 +163,7 @@ public class PaymentServiceImpl implements PaymentService {
         Partner partner = partnerRepository.findById(payment.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác"));
 
-        if (!"POSTED".equals(payment.getStatus())) {
+        if (!DocumentStatus.POSTED.name().equals(payment.getStatus())) {
             throw new BusinessException("Chỉ có thể bỏ ghi sổ cho phiếu đã ghi sổ quỹ (POSTED)");
         }
 
@@ -182,7 +184,7 @@ public class PaymentServiceImpl implements PaymentService {
         );
 
         // Chuyển trạng thái phiếu về DRAFT (Chờ ghi sổ)
-        payment.setStatus("DRAFT");
+        payment.setStatus(DocumentStatus.DRAFT.name());
         PaymentTransaction saved = paymentTransactionRepository.save(payment);
 
         log.info("[Payment] Đã bỏ ghi sổ phiếu {}. Đưa về trạng thái DRAFT. Lý do: {}", 

@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -56,7 +58,7 @@ import org.springframework.data.domain.PageRequest;
 @Slf4j
 public class RepairServiceImpl  implements RepairService {
 
-    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "QUOTATION", "UNDER_REPAIR");
+    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), "QUOTATION", "UNDER_REPAIR");
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
     private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REPLACE", "REMOVE");
 
@@ -119,7 +121,7 @@ public class RepairServiceImpl  implements RepairService {
                 .referenceCode(trimToNull(request.getReferenceCode()))
                 .receivedDate(request.getReceivedDate() != null ? request.getReceivedDate() : LocalDate.now())
                 .expectedDate(request.getExpectedDate())
-                .repairStatus("DRAFT")
+                .repairStatus(DocumentStatus.DRAFT.name())
                 .issueDescription(trimToNull(request.getIssueDescription()))
                 .diagnosisNote(trimToNull(request.getDiagnosisNote()))
                 .underWarranty(request.getUnderWarranty() != null ? request.getUnderWarranty() : false)

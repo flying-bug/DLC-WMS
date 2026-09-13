@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.request.EInvoiceCancelRequest;
@@ -77,14 +79,14 @@ public class EInvoiceServiceImpl  implements EInvoiceService {
 
     @Transactional(readOnly = true)
     public EInvoiceResponse getInvoiceBySalesOrderId(Long salesOrderId) {
-        return einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(salesOrderId, "CANCELED")
+        return einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(salesOrderId, DocumentStatus.CANCELED.name())
                 .map(this::toResponse)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public EInvoiceResponse getInvoiceByInventoryDocumentId(Long inventoryDocumentId) {
-        return einvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(inventoryDocumentId, "CANCELED")
+        return einvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(inventoryDocumentId, DocumentStatus.CANCELED.name())
                 .map(this::toResponse)
                 .orElse(null);
     }
@@ -105,13 +107,13 @@ public class EInvoiceServiceImpl  implements EInvoiceService {
             final InventoryDocument foundDoc = inventoryDocumentRepository.findById(exportDocId)
                     .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho #" + exportDocId));
 
-            if (!"POSTED".equalsIgnoreCase(foundDoc.getStatus())) {
+            if (!DocumentStatus.POSTED.name().equalsIgnoreCase(foundDoc.getStatus())) {
                 throw new BusinessException("Chỉ có thể xuất hóa đơn điện tử cho phiếu xuất kho đã ghi sổ (hoàn tất xuất kho).");
             }
 
             // 1. Kiểm tra xem phiếu xuất kho này đã xuất HĐĐT chưa
             final String expDocCode = foundDoc.getDocCode();
-            einvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(exportDocId, "CANCELED").ifPresent(existing -> {
+            einvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(exportDocId, DocumentStatus.CANCELED.name()).ifPresent(existing -> {
                 throw new BusinessException(String.format(
                         "Phiếu xuất kho %s đã được xuất hóa đơn số %s (Ký hiệu: %s)",
                         expDocCode, existing.getInvoiceNumber(), existing.getInvoiceSeries()
@@ -125,7 +127,7 @@ public class EInvoiceServiceImpl  implements EInvoiceService {
             if (soId != null) {
                 SalesOrder parentSo = salesOrderRepository.findById(soId).orElse(null);
                 String parentSoCode = parentSo != null ? parentSo.getSoCode() : String.valueOf(soId);
-                einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(soId, "CANCELED").ifPresent(soInv -> {
+                einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(soId, DocumentStatus.CANCELED.name()).ifPresent(soInv -> {
                     throw new BusinessException(String.format(
                             "Đơn bán hàng %s đã được xuất hóa đơn điện tử toàn bộ đơn số %s (Ký hiệu: %s). Theo quy định Nghị định 123/2020/NĐ-CP, không thể xuất thêm hóa đơn riêng cho từng phiếu xuất kho con.",
                             parentSoCode, soInv.getInvoiceNumber(), soInv.getInvoiceSeries()
@@ -143,7 +145,7 @@ public class EInvoiceServiceImpl  implements EInvoiceService {
         if (exportDoc == null && so != null) {
             final String soCode = so.getSoCode();
             // 1. Kiểm tra nếu đơn hàng đã có HĐĐT cấp đơn hàng
-            einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(so.getId(), "CANCELED").ifPresent(existing -> {
+            einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(so.getId(), DocumentStatus.CANCELED.name()).ifPresent(existing -> {
                 throw new BusinessException(String.format(
                         "Đơn bán hàng %s đã được xuất hóa đơn số %s (Ký hiệu: %s) cho toàn bộ đơn hàng.",
                         soCode, existing.getInvoiceNumber(), existing.getInvoiceSeries()
@@ -151,7 +153,7 @@ public class EInvoiceServiceImpl  implements EInvoiceService {
             });
 
             // 2. Kiểm tra chéo: Nếu đơn hàng đã có bất kỳ phiếu xuất kho nào được xuất HĐĐT riêng
-            List<EInvoice> exportInvoices = einvoiceRepository.findAllBySalesOrderIdAndInventoryDocumentIdIsNotNullAndStatusNot(so.getId(), "CANCELED");
+            List<EInvoice> exportInvoices = einvoiceRepository.findAllBySalesOrderIdAndInventoryDocumentIdIsNotNullAndStatusNot(so.getId(), DocumentStatus.CANCELED.name());
             if (!exportInvoices.isEmpty()) {
                 EInvoice firstExpInv = exportInvoices.get(0);
                 throw new BusinessException(String.format(
@@ -385,7 +387,7 @@ public class EInvoiceServiceImpl  implements EInvoiceService {
         EInvoice einvoice = einvoiceRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hóa đơn điện tử #" + id));
 
-        if ("CANCELED".equals(einvoice.getStatus())) {
+        if (DocumentStatus.CANCELED.name().equals(einvoice.getStatus())) {
             throw new BusinessException("Hóa đơn này đã được hủy trước đó.");
         }
 
@@ -401,8 +403,8 @@ public class EInvoiceServiceImpl  implements EInvoiceService {
             throw new BusinessException("Hủy hóa đơn trên hệ thống nhà cung cấp thất bại: " + result.getErrorMessage());
         }
 
-        einvoice.setStatus("CANCELED");
-        einvoice.setCqtStatus("CANCELED");
+        einvoice.setStatus(DocumentStatus.CANCELED.name());
+        einvoice.setCqtStatus(DocumentStatus.CANCELED.name());
         einvoice.setCancelReason(request.getReason());
         einvoice.setCanceledAt(LocalDateTime.now());
         einvoice.setCanceledBy(currentUserId != null ? currentUserId : 1L);

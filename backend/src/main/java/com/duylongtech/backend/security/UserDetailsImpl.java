@@ -1,5 +1,7 @@
 package com.duylongtech.backend.security;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.entity.RoleEntity;
 import org.springframework.security.core.GrantedAuthority;
@@ -65,7 +67,7 @@ public class UserDetailsImpl implements UserDetails {
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
-        boolean enabled = "APPROVED".equalsIgnoreCase(user.getStatus());
+        boolean enabled = DocumentStatus.APPROVED.name().equalsIgnoreCase(user.getStatus());
         return new UserDetailsImpl(
                 user.getId(),
                 user.getUsername(),

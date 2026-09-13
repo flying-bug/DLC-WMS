@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.request.AssemblyBomLineRequest;
@@ -44,13 +46,13 @@ import java.util.stream.Collectors;
 public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     private static final String ASSEMBLY = "ASSEMBLY";
     private static final String DISASSEMBLY = "DISASSEMBLY";
-    private static final String DEFAULT_STATUS = "DRAFT";
+    private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final Set<String> VALID_TYPES = Set.of(ASSEMBLY, DISASSEMBLY);
-    private static final Set<String> VALID_BOM_STATUSES = Set.of("DRAFT", "APPROVED", "INACTIVE");
-    private static final Set<String> VALID_STATUSES = Set.of("DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED");
-    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "APPROVED");
+    private static final Set<String> VALID_BOM_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.APPROVED.name(), com.duylongtech.backend.enums.EntityStatus.INACTIVE.name());
+    private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name());
+    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.APPROVED.name());
     private static final BigDecimal ZERO = BigDecimal.ZERO;
-    private static final String COMPONENT_STATUS_ACTIVE = "ACTIVE";
+    private static final String COMPONENT_STATUS_ACTIVE = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
     private static final String COMPONENT_STATUS_REMOVED = "REMOVED";
 
     private final AssemblyBomRepository assemblyBomRepository;
@@ -108,7 +110,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
                 .bomCode(bomCode)
                 .bomName(trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName())
                 .versionNo(nextVersion)
-                .status(normalizeBomStatus(request.getStatus(), "APPROVED"))
+                .status(normalizeBomStatus(request.getStatus(), DocumentStatus.APPROVED.name()))
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -119,7 +121,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     @Transactional
     public AssemblyBomResponse updateBom(Long id, AssemblyBomRequest request) {
         validateBomRequest(request, false);
-        if (assemblyOrderRepository.existsByBomIdAndStatusIn(id, List.of("DRAFT", "SUBMITTED", "APPROVED"))) {
+        if (assemblyOrderRepository.existsByBomIdAndStatusIn(id, List.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.APPROVED.name()))) {
             throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_ORDER_LOCKED.getMessage());
         }
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
@@ -211,18 +213,18 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         AssemblyOrder order = findOrderOrThrow(id);
         String status = normalizeStatus(newStatus, order.getStatus());
         
-        if ("CANCELLED".equals(status)) {
+        if (DocumentStatus.CANCELLED.name().equals(status)) {
             if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceId("ASSEMBLY_ORDER", id)) {
                 throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_HAS_POSTED_DOCS.getMessage());
             }
         }
         
-        if ("SUBMITTED".equals(status)) {
+        if (DocumentStatus.SUBMITTED.name().equals(status)) {
             List<InventoryDocument> exports = inventoryDocumentRepository.searchExports(null, null, null, null, null, null, "ASSEMBLY_ORDER", id, null, null);
             List<InventoryDocument> imports = inventoryDocumentRepository.searchImports(null, null, null, null, null, null, "ASSEMBLY_ORDER", id, null, null);
             
-            boolean anyDraft = exports.stream().anyMatch(d -> "DRAFT".equals(d.getStatus())) ||
-                               imports.stream().anyMatch(d -> "DRAFT".equals(d.getStatus()));
+            boolean anyDraft = exports.stream().anyMatch(d -> DocumentStatus.DRAFT.name().equals(d.getStatus())) ||
+                               imports.stream().anyMatch(d -> DocumentStatus.DRAFT.name().equals(d.getStatus()));
                                
             if (anyDraft) {
                 throw new BusinessException(SystemMessage.ASM_ERR_037.getMessage());
@@ -239,28 +241,28 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
             Long targetId = order.getTargetVariant().getId();
 
             BigDecimal exportedComponents = exports.stream()
-                .filter(d -> "POSTED".equals(d.getStatus()))
+                .filter(d -> DocumentStatus.POSTED.name().equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
                 .filter(l -> l.getVariantId() != null && componentIds.contains(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityOut)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal exportedTarget = exports.stream()
-                .filter(d -> "POSTED".equals(d.getStatus()))
+                .filter(d -> DocumentStatus.POSTED.name().equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
                 .filter(l -> l.getVariantId() != null && targetId.equals(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityOut)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal importedComponents = imports.stream()
-                .filter(d -> "POSTED".equals(d.getStatus()))
+                .filter(d -> DocumentStatus.POSTED.name().equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
                 .filter(l -> l.getVariantId() != null && componentIds.contains(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityIn)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal importedTarget = imports.stream()
-                .filter(d -> "POSTED".equals(d.getStatus()))
+                .filter(d -> DocumentStatus.POSTED.name().equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
                 .filter(l -> l.getVariantId() != null && targetId.equals(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityIn)
@@ -303,7 +305,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     @Transactional
     public AssemblyOrderResponse updateNote(Long id, AssemblyOrderRequest request) {
         AssemblyOrder order = findOrderOrThrow(id);
-        if ("SUBMITTED".equals(order.getStatus())) {
+        if (DocumentStatus.SUBMITTED.name().equals(order.getStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_034.getMessage());
         }
         order.setNote(request.getNote());
@@ -314,7 +316,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     @Transactional
     public void generateInventoryDocument(Long id, com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request, String actor) {
         AssemblyOrder order = findOrderOrThrow(id);
-        if (!"SUBMITTED".equals(order.getStatus()) && !"APPROVED".equals(order.getStatus())) {
+        if (!DocumentStatus.SUBMITTED.name().equals(order.getStatus()) && !DocumentStatus.APPROVED.name().equals(order.getStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_033.getMessage());
         }
         
@@ -325,7 +327,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         docReq.setReferenceId(order.getId());
         docReq.setIssuePurpose(order.getOrderType().equals(ASSEMBLY) ? "Lắp ráp" : "Tháo dỡ");
         docReq.setCreatedBy(order.getCreatedBy());
-        docReq.setStatus("DRAFT");
+        docReq.setStatus(DocumentStatus.DRAFT.name());
         
         List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> lines = request.getLines().stream().map(line -> {
             com.duylongtech.backend.dto.request.InventoryDocumentLineRequest lr = new com.duylongtech.backend.dto.request.InventoryDocumentLineRequest();
@@ -412,7 +414,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
             throw new BusinessException(SystemMessage.ASM_ERR_022.getMessage());
         }
 
-        boolean isApproved = "APPROVED".equals(request.getStatus());
+        boolean isApproved = DocumentStatus.APPROVED.name().equals(request.getStatus());
 
         for (int i = 0; i < request.getLines().size(); i++) {
             AssemblyBomLineRequest line = request.getLines().get(i);
@@ -483,7 +485,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     private AssemblyBom findBomOrThrow(Long bomId) {
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(bomId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy định mức vật tư"));
-        if (!"APPROVED".equalsIgnoreCase(bom.getStatus())) {
+        if (!DocumentStatus.APPROVED.name().equalsIgnoreCase(bom.getStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_018.getMessage());
         }
         if (bom.getLines() == null || bom.getLines().isEmpty()) {
@@ -954,7 +956,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     @Transactional
     public void executeAssemblyOrder(Long id, AssemblyExecutionRequest request, Long userId) {
         AssemblyOrder order = findOrderOrThrow(id);
-        if (!"APPROVED".equals(order.getStatus())) {
+        if (!DocumentStatus.APPROVED.name().equals(order.getStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_003.getMessage());
         }
         if (!ASSEMBLY.equals(order.getOrderType()) && !"DISASSEMBLY".equals(order.getOrderType())) {
@@ -1028,7 +1030,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         exportDoc.setReferenceId(order.getId());
         exportDoc.setIssuePurpose("ASSEMBLY"); // Xuất lắp ráp/tháo dỡ
         exportDoc.setCreatedBy(userId);
-        exportDoc.setStatus("SUBMITTED");
+        exportDoc.setStatus(DocumentStatus.SUBMITTED.name());
         exportDoc.setLines(exportLines);
         com.duylongtech.backend.dto.response.InventoryDocumentResponse createdExport = inventoryDocumentService.createExport(exportDoc);
         inventoryDocumentService.postExport(createdExport.getId());
@@ -1040,7 +1042,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         importDoc.setReferenceId(order.getId());
         importDoc.setIssuePurpose("PRODUCTION"); // Nhập kho sản xuất (thành phẩm sau lắp ráp)
         importDoc.setCreatedBy(userId);
-        importDoc.setStatus("SUBMITTED");
+        importDoc.setStatus(DocumentStatus.SUBMITTED.name());
         importDoc.setLines(importLines);
         com.duylongtech.backend.dto.response.InventoryDocumentResponse createdImport = inventoryDocumentService.createImport(importDoc);
         inventoryDocumentService.postImport(createdImport.getId());
@@ -1083,7 +1085,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
 
         // Nếu đã thực thi đủ toàn bộ → tự động chuyển SUBMITTED
         if (newProduced.compareTo(order.getQuantity()) >= 0) {
-            order.setStatus("SUBMITTED");
+            order.setStatus(DocumentStatus.SUBMITTED.name());
         }
         order.setUpdatedAt(LocalDateTime.now());
         assemblyOrderRepository.save(order);
@@ -1239,7 +1241,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     public AssemblyBomResponse submitBom(Long id, Long actorId) {
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
-        requireState(bom.getStatus(), "DRAFT", "REJECTED");
+        requireState(bom.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED");
         validateBomEntity(bom);
         bom.setStatus("PENDING_APPROVAL");
         bom.setSubmittedBy(actorId);
@@ -1257,7 +1259,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
         requireState(bom.getStatus(), "PENDING_APPROVAL");
         validateBomEntity(bom);
-        bom.setStatus("APPROVED");
+        bom.setStatus(DocumentStatus.APPROVED.name());
         bom.setApprovedBy(actorId);
         bom.setApprovedAt(LocalDateTime.now());
         notifyUser(bom.getSubmittedBy(), "BOM ─æ├ú ─æ╞░ß╗úc duyß╗çt: " + bom.getBomCode(),
@@ -1286,7 +1288,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     @Transactional
     public AssemblyOrderResponse submitOrder(Long id, Long actorId) {
         AssemblyOrder order = findOrderOrThrow(id);
-        requireState(order.getStatus(), "DRAFT", "REJECTED");
+        requireState(order.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED");
         order.setStatus("PENDING_APPROVAL");
         order.setSubmittedBy(actorId);
         order.setSubmittedAt(LocalDateTime.now());
@@ -1300,19 +1302,19 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     @Transactional
     public AssemblyOrderResponse approveOrder(Long id, Long actorId) {
         AssemblyOrder order = findOrderOrThrow(id);
-        if ("APPROVED".equals(order.getStatus())
+        if (DocumentStatus.APPROVED.name().equals(order.getStatus())
                 && inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("ASSEMBLY_ORDER", id, "EX_SO")
                 && inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("ASSEMBLY_ORDER", id, "IN_PO")) {
             return toOrderResponse(order);
         }
         requireState(order.getStatus(), "PENDING_APPROVAL");
-        if (!"APPROVED".equals(order.getBom().getStatus())) {
+        if (!DocumentStatus.APPROVED.name().equals(order.getBom().getStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_018.getMessage());
         }
         if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceId("ASSEMBLY_ORDER", id)) {
             throw new BusinessException(SystemMessage.ASM_ERR_042.getMessage());
         }
-        order.setStatus("APPROVED");
+        order.setStatus(DocumentStatus.APPROVED.name());
         order.setApprovedBy(actorId);
         order.setApprovedAt(LocalDateTime.now());
         assemblyOrderRepository.saveAndFlush(order);
@@ -1342,12 +1344,12 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
     @Transactional
     public AssemblyOrderResponse requestCancel(Long id, Long actorId, String reason) {
         AssemblyOrder order = findOrderOrThrow(id);
-        requireState(order.getStatus(), "DRAFT", "REJECTED", "PENDING_APPROVAL", "APPROVED", "IN_PROGRESS");
+        requireState(order.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED", "PENDING_APPROVAL", DocumentStatus.APPROVED.name(), "IN_PROGRESS");
         order.setCancellationReason(requireReason(reason));
         order.setCancelRequestedBy(actorId);
         order.setCancelRequestedAt(LocalDateTime.now());
-        if (Set.of("DRAFT", "REJECTED", "PENDING_APPROVAL").contains(order.getStatus())) {
-            order.setStatus("CANCELLED");
+        if (Set.of(DocumentStatus.DRAFT.name(), "REJECTED", "PENDING_APPROVAL").contains(order.getStatus())) {
+            order.setStatus(DocumentStatus.CANCELLED.name());
             order.setCancelledBy(actorId);
             order.setCancelledAt(LocalDateTime.now());
             order.setCancellationSettlementStatus("SETTLED");
@@ -1369,14 +1371,14 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         }
         List<InventoryDocument> documents = inventoryDocumentRepository
                 .findByReferenceWithLines("ASSEMBLY_ORDER", id);
-        if (documents.stream().anyMatch(d -> "IN_PO".equals(d.getDocType()) && "POSTED".equals(d.getStatus()))) {
+        if (documents.stream().anyMatch(d -> "IN_PO".equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()))) {
             throw new BusinessException(SystemMessage.ASM_ERR_044.getMessage());
         }
         boolean exportPosted = documents.stream()
-                .anyMatch(d -> "EX_SO".equals(d.getDocType()) && "POSTED".equals(d.getStatus()));
-        documents.stream().filter(d -> "DRAFT".equals(d.getStatus())).forEach(d -> d.setStatus("CANCELLED"));
+                .anyMatch(d -> "EX_SO".equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
+        documents.stream().filter(d -> DocumentStatus.DRAFT.name().equals(d.getStatus())).forEach(d -> d.setStatus(DocumentStatus.CANCELLED.name()));
         inventoryDocumentRepository.saveAll(documents);
-        order.setStatus("CANCELLED");
+        order.setStatus(DocumentStatus.CANCELLED.name());
         order.setCancelConfirmedBy(actorId);
         order.setCancelConfirmedAt(LocalDateTime.now());
         order.setCancelledBy(actorId);
@@ -1434,7 +1436,7 @@ public class AssemblyOrderServiceImpl  implements AssemblyOrderService {
         request.setReferenceId(order.getId());
         request.setWarehouseId(order.getWarehouseId());
         request.setDocDate(LocalDate.now());
-        request.setStatus("DRAFT");
+        request.setStatus(DocumentStatus.DRAFT.name());
         request.setCreatedBy(order.getCreatedBy());
         request.setNote("Tß╗▒ ─æß╗Öng tß║ío tß╗½ lß╗çnh " + order.getOrderCode());
         return request;

@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.request.ChangePasswordRequest;
@@ -85,7 +87,7 @@ public class AuthServiceImpl  implements AuthService {
                     .orElseGet(() -> userRepository.findByUsername(email)
                             .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND)));
             
-            if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
+            if (!DocumentStatus.APPROVED.name().equalsIgnoreCase(user.getStatus())) {
                 throw new BusinessException(SystemMessage.USER_LOCKED);
             }
 

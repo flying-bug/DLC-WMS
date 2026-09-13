@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.einvoice;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -100,7 +102,7 @@ public class ViettelSinvoiceProvider implements EInvoiceProvider {
                 .success(true)
                 .invoiceNumber(invoiceNumber)
                 .invoiceSeries(invoiceSeries)
-                .cqtStatus("CANCELED")
+                .cqtStatus(DocumentStatus.CANCELED.name())
                 .issuedAt(LocalDateTime.now())
                 .rawResponse("{\"status\":\"CANCELED\",\"reason\":\"" + reason + "\"}")
                 .build();

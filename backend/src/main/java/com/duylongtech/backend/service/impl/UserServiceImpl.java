@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.request.UserDto;
@@ -130,7 +132,7 @@ public class UserServiceImpl  implements UserService {
                 .collect(Collectors.toList());
 
         // Chuyển đổi status -> isActive (APPROVED = true, còn lại = false)
-        boolean isActive = "APPROVED".equalsIgnoreCase(user.getStatus());
+        boolean isActive = DocumentStatus.APPROVED.name().equalsIgnoreCase(user.getStatus());
 
         return UserDetailResponseDTO.builder()
                 .id(user.getId())
@@ -167,7 +169,7 @@ public class UserServiceImpl  implements UserService {
     public List<UserDto> searchUsers(String keyword) {
         String kw = (keyword == null || keyword.isBlank()) ? "" : keyword.trim().toLowerCase();
         return userRepository.findAll().stream()
-                .filter(u -> "APPROVED".equalsIgnoreCase(u.getStatus()))
+                .filter(u -> DocumentStatus.APPROVED.name().equalsIgnoreCase(u.getStatus()))
                 .filter(u -> {
                     if (kw.isEmpty()) return true;
                     return (u.getFullName() != null && u.getFullName().toLowerCase().contains(kw))
@@ -203,7 +205,7 @@ public class UserServiceImpl  implements UserService {
         user.setFullName(fullName);
         user.setEmail(email);
         user.setPhone(phone);
-        user.setStatus("APPROVED");
+        user.setStatus(DocumentStatus.APPROVED.name());
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         String idCard = userDto.getIdCard() != null ? userDto.getIdCard().trim() : null;
         if (idCard != null && idCard.length() > 20) {
@@ -237,12 +239,12 @@ public class UserServiceImpl  implements UserService {
     public void updateStatus(Long id, String status) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
-        if (!Set.of("APPROVED", "INACTIVE").contains(normalizedStatus)) {
+        if (!Set.of(DocumentStatus.APPROVED.name(), com.duylongtech.backend.enums.EntityStatus.INACTIVE.name()).contains(normalizedStatus)) {
             throw new BusinessException(SystemMessage.INVALID_USER_STATUS);
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if ("INACTIVE".equals(normalizedStatus) && authentication != null
+        if (com.duylongtech.backend.enums.EntityStatus.INACTIVE.name().equals(normalizedStatus) && authentication != null
                 && authentication.getPrincipal() instanceof UserDetailsImpl currentUser
                 && currentUser.getId().equals(id)) {
             throw new BusinessException(SystemMessage.CANNOT_LOCK_SELF);
@@ -301,7 +303,7 @@ public class UserServiceImpl  implements UserService {
 
         if (userDto.getStatus() != null) {
             String normalizedStatus = userDto.getStatus().trim().toUpperCase();
-            if (!Set.of("APPROVED", "INACTIVE").contains(normalizedStatus)) {
+            if (!Set.of(DocumentStatus.APPROVED.name(), com.duylongtech.backend.enums.EntityStatus.INACTIVE.name()).contains(normalizedStatus)) {
                 throw new BusinessException(SystemMessage.INVALID_USER_STATUS);
             }
             user.setStatus(normalizedStatus);

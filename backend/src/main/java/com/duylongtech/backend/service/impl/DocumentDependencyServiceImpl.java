@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.response.DependencyCheckResponse;
@@ -35,7 +37,7 @@ public class DocumentDependencyServiceImpl  implements DocumentDependencyService
         InventoryDocument doc = documentRepository.findById(docId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chứng từ ID: " + docId));
 
-        if (!"POSTED".equalsIgnoreCase(doc.getStatus())) {
+        if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
             return DependencyCheckResponse.builder()
                     .canUnpost(true)
                     .level("CLEAN")
@@ -119,7 +121,7 @@ public class DocumentDependencyServiceImpl  implements DocumentDependencyService
         InventoryDocument doc = documentRepository.findById(docId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chứng từ ID: " + docId));
 
-        if (!"POSTED".equalsIgnoreCase(doc.getStatus())) {
+        if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
             return DependencyCheckResponse.builder()
                     .canUnpost(true)
                     .level("CLEAN")
@@ -132,7 +134,7 @@ public class DocumentDependencyServiceImpl  implements DocumentDependencyService
         List<String> conflictingDocs = new ArrayList<>();
 
         // 1. Đã xuất hóa đơn điện tử cho lần xuất này chưa bị hủy?
-        eInvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(docId, "CANCELED")
+        eInvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(docId, DocumentStatus.CANCELED.name())
                 .ifPresent(inv -> {
                     String invCode = (inv.getInvoiceSeries() != null ? inv.getInvoiceSeries() : "")
                             + (inv.getInvoiceNumber() != null ? "-" + inv.getInvoiceNumber() : "");

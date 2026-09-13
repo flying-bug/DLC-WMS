@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class WarrantyLifecycleServiceImpl  implements WarrantyLifecycleService {
 
     private static final Set<String> VALID_STATUSES = Set.of(
-            "ACTIVE", "EXPIRED", "VOIDED"
+            com.duylongtech.backend.enums.EntityStatus.ACTIVE.name(), "EXPIRED", "VOIDED"
     );
 
     private final WarrantyRepository warrantyRepository;
@@ -45,7 +45,7 @@ public class WarrantyLifecycleServiceImpl  implements WarrantyLifecycleService {
                 .salesOrderId(request.getSalesOrderId())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .warrantyStatus(normalizeStatusOrDefault(request.getWarrantyStatus(), "ACTIVE"))
+                .warrantyStatus(normalizeStatusOrDefault(request.getWarrantyStatus(), com.duylongtech.backend.enums.EntityStatus.ACTIVE.name()))
                 .note(trimToNull(request.getNote()))
                 .build();
         
@@ -133,7 +133,7 @@ public class WarrantyLifecycleServiceImpl  implements WarrantyLifecycleService {
         if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new BusinessException(SystemMessage.WARR_ERR_003.getMessage());
         }
-        String status = normalizeStatusOrDefault(request.getWarrantyStatus(), "ACTIVE");
+        String status = normalizeStatusOrDefault(request.getWarrantyStatus(), com.duylongtech.backend.enums.EntityStatus.ACTIVE.name());
         if (!VALID_STATUSES.contains(status)) {
             throw new BusinessException(SystemMessage.WARR_ERR_002.getMessage());
         }

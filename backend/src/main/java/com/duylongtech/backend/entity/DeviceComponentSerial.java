@@ -43,7 +43,7 @@ public class DeviceComponentSerial {
 
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private String status = "ACTIVE";
+    private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
 
     @Column(name = "installed_at")
     private LocalDateTime installedAt;

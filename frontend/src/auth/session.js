@@ -31,7 +31,7 @@ export function getAuthPermissions() {
 
 export function hasPermission(requiredPerm) {
     const roles = getAuthRoles();
-    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN')) return true;
+    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER')) return true;
     const perms = getAuthPermissions();
     if (Array.isArray(requiredPerm)) {
         return requiredPerm.some(p => perms.includes(p));
@@ -41,7 +41,7 @@ export function hasPermission(requiredPerm) {
 
 export function hasAnyModulePermission(moduleName) {
     const roles = getAuthRoles();
-    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN')) return true;
+    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER')) return true;
     const perms = getAuthPermissions();
     return perms.some(p => p === moduleName || p.startsWith(`${moduleName}:`));
 }

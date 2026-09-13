@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.request.DirectCheckoutRequest;
@@ -109,7 +111,7 @@ public class DirectCheckoutServiceImpl  implements DirectCheckoutService {
         if (customer == null || !Boolean.TRUE.equals(customer.getIsCustomer())) {
             throw new BusinessException(SystemMessage.CHK_ERR_005.getMessage());
         }
-        if (!"APPROVED".equals(customer.getStatus())) {
+        if (!DocumentStatus.APPROVED.name().equals(customer.getStatus())) {
             throw new BusinessException(SystemMessage.CHK_ERR_004.getMessage());
         }
     }
@@ -120,7 +122,7 @@ public class DirectCheckoutServiceImpl  implements DirectCheckoutService {
                 .type("INDIVIDUAL")
                 .name("Khách vãng lai")
                 .groupType("RETAIL")
-                .status("APPROVED")
+                .status(DocumentStatus.APPROVED.name())
                 .isCustomer(true)
                 .isSupplier(false)
                 .build();
@@ -139,7 +141,7 @@ public class DirectCheckoutServiceImpl  implements DirectCheckoutService {
                 .phone(phone)
                 .address(trimToNull(request.getCustomerAddress()))
                 .groupType("RETAIL")
-                .status("APPROVED")
+                .status(DocumentStatus.APPROVED.name())
                 .isCustomer(true)
                 .isSupplier(false)
                 .build();
@@ -185,7 +187,7 @@ public class DirectCheckoutServiceImpl  implements DirectCheckoutService {
                 .warehouseId(request.getWarehouseId())
                 .soCode(soCode)
                 .soDate(checkoutDate)
-                .status("POSTED")
+                .status(DocumentStatus.POSTED.name())
                 .subTotalAmount(subTotal)
                 .taxAmount(taxAmount)
                 .totalAmount(total)
@@ -213,7 +215,7 @@ public class DirectCheckoutServiceImpl  implements DirectCheckoutService {
         exportReq.setPartnerId(customer.getId());
         exportReq.setWarehouseId(request.getWarehouseId());
         exportReq.setDocDate(checkoutDate);
-        exportReq.setStatus("DRAFT");
+        exportReq.setStatus(DocumentStatus.DRAFT.name());
         exportReq.setCreatedBy(actorUser.getId());
         exportReq.setRecipientName(customer.getName());
         exportReq.setRecipientAddress(trimToNull(request.getCustomerAddress()));
@@ -254,7 +256,7 @@ public class DirectCheckoutServiceImpl  implements DirectCheckoutService {
             paymentRequest.setAmount(paidAmount);
             paymentRequest.setPaymentMethod("CASH"); // Mặc định bán hàng trực tiếp dùng tiền mặt
             paymentRequest.setNote("Thu tiền bán hàng trực tiếp " + order.getSoCode() + " / " + exportCode);
-            paymentRequest.setStatus("POSTED"); // Ghi sổ luôn
+            paymentRequest.setStatus(DocumentStatus.POSTED.name()); // Ghi sổ luôn
             
             paymentService.createPaymentReceipt(paymentRequest);
         }

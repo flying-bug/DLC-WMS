@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.dto.request.SalesOrderRequest;
@@ -158,7 +160,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
                 .warehouseId(headerWh)
                 .soCode(soCode)
                 .soDate(request.getSoDate())
-                .status("DRAFT")
+                .status(DocumentStatus.DRAFT.name())
                 .subTotalAmount(subTotalAmount)
                 .taxAmount(taxAmount)
                 .totalAmount(totalAmount)
@@ -191,7 +193,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
         SalesOrder so = salesOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
-        if (!"DRAFT".equals(so.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(so.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.SO_ERR_009.getMessage(), so.getStatus()));
         }
 
@@ -260,7 +262,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
         SalesOrder so = salesOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
-        if (!"DRAFT".equals(so.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(so.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.SO_ERR_006.getMessage(), so.getStatus()));
         }
 
@@ -320,7 +322,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
             inventoryBalanceRepository.save(balance);
         }
 
-        so.setStatus("APPROVED");
+        so.setStatus(DocumentStatus.APPROVED.name());
         SalesOrder approved = salesOrderRepository.save(so);
         log.info("Duyệt đơn bán hàng {} bởi {}", approved.getSoCode(), actor);
 
@@ -337,14 +339,14 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
         SalesOrder so = salesOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
-        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus())) {
+        if (DocumentStatus.POSTED.name().equals(so.getStatus()) || DocumentStatus.CANCELLED.name().equals(so.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.SO_ERR_005.getMessage(), so.getStatus()));
         }
 
         // Kiểm tra xem đơn hàng đã có phiếu xuất kho nào đã ghi sổ (POSTED) chưa
         List<InventoryDocument> exportDocs = inventoryDocumentRepository.findAllExports();
         boolean hasPostedExport = exportDocs.stream()
-                .anyMatch(d -> id.equals(d.getSalesOrderId()) && "POSTED".equalsIgnoreCase(d.getStatus()));
+                .anyMatch(d -> id.equals(d.getSalesOrderId()) && DocumentStatus.POSTED.name().equalsIgnoreCase(d.getStatus()));
         if (hasPostedExport) {
             throw new BusinessException("Đơn bán hàng đã có phiếu xuất kho đã ghi sổ (hoàn tất xuất), không thể hủy đơn hàng.");
         }
@@ -352,7 +354,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
         // Release tất cả reservations HOLDING
         releaseReservations(so.getId(), so.getWarehouseId());
 
-        so.setStatus("CANCELLED");
+        so.setStatus(DocumentStatus.CANCELLED.name());
         SalesOrder cancelled = salesOrderRepository.save(so);
         log.info("Hủy đơn bán hàng {} bởi {}", cancelled.getSoCode(), actor);
         return toSummaryResponse(cancelled);
@@ -369,7 +371,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
 
         Partner customer = partnerRepository.findByIdAndIsCustomerTrue(partnerId)
                 .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại"));
-        if (!"APPROVED".equals(customer.getStatus())) {
+        if (!DocumentStatus.APPROVED.name().equals(customer.getStatus())) {
             throw new BusinessException(SystemMessage.CHK_ERR_004.getMessage());
         }
         return customer;
@@ -458,7 +460,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
         boolean allFulfilled = all.stream().allMatch(r -> "FULFILLED".equals(r.getStatus()));
         if (allFulfilled) {
             salesOrderRepository.findById(salesOrderId).ifPresent(so -> {
-                so.setStatus("POSTED");
+                so.setStatus(DocumentStatus.POSTED.name());
                 salesOrderRepository.save(so);
             });
         }
@@ -521,7 +523,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
         SalesOrder so = salesOrderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng"));
         
-        if ("CANCELLED".equals(so.getStatus())) {
+        if (DocumentStatus.CANCELLED.name().equals(so.getStatus())) {
             throw new BusinessException(SystemMessage.SO_ERR_003.getMessage());
         }
 
@@ -553,7 +555,7 @@ public class SalesOrderServiceImpl  implements SalesOrderService {
         paymentRequest.setAmount(amount);
         paymentRequest.setPaymentMethod("CASH"); // Mặc định tiền mặt
         paymentRequest.setNote("Thanh toán cho đơn hàng " + so.getSoCode());
-        paymentRequest.setStatus("POSTED"); // Ghi sổ luôn
+        paymentRequest.setStatus(DocumentStatus.POSTED.name()); // Ghi sổ luôn
         
         paymentService.createPaymentReceipt(paymentRequest);
 

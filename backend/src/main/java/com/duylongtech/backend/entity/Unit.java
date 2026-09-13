@@ -27,7 +27,7 @@ public class Unit {
 
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private String status = "ACTIVE"; // ACTIVE, INACTIVE
+    private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name(); // ACTIVE, INACTIVE
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

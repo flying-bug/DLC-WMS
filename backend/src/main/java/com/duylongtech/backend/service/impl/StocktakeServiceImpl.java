@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -146,7 +148,7 @@ public class StocktakeServiceImpl  implements StocktakeService {
                 .purpose(req.getPurpose())
                 .stocktakeDate(req.getStocktakeDate() != null ? req.getStocktakeDate() : LocalDate.now())
                 .conclusion(req.getConclusion())
-                .status("DRAFT")
+                .status(DocumentStatus.DRAFT.name())
                 .createdBy(req.getCreatedBy())
                 .build();
 
@@ -161,7 +163,7 @@ public class StocktakeServiceImpl  implements StocktakeService {
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
 
-        if (!"DRAFT".equals(stocktake.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(stocktake.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
         }
 
@@ -193,7 +195,7 @@ public class StocktakeServiceImpl  implements StocktakeService {
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
 
-        if (!"DRAFT".equals(stocktake.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(stocktake.getStatus())) {
             throw new BusinessException(SystemMessage.STK_ERR_005.getMessage());
         }
 
@@ -231,7 +233,7 @@ public class StocktakeServiceImpl  implements StocktakeService {
             }
         }
 
-        stocktake.setStatus("POSTED");
+        stocktake.setStatus(DocumentStatus.POSTED.name());
         return toResponse(stocktakeRepository.save(stocktake));
     }
 

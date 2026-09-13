@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.AssignRolesRequest;
 import com.duylongtech.backend.dto.response.WarehouseStaffResponse;
@@ -145,13 +147,13 @@ public class WarehouseStaffServiceImpl implements WarehouseStaffService {
     public void revokeAccess(Long warehouseId, Long userId) {
         // 1. Hard Block: Check if the user is the creator of any DRAFT/SUBMITTED docs
         // Check Inventory Documents
-        boolean hasPendingInvDocs = inventoryDocumentRepository.existsByCreatedByAndWarehouseIdAndStatusIn(userId, warehouseId, List.of("DRAFT", "SUBMITTED"));
+        boolean hasPendingInvDocs = inventoryDocumentRepository.existsByCreatedByAndWarehouseIdAndStatusIn(userId, warehouseId, List.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name()));
         if (hasPendingInvDocs) {
             throw new BusinessException(SystemMessage.WH_STAFF_HAS_PENDING_DOCS);
         }
 
         // Check Stock Transfers
-        boolean hasPendingTransfers = stockTransferRepository.existsByCreatedByAndFromWarehouseIdAndStatusIn(userId, warehouseId, List.of("DRAFT", "SUBMITTED"));
+        boolean hasPendingTransfers = stockTransferRepository.existsByCreatedByAndFromWarehouseIdAndStatusIn(userId, warehouseId, List.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name()));
         if (hasPendingTransfers) {
             throw new BusinessException(SystemMessage.WH_STAFF_HAS_PENDING_DOCS);
         }

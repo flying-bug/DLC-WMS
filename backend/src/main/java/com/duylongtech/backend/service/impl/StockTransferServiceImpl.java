@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.* ;
 import com.duylongtech.backend.entity.* ;
@@ -123,7 +125,7 @@ public class StockTransferServiceImpl implements StockTransferService {
                 .fromWarehouseId(requestDTO.getFromWarehouseId())
                 .toWarehouseId(requestDTO.getToWarehouseId())
                 .transferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : java.time.LocalDate.now())
-                .status(requestDTO.getStatus() != null ? requestDTO.getStatus() : "DRAFT")
+                .status(requestDTO.getStatus() != null ? requestDTO.getStatus() : DocumentStatus.DRAFT.name())
                 .note(requestDTO.getNote())
                 .deliverer(requestDTO.getDeliverer())
                 .attachedDocument(requestDTO.getAttachedDocument())
@@ -158,7 +160,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
-        if ("POSTED".equals(stockTransfer.getStatus())) {
+        if (DocumentStatus.POSTED.name().equals(stockTransfer.getStatus())) {
             processInventoryForTransfer(stockTransfer, userId);
         }
 
@@ -171,7 +173,7 @@ public class StockTransferServiceImpl implements StockTransferService {
         StockTransfer stockTransfer = stockTransferRepository.findByIdWithLines(transferId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
 
-        if (!"DRAFT".equals(stockTransfer.getStatus()) && !"SUBMITTED".equals(stockTransfer.getStatus())) {
+        if (!DocumentStatus.DRAFT.name().equals(stockTransfer.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(stockTransfer.getStatus())) {
             throw new BusinessException(SystemMessage.ST_ERR_002.getMessage());
         }
 
@@ -219,7 +221,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
-        if ("POSTED".equals(stockTransfer.getStatus())) {
+        if (DocumentStatus.POSTED.name().equals(stockTransfer.getStatus())) {
             processInventoryForTransfer(stockTransfer, userId);
         }
 
@@ -252,7 +254,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
         java.util.Map<Long, BigDecimal> exportedCosts = new java.util.HashMap<>();
         List<InventoryDocumentResponse> exports = inventoryDocumentService.getExportHistory(
-                null, null, null, "POSTED", stockTransfer.getFromWarehouseId(),
+                null, null, null, DocumentStatus.POSTED.name(), stockTransfer.getFromWarehouseId(),
                 InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_OUT, "STOCK_TRANSFER", stockTransfer.getId()
         );
         if (exports != null && !exports.isEmpty()) {
@@ -268,7 +270,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
         createAndPostImport(stockTransfer, exportedCosts, userId);
 
-        stockTransfer.setStatus("POSTED");
+        stockTransfer.setStatus(DocumentStatus.POSTED.name());
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
         return mapToResponseDTO(stockTransfer);

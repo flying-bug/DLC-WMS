@@ -273,7 +273,8 @@
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 8px;
-    overflow-x: auto;
+    overflow: auto;
+    max-height: calc(100vh - 280px);
     min-width: 0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
@@ -290,6 +291,9 @@
     color: var(--color-text-muted);
     font-size: 12px;
     font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--color-border);

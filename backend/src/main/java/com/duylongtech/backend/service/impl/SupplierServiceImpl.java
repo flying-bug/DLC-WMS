@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -42,8 +44,8 @@ import java.util.stream.Collectors;
 public class SupplierServiceImpl  implements SupplierService {
 
     private static final String COMPANY_TYPE  = "COMPANY";
-    private static final String APPROVED      = "APPROVED";
-    private static final String INACTIVE      = "INACTIVE";
+    private static final String APPROVED      = DocumentStatus.APPROVED.name();
+    private static final String INACTIVE      = com.duylongtech.backend.enums.EntityStatus.INACTIVE.name();
     private static final Set<String> VALID_TYPES      = Set.of("COMPANY", "INDIVIDUAL");
     private static final Set<String> VALID_STATUSES   = Set.of(APPROVED, INACTIVE);
     /** Các giá trị hợp lệ theo CHECK constraint chk_partners_group trong DB. */
@@ -219,7 +221,7 @@ public class SupplierServiceImpl  implements SupplierService {
 
         if (hasTransactions) {
             // Có giao dịch - chuyển trạng thái sang INACTIVE
-            partner.setStatus("INACTIVE");
+            partner.setStatus(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name());
             partnerRepository.save(partner);
         } else {
             // Chưa có giao dịch - xóa vật lý an toàn

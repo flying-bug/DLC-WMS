@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -68,8 +70,8 @@ public class CustomerServiceImpl  implements CustomerService {
 
     private static final String SEED_DATA_CODE  = "KH-0000";
     private static final String INDIVIDUAL_TYPE  = "INDIVIDUAL";
-    private static final String APPROVED         = "APPROVED";
-    private static final String INACTIVE         = "INACTIVE";
+    private static final String APPROVED         = DocumentStatus.APPROVED.name();
+    private static final String INACTIVE         = com.duylongtech.backend.enums.EntityStatus.INACTIVE.name();
     private static final String DEFAULT_GROUP    = "RETAIL";
     private static final Set<String> VALID_GROUPS = Set.of("RETAIL", "WHOLESALE", "DISTRIBUTOR");
     private static final Set<String> REPAIRING_STATUSES = Set.of("RECEIVED", "REPAIRING");
@@ -230,7 +232,7 @@ public class CustomerServiceImpl  implements CustomerService {
                 else if ("DISTRIBUTOR".equals(customer.getGroupType())) groupTypeStr = "Đại lý";
                 row.createCell(5).setCellValue(groupTypeStr);
                 
-                String statusStr = "APPROVED".equals(customer.getStatus()) ? "Đang hoạt động" : "Ngừng hoạt động";
+                String statusStr = DocumentStatus.APPROVED.name().equals(customer.getStatus()) ? "Đang hoạt động" : "Ngừng hoạt động";
                 row.createCell(6).setCellValue(statusStr);
 
                 for (int i = 0; i < EXCEL_HEADERS.length; i++) {
@@ -371,7 +373,7 @@ public class CustomerServiceImpl  implements CustomerService {
                         .address(dto.getAddress())
                         .type("INDIVIDUAL")
                         .groupType(mapGroupTypeFromExcel(dto.getGroupType()))
-                        .status("APPROVED")
+                        .status(DocumentStatus.APPROVED.name())
                         .isCustomer(true)
                         .creditLimit(java.math.BigDecimal.ZERO)
                         .paymentTermDays(0)

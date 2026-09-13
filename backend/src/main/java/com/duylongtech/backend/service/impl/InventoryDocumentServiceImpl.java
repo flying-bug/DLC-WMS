@@ -103,6 +103,8 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
+    private final InventoryValidationService inventoryValidationService;
+    private final InventoryPostingService inventoryPostingService;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final PartnerLedgerService partnerLedgerService;
@@ -217,8 +219,8 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createExport(InventoryDocumentRequest req) {
         validateCreateRequest(req);
-        validateOrderLineQuantities(req, null);
-        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
+        inventoryValidationService.validateOrderLineQuantities(req, null);
+        inventoryValidationService.validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
                 req.getReferenceId(), req.getLines());
         InventoryDocument doc = buildBaseDocument(req, EXPORT_DOC_TYPE, resolveCreateDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
@@ -232,7 +234,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createImport(InventoryDocumentRequest req) {
         validateCreateImportRequest(req);
-        validateOrderLineQuantities(req, null);
+        inventoryValidationService.validateOrderLineQuantities(req, null);
         InventoryDocument doc = buildBaseDocument(req, IMPORT_DOC_TYPE, resolveCreateImportDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toImportLineEntity(doc, req.getLines().get(i), i));
@@ -272,8 +274,8 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse updateExport(Long id, InventoryDocumentRequest req) {
         validateUpdateRequest(req);
-        validateOrderLineQuantities(req, id);
-        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
+        inventoryValidationService.validateOrderLineQuantities(req, id);
+        inventoryValidationService.validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
                 req.getReferenceId(), req.getLines());
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
@@ -287,8 +289,8 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
 
     @Transactional
     public InventoryDocumentResponse updateImport(Long id, InventoryDocumentRequest req) {
-        validateUpdateImportRequest(req);
-        validateOrderLineQuantities(req, id);
+        inventoryValidationService.validateUpdateImportRequest(req);
+        inventoryValidationService.validateOrderLineQuantities(req, id);
         InventoryDocument doc = findImportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu nhập kho đã tồn tại", true);
@@ -299,515 +301,13 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         return toResponse(inventoryDocumentRepository.save(doc));
     }
 
-    private void validateOrderLineQuantities(InventoryDocumentRequest req, Long excludeDocId) {
-        Long soId = req.getSalesOrderId();
-        if (soId == null && "SALES_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))) {
-            soId = req.getReferenceId();
-        }
-        if (soId != null) {
-            SalesOrder so = salesOrderRepository.findByIdWithDetails(soId).orElse(null);
-            if (so != null && so.getLines() != null && req.getLines() != null) {
-                Map<Long, BigDecimal> orderedMap = so.getLines().stream()
-                        .collect(Collectors.toMap(SalesOrderLine::getVariantId, SalesOrderLine::getQuantity,
-                                (a, b) -> a));
-                for (InventoryDocumentLineRequest lineReq : req.getLines()) {
-                    if (lineReq.getVariantId() == null)
-                        continue;
-                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
-                    if (orderedQty != null) {
-                        BigDecimal exportedAlready = inventoryDocumentLineRepository
-                                .sumExportedQuantityBySalesOrderIdAndVariantIdExcludingDoc(so.getId(),
-                                        lineReq.getVariantId(), excludeDocId);
-                        if (exportedAlready == null)
-                            exportedAlready = ZERO;
-                        BigDecimal remaining = orderedQty.subtract(exportedAlready);
-                        if (remaining.compareTo(ZERO) < 0)
-                            remaining = ZERO;
-
-                        BigDecimal qtyOut = lineReq.getQuantityOut() != null ? lineReq.getQuantityOut() : ZERO;
-                        if (qtyOut.compareTo(remaining) > 0) {
-                            ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
-                            String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
-                            throw new BusinessException(String.format(SystemMessage.INV_ERR_048.getMessage(), qtyOut,
-                                    so.getSoCode(), remaining, skuName));
-                        }
-                    }
-                }
-            }
-        }
-
-        Long poId = req.getPurchaseOrderId();
-        if (poId == null && "PURCHASE_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))) {
-            poId = req.getReferenceId();
-        }
-        if (poId != null) {
-            PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(poId).orElse(null);
-            if (po != null && po.getLines() != null && req.getLines() != null) {
-                Map<Long, BigDecimal> orderedMap = po.getLines().stream()
-                        .collect(Collectors.toMap(PurchaseOrderLine::getVariantId, PurchaseOrderLine::getQuantity,
-                                (a, b) -> a));
-                for (InventoryDocumentLineRequest lineReq : req.getLines()) {
-                    if (lineReq.getVariantId() == null)
-                        continue;
-                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
-                    if (orderedQty != null) {
-                        BigDecimal importedAlready = inventoryDocumentLineRepository
-                                .sumImportedQuantityByPurchaseOrderIdAndVariantIdExcludingDoc(po.getId(),
-                                        lineReq.getVariantId(), excludeDocId);
-                        if (importedAlready == null)
-                            importedAlready = ZERO;
-                        BigDecimal remaining = orderedQty.subtract(importedAlready);
-                        if (remaining.compareTo(ZERO) < 0)
-                            remaining = ZERO;
-
-                        BigDecimal qtyIn = lineReq.getQuantityIn() != null ? lineReq.getQuantityIn() : ZERO;
-                        if (qtyIn.compareTo(remaining) > 0) {
-                            ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
-                            String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
-                            throw new BusinessException(String.format(SystemMessage.INV_ERR_047.getMessage(), qtyIn,
-                                    po.getPoCode(), remaining, skuName));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
-        InventoryDocument doc = findExportOrThrow(id);
-        if (!"DRAFT".equals(doc.getStatus()) && !"SUBMITTED".equals(doc.getStatus())
-                && !"UNPOSTED".equals(doc.getStatus())) {
-            throw new BusinessException(SystemMessage.INV_ERR_046.getMessage());
-        }
-
-        List<com.duylongtech.backend.dto.request.WarrantyLineRequest> warrantyLines = new java.util.ArrayList<>();
-
-        for (InventoryDocumentLine line : doc.getLines()) {
-            Long effectiveWarehouseId = line.getWarehouseId() != null ? line.getWarehouseId() : doc.getWarehouseId();
-            if (effectiveWarehouseId == null) {
-                throw new BusinessException("Dòng sản phẩm chưa được chọn kho xuất");
-            }
-            BigDecimal qtyToExport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
-                    ? line.getBaseQuantity()
-                    : line.getQuantityOut();
-            List<SerialNumber> serialsToExport = new java.util.ArrayList<>();
-            ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
-
-            Long targetSerialId = line.getSerialNumberId();
-            if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
-                List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
-                for (String sn : serials) {
-                    serialNumberRepository.findByVariantIdAndSerialNumberForUpdate(line.getVariantId(), sn)
-                            .ifPresent(serialsToExport::add);
-                }
-                if (!serialsToExport.isEmpty() && targetSerialId == null) {
-                    line.setSerialNumberId(serialsToExport.get(0).getId());
-                }
-            } else if (targetSerialId != null) {
-                SerialNumber snObj = serialNumberRepository.findByIdForUpdate(targetSerialId)
-                        .orElseThrow(() -> new BusinessException("Không tìm thấy serial cần xuất"));
-                serialsToExport.add(snObj);
-            }
-
-            for (SerialNumber snObj : serialsToExport) {
-                if (!"AVAILABLE".equals(snObj.getStatus())) {
-                    throw new BusinessException(String.format(SystemMessage.INV_ERR_045.getMessage(),
-                            snObj.getSerialNumber(), snObj.getStatus()));
-                }
-                if (!effectiveWarehouseId.equals(snObj.getWarehouseId())) {
-                    throw new BusinessException(
-                            String.format(SystemMessage.INV_ERR_044.getMessage(), snObj.getSerialNumber()));
-                }
-                if (!line.getVariantId().equals(snObj.getVariantId())) {
-                    throw new BusinessException(
-                            String.format(SystemMessage.INV_ERR_043.getMessage(), snObj.getSerialNumber()));
-                }
-                ensureSerialNotInstalledInPc(snObj, doc);
-            }
-
-            if (variant != null && variant.getProduct() != null
-                    && Boolean.TRUE.equals(variant.getProduct().getTrackSerial())) {
-                int expected = line.getQuantityOut().stripTrailingZeros().intValueExact();
-                if (serialsToExport.size() != expected) {
-                    throw new BusinessException(
-                            String.format(SystemMessage.INV_ERR_042.getMessage(), variant.getSku(), expected));
-                }
-            }
-
-            InventoryBalance balance = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(effectiveWarehouseId, line.getVariantId(), "GOOD")
-                    .orElse(null);
-
-            if (balance == null || balance.getQuantityOnHand().compareTo(ZERO) <= 0) {
-                List<InventoryBalance> balances = inventoryBalanceRepository
-                        .findByWarehouseAndVariantForUpdate(effectiveWarehouseId, line.getVariantId());
-                balance = balances.stream()
-                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
-                        .findFirst()
-                        .orElse(balances.isEmpty() ? null : balances.get(0));
-            }
-
-            if (balance == null || balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
-                String productDisplayName = variant != null && variant.getProduct() != null
-                        ? variant.getProduct().getProductName()
-                        : variant != null ? variant.getVariantName() : null;
-                if (productDisplayName == null || productDisplayName.isBlank()) {
-                    productDisplayName = variant != null && variant.getSku() != null
-                            ? variant.getSku()
-                            : String.valueOf(line.getVariantId());
-                }
-                throw new BusinessException(String.format(SystemMessage.INV_ERR_041.getMessage(), productDisplayName));
-            }
-
-            balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyToExport));
-            balance.setUpdatedAt(LocalDateTime.now());
-            inventoryBalanceRepository.save(balance);
-
-            List<InventoryCostLayer> layers = inventoryCostLayerRepository
-                    .findAvailableLayersForUpdate(effectiveWarehouseId, line.getVariantId());
-            BigDecimal remainingQty = qtyToExport;
-            BigDecimal totalCost = ZERO;
-
-            for (InventoryCostLayer layer : layers) {
-                if (remainingQty.compareTo(ZERO) <= 0) {
-                    break;
-                }
-                BigDecimal qtyFromLayer = remainingQty.min(layer.getQuantityLayered());
-                layer.setQuantityLayered(layer.getQuantityLayered().subtract(qtyFromLayer));
-                inventoryCostLayerRepository.save(layer);
-                totalCost = totalCost.add(qtyFromLayer.multiply(layer.getUnitCost()));
-                remainingQty = remainingQty.subtract(qtyFromLayer);
-            }
-
-            if (remainingQty.compareTo(ZERO) > 0 || totalCost.compareTo(ZERO) <= 0) {
-                BigDecimal fallbackCost = (line.getUnitCost() != null && line.getUnitCost().compareTo(ZERO) > 0)
-                        ? line.getUnitCost()
-                        : ((balance != null && balance.getAverageCost() != null
-                                && balance.getAverageCost().compareTo(ZERO) > 0)
-                                        ? balance.getAverageCost()
-                                        : (variant != null && variant.getCostPrice() != null
-                                                && variant.getCostPrice().compareTo(ZERO) > 0
-                                                        ? variant.getCostPrice()
-                                                        : (variant != null && variant.getSalePrice() != null
-                                                                ? variant.getSalePrice()
-                                                                : ZERO)));
-                if (totalCost.compareTo(ZERO) <= 0) {
-                    totalCost = qtyToExport.multiply(fallbackCost);
-                } else if (remainingQty.compareTo(ZERO) > 0) {
-                    totalCost = totalCost.add(remainingQty.multiply(fallbackCost));
-                }
-                remainingQty = ZERO;
-            }
-
-            BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
-            line.setUnitCost(avgUnitCost);
-            BigDecimal currentOnHand = balance != null ? balance.getQuantityOnHand() : ZERO;
-            inventoryLedgerRepository
-                    .save(buildLedger(doc, line, "OUT", ZERO, qtyToExport, avgUnitCost, currentOnHand,
-                            effectiveWarehouseId));
-
-            for (SerialNumber snObj : serialsToExport) {
-                updateExportedSerialBalance(doc, line, snObj, avgUnitCost, effectiveWarehouseId);
-                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line,
-                        snObj);
-                if (wl != null)
-                    warrantyLines.add(wl);
-            }
-            if (serialsToExport.isEmpty()) {
-                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line,
-                        null);
-                if (wl != null)
-                    warrantyLines.add(wl);
-            }
-
-            Long soId = doc.getSalesOrderId();
-            if (soId == null && ("SALES_ORDER".equalsIgnoreCase(doc.getReferenceType())
-                    || "SO".equalsIgnoreCase(doc.getReferenceType()))) {
-                soId = doc.getReferenceId();
-            }
-            if (soId != null) {
-                salesOrderService.fulfillReservation(soId, line.getVariantId(), effectiveWarehouseId,
-                        qtyToExport, totalCost);
-            }
-        }
-
-        if (!warrantyLines.isEmpty()) {
-            Warranty w = new Warranty();
-            w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "BH", 5));
-            w.setPartnerId(doc.getPartnerId());
-            w.setSalesOrderId(doc.getSalesOrderId());
-            w.setExportSlipId(doc.getId());
-            w.setStartDate(LocalDate.now());
-            LocalDate maxEndDate = warrantyLines.stream()
-                    .map(com.duylongtech.backend.dto.request.WarrantyLineRequest::getEndDate).max(LocalDate::compareTo)
-                    .orElse(LocalDate.now());
-            w.setEndDate(maxEndDate);
-            w.setWarrantyStatus("ACTIVE");
-            w.setNote("Tự động sinh từ phiếu xuất " + doc.getDocCode());
-            for (com.duylongtech.backend.dto.request.WarrantyLineRequest reqLine : warrantyLines) {
-                com.duylongtech.backend.entity.WarrantyLine wLine = new com.duylongtech.backend.entity.WarrantyLine();
-                wLine.setWarranty(w);
-                wLine.setProductVariantId(reqLine.getProductVariantId());
-                wLine.setSerialNumberId(reqLine.getSerialNumberId());
-                wLine.setQuantity(reqLine.getQuantity());
-                wLine.setStartDate(reqLine.getStartDate());
-                wLine.setEndDate(reqLine.getEndDate());
-                wLine.setWarrantyStatus(reqLine.getWarrantyStatus());
-                w.getLines().add(wLine);
-            }
-            warrantyRepository.save(w);
-        }
-
-        if (doc.getSalesOrderId() != null && doc.getPartnerId() != null) {
-            SalesOrder so = salesOrderRepository.findById(doc.getSalesOrderId()).orElse(null);
-            if (so != null) {
-                BigDecimal totalDebt = BigDecimal.ZERO;
-                for (InventoryDocumentLine line : doc.getLines()) {
-                    SalesOrderLine soLine = so.getLines().stream()
-                            .filter(l -> l.getVariantId().equals(line.getVariantId()))
-                            .findFirst().orElse(null);
-
-                    if (soLine != null) {
-                        BigDecimal qtyToExport = line.getQuantityOut();
-                        BigDecimal unitPrice = soLine.getUnitPrice();
-                        BigDecimal lineAmount = qtyToExport.multiply(unitPrice);
-                        BigDecimal vatRate = soLine.getVatRate() != null ? soLine.getVatRate() : BigDecimal.ZERO;
-                        BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2,
-                                RoundingMode.HALF_UP);
-
-                        totalDebt = totalDebt.add(lineAmount).add(vatAmount);
-                    }
-                }
-
-                if (totalDebt.compareTo(BigDecimal.ZERO) > 0) {
-                    partnerLedgerService.recordLedger(
-                            doc.getPartnerId(),
-                            "INVENTORY_EXPORT_SO",
-                            doc.getId(),
-                            doc.getDocCode(),
-                            totalDebt,
-                            BigDecimal.ZERO,
-                            "Ghi nhận công nợ xuất kho bán hàng " + doc.getDocCode());
-                }
-            }
-        }
-
-        doc.setStatus("POSTED");
-        doc.setPostedAt(LocalDateTime.now());
-        doc.setUpdatedAt(LocalDateTime.now());
-
-        InventoryDocument saved = inventoryDocumentRepository.save(doc);
-
-        try {
-            auditLogService.logEvent(null, "POST_EXPORT", "InventoryDocument", saved.getId(), "SUCCESS",
-                    "Ghi sổ phiếu xuất kho " + saved.getDocCode() + " ("
-                            + (saved.getIssuePurpose() != null ? saved.getIssuePurpose() : "EX_SO") + ")",
-                    null, null);
-        } catch (Exception ignored) {
-        }
-
-        return toResponse(saved);
+        return inventoryPostingService.postExport(id);
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postImport(Long id) {
-        InventoryDocument doc = findImportOrThrow(id);
-        if (!"DRAFT".equals(doc.getStatus()) && !"SUBMITTED".equals(doc.getStatus())
-                && !"UNPOSTED".equals(doc.getStatus())) {
-            throw new BusinessException(SystemMessage.INV_ERR_040.getMessage());
-        }
-
-        InventoryDocument savedDoc = inventoryDocumentRepository.saveAndFlush(doc);
-        for (InventoryDocumentLine line : savedDoc.getLines()) {
-            Long effectiveWarehouseId = line.getWarehouseId() != null ? line.getWarehouseId()
-                    : savedDoc.getWarehouseId();
-            if (effectiveWarehouseId == null) {
-                throw new BusinessException("Dòng sản phẩm chưa được chọn kho nhập");
-            }
-            BigDecimal qtyToImport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
-                    ? line.getBaseQuantity()
-                    : line.getQuantityIn();
-            BigDecimal unitCost = nonNegativeOrZero(line.getUnitCost(), "unitCost");
-            InventoryBalance balance = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(effectiveWarehouseId, line.getVariantId(), "GOOD")
-                    .orElse(null);
-
-            if (balance == null) {
-                List<InventoryBalance> balances = inventoryBalanceRepository
-                        .findByWarehouseAndVariantForUpdate(effectiveWarehouseId, line.getVariantId());
-                balance = balances.stream()
-                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
-                        .findFirst()
-                        .orElse(balances.isEmpty() ? null : balances.get(0));
-            }
-
-            if (balance == null) {
-                balance = InventoryBalance.builder()
-                        .warehouseId(effectiveWarehouseId)
-                        .variantId(line.getVariantId())
-                        .stockStatus("GOOD")
-                        .quantityOnHand(ZERO)
-                        .quantityReserved(ZERO)
-                        .averageCost(ZERO)
-                        .updatedAt(LocalDateTime.now())
-                        .build();
-            }
-
-            BigDecimal oldQty = balance.getQuantityOnHand();
-            BigDecimal oldValue = oldQty.multiply(balance.getAverageCost());
-            BigDecimal importValue = qtyToImport.multiply(unitCost);
-            BigDecimal newQty = oldQty.add(qtyToImport);
-            BigDecimal newAverageCost = newQty.compareTo(ZERO) > 0
-                    ? oldValue.add(importValue).divide(newQty, 4, RoundingMode.HALF_UP)
-                    : ZERO;
-
-            balance.setQuantityOnHand(newQty);
-            balance.setAverageCost(newAverageCost);
-            balance.setUpdatedAt(LocalDateTime.now());
-            inventoryBalanceRepository.save(balance);
-
-            inventoryCostLayerRepository.save(InventoryCostLayer.builder()
-                    .warehouseId(effectiveWarehouseId)
-                    .variantId(line.getVariantId())
-                    .inventoryDocumentLineId(line.getId())
-                    .quantityReceived(qtyToImport)
-                    .quantityLayered(qtyToImport)
-                    .unitCost(unitCost)
-                    .createdAt(LocalDateTime.now())
-                    .build());
-
-            inventoryLedgerRepository
-                    .save(buildLedger(savedDoc, line, "IN", qtyToImport, ZERO, unitCost, balance.getQuantityOnHand(),
-                            effectiveWarehouseId));
-            createImportedSerialsIfNeeded(savedDoc, line, unitCost, effectiveWarehouseId);
-        }
-
-        savedDoc.setStatus("POSTED");
-        savedDoc.setPostedAt(LocalDateTime.now());
-        savedDoc.setUpdatedAt(LocalDateTime.now());
-        InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
-        syncStocktakeReference(savedImport);
-
-        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (luôn luôn ghi nhận nếu có
-        // partnerId)
-        if (savedImport.getPartnerId() != null) {
-            BigDecimal totalImportValue = savedImport.getLines().stream()
-                    .map(l -> {
-                        if (l.getLineAmount() != null && l.getLineAmount().compareTo(BigDecimal.ZERO) > 0) {
-                            return l.getLineAmount();
-                        }
-                        BigDecimal qty = l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO;
-                        BigDecimal cost = l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO;
-                        BigDecimal subtotal = qty.multiply(cost);
-                        BigDecimal vatRate = l.getVatRate() != null ? l.getVatRate()
-                                : (l.getVatPercent() != null ? l.getVatPercent() : BigDecimal.ZERO);
-                        BigDecimal vatAmount = subtotal.multiply(vatRate).divide(BigDecimal.valueOf(100), 2,
-                                RoundingMode.HALF_UP);
-                        return subtotal.add(vatAmount);
-                    })
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            partnerLedgerService.recordLedger(
-                    savedImport.getPartnerId(),
-                    "INVENTORY_IMPORT",
-                    savedImport.getId(),
-                    savedImport.getDocCode(),
-                    totalImportValue,
-                    BigDecimal.ZERO,
-                    "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode());
-        }
-
-        if (savedImport.getPurchaseOrderId() != null) {
-            PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(savedImport.getPurchaseOrderId())
-                    .orElse(null);
-            if (po != null && !"POSTED".equals(po.getStatus()) && !"CANCELLED".equals(po.getStatus())) {
-                boolean fullyImported = !po.getLines().isEmpty() && po.getLines().stream().allMatch(l -> {
-                    BigDecimal imported = inventoryDocumentLineRepository
-                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), l.getVariantId());
-                    if (imported == null)
-                        imported = BigDecimal.ZERO;
-                    return l.getQuantity().subtract(imported).compareTo(BigDecimal.ZERO) <= 0;
-                });
-                if (fullyImported) {
-                    po.setStatus("POSTED");
-                    purchaseOrderRepository.save(po);
-                }
-            }
-        }
-
-        // Tự động kiểm tra và chuyển BACKORDERED thành HOLDING cho các đơn hàng bị
-        // thiếu hàng trước đây
-        savedImport.getLines().stream()
-                .map(InventoryDocumentLine::getVariantId)
-                .distinct()
-                .forEach(variantId -> salesOrderService.reEvaluateBackorders(savedImport.getWarehouseId(), variantId));
-
-        // Kiểm tra chênh lệch giữa số lượng dự kiến và thực nhận
-        boolean hasDiscrepancy = false;
-        StringBuilder discrepancyDetails = new StringBuilder();
-        for (InventoryDocumentLine line : savedImport.getLines()) {
-            BigDecimal exp = line.getExpectedQuantity() != null
-                    && line.getExpectedQuantity().compareTo(BigDecimal.ZERO) > 0
-                            ? line.getExpectedQuantity()
-                            : (line.getQuantityIn() != null ? line.getQuantityIn() : BigDecimal.ZERO);
-            BigDecimal act = line.getQuantityIn() != null ? line.getQuantityIn() : BigDecimal.ZERO;
-            BigDecimal rej = line.getRejectedQuantity() != null ? line.getRejectedQuantity() : BigDecimal.ZERO;
-
-            if (act.compareTo(exp) < 0 || rej.compareTo(BigDecimal.ZERO) > 0
-                    || (line.getDiscrepancyReason() != null && !line.getDiscrepancyReason().isBlank())) {
-                hasDiscrepancy = true;
-                ProductVariant pv = productVariantRepository.findById(line.getVariantId()).orElse(null);
-                String sku = pv != null ? pv.getSku() : String.valueOf(line.getVariantId());
-                BigDecimal diff = exp.subtract(act);
-                discrepancyDetails.append(
-                        String.format("• %s: Dự kiến %s, Thực nhận %s (Thiếu: %s, Lỗi: %s). Chi tiết lệch: %s\n",
-                                sku, exp.stripTrailingZeros().toPlainString(), act.stripTrailingZeros().toPlainString(),
-                                diff.stripTrailingZeros().toPlainString(), rej.stripTrailingZeros().toPlainString(),
-                                line.getDiscrepancyReason() != null ? line.getDiscrepancyReason() : "Chưa nhập lý do"));
-            }
-
-        }
-
-        if (hasDiscrepancy) {
-            savedImport.setHasDiscrepancy(true);
-            savedImport.setDiscrepancyNote(discrepancyDetails.toString().trim());
-            inventoryDocumentRepository.save(savedImport);
-
-            try {
-                String partnerName = "";
-                if (savedImport.getPartnerId() != null) {
-                    partnerName = partnerRepository.findById(savedImport.getPartnerId()).map(Partner::getName)
-                            .orElse("");
-                }
-                String notifTitle = "⚠️ Cảnh báo nhập kho thiếu: " + savedImport.getDocCode();
-                String notifMsg = String.format(
-                        "Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện thiếu/hàng lỗi:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với NCC.",
-                        savedImport.getDocCode(), partnerName.isBlank() ? "" : "(NCC: " + partnerName + ")",
-                        discrepancyDetails.toString().trim());
-
-                appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
-                        "DISCREPANCY", "IMPORT_DOCUMENT", savedImport.getId(),
-                        "/import-slips/" + savedImport.getId() + "/edit");
-                appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
-                        "DISCREPANCY", "IMPORT_DOCUMENT", savedImport.getId(),
-                        "/import-slips/" + savedImport.getId() + "/edit");
-            } catch (Exception e) {
-                // Log warning but do not fail the transaction
-            }
-        }
-
-        try {
-            String postDesc = "Ghi sổ phiếu nhập kho " + savedImport.getDocCode();
-            if (Boolean.TRUE.equals(savedImport.getHasDiscrepancy())) {
-                postDesc += " (Có chênh lệch: " + savedImport.getDiscrepancyNote() + ")";
-            }
-            auditLogService.logEvent(null, "POST_IMPORT", "InventoryDocument", savedImport.getId(), "SUCCESS", postDesc,
-                    null, null);
-        } catch (Exception ignored) {
-        }
-
-        return toResponse(savedImport);
+        return inventoryPostingService.postImport(id);
     }
 
     private InventoryDocument buildBaseDocument(InventoryDocumentRequest req, String docType, String docCode) {
@@ -902,25 +402,6 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         doc.setUpdatedAt(LocalDateTime.now());
     }
 
-    private InventoryLedger buildLedger(InventoryDocument doc, InventoryDocumentLine line, String movementType,
-            BigDecimal quantityIn, BigDecimal quantityOut, BigDecimal unitCost, BigDecimal balanceAfter,
-            Long warehouseId) {
-        return InventoryLedger.builder()
-                .inventoryDocumentId(doc.getId())
-                .inventoryDocumentLineId(line.getId())
-                .warehouseId(warehouseId != null ? warehouseId : doc.getWarehouseId())
-                .variantId(line.getVariantId())
-                .serialNumberId(line.getSerialNumberId())
-                .movementType(movementType)
-                .quantityIn(quantityIn)
-                .quantityOut(quantityOut)
-                .unitCost(unitCost)
-                .balanceAfter(balanceAfter)
-                .movementAt(LocalDateTime.now())
-                .createdAt(LocalDateTime.now())
-                .build();
-    }
-
     private ScanResolveResponse resolveSerialScan(SerialNumber serial, Long warehouseId, String code) {
         if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.INV_ERR_038.getMessage(), code));
@@ -928,39 +409,12 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         if (!warehouseId.equals(serial.getWarehouseId())) {
             throw new BusinessException(SystemMessage.INV_ERR_037.getMessage());
         }
-        ensureSerialNotInstalledInPc(serial);
+        inventoryValidationService.ensureSerialNotInstalledInPc(serial);
         ProductVariant variant = serial.getVariant();
         if (variant == null) {
             throw new BusinessException(SystemMessage.INV_ERR_033.getMessage());
         }
         return buildScanResponse("SERIAL", code, variant, serial);
-    }
-
-    private void ensureSerialNotInstalledInPc(SerialNumber serial) {
-        if (serial == null || serial.getVariantId() == null || trimToNull(serial.getSerialNumber()) == null) {
-            return;
-        }
-        boolean installedInPc = deviceComponentSerialRepository.existsActiveComponentSerial(
-                serial.getVariantId(), serial.getSerialNumber().trim());
-        if (installedInPc) {
-            throw new BusinessException(
-                    String.format(SystemMessage.INV_ERR_036.getMessage(), serial.getSerialNumber()));
-        }
-    }
-
-    private void ensureSerialNotInstalledInPc(SerialNumber serial, InventoryDocument doc) {
-        if (isAssemblyDocument(doc)) {
-            return;
-        }
-        ensureSerialNotInstalledInPc(serial);
-    }
-
-    private boolean isAssemblyDocument(InventoryDocument doc) {
-        if (doc == null) {
-            return false;
-        }
-        return ISSUE_PURPOSE_ASSEMBLY.equals(doc.getIssuePurpose())
-                || "ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(doc.getReferenceType()));
     }
 
     @Transactional(readOnly = true)
@@ -1041,44 +495,6 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
             throw new BusinessException(SystemMessage.INV_ERR_028.getMessage());
         }
     }
-
-    private void updateExportedSerialBalance(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial,
-            BigDecimal unitCost, Long warehouseId) {
-        Long effectiveWh = warehouseId != null ? warehouseId : doc.getWarehouseId();
-        InventoryBalance serialBalance = inventoryBalanceRepository
-                .findByWarehouseVariantSerialForUpdate(effectiveWh, line.getVariantId(), serial.getId(),
-                        "GOOD")
-                .orElse(null);
-        if (serialBalance != null) {
-            if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
-                throw new BusinessException(
-                        String.format(SystemMessage.INV_ERR_027.getMessage(), serial.getSerialNumber()));
-            }
-            serialBalance.setQuantityOnHand(ZERO);
-            serialBalance.setUpdatedAt(LocalDateTime.now());
-            inventoryBalanceRepository.save(serialBalance);
-        }
-
-        if (ISSUE_PURPOSE_TRANSFER_OUT.equals(doc.getIssuePurpose())) {
-            serial.setStatus("IN_TRANSIT");
-        } else {
-            serial.setStatus("SOLD");
-            serial.setSoldAt(LocalDateTime.now());
-        }
-        serial.setUpdatedAt(LocalDateTime.now());
-        serialNumberRepository.save(serial);
-    }
-
-    /**
-     * Tự động tạo phiếu bảo hành (WARRANTY) cho serial number vừa được xuất bán,
-     * nếu dòng sản phẩm có khai báo warrantyMonths > 0.
-     * Điều kiện:
-     * - line.warrantyMonths phải được lưu trước trong entity (xem
-     * InventoryDocumentLine.warrantyMonths)
-     * - doc phải có partnerId (khách hàng mua)
-     * Phiếu bảo hành sẽ không được tạo nếu serial đó đã có warranty tồn tại
-     * (tránh duplicate khi gọi lại postExport do lỗi retry).
-     */
     private com.duylongtech.backend.dto.request.WarrantyLineRequest generateWarrantyLineIfNeeded(InventoryDocument doc,
             InventoryDocumentLine line, SerialNumber serial) {
         // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
@@ -1118,92 +534,6 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         wLine.setEndDate(endDate);
         wLine.setWarrantyStatus("APPROVED");
         return wLine;
-    }
-
-    private void createImportedSerialsIfNeeded(InventoryDocument doc, InventoryDocumentLine line, BigDecimal unitCost,
-            Long warehouseId) {
-        ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
-        Product product = variant != null ? variant.getProduct() : null;
-        if (product == null || !Boolean.TRUE.equals(product.getTrackSerial())) {
-            return;
-        }
-
-        Long effectiveWh = warehouseId != null ? warehouseId : doc.getWarehouseId();
-
-        List<String> serialValues = parseSerialNumbers(line.getSerialNumbersText());
-        int expectedQuantity = requireWholeNumber(line.getQuantityIn(), "So luong nhap serial");
-        if (serialValues.size() != expectedQuantity) {
-            throw new BusinessException(String.format(SystemMessage.INV_ERR_026.getMessage(), expectedQuantity));
-        }
-
-        for (String serialValue : serialValues) {
-            if (serialNumberRepository.findBySerialNumber(serialValue).stream()
-                    .anyMatch(existing -> !existing.getVariantId().equals(line.getVariantId()))) {
-                throw new BusinessException(String.format(SystemMessage.INV_ERR_025.getMessage(), serialValue));
-            }
-            Optional<SerialNumber> existingOpt = serialNumberRepository
-                    .findByVariantIdAndSerialNumber(line.getVariantId(), serialValue);
-            if (existingOpt.isPresent()) {
-                if ("SCRAP".equals(doc.getIssuePurpose())) {
-                    SerialNumber serial = existingOpt.get();
-                    serial.setStatus("SCRAP");
-                    serial.setWarehouseId(effectiveWh);
-                    serial.setUpdatedAt(LocalDateTime.now());
-                    SerialNumber savedSerial = serialNumberRepository.save(serial);
-                    inventoryBalanceRepository.save(InventoryBalance.builder()
-                            .warehouseId(effectiveWh)
-                            .variantId(line.getVariantId())
-                            .serialNumberId(savedSerial.getId())
-                            .stockStatus("GOOD")
-                            .quantityOnHand(BigDecimal.ONE)
-                            .quantityReserved(ZERO)
-                            .averageCost(unitCost)
-                            .updatedAt(LocalDateTime.now())
-                            .build());
-                    continue;
-                } else if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
-                    SerialNumber serial = existingOpt.get();
-                    if (!"IN_TRANSIT".equals(serial.getStatus())) {
-                        throw new BusinessException(String.format(SystemMessage.INV_ERR_024.getMessage(), serialValue));
-                    }
-                    serial.setStatus("AVAILABLE");
-                    serial.setWarehouseId(effectiveWh);
-                    serial.setUpdatedAt(LocalDateTime.now());
-                    SerialNumber savedSerial = serialNumberRepository.save(serial);
-                    inventoryBalanceRepository.save(InventoryBalance.builder()
-                            .warehouseId(effectiveWh)
-                            .variantId(line.getVariantId())
-                            .serialNumberId(savedSerial.getId())
-                            .stockStatus("GOOD")
-                            .quantityOnHand(BigDecimal.ONE)
-                            .quantityReserved(ZERO)
-                            .averageCost(unitCost)
-                            .updatedAt(LocalDateTime.now())
-                            .build());
-                    continue;
-                } else {
-                    throw new BusinessException(String.format(SystemMessage.INV_ERR_023.getMessage(), serialValue));
-                }
-            }
-            SerialNumber serial = SerialNumber.builder()
-                    .variantId(line.getVariantId())
-                    .warehouseId(effectiveWh)
-                    .serialNumber(serialValue)
-                    .status("AVAILABLE")
-                    .importedAt(LocalDateTime.now())
-                    .build();
-            SerialNumber savedSerial = serialNumberRepository.save(serial);
-            inventoryBalanceRepository.save(InventoryBalance.builder()
-                    .warehouseId(effectiveWh)
-                    .variantId(line.getVariantId())
-                    .serialNumberId(savedSerial.getId())
-                    .stockStatus("GOOD")
-                    .quantityOnHand(BigDecimal.ONE)
-                    .quantityReserved(ZERO)
-                    .averageCost(unitCost)
-                    .updatedAt(LocalDateTime.now())
-                    .build());
-        }
     }
 
     private int requireWholeNumber(BigDecimal value, String fieldName) {
@@ -1248,101 +578,18 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         }
     }
 
-    private void validateUpdateImportRequest(InventoryDocumentRequest req) {
-        validateRequiredImportFields(req);
-    }
-
     private void validateRequiredExportFields(InventoryDocumentRequest req) {
-        validateCommonRequiredFields(req, "xuat", true);
+        inventoryValidationService.validateCommonRequiredFields(req, "xuat", true);
     }
 
     private void validateRequiredImportFields(InventoryDocumentRequest req) {
-        validateCommonRequiredFields(req, "nhap", false);
-    }
-
-    private void validateCommonRequiredFields(InventoryDocumentRequest req, String label, boolean exportDocument) {
-        if (req == null) {
-            throw new BusinessException(String.format(SystemMessage.INV_ERR_019.getMessage(), label));
-        }
-        if (req.getDocDate() == null) {
-            throw new BusinessException(SystemMessage.INV_ERR_017.getMessage());
-        }
-        if (req.getLines() == null || req.getLines().isEmpty()) {
-            throw new BusinessException(String.format(SystemMessage.INV_ERR_016.getMessage(), label));
-        }
-        if (req.getWarehouseId() == null) {
-            Long firstWh = req.getLines().stream()
-                    .map(InventoryDocumentLineRequest::getWarehouseId)
-                    .filter(java.util.Objects::nonNull)
-                    .findFirst()
-                    .orElse(null);
-            if (firstWh != null) {
-                req.setWarehouseId(firstWh);
-            }
-        }
-        for (int i = 0; i < req.getLines().size(); i++) {
-            InventoryDocumentLineRequest line = req.getLines().get(i);
-            if (line == null || line.getVariantId() == null) {
-                throw new BusinessException(String.format(SystemMessage.INV_ERR_015.getMessage(), i));
-            }
-            if (line.getWarehouseId() == null && req.getWarehouseId() == null) {
-                throw new BusinessException(
-                        String.format("Dòng %d: Vui lòng chọn kho %s", (i + 1), exportDocument ? "xuất" : "nhập"));
-            }
-            if (exportDocument) {
-                requirePositive(line.getQuantityOut(), "lines[" + i + "].quantityOut");
-            } else {
-                requirePositive(line.getQuantityIn(), "lines[" + i + "].quantityIn");
-            }
-        }
+        inventoryValidationService.validateCommonRequiredFields(req, "nhap", false);
     }
 
     private void ensureEditable(InventoryDocument doc) {
         String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
             throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
-        }
-    }
-
-    private void validateExportInventoryBalance(Long warehouseId, Long salesOrderId, String referenceType,
-            Long referenceId, List<InventoryDocumentLineRequest> lines) {
-        if (lines == null || lines.isEmpty())
-            return;
-
-        Long effectiveSalesOrderId = salesOrderId;
-        if (effectiveSalesOrderId == null && ("SALES_ORDER".equalsIgnoreCase(trimToNull(referenceType))
-                || "SO".equalsIgnoreCase(trimToNull(referenceType)))) {
-            effectiveSalesOrderId = referenceId;
-        }
-
-        for (int i = 0; i < lines.size(); i++) {
-            InventoryDocumentLineRequest line = lines.get(i);
-            if (line.getVariantId() == null || line.getQuantityOut() == null)
-                continue;
-
-            Long effectiveWh = line.getWarehouseId() != null ? line.getWarehouseId() : warehouseId;
-            if (effectiveWh == null)
-                continue;
-
-            BigDecimal qtyToExport = line.getQuantityOut();
-            BigDecimal totalAvailable = inventoryBalanceRepository
-                    .sumAvailableQuantityByWarehouseAndVariant(effectiveWh, line.getVariantId(), "GOOD");
-            if (totalAvailable == null) {
-                totalAvailable = BigDecimal.ZERO;
-            }
-
-            if (effectiveSalesOrderId != null) {
-                BigDecimal reservedForThisOrder = stockReservationRepository
-                        .sumHoldingQuantityBySalesOrderIdAndVariantAndWarehouse(effectiveSalesOrderId,
-                                line.getVariantId(), effectiveWh);
-                if (reservedForThisOrder != null) {
-                    totalAvailable = totalAvailable.add(reservedForThisOrder);
-                }
-            }
-
-            if (totalAvailable.compareTo(qtyToExport) < 0) {
-                throw new BusinessException(SystemMessage.INV_ERR_013.getMessage());
-            }
         }
     }
 
@@ -1488,7 +735,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
                         throw new BusinessException(
                                 String.format(SystemMessage.INV_ERR_009.getMessage(), snValue, snObj.getStatus()));
                     }
-                    ensureSerialNotInstalledInPc(snObj, doc);
+                    inventoryValidationService.ensureSerialNotInstalledInPc(snObj, doc);
                     boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(snObj.getId(),
                             doc.getId());
                     if (isLocked) {
@@ -1507,7 +754,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
                     throw new BusinessException(String.format(SystemMessage.INV_ERR_009.getMessage(),
                             snObj.getSerialNumber(), snObj.getStatus()));
                 }
-                ensureSerialNotInstalledInPc(snObj, doc);
+                inventoryValidationService.ensureSerialNotInstalledInPc(snObj, doc);
                 boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(serialNumberId, doc.getId());
                 if (isLocked) {
                     throw new BusinessException(
@@ -1917,172 +1164,13 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
-        InventoryDocument doc = findImportOrThrow(id);
-        if (!"POSTED".equalsIgnoreCase(doc.getStatus())) {
-            throw new BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đang ở trạng thái ĐÃ GHI SỔ (POSTED).");
-        }
-
-        com.duylongtech.backend.dto.response.DependencyCheckResponse check = documentDependencyService
-                .checkImportSlipUnpostable(id);
-        if (!check.isCanUnpost()) {
-            throw new BusinessException(check.getMessage() + " Chi tiết: " + String.join("; ", check.getDetails()));
-        }
-
-        Long warehouseId = doc.getWarehouseId();
-
-        // 1. Hoàn tác tồn kho (giảm số lượng đã nhập)
-        for (InventoryDocumentLine line : doc.getLines()) {
-            if (line.getVariantId() == null)
-                continue;
-            BigDecimal qtyIn = line.getBaseQuantity() != null ? line.getBaseQuantity() : line.getQuantityIn();
-            if (qtyIn == null || qtyIn.compareTo(ZERO) <= 0)
-                continue;
-
-            Optional<InventoryBalance> balanceOpt = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "AVAILABLE");
-            if (balanceOpt.isPresent()) {
-                InventoryBalance balance = balanceOpt.get();
-                balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyIn));
-                balance.setUpdatedAt(LocalDateTime.now());
-                inventoryBalanceRepository.save(balance);
-
-                InventoryLedger ledger = buildLedger(doc, line, "UNPOST_IMPORT", ZERO, qtyIn, line.getUnitCost(),
-                        balance.getQuantityOnHand(), warehouseId);
-                inventoryLedgerRepository.save(ledger);
-            }
-
-            // Xóa Serial Numbers đã sinh nếu có
-            if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
-                String[] rawSerials = line.getSerialNumbersText().split("[,;\\s\\n]+");
-                for (String sn : rawSerials) {
-                    String clean = sn.trim();
-                    if (!clean.isEmpty()) {
-                        serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), clean)
-                                .ifPresent(serialNumberRepository::delete);
-                    }
-                }
-            }
-        }
-
-        // 2. Chuyển trạng thái PO nếu có
-        if (doc.getPurchaseOrderId() != null) {
-            purchaseOrderRepository.findById(doc.getPurchaseOrderId()).ifPresent(po -> {
-                if ("POSTED".equals(po.getStatus())) {
-                    po.setStatus("APPROVED");
-                    purchaseOrderRepository.save(po);
-                }
-            });
-        }
-
-        // 3. Cập nhật trạng thái chứng từ
-        doc.setStatus("UNPOSTED");
-        doc.setUnpostedBy(currentUserId);
-        doc.setUnpostedAt(LocalDateTime.now());
-        doc.setUnpostReason(reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu nhập");
-        doc.setUpdatedAt(LocalDateTime.now());
-
-        InventoryDocument saved = inventoryDocumentRepository.save(doc);
-
-        try {
-            String username = currentUserId != null
-                    ? userRepository.findById(currentUserId).map(User::getUsername).orElse(null)
-                    : null;
-            auditLogService.logEvent(username, "UNPOST_IMPORT", "InventoryDocument", doc.getId(), "SUCCESS",
-                    "Bỏ ghi sổ phiếu nhập kho " + doc.getDocCode() + ". Lý do: " + doc.getUnpostReason(), null, null);
-        } catch (Exception ignored) {
-        }
-
-        return toResponse(saved, true);
+        return inventoryPostingService.unpostImport(id, reason, currentUserId);
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
-        InventoryDocument doc = findExportOrThrow(id);
-        if (!"POSTED".equalsIgnoreCase(doc.getStatus())) {
-            throw new BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đang ở trạng thái ĐÃ GHI SỔ (POSTED).");
-        }
-
-        com.duylongtech.backend.dto.response.DependencyCheckResponse check = documentDependencyService
-                .checkExportSlipUnpostable(id);
-        if (!check.isCanUnpost()) {
-            throw new BusinessException(check.getMessage());
-        }
-
-        Long warehouseId = doc.getWarehouseId();
-
-        // 1. Hoàn tác tồn kho (cộng lại số lượng đã xuất)
-        for (InventoryDocumentLine line : doc.getLines()) {
-            if (line.getVariantId() == null)
-                continue;
-            BigDecimal qtyOut = line.getBaseQuantity() != null ? line.getBaseQuantity() : line.getQuantityOut();
-            if (qtyOut == null || qtyOut.compareTo(ZERO) <= 0)
-                continue;
-
-            Optional<InventoryBalance> balanceOpt = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "AVAILABLE");
-            if (balanceOpt.isPresent()) {
-                InventoryBalance balance = balanceOpt.get();
-                balance.setQuantityOnHand(balance.getQuantityOnHand().add(qtyOut));
-                balance.setUpdatedAt(LocalDateTime.now());
-                inventoryBalanceRepository.save(balance);
-
-                InventoryLedger ledger = buildLedger(doc, line, "UNPOST_EXPORT", qtyOut, ZERO, line.getUnitCost(),
-                        balance.getQuantityOnHand(), warehouseId);
-                inventoryLedgerRepository.save(ledger);
-            }
-
-            // Trả lại trạng thái Serial = AVAILABLE
-            if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
-                String[] rawSerials = line.getSerialNumbersText().split("[,;\\s\\n]+");
-                for (String sn : rawSerials) {
-                    String clean = sn.trim();
-                    if (!clean.isEmpty()) {
-                        serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), clean)
-                                .ifPresent(s -> {
-                                    s.setStatus("AVAILABLE");
-                                    s.setSoldAt(null);
-                                    s.setSalesOrderLineId(null);
-                                    serialNumberRepository.save(s);
-                                });
-                    }
-                }
-            }
-        }
-
-        // 2. Chuyển trạng thái SO nếu có
-        if (doc.getSalesOrderId() != null) {
-            salesOrderRepository.findById(doc.getSalesOrderId()).ifPresent(so -> {
-                if ("POSTED".equals(so.getStatus())) {
-                    so.setStatus("APPROVED");
-                    salesOrderRepository.save(so);
-                }
-            });
-        }
-
-        // 3. Cập nhật trạng thái chứng từ
-        doc.setStatus("UNPOSTED");
-        doc.setUnpostedBy(currentUserId);
-        doc.setUnpostedAt(LocalDateTime.now());
-        doc.setUnpostReason(reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu xuất");
-        doc.setUpdatedAt(LocalDateTime.now());
-
-        InventoryDocument saved = inventoryDocumentRepository.save(doc);
-
-        try {
-            String username = currentUserId != null
-                    ? userRepository.findById(currentUserId).map(User::getUsername).orElse(null)
-                    : null;
-            auditLogService.logEvent(username, "UNPOST_EXPORT", "InventoryDocument", doc.getId(), "SUCCESS",
-                    "Bỏ ghi sổ phiếu xuất kho " + doc.getDocCode() + ". Lý do: " + doc.getUnpostReason(), null, null);
-        } catch (Exception ignored) {
-        }
-
-        return toResponse(saved, true);
+        return inventoryPostingService.unpostExport(id, reason, currentUserId);
     }
 
-
-
-    @Transactional(readOnly = true)
     public List<InventoryDocumentResponse> getAssemblyDocuments(Long orderId) {
         return inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", orderId).stream()
                 .map(this::toResponse)
@@ -2094,90 +1182,6 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
         return documentId != null && inventoryDocumentRepository.findById(documentId)
                 .map(document -> "POSTED".equals(document.getStatus()))
                 .orElse(false);
-    }
-
-
-    private void rollbackInventory(InventoryDocument doc, boolean importDocument) {
-        for (InventoryDocumentLine line : doc.getLines()) {
-            Long warehouseId = line.getWarehouseId() != null ? line.getWarehouseId() : doc.getWarehouseId();
-            if (warehouseId == null) {
-                throw new BusinessException("D├▓ng sß║ún phß║⌐m ch╞░a ─æ╞░ß╗úc chß╗ìn kho");
-            }
-            BigDecimal quantity = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
-                    ? line.getBaseQuantity()
-                    : (importDocument ? line.getQuantityIn() : line.getQuantityOut());
-            InventoryBalance balance = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "GOOD")
-                    .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy tß╗ôn kho ─æß╗â ho├án t├íc"));
-            BigDecimal newQuantity = importDocument
-                    ? balance.getQuantityOnHand().subtract(quantity)
-                    : balance.getQuantityOnHand().add(quantity);
-            if (newQuantity.compareTo(ZERO) < 0) {
-                throw new BusinessException("Tß╗ôn kho kh├┤ng ─æß╗º ─æß╗â ho├án t├íc chß╗⌐ng tß╗½");
-            }
-
-            balance.setQuantityOnHand(newQuantity);
-            balance.setUpdatedAt(LocalDateTime.now());
-            inventoryBalanceRepository.save(balance);
-            inventoryLedgerRepository.save(buildLedger(doc, line,
-                    importDocument ? "UNPOST_IMPORT" : "UNPOST_EXPORT",
-                    importDocument ? ZERO : quantity,
-                    importDocument ? quantity : ZERO,
-                    nonNegativeOrZero(line.getUnitCost(), "unitCost"), newQuantity, warehouseId));
-            if (!importDocument) {
-                for (String serialValue : parseSerialNumbers(line.getSerialNumbersText())) {
-                    serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), serialValue)
-                            .ifPresent(serial -> {
-                                serial.setStatus("AVAILABLE");
-                                serial.setWarehouseId(warehouseId);
-                                serial.setSoldAt(null);
-                                serial.setSalesOrderLineId(null);
-                                serial.setUpdatedAt(LocalDateTime.now());
-                                serialNumberRepository.save(serial);
-                            });
-                }
-            }
-        }
-    }
-
-
-    private void validateAssemblyPost(InventoryDocument doc, boolean importDocument) {
-        if (!"ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(doc.getReferenceType())) || doc.getReferenceId() == null) {
-            return;
-        }
-        AssemblyOrder order = assemblyOrderRepository.findByIdWithLines(doc.getReferenceId())
-                .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy lß╗çnh cß╗ºa phiß║┐u kho"));
-        if ("REQUESTED".equals(order.getCancellationSettlementStatus()) || "CANCELLED".equals(order.getStatus())) {
-            throw new BusinessException(SystemMessage.ASM_ERR_045.getMessage());
-        }
-        List<InventoryDocument> pair = inventoryDocumentRepository
-                .findByReferenceWithLines("ASSEMBLY_ORDER", order.getId());
-        if (pair.size() != 2) {
-            throw new BusinessException(SystemMessage.ASM_ERR_042.getMessage());
-        }
-        if (importDocument && pair.stream().noneMatch(d -> EXPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()))) {
-            throw new BusinessException(SystemMessage.ASM_ERR_043.getMessage());
-        }
-        validateAssemblyQuantities(order, doc, importDocument);
-    }
-
-
-    private void validateAssemblyQuantities(AssemblyOrder order, InventoryDocument doc, boolean importDocument) {
-        boolean componentsExpected = ("ASSEMBLY".equals(order.getOrderType()) && !importDocument)
-                || ("DISASSEMBLY".equals(order.getOrderType()) && importDocument);
-        Map<Long, BigDecimal> expected = componentsExpected
-                ? order.getLines().stream().collect(Collectors.toMap(
-                        line -> line.getComponentVariant().getId(),
-                        line -> line.getQuantityRequired(), BigDecimal::add))
-                : Map.of(order.getTargetVariant().getId(), order.getQuantity());
-        Map<Long, BigDecimal> actual = doc.getLines().stream().collect(Collectors.toMap(
-                InventoryDocumentLine::getVariantId,
-                line -> importDocument ? line.getQuantityIn() : line.getQuantityOut(), BigDecimal::add));
-        if (actual.size() != expected.size() || expected.entrySet().stream()
-                .anyMatch(entry -> actual.get(entry.getKey()) == null
-                        || actual.get(entry.getKey()).compareTo(entry.getValue()) != 0)) {
-            throw new BusinessException(SystemMessage.ASM_ERR_035.getMessage());
-        }
     }
 
 
@@ -2321,7 +1325,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
                             .targetSerial(targetSerials.get(targetIndex))
                             .componentVariant(orderLine.getComponentVariant())
                             .componentSerial(componentSerial)
-                            .status("ACTIVE")
+                            .status(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name())
                             .installedAt(LocalDateTime.now())
                             .createdBy(order.getCreatedBy())
                             .build());

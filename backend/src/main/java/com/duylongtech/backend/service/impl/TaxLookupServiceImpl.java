@@ -48,7 +48,7 @@ public class TaxLookupServiceImpl  implements TaxLookupService {
                         .name(name)
                         .shortName(shortName)
                         .address(address)
-                        .status("ACTIVE")
+                        .status(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name())
                         .rawStatusText("Đang hoạt động")
                         .message("Tra cứu thành công")
                         .build();
@@ -71,7 +71,7 @@ public class TaxLookupServiceImpl  implements TaxLookupService {
                         .name(String.valueOf(data.getOrDefault("name", "")))
                         .address(String.valueOf(data.getOrDefault("address", "")))
                         .representative(String.valueOf(data.getOrDefault("representative", "")))
-                        .status("ACTIVE")
+                        .status(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name())
                         .rawStatusText("Đang hoạt động")
                         .message("Tra cứu thành công")
                         .build();

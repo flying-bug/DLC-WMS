@@ -46,7 +46,7 @@ public class UnitServiceImpl  implements UnitService {
 
         Unit unit = unitMapper.toEntity(dto);
         if (unit.getStatus() == null) {
-            unit.setStatus("ACTIVE");
+            unit.setStatus(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name());
         }
 
         Unit savedUnit = unitRepository.save(unit);
@@ -73,7 +73,7 @@ public class UnitServiceImpl  implements UnitService {
         if (!unitRepository.existsById(id)) {
             throw new BusinessException(SystemMessage.UNIT_NOT_FOUND);
         }
-        // Có thể thay bằng soft delete nếu cần: unit.setStatus("INACTIVE")
+        // Có thể thay bằng soft delete nếu cần: unit.setStatus(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name())
         unitRepository.deleteById(id);
     }
 }

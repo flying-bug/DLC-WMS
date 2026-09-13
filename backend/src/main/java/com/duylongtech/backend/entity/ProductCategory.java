@@ -1,5 +1,7 @@
 package com.duylongtech.backend.entity;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,7 +32,7 @@ public class ProductCategory {
 
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private String status = "APPROVED";
+    private String status = DocumentStatus.APPROVED.name();
 
     @Column(columnDefinition = "TEXT")
     private String description;

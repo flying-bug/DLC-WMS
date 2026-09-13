@@ -1,5 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.service.*;
 
 import com.duylongtech.backend.constant.SystemMessage;
@@ -77,7 +79,7 @@ public class WarehouseServiceImpl  implements WarehouseService {
                 .name(request.getName())
                 .address(request.getAddress())
                 .type(request.getType() != null && !request.getType().isBlank() ? request.getType() : "STANDARD")
-                .status("APPROVED")
+                .status(DocumentStatus.APPROVED.name())
                 .creator(creator)
                 .build();
 
@@ -116,7 +118,7 @@ public class WarehouseServiceImpl  implements WarehouseService {
     public List<WarehouseResponse> getMyWarehouses(Long userId) {
         if (userId == null) {
             return warehouseRepository.findAll().stream()
-                    .filter(w -> "APPROVED".equalsIgnoreCase(w.getStatus()))
+                    .filter(w -> DocumentStatus.APPROVED.name().equalsIgnoreCase(w.getStatus()))
                     .map(warehouseMapper::toResponse)
                     .collect(Collectors.toList());
         }
@@ -130,7 +132,7 @@ public class WarehouseServiceImpl  implements WarehouseService {
 
         if (isAdminOrManager) {
             return warehouseRepository.findAll().stream()
-                    .filter(w -> "APPROVED".equalsIgnoreCase(w.getStatus()))
+                    .filter(w -> DocumentStatus.APPROVED.name().equalsIgnoreCase(w.getStatus()))
                     .map(warehouseMapper::toResponse)
                     .collect(Collectors.toList());
         }
@@ -147,7 +149,7 @@ public class WarehouseServiceImpl  implements WarehouseService {
         }
 
         return warehouseRepository.findAllById(assignedWarehouseIds).stream()
-                .filter(w -> "APPROVED".equalsIgnoreCase(w.getStatus()))
+                .filter(w -> DocumentStatus.APPROVED.name().equalsIgnoreCase(w.getStatus()))
                 .map(warehouseMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -234,7 +236,7 @@ public class WarehouseServiceImpl  implements WarehouseService {
 
         if (hasInventory || hasTransactions) {
             // Tự động chuyển INACTIVE thay vì xóa
-            warehouse.setStatus("INACTIVE");
+            warehouse.setStatus(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name());
             warehouseRepository.save(warehouse);
             return false; // Soft deleted
         }
@@ -252,7 +254,7 @@ public class WarehouseServiceImpl  implements WarehouseService {
             return true; // Hard deleted
         } catch (DataIntegrityViolationException e) {
             // Vẫn còn dữ liệu liên quan khác (lịch sử tồn kho, cost layers...) -> Soft delete
-            warehouse.setStatus("INACTIVE");
+            warehouse.setStatus(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name());
             warehouseRepository.save(warehouse);
             return false; // Soft deleted
         }
@@ -324,8 +326,8 @@ public class WarehouseServiceImpl  implements WarehouseService {
                 row.createCell(6).setCellValue(wh.getUpdater() != null ? wh.getUpdater().getFullName() : "");
                 
                 String statusStr = "Khác";
-                if ("APPROVED".equals(wh.getStatus())) statusStr = "Đang hoạt động";
-                else if ("INACTIVE".equals(wh.getStatus())) statusStr = "Ngừng hoạt động";
+                if (DocumentStatus.APPROVED.name().equals(wh.getStatus())) statusStr = "Đang hoạt động";
+                else if (com.duylongtech.backend.enums.EntityStatus.INACTIVE.name().equals(wh.getStatus())) statusStr = "Ngừng hoạt động";
                 else if ("PENDING".equals(wh.getStatus())) statusStr = "Chờ duyệt";
                 row.createCell(7).setCellValue(statusStr);
 

@@ -1,5 +1,7 @@
 package com.duylongtech.backend.entity;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -38,7 +40,7 @@ public class AssemblyBom {
 
     @Column(nullable = false, length = 30)
     @Builder.Default
-    private String status = "DRAFT";
+    private String status = DocumentStatus.DRAFT.name();
 
     @Column(name = "submitted_by")
     private Long submittedBy;

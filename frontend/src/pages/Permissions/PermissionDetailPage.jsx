@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
@@ -21,7 +21,7 @@ function PermissionDetailPage() {
     const [allSystemRoles, setAllSystemRoles] = useState([]);
     const [originalUserRoles, setOriginalUserRoles] = useState([]);
     
-    const [activeCategory, setActiveCategory] = useState('warehouse');
+
     const [permissions, setPermissions] = useState(() => buildPermissionsFromCodes([]));
     
     const [initialCodes, setInitialCodes] = useState([]);
@@ -231,12 +231,36 @@ function PermissionDetailPage() {
         }
     };
 
-    // Luôn hiện đủ toàn bộ danh mục/chức năng (giống RolePermissionsPage) - không ẩn bớt
-    // theo quyền hiện có, để admin luôn cấp được chức năng MỚI mà role/nhân viên chưa từng
-    // có (vd: thêm "Phiếu Nhập kho" cho Kế toán dù trước đó Kế toán chưa có quyền nào ở đây).
-    const currentCategoryObj = useMemo(() => {
-        return PERMISSION_CATEGORIES.find(c => c.key === activeCategory) || PERMISSION_CATEGORIES[0];
-    }, [activeCategory]);
+    const visibleModules = useMemo(() => {
+        const currentRoles = user?.roles || [];
+        const isManager = currentRoles.some(r => normalizeRoleCode(r) === 'ROLE_MANAGER');
+        if (isManager) {
+            return new Set(PERMISSION_CATEGORIES.flatMap(c => c.modules.map(m => m.key)));
+        }
+
+        const codes = new Set();
+        currentRoles.forEach(r => {
+            getDefaultCodesForRole(normalizeRoleCode(r)).forEach(c => codes.add(c));
+        });
+        
+        if (initialCodes) {
+            initialCodes.forEach(c => codes.add(c));
+        }
+
+        const modules = new Set();
+        codes.forEach(code => {
+            const mod = code.split(':')[0];
+            if (mod) modules.add(mod);
+        });
+        return modules;
+    }, [user, allSystemRoles, initialCodes]);
+
+    const filteredCategories = useMemo(() => {
+        return PERMISSION_CATEGORIES.map(cat => ({
+            ...cat,
+            modules: cat.modules.filter(mod => visibleModules.has(mod.key))
+        })).filter(cat => cat.modules.length > 0);
+    }, [visibleModules]);
 
     const renderCheckbox = (moduleKey, actionKey, featureName) => {
         if (permissions[moduleKey]?.[actionKey] === undefined) {
@@ -341,63 +365,52 @@ function PermissionDetailPage() {
                     </div>
 
                     <div className={styles.layout}>
-                        <nav className={styles.sidebar} aria-label="Danh mục module">
-                            <div className={styles.sidebarHeader}>DANH MỤC MODULE</div>
-                            {PERMISSION_CATEGORIES.map(cat => {
-                                const isActive = activeCategory === cat.key;
-                                return (
-                                    <button
-                                        key={cat.key}
-                                        type="button"
-                                        aria-pressed={isActive}
-                                        className={`${styles.menuItem} ${isActive ? styles.menuItemActive : ''}`}
-                                        onClick={() => setActiveCategory(cat.key)}
-                                    >
-                                        <div className={styles.menuItemLeft}>
-                                            <i className={`bi ${cat.icon}`} /> {cat.name}
-                                        </div>
-                                        <i className="bi bi-chevron-right" style={{ fontSize: '12px' }} />
-                                    </button>
-                                );
-                            })}
-                        </nav>
-
-                        <div className={styles.matrixPanel}>
+                        <div className={styles.matrixPanel} style={{ width: '100%', marginLeft: 0 }}>
                             <div className={styles.matrixContent}>
-                                {currentCategoryObj ? (
+                                {filteredCategories.length > 0 ? (
                                     <table className={styles.table}>
                                         <thead>
                                             <tr>
-                                                <th>CHỨC NĂNG ({currentCategoryObj.name})</th>
+                                                <th>CHỨC NĂNG</th>
                                                 {PERMISSION_ACTIONS.map(action => (
                                                     <th key={action.key}>{action.label.toUpperCase()}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {currentCategoryObj.modules.map(mod => (
-                                                <tr key={mod.key} className={styles.tableRow}>
-                                                    <td>
-                                                        <div className={styles.featureName}>
-                                                            <div className={styles.featureIcon}>
-                                                                <i className={`bi ${mod.icon}`} />
-                                                            </div>
-                                                            {mod.name}
-                                                        </div>
-                                                    </td>
-                                                    {PERMISSION_ACTIONS.map(action => (
-                                                        <td key={action.key}>
-                                                            {renderCheckbox(mod.key, action.key, mod.name)}
+                                            {filteredCategories.map(cat => (
+                                                <React.Fragment key={cat.key}>
+                                                    <tr className={styles.categoryRow}>
+                                                        <td colSpan={PERMISSION_ACTIONS.length + 1} style={{ backgroundColor: '#f8fafc', padding: '12px 16px', fontWeight: 'bold', color: 'var(--wms-primary)' }}>
+                                                            <i className={`bi ${cat.icon} me-2`} />
+                                                            {cat.name}
                                                         </td>
+                                                    </tr>
+                                                    {cat.modules.map(mod => (
+                                                        <tr key={mod.key} className={styles.tableRow}>
+                                                            <td>
+                                                                <div className={styles.featureName} style={{ paddingLeft: '20px' }}>
+                                                                    <div className={styles.featureIcon}>
+                                                                        <i className={`bi ${mod.icon}`} />
+                                                                    </div>
+                                                                    {mod.name}
+                                                                </div>
+                                                            </td>
+                                                            {PERMISSION_ACTIONS.map(action => (
+                                                                <td key={action.key}>
+                                                                    {renderCheckbox(mod.key, action.key, mod.name)}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
                                                     ))}
-                                                </tr>
+                                                </React.Fragment>
                                             ))}
                                         </tbody>
                                     </table>
                                 ) : (
                                     <div style={{ padding: '40px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>
                                         <i className="bi bi-shield-lock" style={{ fontSize: '48px', color: '#e2e8f0', marginBottom: '16px', display: 'block' }}></i>
-                                        Không có chức năng nào được cấp phép cho vai trò hiện tại.
+                                        Vui lòng chọn vai trò để xem các chức năng được phép.
                                     </div>
                                 )}
                             </div>

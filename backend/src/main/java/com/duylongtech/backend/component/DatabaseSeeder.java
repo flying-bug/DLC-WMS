@@ -1,5 +1,7 @@
 package com.duylongtech.backend.component;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.repository.*;
 import com.duylongtech.backend.service.impl.RoleServiceImpl;
@@ -109,14 +111,14 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .name("Kho chính")
                     .address("123 Cầu Giấy, Hà Nội")
                     .type("STANDARD")
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .build());
             warehouseRepository.save(Warehouse.builder()
                     .code("K02")
                     .name("Kho phụ")
                     .address("456 Giải Phóng, Hà Nội")
                     .type("STANDARD")
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .build());
             System.out.println("✅ Seeded default warehouses successfully.");
         }
@@ -135,7 +137,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .isCustomer(true)
                     .isSupplier(false)
                     .groupType("RETAIL")
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .build());
             partnerRepository.save(Partner.builder()
                     .code("KH00002")
@@ -147,7 +149,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .isCustomer(true)
                     .isSupplier(false)
                     .groupType("WHOLESALE")
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .build());
             partnerRepository.save(Partner.builder()
                     .code("KH00003")
@@ -159,7 +161,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .isCustomer(true)
                     .isSupplier(false)
                     .groupType("RETAIL")
-                    .status("INACTIVE")
+                    .status(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name())
                     .build());
             partnerRepository.save(Partner.builder()
                     .code("NCC00001")
@@ -171,7 +173,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .isCustomer(false)
                     .isSupplier(true)
                     .groupType("RETAIL")
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .build());
             partnerRepository.save(Partner.builder()
                     .code("NCC00002")
@@ -183,7 +185,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .isCustomer(false)
                     .isSupplier(true)
                     .groupType("RETAIL")
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .build());
             System.out.println("✅ Seeded default partners successfully.");
         }
@@ -197,7 +199,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         RoleEntity newRole = new RoleEntity();
         newRole.setCode(code);
         newRole.setName(name);
-        newRole.setStatus("APPROVED");
+        newRole.setStatus(DocumentStatus.APPROVED.name());
         return roleRepository.save(newRole);
     }
 
@@ -241,7 +243,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                             .code(code)
                             .name(action.toUpperCase() + " " + module.toUpperCase())
                             .module(module)
-                            .status("APPROVED")
+                            .status(DocumentStatus.APPROVED.name())
                             .createdAt(LocalDateTime.now())
                             .build());
                 }
@@ -307,7 +309,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             User admin = adminOpt.get();
             Set<RoleEntity> roles = new HashSet<>();
             roles.add(superAdminRole);
-            admin.setStatus("APPROVED");
+            admin.setStatus(DocumentStatus.APPROVED.name());
             admin.setRoles(roles);
             admin.setPermissions(adminPermissions);
             userRepository.save(admin);
@@ -321,7 +323,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .fullName("System Admin")
                     .email("admin@duylongtech.com")
                     .phone("0123456789")
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .roles(roles)
                     .permissions(adminPermissions)
                     .createdAt(LocalDateTime.now())
@@ -365,7 +367,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .fullName(fullName)
                     .email(email)
                     .phone(phone)
-                    .status("APPROVED")
+                    .status(DocumentStatus.APPROVED.name())
                     .roles(roles)
                     .createdAt(LocalDateTime.now())
                     .build();
@@ -462,7 +464,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
         Unit newUnit = Unit.builder()
                 .name(name)
-                .status("ACTIVE")
+                .status(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name())
                 .build();
         return unitRepository.save(newUnit);
     }
@@ -475,7 +477,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Brand newBrand = Brand.builder()
                 .code(code)
                 .name(name)
-                .status("APPROVED")
+                .status(DocumentStatus.APPROVED.name())
                 .description(description)
                 .hotline(hotline)
                 .contactEmail(email)
@@ -492,7 +494,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .code(code)
                 .name(name)
                 .parentId(parentId)
-                .status("APPROVED")
+                .status(DocumentStatus.APPROVED.name())
                 .build();
         return categoryRepository.save(newCat);
     }

@@ -1,0 +1,164 @@
+﻿    private void validateOrderLineQuantities(InventoryDocumentRequest req, Long excludeDocId) {
+        Long soId = req.getSalesOrderId();
+        if (soId == null && com.duylongtech.backend.enums.ReferenceType.SALES_ORDER.name().equalsIgnoreCase(trimToNull(req.getReferenceType()))) {
+            soId = req.getReferenceId();
+        }
+        if (soId != null) {
+            SalesOrder so = salesOrderRepository.findByIdWithDetails(soId).orElse(null);
+            if (so != null && so.getLines() != null && req.getLines() != null) {
+                Map<Long, BigDecimal> orderedMap = so.getLines().stream()
+                        .collect(Collectors.toMap(SalesOrderLine::getVariantId, SalesOrderLine::getQuantity,
+                                (a, b) -> a));
+                for (InventoryDocumentLineRequest lineReq : req.getLines()) {
+                    if (lineReq.getVariantId() == null)
+                        continue;
+                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
+                    if (orderedQty != null) {
+                        BigDecimal exportedAlready = inventoryDocumentLineRepository
+                                .sumExportedQuantityBySalesOrderIdAndVariantIdExcludingDoc(so.getId(),
+                                        lineReq.getVariantId(), excludeDocId);
+                        if (exportedAlready == null)
+                            exportedAlready = ZERO;
+                        BigDecimal remaining = orderedQty.subtract(exportedAlready);
+                        if (remaining.compareTo(ZERO) < 0)
+                            remaining = ZERO;
+
+                        BigDecimal qtyOut = lineReq.getQuantityOut() != null ? lineReq.getQuantityOut() : ZERO;
+                        if (qtyOut.compareTo(remaining) > 0) {
+                            ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
+                            String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
+                            throw new BusinessException(String.format(SystemMessage.INV_ERR_048.getMessage(), qtyOut,
+                                    so.getSoCode(), remaining, skuName));
+                        }
+                    }
+                }
+            }
+        }
+
+        Long poId = req.getPurchaseOrderId();
+        if (poId == null && com.duylongtech.backend.enums.ReferenceType.PURCHASE_ORDER.name().equalsIgnoreCase(trimToNull(req.getReferenceType()))) {
+            poId = req.getReferenceId();
+        }
+        if (poId != null) {
+            PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(poId).orElse(null);
+            if (po != null && po.getLines() != null && req.getLines() != null) {
+                Map<Long, BigDecimal> orderedMap = po.getLines().stream()
+                        .collect(Collectors.toMap(PurchaseOrderLine::getVariantId, PurchaseOrderLine::getQuantity,
+                                (a, b) -> a));
+                for (InventoryDocumentLineRequest lineReq : req.getLines()) {
+                    if (lineReq.getVariantId() == null)
+                        continue;
+                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
+                    if (orderedQty != null) {
+                        BigDecimal importedAlready = inventoryDocumentLineRepository
+                                .sumImportedQuantityByPurchaseOrderIdAndVariantIdExcludingDoc(po.getId(),
+                                        lineReq.getVariantId(), excludeDocId);
+                        if (importedAlready == null)
+                            importedAlready = ZERO;
+                        BigDecimal remaining = orderedQty.subtract(importedAlready);
+                        if (remaining.compareTo(ZERO) < 0)
+                            remaining = ZERO;
+
+                        BigDecimal qtyIn = lineReq.getQuantityIn() != null ? lineReq.getQuantityIn() : ZERO;
+                        if (qtyIn.compareTo(remaining) > 0) {
+                            ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
+                            String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
+                            throw new BusinessException(String.format(SystemMessage.INV_ERR_047.getMessage(), qtyIn,
+                                    po.getPoCode(), remaining, skuName));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void ensureSerialNotInstalledInPc(SerialNumber serial) {
+        if (serial == null || serial.getVariantId() == null || trimToNull(serial.getSerialNumber()) == null) {
+            return;
+        }
+        boolean installedInPc = deviceComponentSerialRepository.existsActiveComponentSerial(
+                serial.getVariantId(), serial.getSerialNumber().trim());
+        if (installedInPc) {
+            throw new BusinessException(
+                    String.format(SystemMessage.INV_ERR_036.getMessage(), serial.getSerialNumber()));
+        }
+    }
+
+    private void validateCreateRequest(InventoryDocumentRequest req) {
+        validateRequiredExportFields(req);
+        if (req.getCreatedBy() == null) {
+            throw new BusinessException(SystemMessage.INV_ERR_020.getMessage());
+        }
+    }
+
+    private void validateUpdateRequest(InventoryDocumentRequest req) {
+        validateRequiredExportFields(req);
+    }
+
+    private void validateCreateImportRequest(InventoryDocumentRequest req) {
+        validateRequiredImportFields(req);
+        if (req.getCreatedBy() == null) {
+            throw new BusinessException(SystemMessage.INV_ERR_020.getMessage());
+        }
+    }
+
+    private void validateUpdateImportRequest(InventoryDocumentRequest req) {
+        validateRequiredImportFields(req);
+    }
+
+    private void ensureEditable(InventoryDocument doc) {
+        String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
+        if (!EDITABLE_STATUSES.contains(status)) {
+            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
+        }
+    }
+
+    private void validateExportInventoryBalance(Long warehouseId, Long salesOrderId, String referenceType,
+            Long referenceId, List<InventoryDocumentLineRequest> lines) {
+        if (lines == null || lines.isEmpty())
+            return;
+
+        Long effectiveSalesOrderId = salesOrderId;
+        if (effectiveSalesOrderId == null && (com.duylongtech.backend.enums.ReferenceType.SALES_ORDER.name().equalsIgnoreCase(trimToNull(referenceType))
+                || com.duylongtech.backend.enums.ReferenceType.SALES_ORDER.name().equalsIgnoreCase(trimToNull(referenceType)))) {
+            effectiveSalesOrderId = referenceId;
+        }
+
+        for (int i = 0; i < lines.size(); i++) {
+            InventoryDocumentLineRequest line = lines.get(i);
+            if (line.getVariantId() == null || line.getQuantityOut() == null)
+                continue;
+
+            Long effectiveWh = line.getWarehouseId() != null ? line.getWarehouseId() : warehouseId;
+            if (effectiveWh == null)
+                continue;
+
+            BigDecimal qtyToExport = line.getQuantityOut();
+            BigDecimal totalAvailable = inventoryBalanceRepository
+                    .sumAvailableQuantityByWarehouseAndVariant(effectiveWh, line.getVariantId(), "GOOD");
+            if (totalAvailable == null) {
+                totalAvailable = BigDecimal.ZERO;
+            }
+
+            if (effectiveSalesOrderId != null) {
+                BigDecimal reservedForThisOrder = stockReservationRepository
+                        .sumHoldingQuantityBySalesOrderIdAndVariantAndWarehouse(effectiveSalesOrderId,
+                                line.getVariantId(), effectiveWh);
+                if (reservedForThisOrder != null) {
+                    totalAvailable = totalAvailable.add(reservedForThisOrder);
+                }
+            }
+
+            if (totalAvailable.compareTo(qtyToExport) < 0) {
+                throw new BusinessException(SystemMessage.INV_ERR_013.getMessage());
+            }
+        }
+    }
+
+    public com.duylongtech.backend.dto.response.DependencyCheckResponse checkImportUnpostable(Long id) {
+        return documentDependencyService.checkImportSlipUnpostable(id);
+    }
+
+    public com.duylongtech.backend.dto.response.DependencyCheckResponse checkExportUnpostable(Long id) {
+        return documentDependencyService.checkExportSlipUnpostable(id);
+    }

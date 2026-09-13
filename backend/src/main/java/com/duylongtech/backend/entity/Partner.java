@@ -1,5 +1,7 @@
 package com.duylongtech.backend.entity;
 
+import com.duylongtech.backend.enums.DocumentStatus;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -138,7 +140,7 @@ public class Partner {
      */
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private String status = "APPROVED";
+    private String status = DocumentStatus.APPROVED.name();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
