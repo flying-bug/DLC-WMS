@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class InventoryLedger {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -55,4 +53,19 @@ public class InventoryLedger {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public void initEntry(Long inventoryDocumentId, Long inventoryDocumentLineId, Long warehouseId, Long variantId, Long serialNumberId, String movementType, BigDecimal quantityIn, BigDecimal quantityOut, BigDecimal unitCost, BigDecimal balanceAfter) {
+        this.inventoryDocumentId = inventoryDocumentId;
+        this.inventoryDocumentLineId = inventoryDocumentLineId;
+        this.warehouseId = warehouseId;
+        this.variantId = variantId;
+        this.serialNumberId = serialNumberId;
+        this.movementType = movementType;
+        this.quantityIn = quantityIn;
+        this.quantityOut = quantityOut;
+        this.unitCost = unitCost;
+        this.balanceAfter = balanceAfter;
+        this.movementAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
+    }
 }

@@ -423,15 +423,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     private void seedInventoryBalanceIfNotFound(Long warehouseId, Long variantId, BigDecimal qtyOnHand, BigDecimal avgCost) {
         Optional<InventoryBalance> opt = inventoryBalanceRepository.findFirstByWarehouseIdAndVariantIdAndStockStatus(warehouseId, variantId, "GOOD");
         if (opt.isEmpty()) {
-            InventoryBalance balance = InventoryBalance.builder()
-                    .warehouseId(warehouseId)
-                    .variantId(variantId)
-                    .stockStatus("GOOD")
-                    .quantityOnHand(qtyOnHand)
-                    .quantityReserved(BigDecimal.ZERO)
-                    .averageCost(avgCost)
-                    .updatedAt(LocalDateTime.now())
-                    .build();
+            InventoryBalance balance = new InventoryBalance();
+            balance.initBalance(warehouseId, variantId, null, "GOOD", qtyOnHand, BigDecimal.ZERO, avgCost);
             inventoryBalanceRepository.save(balance);
         }
     }

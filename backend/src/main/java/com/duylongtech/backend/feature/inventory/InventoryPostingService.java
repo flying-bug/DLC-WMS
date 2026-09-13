@@ -456,15 +456,8 @@ public class InventoryPostingService {
             }
 
             if (balance == null) {
-                balance = InventoryBalance.builder()
-                        .warehouseId(effectiveWarehouseId)
-                        .variantId(line.getVariantId())
-                        .stockStatus("GOOD")
-                        .quantityOnHand(ZERO)
-                        .quantityReserved(ZERO)
-                        .averageCost(ZERO)
-                        .updatedAt(LocalDateTime.now())
-                        .build();
+                balance = new InventoryBalance();
+                balance.initBalance(effectiveWarehouseId, line.getVariantId(), null, "GOOD", ZERO, ZERO, ZERO);
             }
 
             BigDecimal oldQty = balance.getQuantityOnHand();
@@ -480,15 +473,9 @@ public class InventoryPostingService {
             balance.setUpdatedAt(LocalDateTime.now());
             inventoryBalanceRepository.save(balance);
 
-            inventoryCostLayerRepository.save(InventoryCostLayer.builder()
-                    .warehouseId(effectiveWarehouseId)
-                    .variantId(line.getVariantId())
-                    .inventoryDocumentLineId(line.getId())
-                    .quantityReceived(qtyToImport)
-                    .quantityLayered(qtyToImport)
-                    .unitCost(unitCost)
-                    .createdAt(LocalDateTime.now())
-                    .build());
+            InventoryCostLayer costLayer = new InventoryCostLayer();
+            costLayer.initCostLayer(effectiveWarehouseId, line.getVariantId(), line.getId(), qtyToImport, qtyToImport, unitCost);
+            inventoryCostLayerRepository.save(costLayer);
 
             inventoryLedgerRepository
                     .save(buildLedger(savedDoc, line, "IN", qtyToImport, ZERO, unitCost, balance.getQuantityOnHand(),
@@ -810,20 +797,10 @@ public class InventoryPostingService {
     public InventoryLedger buildLedger(InventoryDocument doc, InventoryDocumentLine line, String movementType,
             BigDecimal quantityIn, BigDecimal quantityOut, BigDecimal unitCost, BigDecimal balanceAfter,
             Long warehouseId) {
-        return InventoryLedger.builder()
-                .inventoryDocumentId(doc.getId())
-                .inventoryDocumentLineId(line.getId())
-                .warehouseId(warehouseId != null ? warehouseId : doc.getWarehouseId())
-                .variantId(line.getVariantId())
-                .serialNumberId(line.getSerialNumberId())
-                .movementType(movementType)
-                .quantityIn(quantityIn)
-                .quantityOut(quantityOut)
-                .unitCost(unitCost)
-                .balanceAfter(balanceAfter)
-                .movementAt(LocalDateTime.now())
-                .createdAt(LocalDateTime.now())
-                .build();
+        InventoryLedger ledger = new InventoryLedger();
+        ledger.initEntry(doc.getId(), line.getId(), warehouseId != null ? warehouseId : doc.getWarehouseId(),
+                line.getVariantId(), line.getSerialNumberId(), movementType, quantityIn, quantityOut, unitCost, balanceAfter);
+        return ledger;
     }
 
     public void ensureSerialNotInstalledInPc(SerialNumber serial) {
@@ -941,16 +918,9 @@ public class InventoryPostingService {
                     serial.updateStatus("SCRAP");
                     serial.updateWarehouse(effectiveWh);
                     SerialNumber savedSerial = serialNumberRepository.save(serial);
-                    inventoryBalanceRepository.save(InventoryBalance.builder()
-                            .warehouseId(effectiveWh)
-                            .variantId(line.getVariantId())
-                            .serialNumberId(savedSerial.getId())
-                            .stockStatus("GOOD")
-                            .quantityOnHand(BigDecimal.ONE)
-                            .quantityReserved(ZERO)
-                            .averageCost(unitCost)
-                            .updatedAt(LocalDateTime.now())
-                            .build());
+                    InventoryBalance scrapBalance = new InventoryBalance();
+                    scrapBalance.initBalance(effectiveWh, line.getVariantId(), savedSerial.getId(), "GOOD", BigDecimal.ONE, ZERO, unitCost);
+                    inventoryBalanceRepository.save(scrapBalance);
                     continue;
                 } else if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
                     SerialNumber serial = existingOpt.get();
@@ -960,16 +930,9 @@ public class InventoryPostingService {
                     serial.updateStatus("AVAILABLE");
                     serial.updateWarehouse(effectiveWh);
                     SerialNumber savedSerial = serialNumberRepository.save(serial);
-                    inventoryBalanceRepository.save(InventoryBalance.builder()
-                            .warehouseId(effectiveWh)
-                            .variantId(line.getVariantId())
-                            .serialNumberId(savedSerial.getId())
-                            .stockStatus("GOOD")
-                            .quantityOnHand(BigDecimal.ONE)
-                            .quantityReserved(ZERO)
-                            .averageCost(unitCost)
-                            .updatedAt(LocalDateTime.now())
-                            .build());
+                    InventoryBalance transferBalance = new InventoryBalance();
+                    transferBalance.initBalance(effectiveWh, line.getVariantId(), savedSerial.getId(), "GOOD", BigDecimal.ONE, ZERO, unitCost);
+                    inventoryBalanceRepository.save(transferBalance);
                     continue;
                 } else {
                     throw new BusinessException(String.format(SystemMessage.INV_ERR_023.getMessage(), serialValue));
@@ -978,16 +941,9 @@ public class InventoryPostingService {
             SerialNumber serial = new SerialNumber();
             serial.initSerialNumber(line.getVariantId(), effectiveWh, serialValue, "AVAILABLE", LocalDateTime.now());
             SerialNumber savedSerial = serialNumberRepository.save(serial);
-            inventoryBalanceRepository.save(InventoryBalance.builder()
-                    .warehouseId(effectiveWh)
-                    .variantId(line.getVariantId())
-                    .serialNumberId(savedSerial.getId())
-                    .stockStatus("GOOD")
-                    .quantityOnHand(BigDecimal.ONE)
-                    .quantityReserved(ZERO)
-                    .averageCost(unitCost)
-                    .updatedAt(LocalDateTime.now())
-                    .build());
+            InventoryBalance newSerialBalance = new InventoryBalance();
+            newSerialBalance.initBalance(effectiveWh, line.getVariantId(), savedSerial.getId(), "GOOD", BigDecimal.ONE, ZERO, unitCost);
+            inventoryBalanceRepository.save(newSerialBalance);
         }
     }
 

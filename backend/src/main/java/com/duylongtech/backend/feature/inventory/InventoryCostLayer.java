@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class InventoryCostLayer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,4 +35,14 @@ public class InventoryCostLayer {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public void initCostLayer(Long warehouseId, Long variantId, Long inventoryDocumentLineId, BigDecimal quantityReceived, BigDecimal quantityLayered, BigDecimal unitCost) {
+        this.warehouseId = warehouseId;
+        this.variantId = variantId;
+        this.inventoryDocumentLineId = inventoryDocumentLineId;
+        this.quantityReceived = quantityReceived;
+        this.quantityLayered = quantityLayered;
+        this.unitCost = unitCost;
+        this.createdAt = LocalDateTime.now();
+    }
 }

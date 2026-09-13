@@ -274,29 +274,16 @@ public class SalesOrderService {
             String resStatus = (available.compareTo(line.getQuantity()) < 0) ? "BACKORDERED" : "HOLDING";
 
             // Tạo reservation
-            StockReservation reservation = StockReservation.builder()
-                    .salesOrderId(so.getId())
-                    .variantId(line.getVariantId())
-                    .warehouseId(lineWh)
-                    .quantityReserved(line.getQuantity())
-                    .status(resStatus)
-                    .expiresAt(expiresAt)
-                    .build();
+            StockReservation reservation = new StockReservation();
+            reservation.initReservation(so.getId(), line.getVariantId(), lineWh, line.getQuantity(), resStatus, expiresAt);
             stockReservationRepository.save(reservation);
 
             // Tăng quantity_reserved trong INVENTORY_BALANCES
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariant(lineWh, line.getVariantId(), "GOOD")
                     .orElseGet(() -> {
-                        InventoryBalance newBalance = InventoryBalance.builder()
-                                .warehouseId(lineWh)
-                                .variantId(line.getVariantId())
-                                .stockStatus("GOOD")
-                                .quantityOnHand(BigDecimal.ZERO)
-                                .quantityReserved(BigDecimal.ZERO)
-                                .averageCost(BigDecimal.ZERO)
-                                .updatedAt(LocalDateTime.now())
-                                .build();
+                        InventoryBalance newBalance = new InventoryBalance();
+                        newBalance.initBalance(lineWh, line.getVariantId(), null, "GOOD", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
                         return inventoryBalanceRepository.save(newBalance);
                     });
             balance.setQuantityReserved(balance.getQuantityReserved().add(line.getQuantity()));

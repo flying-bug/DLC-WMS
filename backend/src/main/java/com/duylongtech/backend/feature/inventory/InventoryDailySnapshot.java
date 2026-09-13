@@ -16,8 +16,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class InventoryDailySnapshot {
 
     @Id
@@ -34,11 +32,9 @@ public class InventoryDailySnapshot {
     private Long variantId;
 
     @Column(name = "closing_quantity", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
     private BigDecimal closingQuantity = BigDecimal.ZERO;
 
     @Column(name = "closing_value", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
     private BigDecimal closingValue = BigDecimal.ZERO;
 
     @CreationTimestamp

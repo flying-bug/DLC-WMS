@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class InventoryBalance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,4 +41,15 @@ public class InventoryBalance {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void initBalance(Long warehouseId, Long variantId, Long serialNumberId, String stockStatus, BigDecimal quantityOnHand, BigDecimal quantityReserved, BigDecimal averageCost) {
+        this.warehouseId = warehouseId;
+        this.variantId = variantId;
+        this.serialNumberId = serialNumberId;
+        this.stockStatus = stockStatus;
+        this.quantityOnHand = quantityOnHand;
+        this.quantityReserved = quantityReserved;
+        this.averageCost = averageCost;
+        this.updatedAt = LocalDateTime.now();
+    }
 }

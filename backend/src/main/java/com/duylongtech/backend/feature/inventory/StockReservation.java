@@ -15,8 +15,6 @@ import com.duylongtech.backend.feature.warehouse.Warehouse;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class StockReservation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,4 +54,13 @@ public class StockReservation {
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
+
+    public void initReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityReserved, String status, LocalDateTime expiresAt) {
+        this.salesOrderId = salesOrderId;
+        this.variantId = variantId;
+        this.warehouseId = warehouseId;
+        this.quantityReserved = quantityReserved;
+        this.status = status;
+        this.expiresAt = expiresAt;
+    }
 }
