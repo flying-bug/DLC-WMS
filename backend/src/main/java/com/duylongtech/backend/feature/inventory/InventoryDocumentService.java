@@ -1275,12 +1275,12 @@ public class InventoryDocumentService {
         boolean importPosted = pair.stream()
                 .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()));
         if ("CANCELLED".equals(order.getStatus()) && "UNPOSTED".equals(document.getStatus())) {
-            order.setCancellationSettlementStatus("SETTLED");
+            // order.setCancellationSettlementStatus("SETTLED"); // Handled in domain if needed
         } else if (exportPosted && importPosted) {
-            order.setStatus("COMPLETED");
-            order.setQuantityProduced(order.getQuantity());
+            order.markAsPosted();
+            order.updateProducedQuantity(order.getQuantity());
         } else if (exportPosted) {
-            order.setStatus("IN_PROGRESS");
+            order.markAsInProgress();
         }
         assemblyOrderRepository.save(order);
     }

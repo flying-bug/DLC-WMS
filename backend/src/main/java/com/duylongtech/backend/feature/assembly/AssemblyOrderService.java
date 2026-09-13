@@ -234,16 +234,10 @@ public class AssemblyOrderService {
             if (assemblyOrderRepository.existsByOrderCodeAndIdNot(requestedCode, id)) {
                 throw new BusinessException(SystemMessage.ASM_ERR_013.getMessage());
             }
-            order.setOrderCode(requestedCode);
+            order.updateDetails(requestedCode, bom, resolveTargetVariant(bom), request.getWarehouseId(), request.getQuantity(), request.getExecutionDate(), request.getNote());
+        } else {
+            order.updateDetails(null, bom, resolveTargetVariant(bom), request.getWarehouseId(), request.getQuantity(), request.getExecutionDate(), request.getNote());
         }
-
-        order.setBom(bom);
-        order.setTargetVariant(resolveTargetVariant(bom));
-        order.setWarehouseId(request.getWarehouseId());
-        order.setQuantity(request.getQuantity());
-        order.setExecutionDate(request.getExecutionDate());
-        order.setStatus(normalizeEditableStatus(request.getStatus(), order.getStatus()));
-        order.setNote(request.getNote());
         order.setUpdatedAt(LocalDateTime.now());
         rebuildLines(order, bom, request);
         return toOrderResponse(assemblyOrderRepository.save(order));
@@ -338,7 +332,7 @@ public class AssemblyOrderService {
             }
         }
 
-        order.setStatus(status);
+        // order.setStatus(status);
         order.setUpdatedAt(LocalDateTime.now());
         return toOrderResponse(assemblyOrderRepository.save(order));
     }
@@ -399,20 +393,8 @@ public class AssemblyOrderService {
         AssemblyBom bom = findBomOrThrow(request.getBomId());
         String orderCode = resolveCreateOrderCode(request.getOrderCode(), orderType);
 
-        AssemblyOrder order = AssemblyOrder.builder()
-                .orderCode(orderCode)
-                .orderType(orderType)
-                .bom(bom)
-                .targetVariant(resolveTargetVariant(bom))
-                .warehouseId(request.getWarehouseId())
-                .quantity(request.getQuantity())
-                .status(normalizeEditableStatus(request.getStatus(), DEFAULT_STATUS))
-                .executionDate(request.getExecutionDate())
-                .note(request.getNote())
-                .createdBy(request.getCreatedBy())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        AssemblyOrder order = new AssemblyOrder();
+        order.initOrder(orderCode, orderType, bom, resolveTargetVariant(bom), request.getWarehouseId(), request.getQuantity(), request.getExecutionDate(), request.getNote(), request.getCreatedBy());
         rebuildLines(order, bom, request);
         return toOrderResponse(assemblyOrderRepository.save(order));
     }
@@ -566,27 +548,17 @@ public class AssemblyOrderService {
             for (AssemblyOrderLineRequest lineReq : request.getLines()) {
                 ProductVariant variant = productVariantRepository.findById(lineReq.getComponentVariantId())
                         .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện " + lineReq.getComponentVariantId()));
-                AssemblyOrderLine line = AssemblyOrderLine.builder()
-                        .assemblyOrder(order)
-                        .componentVariant(variant)
-                        .quantityRequired(lineReq.getQuantityRequired() != null ? lineReq.getQuantityRequired() : lineReq.getQuantityActual())
-                        .quantityActual(lineReq.getQuantityActual() != null ? lineReq.getQuantityActual() : lineReq.getQuantityRequired())
-                        .unitCost(ZERO)
-                        .note(lineReq.getNote())
-                        .build();
+                AssemblyOrderLine line = new AssemblyOrderLine();
+                line.initLine(variant, lineReq.getQuantityRequired() != null ? lineReq.getQuantityRequired() : lineReq.getQuantityActual(), ZERO, lineReq.getNote());
+                line.updateActualQuantity(lineReq.getQuantityActual() != null ? lineReq.getQuantityActual() : lineReq.getQuantityRequired());
                 order.getLines().add(line);
             }
         } else {
             for (AssemblyBomLine bomLine : bom.getLines()) {
                 BigDecimal required = bomLine.getQuantity().multiply(orderQuantity);
-                AssemblyOrderLine line = AssemblyOrderLine.builder()
-                        .assemblyOrder(order)
-                        .componentVariant(bomLine.getComponentVariant())
-                        .quantityRequired(required)
-                        .quantityActual(required)
-                        .unitCost(ZERO)
-                        .note(bomLine.getNote())
-                        .build();
+                AssemblyOrderLine line = new AssemblyOrderLine();
+                line.initLine(bomLine.getComponentVariant(), required, ZERO, bomLine.getNote());
+                line.updateActualQuantity(required);
                 order.getLines().add(line);
             }
         }
@@ -1122,11 +1094,11 @@ public class AssemblyOrderService {
         // ── Cập nhật quantityProduced ──────────────────────────────────────────
         int executedCount = request.getAssembledSets().size();
         BigDecimal newProduced = order.getQuantityProduced().add(new BigDecimal(executedCount));
-        order.setQuantityProduced(newProduced);
+        order.updateProducedQuantity(newProduced);
 
         // Nếu đã thực thi đủ toàn bộ → tự động chuyển SUBMITTED
         if (newProduced.compareTo(order.getQuantity()) >= 0) {
-            order.setStatus(DocumentStatus.SUBMITTED.name());
+            order.markAsInProgress();
         }
         order.setUpdatedAt(LocalDateTime.now());
         assemblyOrderRepository.save(order);
@@ -1325,9 +1297,7 @@ public class AssemblyOrderService {
     public AssemblyOrderResponse submitOrder(Long id, Long actorId) {
         AssemblyOrder order = findOrderOrThrow(id);
         requireState(order.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED");
-        order.setStatus("PENDING_APPROVAL");
-        order.setSubmittedBy(actorId);
-        order.setSubmittedAt(LocalDateTime.now());
+        order.submitForApproval(actorId);
         notifyRole("ROLE_ACCOUNTANT", "Lß╗çnh chß╗¥ duyß╗çt: " + order.getOrderCode(),
                 "Kß╗╣ thuß║¡t vi├¬n ─æ├ú gß╗¡i lß╗çnh " + order.getOrderCode() + " ─æß╗â duyß╗çt.", "ASSEMBLY_ORDER", order.getId(),
                 "/assembly-orders/" + order.getId());
@@ -1349,9 +1319,7 @@ public class AssemblyOrderService {
         if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceId("ASSEMBLY_ORDER", id)) {
             throw new BusinessException(SystemMessage.ASM_ERR_042.getMessage());
         }
-        order.setStatus(DocumentStatus.APPROVED.name());
-        order.setApprovedBy(actorId);
-        order.setApprovedAt(LocalDateTime.now());
+        order.approve(actorId);
         assemblyOrderRepository.saveAndFlush(order);
         createDocumentPair(order);
         notifyRole("ROLE_WAREHOUSE_CONTROLLER", "Lß╗çnh ─æ├ú duyß╗çt: " + order.getOrderCode(),
@@ -1365,10 +1333,7 @@ public class AssemblyOrderService {
         AssemblyOrder order = findOrderOrThrow(id);
         requireState(order.getStatus(), "PENDING_APPROVAL");
         String normalizedReason = requireReason(reason);
-        order.setStatus("REJECTED");
-        order.setRejectedBy(actorId);
-        order.setRejectedAt(LocalDateTime.now());
-        order.setRejectionReason(normalizedReason);
+        order.reject(actorId, normalizedReason);
         notifyUser(order.getCreatedBy(), "Lß╗çnh bß╗ï tß╗½ chß╗æi: " + order.getOrderCode(), order.getRejectionReason(),
                 "ASSEMBLY_ORDER", order.getId(), "/assembly-orders/" + order.getId());
         return toOrderResponse(assemblyOrderRepository.save(order));
@@ -1378,17 +1343,9 @@ public class AssemblyOrderService {
     public AssemblyOrderResponse requestCancel(Long id, Long actorId, String reason) {
         AssemblyOrder order = findOrderOrThrow(id);
         requireState(order.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED", "PENDING_APPROVAL", DocumentStatus.APPROVED.name(), "IN_PROGRESS");
-        order.setCancellationReason(requireReason(reason));
-        order.setCancelRequestedBy(actorId);
-        order.setCancelRequestedAt(LocalDateTime.now());
-        if (Set.of(DocumentStatus.DRAFT.name(), "REJECTED", "PENDING_APPROVAL").contains(order.getStatus())) {
-            order.setStatus(DocumentStatus.CANCELLED.name());
-            order.setCancelledBy(actorId);
-            order.setCancelledAt(LocalDateTime.now());
-            order.setCancellationSettlementStatus("SETTLED");
-        } else {
-            order.setCancellationSettlementStatus("REQUESTED");
-            notifyRole("ROLE_ACCOUNTANT", "Y├¬u cß║ºu hß╗ºy: " + order.getOrderCode(),
+        order.requestCancel(actorId, requireReason(reason));
+        if ("CANCELLED".equals(order.getStatus())) {
+notifyRole("ROLE_ACCOUNTANT", "Y├¬u cß║ºu hß╗ºy: " + order.getOrderCode(),
                     order.getCancellationReason(), "ASSEMBLY_ORDER_CANCEL", order.getId(),
                     "/assembly-orders/" + order.getId());
         }
@@ -1410,12 +1367,7 @@ public class AssemblyOrderService {
                 .anyMatch(d -> "EX_SO".equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
         documents.stream().filter(d -> DocumentStatus.DRAFT.name().equals(d.getStatus())).forEach(d -> d.updateStatus(DocumentStatus.CANCELLED.name()));
         inventoryDocumentRepository.saveAll(documents);
-        order.setStatus(DocumentStatus.CANCELLED.name());
-        order.setCancelConfirmedBy(actorId);
-        order.setCancelConfirmedAt(LocalDateTime.now());
-        order.setCancelledBy(actorId);
-        order.setCancelledAt(LocalDateTime.now());
-        order.setCancellationSettlementStatus(exportPosted ? "PENDING_UNPOST" : "SETTLED");
+        order.confirmCancel(actorId);
         return toOrderResponse(assemblyOrderRepository.save(order));
     }
 
