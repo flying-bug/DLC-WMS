@@ -542,7 +542,8 @@ public class InventoryPostingService {
                     return l.getQuantity().subtract(imported).compareTo(BigDecimal.ZERO) <= 0;
                 });
                 if (fullyImported) {
-                    po.setStatus(DocumentStatus.POSTED.name());
+                    // Cập nhật trạng thái POSTED
+                    po.markAsPosted();
                     purchaseOrderRepository.save(po);
                 }
             }
@@ -674,7 +675,7 @@ public class InventoryPostingService {
         if (doc.getPurchaseOrderId() != null) {
             purchaseOrderRepository.findById(doc.getPurchaseOrderId()).ifPresent(po -> {
                 if (DocumentStatus.POSTED.name().equals(po.getStatus())) {
-                    po.setStatus(DocumentStatus.APPROVED.name());
+                    po.revertToApproved();
                     purchaseOrderRepository.save(po);
                 }
             });

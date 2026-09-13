@@ -40,6 +40,7 @@ public class PurchaseOrderLine {
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitPrice;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "line_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal lineAmount;
 
@@ -47,6 +48,7 @@ public class PurchaseOrderLine {
     @Builder.Default
     private BigDecimal vatRate = BigDecimal.ZERO;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "vat_amount", precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal vatAmount = BigDecimal.ZERO;
@@ -60,4 +62,18 @@ public class PurchaseOrderLine {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    public void calculateAmounts() {
+        if (this.quantity == null) this.quantity = BigDecimal.ZERO;
+        if (this.unitPrice == null) this.unitPrice = BigDecimal.ZERO;
+        
+        BigDecimal rawLineAmount = this.quantity.multiply(this.unitPrice);
+        this.lineAmount = rawLineAmount;
+
+        if (this.vatRate == null) {
+            this.vatRate = BigDecimal.ZERO;
+        }
+
+        this.vatAmount = rawLineAmount.multiply(this.vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+    }
 }

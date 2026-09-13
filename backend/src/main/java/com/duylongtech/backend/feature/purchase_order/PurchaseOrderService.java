@@ -113,54 +113,23 @@ public class PurchaseOrderService {
         User actorUser = userRepository.findByUsername(actor)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy người dùng hiện tại"));
 
-        // Tính toán lines
-        BigDecimal subTotalAmount = BigDecimal.ZERO;
-        BigDecimal taxAmount = BigDecimal.ZERO;
+        PurchaseOrder po = new PurchaseOrder();
+        po.assignInitialCode(poCode);
+        po.initDraftStatus();
+        po.setPartnerId(request.getPartnerId());
+        po.setPoDate(request.getPoDate());
+        po.setPaymentDueDate(request.getPaymentDueDate());
+        po.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+        po.setNote(request.getNote());
+        po.assignCreator(actorUser.getId());
 
-        List<PurchaseOrderLine> lines = new ArrayList<>();
         for (PurchaseOrderRequest.PurchaseOrderLineRequest lr : request.getLines()) {
-            BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
-            BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
-            BigDecimal vatAmount = lineAmount.multiply(vatRate)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-            subTotalAmount = subTotalAmount.add(lineAmount);
-            taxAmount = taxAmount.add(vatAmount);
-
             PurchaseOrderLine line = purchaseOrderMapper.toLineEntity(lr);
-            line.setPurchaseOrderId(0L); // sẽ set sau khi save
-            line.setVatRate(vatRate);
-            line.setVatAmount(vatAmount);
-            line.setLineAmount(lineAmount);
-
-            lines.add(line);
+            line.setVatRate(lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO);
+            po.addLine(line);
         }
 
-        BigDecimal totalAmount = subTotalAmount.add(taxAmount);
-
-        PurchaseOrder po = PurchaseOrder.builder()
-                .partnerId(request.getPartnerId())
-                .poCode(poCode)
-                .poDate(request.getPoDate())
-                .status(DocumentStatus.DRAFT.name())
-                .subTotalAmount(subTotalAmount)
-                .taxAmount(taxAmount)
-                .totalAmount(totalAmount)
-                .paidAmount(BigDecimal.ZERO)
-                .paymentStatus("UNPAID")
-                .paymentDueDate(request.getPaymentDueDate())
-                .expectedDeliveryDate(request.getExpectedDeliveryDate())
-                .note(request.getNote())
-                .createdBy(actorUser.getId())
-                .build();
-
-        po.setLines(new ArrayList<>());
         PurchaseOrder saved = purchaseOrderRepository.save(po);
-
-        final Long poId = saved.getId();
-        lines.forEach(l -> l.setPurchaseOrderId(poId));
-        saved.getLines().addAll(lines);
-        purchaseOrderRepository.save(saved);
 
         log.info("Tạo đơn mua hàng {} bởi {}", saved.getPoCode(), actor);
         return toSummaryResponse(saved);
@@ -189,31 +158,13 @@ public class PurchaseOrderService {
         po.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
         po.setNote(request.getNote());
 
-        po.getLines().clear();
-        BigDecimal subTotalAmount = BigDecimal.ZERO;
-        BigDecimal taxAmount = BigDecimal.ZERO;
+        po.clearLines();
 
         for (PurchaseOrderRequest.PurchaseOrderLineRequest lr : request.getLines()) {
-            BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
-            BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
-            BigDecimal vatAmount = lineAmount.multiply(vatRate)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-            subTotalAmount = subTotalAmount.add(lineAmount);
-            taxAmount = taxAmount.add(vatAmount);
-
             PurchaseOrderLine line = purchaseOrderMapper.toLineEntity(lr);
-            line.setPurchaseOrderId(po.getId());
-            line.setVatRate(vatRate);
-            line.setVatAmount(vatAmount);
-            line.setLineAmount(lineAmount);
-
-            po.getLines().add(line);
+            line.setVatRate(lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO);
+            po.addLine(line);
         }
-
-        po.setSubTotalAmount(subTotalAmount);
-        po.setTaxAmount(taxAmount);
-        po.setTotalAmount(subTotalAmount.add(taxAmount));
 
         PurchaseOrder updated = purchaseOrderRepository.save(po);
         log.info("Cập nhật đơn mua hàng {} bởi {}", updated.getPoCode(), actor);
@@ -229,11 +180,7 @@ public class PurchaseOrderService {
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
-        if (!DocumentStatus.DRAFT.name().equals(po.getStatus())) {
-            throw new BusinessException(String.format(SystemMessage.PO_ERR_002.getMessage(), po.getStatus()));
-        }
-
-        po.setStatus(DocumentStatus.APPROVED.name());
+        po.approve();
         PurchaseOrder approved = purchaseOrderRepository.save(po);
         log.info("Duyệt đơn mua hàng {} bởi {}", approved.getPoCode(), actor);
 
@@ -249,11 +196,7 @@ public class PurchaseOrderService {
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
-        if (DocumentStatus.POSTED.name().equals(po.getStatus()) || DocumentStatus.CANCELLED.name().equals(po.getStatus()) || DocumentStatus.APPROVED.name().equals(po.getStatus())) {
-            throw new BusinessException(String.format(SystemMessage.PO_ERR_001.getMessage(), po.getStatus()));
-        }
-
-        po.setStatus(DocumentStatus.CANCELLED.name());
+        po.cancel();
         PurchaseOrder cancelled = purchaseOrderRepository.save(po);
         log.info("Hủy đơn mua hàng {} bởi {}", cancelled.getPoCode(), actor);
 
