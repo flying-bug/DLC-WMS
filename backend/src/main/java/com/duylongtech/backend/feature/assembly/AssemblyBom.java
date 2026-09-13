@@ -86,7 +86,7 @@ public class AssemblyBom {
     }
 
     public void updateDetails(Product product, String bomCode, String bomName, BigDecimal versionNo) {
-        if (!DocumentStatus.DRAFT.name().equals(this.status) && !"REJECTED".equals(this.status)) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status) && !DocumentStatus.REJECTED.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được sửa BOM khi ở trạng thái DRAFT hoặc REJECTED");
         }
         if (product != null) this.product = product;
@@ -96,16 +96,16 @@ public class AssemblyBom {
     }
 
     public void submitForApproval(Long submitterId) {
-        if (!DocumentStatus.DRAFT.name().equals(this.status) && !"REJECTED".equals(this.status)) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status) && !DocumentStatus.REJECTED.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được trình duyệt BOM khi ở trạng thái DRAFT hoặc REJECTED");
         }
-        this.status = "PENDING_APPROVAL";
+        this.status = DocumentStatus.PENDING_APPROVAL.name();
         this.submittedBy = submitterId;
         this.submittedAt = LocalDateTime.now();
     }
 
     public void approve(Long approverId) {
-        if (!"PENDING_APPROVAL".equals(this.status)) {
+        if (!DocumentStatus.PENDING_APPROVAL.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được duyệt BOM khi đang ở trạng thái PENDING_APPROVAL");
         }
         this.status = DocumentStatus.APPROVED.name();
@@ -114,10 +114,10 @@ public class AssemblyBom {
     }
 
     public void reject(Long rejectorId, String reason) {
-        if (!"PENDING_APPROVAL".equals(this.status)) {
+        if (!DocumentStatus.PENDING_APPROVAL.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được từ chối BOM khi đang ở trạng thái PENDING_APPROVAL");
         }
-        this.status = "REJECTED";
+        this.status = DocumentStatus.REJECTED.name();
         this.rejectedBy = rejectorId;
         this.rejectedAt = LocalDateTime.now();
         this.rejectionReason = reason;

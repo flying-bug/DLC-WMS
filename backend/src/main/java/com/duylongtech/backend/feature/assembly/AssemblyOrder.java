@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.assembly;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.SettlementStatus;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -112,7 +113,7 @@ public class AssemblyOrder {
 
     @Column(name = "cancellation_settlement_status", nullable = false, length = 30)
         @Setter(AccessLevel.NONE)
-    private String cancellationSettlementStatus = "NONE";
+    private String cancellationSettlementStatus = SettlementStatus.NONE.name();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -141,7 +142,7 @@ public class AssemblyOrder {
         this.createdBy = creatorId;
         this.status = DocumentStatus.DRAFT.name();
         this.quantityProduced = BigDecimal.ZERO;
-        this.cancellationSettlementStatus = "NONE";
+        this.cancellationSettlementStatus = SettlementStatus.NONE.name();
     }
 
     public void updateDetails(String orderCode, AssemblyBom bom, ProductVariant targetVariant, Long warehouseId, BigDecimal quantity, LocalDate executionDate, String note) {
@@ -172,16 +173,16 @@ public class AssemblyOrder {
     }
 
     public void submitForApproval(Long submitterId) {
-        if (!DocumentStatus.DRAFT.name().equals(this.status) && !"REJECTED".equals(this.status)) {
+        if (!DocumentStatus.DRAFT.name().equals(this.status) && !DocumentStatus.REJECTED.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được trình duyệt khi ở trạng thái DRAFT hoặc REJECTED");
         }
-        this.status = "PENDING_APPROVAL"; // Using string because it might not be in DocumentStatus
+        this.status = DocumentStatus.PENDING_APPROVAL.name();
         this.submittedBy = submitterId;
         this.submittedAt = LocalDateTime.now();
     }
 
     public void approve(Long approverId) {
-        if (!"PENDING_APPROVAL".equals(this.status)) {
+        if (!DocumentStatus.PENDING_APPROVAL.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được duyệt khi lệnh ở trạng thái PENDING_APPROVAL");
         }
         this.status = DocumentStatus.APPROVED.name();
@@ -190,10 +191,10 @@ public class AssemblyOrder {
     }
 
     public void reject(Long rejectorId, String reason) {
-        if (!"PENDING_APPROVAL".equals(this.status)) {
+        if (!DocumentStatus.PENDING_APPROVAL.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được từ chối khi lệnh ở trạng thái PENDING_APPROVAL");
         }
-        this.status = "REJECTED";
+        this.status = DocumentStatus.REJECTED.name();
         this.rejectedBy = rejectorId;
         this.rejectedAt = LocalDateTime.now();
         this.rejectionReason = reason;
@@ -207,19 +208,19 @@ public class AssemblyOrder {
         this.cancelRequestedAt = LocalDateTime.now();
         this.cancellationReason = reason;
         if (DocumentStatus.SUBMITTED.name().equals(this.status)) {
-            this.status = "CANCEL_REQUESTED";
-            this.cancellationSettlementStatus = "PENDING";
+            this.status = DocumentStatus.CANCEL_REQUESTED.name();
+            this.cancellationSettlementStatus = SettlementStatus.PENDING.name();
         } else {
             // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED
             this.status = DocumentStatus.CANCELLED.name();
             this.cancelledBy = requesterId;
             this.cancelledAt = LocalDateTime.now();
-            this.cancellationSettlementStatus = "SETTLED";
+            this.cancellationSettlementStatus = SettlementStatus.SETTLED.name();
         }
     }
 
     public void confirmCancel(Long confirmerId) {
-        if (!"CANCEL_REQUESTED".equals(this.status)) {
+        if (!DocumentStatus.CANCEL_REQUESTED.name().equals(this.status)) {
             throw new IllegalStateException("Không có yêu cầu hủy nào cần xác nhận");
         }
         this.status = DocumentStatus.CANCELLED.name();
@@ -227,7 +228,7 @@ public class AssemblyOrder {
         this.cancelConfirmedAt = LocalDateTime.now();
         this.cancelledBy = confirmerId;
         this.cancelledAt = LocalDateTime.now();
-        this.cancellationSettlementStatus = "SETTLED";
+        this.cancellationSettlementStatus = SettlementStatus.SETTLED.name();
     }
 
     public void markAsInProgress() {

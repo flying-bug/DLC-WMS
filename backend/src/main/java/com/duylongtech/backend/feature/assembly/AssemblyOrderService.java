@@ -1201,7 +1201,7 @@ public class AssemblyOrderService {
     public AssemblyBomResponse submitBom(Long id, Long actorId) {
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
-        requireState(bom.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED");
+        requireState(bom.getStatus(), DocumentStatus.DRAFT.name(), DocumentStatus.REJECTED.name());
         validateBomEntity(bom);
         bom.submitForApproval(actorId);
         notifyRole("ROLE_ACCOUNTANT", "BOM chß╗¥ duyß╗çt: " + bom.getBomCode(),
@@ -1214,7 +1214,7 @@ public class AssemblyOrderService {
     public AssemblyBomResponse approveBom(Long id, Long actorId) {
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
-        requireState(bom.getStatus(), "PENDING_APPROVAL");
+        requireState(bom.getStatus(), DocumentStatus.PENDING_APPROVAL.name());
         validateBomEntity(bom);
         bom.approve(actorId);
         notifyUser(bom.getSubmittedBy(), "BOM ─æ├ú ─æ╞░ß╗úc duyß╗çt: " + bom.getBomCode(),
@@ -1227,7 +1227,7 @@ public class AssemblyOrderService {
     public AssemblyBomResponse rejectBom(Long id, Long actorId, String reason) {
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy ─æß╗ïnh mß╗⌐c vß║¡t t╞░"));
-        requireState(bom.getStatus(), "PENDING_APPROVAL");
+        requireState(bom.getStatus(), DocumentStatus.PENDING_APPROVAL.name());
         String normalizedReason = requireReason(reason);
         bom.reject(actorId, normalizedReason);
         notifyUser(bom.getSubmittedBy(), "BOM bß╗ï tß╗½ chß╗æi: " + bom.getBomCode(), normalizedReason,
@@ -1238,7 +1238,7 @@ public class AssemblyOrderService {
     @Transactional
     public AssemblyOrderResponse submitOrder(Long id, Long actorId) {
         AssemblyOrder order = findOrderOrThrow(id);
-        requireState(order.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED");
+        requireState(order.getStatus(), DocumentStatus.DRAFT.name(), DocumentStatus.REJECTED.name());
         order.submitForApproval(actorId);
         notifyRole("ROLE_ACCOUNTANT", "Lß╗çnh chß╗¥ duyß╗çt: " + order.getOrderCode(),
                 "Kß╗╣ thuß║¡t vi├¬n ─æ├ú gß╗¡i lß╗çnh " + order.getOrderCode() + " ─æß╗â duyß╗çt.", "ASSEMBLY_ORDER", order.getId(),
@@ -1254,7 +1254,7 @@ public class AssemblyOrderService {
                 && inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("ASSEMBLY_ORDER", id, "IN_PO")) {
             return toOrderResponse(order);
         }
-        requireState(order.getStatus(), "PENDING_APPROVAL");
+        requireState(order.getStatus(), DocumentStatus.PENDING_APPROVAL.name());
         if (!DocumentStatus.APPROVED.name().equals(order.getBom().getStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_018.getMessage());
         }
@@ -1273,7 +1273,7 @@ public class AssemblyOrderService {
     @Transactional
     public AssemblyOrderResponse rejectOrder(Long id, Long actorId, String reason) {
         AssemblyOrder order = findOrderOrThrow(id);
-        requireState(order.getStatus(), "PENDING_APPROVAL");
+        requireState(order.getStatus(), DocumentStatus.PENDING_APPROVAL.name());
         String normalizedReason = requireReason(reason);
         order.reject(actorId, normalizedReason);
         notifyUser(order.getCreatedBy(), "Lß╗çnh bß╗ï tß╗½ chß╗æi: " + order.getOrderCode(), order.getRejectionReason(),
@@ -1284,9 +1284,10 @@ public class AssemblyOrderService {
     @Transactional
     public AssemblyOrderResponse requestCancel(Long id, Long actorId, String reason) {
         AssemblyOrder order = findOrderOrThrow(id);
-        requireState(order.getStatus(), DocumentStatus.DRAFT.name(), "REJECTED", "PENDING_APPROVAL", DocumentStatus.APPROVED.name(), "IN_PROGRESS");
+        requireState(order.getStatus(), DocumentStatus.DRAFT.name(), DocumentStatus.REJECTED.name(),
+                DocumentStatus.PENDING_APPROVAL.name(), DocumentStatus.APPROVED.name(), DocumentStatus.SUBMITTED.name());
         order.requestCancel(actorId, requireReason(reason));
-        if ("CANCELLED".equals(order.getStatus())) {
+        if (DocumentStatus.CANCELLED.name().equals(order.getStatus())) {
 notifyRole("ROLE_ACCOUNTANT", "Y├¬u cß║ºu hß╗ºy: " + order.getOrderCode(),
                     order.getCancellationReason(), "ASSEMBLY_ORDER_CANCEL", order.getId(),
                     "/assembly-orders/" + order.getId());
@@ -1297,7 +1298,7 @@ notifyRole("ROLE_ACCOUNTANT", "Y├¬u cß║ºu hß╗ºy: " + order.getOrderCo
     @Transactional
     public AssemblyOrderResponse confirmCancel(Long id, Long actorId) {
         AssemblyOrder order = findOrderOrThrow(id);
-        if (!"REQUESTED".equals(order.getCancellationSettlementStatus())) {
+        if (!com.duylongtech.backend.enums.SettlementStatus.PENDING.name().equals(order.getCancellationSettlementStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_040.getMessage());
         }
         List<InventoryDocument> documents = inventoryDocumentRepository
