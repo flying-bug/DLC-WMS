@@ -127,16 +127,12 @@ public class WarehouseStaffService {
 
             if (existingMapping != null) {
                 if (!existingMapping.getIsActive()) {
-                    existingMapping.setIsActive(true);
+                    existingMapping.updateStatus(true);
                     userWarehouseRoleRepository.save(existingMapping);
                 }
             } else {
-                UserWarehouseRole newMapping = UserWarehouseRole.builder()
-                        .userId(request.getUserId())
-                        .warehouseId(warehouseId)
-                        .roleId(roleId)
-                        .isActive(true)
-                        .build();
+                UserWarehouseRole newMapping = new UserWarehouseRole();
+                newMapping.initRole(request.getUserId(), warehouseId, roleId);
                 userWarehouseRoleRepository.save(newMapping);
             }
         }
@@ -144,7 +140,7 @@ public class WarehouseStaffService {
         // Deactivate roles not in the request
         for (UserWarehouseRole currentRole : currentRoles) {
             if (!requestedRoleIds.contains(currentRole.getRoleId()) && currentRole.getIsActive()) {
-                currentRole.setIsActive(false);
+                currentRole.updateStatus(false);
                 userWarehouseRoleRepository.save(currentRole);
             }
         }
@@ -172,7 +168,7 @@ public class WarehouseStaffService {
         boolean updated = false;
         for (UserWarehouseRole role : currentRoles) {
             if (role.getIsActive()) {
-                role.setIsActive(false);
+                role.updateStatus(false);
                 userWarehouseRoleRepository.save(role);
                 updated = true;
             }

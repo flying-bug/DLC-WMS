@@ -95,7 +95,8 @@ public class UserService {
         User user = userRepository.findWithRolesById(userDetails.getId())
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         UploadResponse uploaded = cloudinaryService.uploadImage(file, "avatars");
-        user.setAvatarUrl(uploaded.getSecureUrl() != null ? uploaded.getSecureUrl() : uploaded.getUrl());
+        String avatarUrl = uploaded.getSecureUrl() != null ? uploaded.getSecureUrl() : uploaded.getUrl();
+        user.updateProfile(user.getFullName(), avatarUrl, user.getEmail(), user.getPhone(), user.getAddress(), user.getIdCard(), user.getDob(), user.getGender());
         User saved = userRepository.save(user);
         return mapToDetailDto(saved);
     }
@@ -120,8 +121,7 @@ public class UserService {
             throw new BusinessException(SystemMessage.PHONE_EXISTS);
         }
 
-        user.setFullName(fullName);
-        user.setPhone(phone);
+        user.updateProfile(fullName, user.getAvatarUrl(), user.getEmail(), phone, user.getAddress(), user.getIdCard(), user.getDob(), user.getGender());
         User saved = userRepository.save(user);
         return mapToDetailDto(saved);
     }
@@ -212,17 +212,13 @@ public class UserService {
         }
 
         User user = userMapper.toEntity(userDto);
-        user.setUsername(username);
-        user.setFullName(fullName);
-        user.setEmail(email);
-        user.setPhone(phone);
-        user.setStatus(DocumentStatus.APPROVED.name());
-        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+        user.initUser(username, null, passwordEncoder.encode(temporaryPassword), fullName, DocumentStatus.APPROVED.name());
+        user.updateProfile(fullName, null, email, phone, null, null, null, null);
         String idCard = userDto.getIdCard() != null ? userDto.getIdCard().trim() : null;
         if (idCard != null && idCard.length() > 20) {
             idCard = idCard.substring(0, 20);
         }
-        user.setIdCard(idCard);
+        user.updateProfile(user.getFullName(), user.getAvatarUrl(), user.getEmail(), user.getPhone(), user.getAddress(), idCard, user.getDob(), user.getGender());
 
         if (userDto.getRoles() == null || userDto.getRoles().isEmpty()) {
             throw new BusinessException(SystemMessage.ROLE_REQUIRED);
@@ -231,7 +227,7 @@ public class UserService {
         userDto.getRoles().forEach(roleCode -> {
             findRoleByCode(roleCode).ifPresent(roles::add);
         });
-        user.setRoles(roles);
+        
 
         User savedUser = userRepository.save(user);
         try {
@@ -261,7 +257,7 @@ public class UserService {
             throw new BusinessException(SystemMessage.CANNOT_LOCK_SELF);
         }
 
-        user.setStatus(normalizedStatus);
+        user.changeStatus(normalizedStatus);
         userRepository.save(user);
     }
 
@@ -278,7 +274,7 @@ public class UserService {
                 permissionRepository.findByCode(code).ifPresent(permissions::add);
             });
         }
-        user.setPermissions(permissions);
+        user.updatePermissions(permissions);
         userRepository.save(user);
     }
 
@@ -295,7 +291,7 @@ public class UserService {
             if (!email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmailAndIdNot(email, id)) {
                 throw new BusinessException(SystemMessage.EMAIL_EXISTS);
             }
-            user.setEmail(email);
+            user.updateProfile(user.getFullName(), user.getAvatarUrl(), email, user.getPhone(), user.getAddress(), user.getIdCard(), user.getDob(), user.getGender());
         }
 
         if (userDto.getPhone() != null) {
@@ -309,7 +305,7 @@ public class UserService {
             if (!phone.equals(user.getPhone()) && userRepository.existsByPhoneAndIdNot(phone, id)) {
                 throw new BusinessException(SystemMessage.PHONE_EXISTS);
             }
-            user.setPhone(phone);
+            user.updateProfile(user.getFullName(), user.getAvatarUrl(), user.getEmail(), phone, user.getAddress(), user.getIdCard(), user.getDob(), user.getGender());
         }
 
         if (userDto.getStatus() != null) {
@@ -317,7 +313,7 @@ public class UserService {
             if (!Set.of(DocumentStatus.APPROVED.name(), com.duylongtech.backend.enums.EntityStatus.INACTIVE.name()).contains(normalizedStatus)) {
                 throw new BusinessException(SystemMessage.INVALID_USER_STATUS);
             }
-            user.setStatus(normalizedStatus);
+            user.changeStatus(normalizedStatus);
         }
 
         if (userDto.getRoles() != null) {
@@ -328,18 +324,18 @@ public class UserService {
             if (roles.isEmpty()) {
                 throw new BusinessException(SystemMessage.ROLE_REQUIRED);
             }
-            user.setRoles(roles);
+            
         }
         userMapper.updateEntity(user, userDto);
 
         if (userDto.getFullName() != null) {
-            user.setFullName(normalizeFullName(userDto.getFullName()));
+            user.updateProfile(normalizeFullName(userDto.getFullName()), user.getAvatarUrl(), user.getEmail(), user.getPhone(), user.getAddress(), user.getIdCard(), user.getDob(), user.getGender());
         }
         
         if (userDto.getIdCard() != null) {
             String idCard = userDto.getIdCard().trim();
             if (idCard.length() > 20) idCard = idCard.substring(0, 20);
-            user.setIdCard(idCard);
+            user.updateProfile(user.getFullName(), user.getAvatarUrl(), user.getEmail(), user.getPhone(), user.getAddress(), idCard, user.getDob(), user.getGender());
         }
         User updated = userRepository.save(user);
         return userMapper.toDto(updated);

@@ -24,13 +24,13 @@ public abstract class SupplierMapper {
     public abstract SupplierResponse toResponse(Partner partner);
 
     @AfterMapping
-    protected void mapCurrentDebt(Partner partner, @MappingTarget SupplierResponse.SupplierResponseBuilder responseBuilder) {
+    protected void mapCurrentDebt(Partner partner, @MappingTarget SupplierResponse response) {
         BigDecimal currentDebt = BigDecimal.ZERO;
         Optional<PartnerLedger> latestLedger = partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(partner.getId());
         if (latestLedger.isPresent()) {
             currentDebt = latestLedger.get().getBalanceAfter();
         }
-        responseBuilder.currentDebt(currentDebt);
+        response.setCurrentDebt(currentDebt);
     }
 
 }

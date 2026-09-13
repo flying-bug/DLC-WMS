@@ -11,8 +11,6 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AssemblyOrderLine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,8 +33,7 @@ public class AssemblyOrderLine {
     private BigDecimal quantityActual;
 
     @Column(name = "unit_cost", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
-    @Setter(AccessLevel.NONE)
+        @Setter(AccessLevel.NONE)
     private BigDecimal unitCost = BigDecimal.ZERO;
 
     @Column(columnDefinition = "TEXT")

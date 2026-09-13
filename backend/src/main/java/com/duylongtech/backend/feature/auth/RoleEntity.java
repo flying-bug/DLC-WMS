@@ -11,10 +11,7 @@ import java.util.Set;
 @Entity
 @Table(name = "ROLES")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class RoleEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,6 +43,25 @@ public class RoleEntity {
             joinColumns = @JoinColumn(name = "role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    @Builder.Default
     private Set<PermissionEntity> permissions = new HashSet<>();
+
+    public void initRole(String code, String name, String description, String status) {
+        this.code = code;
+        this.name = name;
+        this.description = description;
+        this.status = status;
+    }
+
+    public void updateStatus(String status) {
+        this.status = status;
+    }
+
+    public void updateDetails(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    public void updatePermissions(Set<PermissionEntity> permissions) {
+        this.permissions = permissions;
+    }
 }

@@ -188,8 +188,12 @@ public class SystemSettingsService {
 
     private void upsert(String key, String value) {
         SystemSetting s = settingRepo.findBySettingKey(key)
-                .orElse(SystemSetting.builder().settingKey(key).build());
-        s.setSettingValue(value);
+                .orElseGet(() -> {
+                    SystemSetting created = new SystemSetting();
+                    created.initSetting(key, null, null);
+                    return created;
+                });
+        s.updateValue(value);
         settingRepo.save(s);
     }
 }

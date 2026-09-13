@@ -13,10 +13,7 @@ import java.util.List;
 @Entity
 @Table(name = "STOCK_TRANSFERS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class StockTransfer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,6 +41,10 @@ public class StockTransfer {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
+    public void setNote(String note) {
+        this.note = note;
+    }
+
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
@@ -53,8 +54,16 @@ public class StockTransfer {
     @Column(name = "deliverer", length = 100)
     private String deliverer;
 
+    public void setDeliverer(String deliverer) {
+        this.deliverer = deliverer;
+    }
+
     @Column(name = "attached_document", length = 255)
     private String attachedDocument;
+
+    public void setAttachedDocument(String attachedDocument) {
+        this.attachedDocument = attachedDocument;
+    }
 
     @Column(name = "reference_id")
     private Long referenceId;
@@ -65,6 +74,12 @@ public class StockTransfer {
     @Column(name = "reference_code", length = 100)
     private String referenceCode;
 
+    public void initReference(Long referenceId, String referenceType, String referenceCode) {
+        this.referenceId = referenceId;
+        this.referenceType = referenceType;
+        this.referenceCode = referenceCode;
+    }
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -74,12 +89,11 @@ public class StockTransfer {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "stockTransfer", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<StockTransferLine> lines = new ArrayList<>();
+        private List<StockTransferLine> lines = new ArrayList<>();
 
     // --- DOMAIN METHODS ---
 
-    public void initDraft(String code, Long fromWh, Long toWh) {
+    public void initDraft(String code, Long fromWh, Long toWh, LocalDate transferDate) {
         if (fromWh == null || toWh == null || fromWh.equals(toWh)) {
             throw new IllegalArgumentException("Kho xuất và kho nhập phải khác nhau và không được để trống");
         }
@@ -88,7 +102,14 @@ public class StockTransfer {
         }
         this.fromWarehouseId = fromWh;
         this.toWarehouseId = toWh;
+        this.transferDate = transferDate != null ? transferDate : LocalDate.now();
         this.status = "DRAFT"; // Sử dụng DRAFT (hoặc DocumentStatus.DRAFT.name())
+    }
+
+    public void updateTransferDate(LocalDate transferDate) {
+        if (transferDate != null) {
+            this.transferDate = transferDate;
+        }
     }
 
     public void assignCreator(Long userId) {

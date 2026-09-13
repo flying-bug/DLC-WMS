@@ -20,12 +20,13 @@ public abstract class ProductCategoryMapper {
     public abstract ProductCategoryResponse toResponse(ProductCategory category);
 
     @AfterMapping
-    protected void mapParentName(ProductCategory category, @MappingTarget ProductCategoryResponse.ProductCategoryResponseBuilder responseBuilder) {
+    protected void mapParentName(ProductCategory category, @MappingTarget ProductCategoryResponse response) {
         if (category.getParentId() != null) {
             categoryRepository.findById(category.getParentId())
-                    .ifPresent(parent -> responseBuilder.parentName(parent.getName()));
+                    .ifPresent(parent -> response.setParentName(parent.getName()));
         }
     }
 
     public abstract void updateEntity(@MappingTarget ProductCategory category, ProductCategoryRequest request);
 }
+

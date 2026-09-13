@@ -55,17 +55,8 @@ public class AppNotificationService {
     @Transactional
     public AppNotification createNotification(String recipientRole, Long userId, String title, String message,
                                               String type, String referenceType, Long referenceId, String link) {
-        AppNotification notif = AppNotification.builder()
-                .recipientRole(recipientRole)
-                .userId(userId)
-                .title(title)
-                .message(message)
-                .type(type)
-                .referenceType(referenceType)
-                .referenceId(referenceId)
-                .link(link)
-                .isRead(false)
-                .build();
+        AppNotification notif = new AppNotification();
+        notif.initNotification(recipientRole, userId, title, message, type, referenceType, referenceId, link);
         return notificationRepository.save(notif);
     }
 }

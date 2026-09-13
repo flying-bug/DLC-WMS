@@ -11,8 +11,6 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AssemblyBomLine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

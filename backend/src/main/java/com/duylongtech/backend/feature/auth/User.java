@@ -11,10 +11,7 @@ import java.util.Set;
 @Entity
 @Table(name = "USERS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -77,7 +74,6 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -86,6 +82,47 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    @Builder.Default
     private Set<PermissionEntity> permissions = new HashSet<>();
+
+    public void initUser(String username, String userCode, String passwordHash, String fullName, String status) {
+        this.username = username;
+        this.userCode = userCode;
+        this.passwordHash = passwordHash;
+        this.fullName = fullName;
+        this.status = status;
+    }
+
+    public void updateProfile(String fullName, String avatarUrl, String email, String phone, String address, String idCard, java.time.LocalDate dob, String gender) {
+        this.fullName = fullName;
+        this.avatarUrl = avatarUrl;
+        this.email = email;
+        this.phone = phone;
+        this.address = address;
+        this.idCard = idCard;
+        this.dob = dob;
+        this.gender = gender;
+    }
+
+    public void updateWorkInfo(String position, String department, java.time.LocalDate startDate) {
+        this.position = position;
+        this.department = department;
+        this.startDate = startDate;
+    }
+
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public void changeStatus(String status) {
+        this.status = status;
+    }
+
+
+    public void updateRoles(Set<RoleEntity> roles) {
+        this.roles = roles;
+    }
+
+    public void updatePermissions(Set<PermissionEntity> permissions) {
+        this.permissions = permissions;
+    }
 }

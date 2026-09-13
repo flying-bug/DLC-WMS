@@ -121,14 +121,11 @@ public class StockTransferService {
         }
 
         StockTransfer stockTransfer = new StockTransfer();
-        stockTransfer.initDraft(transferCode, requestDTO.getFromWarehouseId(), requestDTO.getToWarehouseId());
-        stockTransfer.setTransferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : java.time.LocalDate.now());
+        stockTransfer.initDraft(transferCode, requestDTO.getFromWarehouseId(), requestDTO.getToWarehouseId(), requestDTO.getTransferDate());
         stockTransfer.setNote(requestDTO.getNote());
         stockTransfer.setDeliverer(requestDTO.getDeliverer());
         stockTransfer.setAttachedDocument(requestDTO.getAttachedDocument());
-        stockTransfer.setReferenceId(requestDTO.getReferenceId());
-        stockTransfer.setReferenceType(requestDTO.getReferenceType());
-        stockTransfer.setReferenceCode(requestDTO.getReferenceCode());
+        stockTransfer.initReference(requestDTO.getReferenceId(), requestDTO.getReferenceType(), requestDTO.getReferenceCode());
         stockTransfer.assignCreator(userId);
 
         for (StockTransferLineDTO lineDTO : requestDTO.getLines()) {
@@ -142,13 +139,8 @@ public class StockTransferService {
             }
 
             BigDecimal unitCost = resolveTransferUnitCost(requestDTO.getFromWarehouseId(), lineDTO.getVariantId(), lineDTO.getUnitCost());
-            StockTransferLine line = StockTransferLine.builder()
-                    .variantId(lineDTO.getVariantId())
-                    .quantity(lineDTO.getQuantity())
-                    .unitCost(unitCost)
-                    .serialNumbersText(serialsJson)
-                    .note(lineDTO.getNote())
-                    .build();
+            StockTransferLine line = new StockTransferLine();
+            line.initLine(lineDTO.getVariantId(), lineDTO.getQuantity(), unitCost, serialsJson, lineDTO.getNote());
             stockTransfer.addLine(line);
         }
 
@@ -177,7 +169,7 @@ public class StockTransferService {
             stockTransfer.changeWarehouses(requestDTO.getFromWarehouseId(), requestDTO.getToWarehouseId());
         }
 
-        stockTransfer.setTransferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : stockTransfer.getTransferDate());
+        stockTransfer.updateTransferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : stockTransfer.getTransferDate());
         if (requestDTO.getStatus() != null && !stockTransfer.getStatus().equals(requestDTO.getStatus())) {
             if ("CANCELLED".equals(requestDTO.getStatus())) {
                 stockTransfer.cancel();
@@ -188,9 +180,7 @@ public class StockTransferService {
         stockTransfer.setNote(requestDTO.getNote());
         stockTransfer.setDeliverer(requestDTO.getDeliverer());
         stockTransfer.setAttachedDocument(requestDTO.getAttachedDocument());
-        stockTransfer.setReferenceId(requestDTO.getReferenceId());
-        stockTransfer.setReferenceType(requestDTO.getReferenceType());
-        stockTransfer.setReferenceCode(requestDTO.getReferenceCode());
+        stockTransfer.initReference(requestDTO.getReferenceId(), requestDTO.getReferenceType(), requestDTO.getReferenceCode());
 
         stockTransferLineRepository.deleteAll(stockTransfer.getLines());
         stockTransfer.clearLines();
@@ -206,13 +196,8 @@ public class StockTransferService {
             }
 
             BigDecimal unitCost = resolveTransferUnitCost(requestDTO.getFromWarehouseId(), lineDTO.getVariantId(), lineDTO.getUnitCost());
-            StockTransferLine line = StockTransferLine.builder()
-                    .variantId(lineDTO.getVariantId())
-                    .quantity(lineDTO.getQuantity())
-                    .unitCost(unitCost)
-                    .serialNumbersText(serialsJson)
-                    .note(lineDTO.getNote())
-                    .build();
+            StockTransferLine line = new StockTransferLine();
+            line.initLine(lineDTO.getVariantId(), lineDTO.getQuantity(), unitCost, serialsJson, lineDTO.getNote());
             stockTransfer.addLine(line);
         }
 
@@ -354,7 +339,7 @@ public class StockTransferService {
             }
 
             if (line.getUnitCost() == null || line.getUnitCost().compareTo(BigDecimal.ZERO) <= 0) {
-                line.setUnitCost(unitCost);
+                line.updateUnitCost(unitCost);
                 stockTransferLineRepository.save(line);
             }
 

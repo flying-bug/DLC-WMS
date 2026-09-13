@@ -8,10 +8,7 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "STOCK_TRANSFER_LINES")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class StockTransferLine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,4 +32,22 @@ public class StockTransferLine {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    public void initLine(Long variantId, BigDecimal quantity, BigDecimal unitCost, String serialNumbersText, String note) {
+        this.variantId = variantId;
+        this.quantity = quantity;
+        this.unitCost = unitCost != null ? unitCost : BigDecimal.ZERO;
+        this.serialNumbersText = serialNumbersText;
+        this.note = note;
+    }
+
+    public void setStockTransfer(StockTransfer stockTransfer) {
+        this.stockTransfer = stockTransfer;
+    }
+
+    public void updateUnitCost(BigDecimal unitCost) {
+        if (unitCost != null) {
+            this.unitCost = unitCost;
+        }
+    }
 }

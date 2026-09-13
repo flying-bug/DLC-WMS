@@ -72,17 +72,8 @@ public class AuditLogService {
                 user = userOpt.orElse(null);
             }
 
-            AuditLog logEntity = AuditLog.builder()
-                    .user(user)
-                    .action(action)
-                    .entityName(entityName)
-                    .entityId(entityId)
-                    .detail(detailJson)
-                    .ipAddress(ipAddress)
-                    .status(status)
-                    .description(sanitizeDescription(description))
-                    .createdAt(Instant.now())
-                    .build();
+            AuditLog logEntity = new AuditLog();
+            logEntity.initLog(user, action, entityName, entityId, detailJson, ipAddress, status, sanitizeDescription(description));
 
             auditLogRepository.save(logEntity);
         } catch (Exception e) {

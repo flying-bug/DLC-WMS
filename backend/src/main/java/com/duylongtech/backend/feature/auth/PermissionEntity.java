@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "PERMISSIONS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class PermissionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,4 +37,12 @@ public class PermissionEntity {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initPermission(String code, String name, String module, String description, String status) {
+        this.code = code;
+        this.name = name;
+        this.module = module;
+        this.description = description;
+        this.status = status;
+    }
 }

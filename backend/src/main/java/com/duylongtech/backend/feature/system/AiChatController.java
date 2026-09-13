@@ -47,11 +47,8 @@ public class AiChatController {
             userId = userDetails.getId();
         }
 
-        AiChatLog log = AiChatLog.builder()
-                .userId(userId)
-                .question(request.getMessage())
-                .answer(response.getAnswer())
-                .build();
+        AiChatLog log = new AiChatLog();
+            log.initLog(userId, request.getMessage(), response.getAnswer());
         aiChatLogRepository.save(log);
 
         return ResponseEntity.ok(ApiResponse.success(response));

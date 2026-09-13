@@ -58,7 +58,7 @@ public class RoleService {
             }
         }
 
-        role.setPermissions(targetPermissions);
+        role.updatePermissions(targetPermissions);
         RoleEntity saved = roleRepository.save(role);
         log.info("Cập nhật phân quyền cho vai trò [{} - {}]: {} quyền", role.getCode(), role.getName(), targetPermissions.size());
         return saved;
@@ -71,7 +71,7 @@ public class RoleService {
         Set<PermissionEntity> allPerms = new HashSet<>(permissionRepository.findAll());
         Set<PermissionEntity> defaultPerms = getDefaultPermissionsForRole(role.getCode(), allPerms);
 
-        role.setPermissions(defaultPerms);
+        role.updatePermissions(defaultPerms);
         RoleEntity saved = roleRepository.save(role);
         log.info("Khôi phục quyền mặc định cho vai trò [{} - {}]: {} quyền", role.getCode(), role.getName(), defaultPerms.size());
         return saved;

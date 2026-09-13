@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "system_settings")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class SystemSetting {
 
     @Id
@@ -31,4 +28,14 @@ public class SystemSetting {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initSetting(String settingKey, String settingValue, String description) {
+        this.settingKey = settingKey;
+        this.settingValue = settingValue;
+        this.description = description;
+    }
+
+    public void updateValue(String settingValue) {
+        this.settingValue = settingValue;
+    }
 }

@@ -1368,16 +1368,9 @@ public class InventoryDocumentService {
             for (int targetIndex = 0; targetIndex < targetSerials.size(); targetIndex++) {
                 for (int componentIndex = 0; componentIndex < perTarget; componentIndex++) {
                     String componentSerial = componentSerials.get(targetIndex * perTarget + componentIndex);
-                    assemblyOrderSerialRepository.save(AssemblyOrderSerial.builder()
-                            .assemblyOrder(order)
-                            .targetVariant(order.getTargetVariant())
-                            .targetSerial(targetSerials.get(targetIndex))
-                            .componentVariant(orderLine.getComponentVariant())
-                            .componentSerial(componentSerial)
-                            .status(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name())
-                            .installedAt(LocalDateTime.now())
-                            .createdBy(order.getCreatedBy())
-                            .build());
+                    AssemblyOrderSerial aos = new AssemblyOrderSerial();
+                    aos.initSerial(order, order.getTargetVariant(), targetSerials.get(targetIndex), orderLine.getComponentVariant(), componentSerial, order.getCreatedBy());
+                    assemblyOrderSerialRepository.save(aos);
                 }
             }
         }

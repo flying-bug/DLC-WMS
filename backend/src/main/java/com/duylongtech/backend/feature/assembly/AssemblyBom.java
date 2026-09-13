@@ -18,8 +18,6 @@ import com.duylongtech.backend.feature.product.Product;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AssemblyBom {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,13 +37,11 @@ public class AssemblyBom {
 
     @Setter(AccessLevel.NONE)
     @Column(name = "version_no", nullable = false, precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal versionNo = BigDecimal.ONE;
+        private BigDecimal versionNo = BigDecimal.ONE;
 
     @Setter(AccessLevel.NONE)
     @Column(nullable = false, length = 30)
-    @Builder.Default
-    private String status = DocumentStatus.DRAFT.name();
+        private String status = DocumentStatus.DRAFT.name();
 
     @Column(name = "submitted_by")
     private Long submittedBy;
@@ -77,8 +73,7 @@ public class AssemblyBom {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "assemblyBom", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    @Setter(AccessLevel.NONE)
+        @Setter(AccessLevel.NONE)
     private List<AssemblyBomLine> lines = new ArrayList<>();
 
     public void initBom(Product product, String bomCode, String bomName, BigDecimal versionNo, Long submitterId) {
@@ -87,6 +82,13 @@ public class AssemblyBom {
         this.bomName = bomName;
         this.versionNo = versionNo != null ? versionNo : BigDecimal.ONE;
         this.status = DocumentStatus.DRAFT.name();
+        this.submittedBy = submitterId;
+    }
+
+    public void forceUpdateStatus(String status) {
+        if (status != null) {
+            this.status = status;
+        }
     }
 
     public void updateDetails(Product product, String bomCode, String bomName, BigDecimal versionNo) {

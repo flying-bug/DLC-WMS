@@ -13,8 +13,6 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class DeviceComponentSerial {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,8 +48,7 @@ public class DeviceComponentSerial {
 
     @Setter(AccessLevel.NONE)
     @Column(name = "status", nullable = false, length = 30)
-    @Builder.Default
-    private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
 
     @Setter(AccessLevel.NONE)
     @Column(name = "installed_at")
@@ -108,6 +105,19 @@ public class DeviceComponentSerial {
         this.status = "REMOVED";
         this.removedAt = LocalDateTime.now();
         this.note = note;
+    }
+
+    public void initForRepair(AssemblyOrder sourceOrder, ProductVariant targetVariant, String targetSerial, ProductVariant componentVariant, String componentSerial, Long repairId, String note, Long creatorId) {
+        this.sourceAssemblyOrder = sourceOrder;
+        this.targetVariant = targetVariant;
+        this.targetSerial = targetSerial;
+        this.componentVariant = componentVariant;
+        this.componentSerial = componentSerial;
+        this.sourceRepairId = repairId;
+        this.note = note;
+        this.createdBy = creatorId;
+        this.status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        this.installedAt = LocalDateTime.now();
     }
 
     public void markAsRemoved(Long repairId, AssemblyOrder removedByAssemblyOrder, String note) {

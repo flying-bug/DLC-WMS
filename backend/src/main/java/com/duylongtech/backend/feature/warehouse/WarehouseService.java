@@ -93,14 +93,11 @@ public class WarehouseService {
         com.duylongtech.backend.feature.auth.User creator = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
 
-        Warehouse warehouse = Warehouse.builder()
-                .code(request.getCode())
-                .name(request.getName())
-                .address(request.getAddress())
-                .type(request.getType() != null && !request.getType().isBlank() ? request.getType() : "STANDARD")
-                .status(DocumentStatus.APPROVED.name())
-                .creator(creator)
-                .build();
+        Warehouse warehouse = new Warehouse();
+        warehouse.initWarehouse(request.getCode(), request.getName(), request.getAddress(), 
+                request.getType() != null && !request.getType().isBlank() ? request.getType() : "STANDARD");
+        warehouse.setStatus(DocumentStatus.APPROVED.name());
+        warehouse.assignCreator(creator);
 
         Warehouse saved = warehouseRepository.save(warehouse);
 
@@ -112,12 +109,8 @@ public class WarehouseService {
         }
 
         // Ghi nhận người tạo vào USER_WAREHOUSE_ROLES
-        UserWarehouseRole ownerRole = UserWarehouseRole.builder()
-                .userId(currentUserId)
-                .warehouseId(saved.getId())
-                .roleId(roleId)
-                .isActive(true)
-                .build();
+        UserWarehouseRole ownerRole = new UserWarehouseRole();
+        ownerRole.initRole(currentUserId, saved.getId(), roleId);
         userWarehouseRoleRepository.save(ownerRole);
 
         return warehouseMapper.toResponse(saved);
@@ -222,18 +215,15 @@ public class WarehouseService {
         }
 
         // Chỉ cho phép sửa name, address, status, type. Code là read-only.
-        warehouse.setName(request.getName());
-        warehouse.setAddress(request.getAddress());
+        warehouse.updateDetails(null, request.getName(), request.getAddress(), request.getType() != null && !request.getType().isBlank() ? request.getType() : null);
+        
         if (request.getStatus() != null) {
             warehouse.setStatus(request.getStatus());
-        }
-        if (request.getType() != null && !request.getType().isBlank()) {
-            warehouse.setType(request.getType());
         }
 
         // Set updater
         if (currentUserId != null) {
-            warehouse.setUpdater(userRepository.findById(currentUserId).orElse(null));
+            warehouse.assignUpdater(userRepository.findById(currentUserId).orElse(null));
         }
 
         Warehouse updated = warehouseRepository.save(warehouse);

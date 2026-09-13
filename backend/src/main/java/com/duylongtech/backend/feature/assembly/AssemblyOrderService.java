@@ -146,15 +146,9 @@ public class AssemblyOrderService {
         String productCode = trimToNull(product.getProductCode()) != null ? product.getProductCode().trim() : String.valueOf(product.getId());
         String bomCode = "CH-" + productCode + "-v" + nextVersion.stripTrailingZeros().toPlainString();
         
-        AssemblyBom bom = AssemblyBom.builder()
-                .product(product)
-                .bomCode(bomCode)
-                .bomName(trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName())
-                .versionNo(nextVersion)
-                .status(normalizeBomStatus(request.getStatus(), DocumentStatus.APPROVED.name()))
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        AssemblyBom bom = new AssemblyBom();
+        bom.initBom(product, bomCode, trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName(), nextVersion, null);
+        bom.forceUpdateStatus(normalizeBomStatus(request.getStatus(), DocumentStatus.APPROVED.name()));
         rebuildBomLines(bom, request.getLines());
         return toBomResponse(assemblyBomRepository.save(bom));
     }

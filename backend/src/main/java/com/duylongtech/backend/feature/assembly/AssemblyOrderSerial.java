@@ -11,8 +11,6 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AssemblyOrderSerial {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,8 +41,7 @@ public class AssemblyOrderSerial {
 
     @Setter(AccessLevel.NONE)
     @Column(name = "status", nullable = false, length = 30)
-    @Builder.Default
-    private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
 
     @Setter(AccessLevel.NONE)
     @Column(name = "installed_at")

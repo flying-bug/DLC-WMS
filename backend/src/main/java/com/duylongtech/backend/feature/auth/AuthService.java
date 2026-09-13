@@ -199,7 +199,7 @@ public class AuthService {
         com.duylongtech.backend.feature.auth.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
 
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.changePassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_RESET", "Mật khẩu của bạn vừa được thay đổi. Vui lòng đăng nhập lại.");
 
@@ -216,7 +216,7 @@ public class AuthService {
             throw new BusinessException(SystemMessage.WRONG_PASSWORD);
         }
 
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.changePassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_CHANGED", "Mat khau cua ban vua duoc thay doi. Vui long dang nhap lai.");
     }

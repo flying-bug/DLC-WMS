@@ -205,13 +205,9 @@ public class BackupService {
         }
 
         long fileSize = Files.size(outPath);
-        BackupRecord record = BackupRecord.builder()
-                .filename(filename)
-                .fileSize(fileSize)
-                .status(BackupRecord.BackupStatus.LOCAL)
-                .createdBy(actor)
-                .note(encrypt && !encKey.isBlank() ? "Backup mã hóa (AES-256)" : "Backup thủ công")
-                .build();
+        BackupRecord record = new BackupRecord();
+        record.initRecord(filename, fileSize, BackupRecord.BackupStatus.LOCAL, null, null, actor,
+                encrypt && !encKey.isBlank() ? "Backup mã hóa (AES-256)" : "Backup thủ công");
 
         record = backupRecordRepo.save(record);
         log.info("Backup created: {} ({})", filename, SystemHealthService.formatBytes(fileSize));
@@ -260,9 +256,8 @@ public class BackupService {
         String driveFileId = driveService.uploadFile(file, MIME_GZIP);
         String webLink     = driveService.getWebViewLink(driveFileId);
 
-        record.setDriveFileId(driveFileId);
-        record.setDriveLink(webLink);
-        record.setStatus(BackupRecord.BackupStatus.BOTH);
+        record.updateDriveInfo(driveFileId, webLink);
+        record.updateStatus(BackupRecord.BackupStatus.BOTH);
         return backupRecordRepo.save(record);
     }
 
@@ -298,36 +293,16 @@ public class BackupService {
 
             if (optRecord.isPresent()) {
                 BackupRecord rec = optRecord.get();
-                rec.setDriveFileId(driveFileId);
-                if (driveLink != null && !driveLink.isBlank()) {
-                    rec.setDriveLink(driveLink);
-                }
+                rec.updateDriveInfo(driveFileId, (driveLink != null && !driveLink.isBlank()) ? driveLink : rec.getDriveLink());
                 if (rec.getFileSize() == null || rec.getFileSize() == 0) {
-                    rec.setFileSize(size);
+                    rec.updateFileSize(size);
                 }
-                rec.setStatus(existsOnDisk ? BackupRecord.BackupStatus.BOTH : BackupRecord.BackupStatus.DRIVE);
+                rec.updateStatus(existsOnDisk ? BackupRecord.BackupStatus.BOTH : BackupRecord.BackupStatus.DRIVE);
                 backupRecordRepo.save(rec);
             } else {
-                LocalDateTime createdAt = LocalDateTime.now();
-                if (df.getCreatedTime() != null) {
-                    try {
-                        createdAt = LocalDateTime.ofInstant(
-                                java.time.Instant.ofEpochMilli(df.getCreatedTime().getValue()),
-                                java.time.ZoneId.systemDefault()
-                        );
-                    } catch (Exception ignored) {}
-                }
-
-                BackupRecord newRecord = BackupRecord.builder()
-                        .filename(fname)
-                        .fileSize(size)
-                        .driveFileId(driveFileId)
-                        .driveLink(driveLink)
-                        .status(existsOnDisk ? BackupRecord.BackupStatus.BOTH : BackupRecord.BackupStatus.DRIVE)
-                        .createdBy("google-drive")
-                        .createdAt(createdAt)
-                        .note("Đồng bộ từ Google Drive (Remote)")
-                        .build();
+                BackupRecord newRecord = new BackupRecord();
+                newRecord.initRecord(fname, size, existsOnDisk ? BackupRecord.BackupStatus.BOTH : BackupRecord.BackupStatus.DRIVE,
+                        driveFileId, driveLink, "google-drive", "Đồng bộ từ Google Drive (Remote)");
                 backupRecordRepo.save(newRecord);
             }
         }
@@ -352,8 +327,8 @@ public class BackupService {
         driveService.downloadFile(record.getDriveFileId(), targetPath.toFile());
 
         long fileSize = Files.size(targetPath);
-        record.setFileSize(fileSize);
-        record.setStatus(BackupRecord.BackupStatus.BOTH);
+        record.updateFileSize(fileSize);
+        record.updateStatus(BackupRecord.BackupStatus.BOTH);
         record = backupRecordRepo.save(record);
 
         log.info("Pulled backup from Drive successfully: {}", record.getFilename());
@@ -382,8 +357,8 @@ public class BackupService {
             if (record.getDriveFileId() != null && !record.getDriveFileId().isBlank()) {
                 log.info("Local file missing. Auto-pulling from Drive before restore: {}", record.getFilename());
                 driveService.downloadFile(record.getDriveFileId(), filePath.toFile());
-                record.setStatus(BackupRecord.BackupStatus.BOTH);
-                record.setFileSize(Files.size(filePath));
+                record.updateStatus(BackupRecord.BackupStatus.BOTH);
+                record.updateFileSize(Files.size(filePath));
                 backupRecordRepo.save(record);
             } else {
                 throw new FileNotFoundException(String.format(SystemMessage.BACKUP_ERR_003.getMessage(), record.getFilename()));
@@ -486,13 +461,8 @@ public class BackupService {
                     String fname = filePath.getFileName().toString();
                     if (!backupRecordRepo.existsByFilename(fname)) {
                         long size = Files.size(filePath);
-                        BackupRecord record = BackupRecord.builder()
-                                .filename(fname)
-                                .fileSize(size)
-                                .status(BackupRecord.BackupStatus.LOCAL)
-                                .createdBy("system")
-                                .note("Sao lưu sẵn trên ổ cứng")
-                                .build();
+                        BackupRecord record = new BackupRecord();
+                        record.initRecord(fname, size, BackupRecord.BackupStatus.LOCAL, null, null, "system", "Sao lưu sẵn trên ổ cứng");
                         backupRecordRepo.save(record);
                     }
                 }
@@ -593,8 +563,12 @@ public class BackupService {
 
     private void upsertSetting(String key, String value) {
         SystemSetting s = settingRepo.findBySettingKey(key)
-                .orElse(SystemSetting.builder().settingKey(key).build());
-        s.setSettingValue(value);
+                .orElseGet(() -> {
+                    SystemSetting created = new SystemSetting();
+                    created.initSetting(key, null, null);
+                    return created;
+                });
+        s.updateValue(value);
         settingRepo.save(s);
     }
 

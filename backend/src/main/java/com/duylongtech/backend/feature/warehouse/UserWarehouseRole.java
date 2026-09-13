@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
     @UniqueConstraint(name = "uk_user_warehouse_role", columnNames = {"user_id", "warehouse_id", "role_id"})
 })
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class UserWarehouseRole {
 
     @Id
@@ -29,14 +26,26 @@ public class UserWarehouseRole {
     private Long roleId;
 
     @Column(name = "is_active", nullable = false)
-    @Builder.Default
-    private Boolean isActive = true;
+        private Boolean isActive = true;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initRole(Long userId, Long warehouseId, Long roleId) {
+        this.userId = userId;
+        this.warehouseId = warehouseId;
+        this.roleId = roleId;
+        this.isActive = true;
+    }
+
+    public void updateStatus(Boolean isActive) {
+        if (isActive != null) {
+            this.isActive = isActive;
+        }
+    }
 
     @PrePersist
     protected void onCreate() {

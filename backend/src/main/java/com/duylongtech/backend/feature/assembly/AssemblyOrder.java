@@ -19,8 +19,6 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AssemblyOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,8 +26,7 @@ public class AssemblyOrder {
 
     @Version
     @Column(name = "row_version", nullable = false)
-    @Builder.Default
-    private Long version = 0L;
+        private Long version = 0L;
 
     @Column(name = "order_code", nullable = false, unique = true, length = 50)
     @Setter(AccessLevel.NONE)
@@ -55,13 +52,11 @@ public class AssemblyOrder {
     private BigDecimal quantity;
 
     @Column(name = "quantity_produced", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
-    @Setter(AccessLevel.NONE)
+        @Setter(AccessLevel.NONE)
     private BigDecimal quantityProduced = BigDecimal.ZERO;
 
     @Column(nullable = false, length = 30)
-    @Builder.Default
-    @Setter(AccessLevel.NONE)
+        @Setter(AccessLevel.NONE)
     private String status = DocumentStatus.DRAFT.name();
 
     @Column(name = "execution_date", nullable = false)
@@ -116,8 +111,7 @@ public class AssemblyOrder {
     private LocalDateTime cancelledAt;
 
     @Column(name = "cancellation_settlement_status", nullable = false, length = 30)
-    @Builder.Default
-    @Setter(AccessLevel.NONE)
+        @Setter(AccessLevel.NONE)
     private String cancellationSettlementStatus = "NONE";
 
     @CreationTimestamp
@@ -129,8 +123,7 @@ public class AssemblyOrder {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "assemblyOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    @Setter(AccessLevel.NONE)
+        @Setter(AccessLevel.NONE)
     private List<AssemblyOrderLine> lines = new ArrayList<>();
 
     public void initOrder(String orderCode, String orderType, AssemblyBom bom, ProductVariant targetVariant, Long warehouseId, BigDecimal quantity, LocalDate executionDate, String note, Long creatorId) {

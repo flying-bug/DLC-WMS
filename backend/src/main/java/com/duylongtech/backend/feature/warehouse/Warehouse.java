@@ -10,10 +10,7 @@ import com.duylongtech.backend.feature.auth.User;
 @Entity
 @Table(name = "WAREHOUSES")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Warehouse {
 
     @Id
@@ -30,17 +27,14 @@ public class Warehouse {
     private String address;
 
     @Column(nullable = false, length = 50)
-    @Builder.Default
-    private String type = "STANDARD";
+        private String type = "STANDARD";
 
     @Column(nullable = false, length = 20)
-    @Builder.Default
-    private String status = DocumentStatus.APPROVED.name();
+        private String status = DocumentStatus.APPROVED.name();
 
     @Version
     @Column(nullable = false)
-    @Builder.Default
-    private Long version = 0L;
+        private Long version = 0L;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -55,6 +49,36 @@ public class Warehouse {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updater_id")
     private User updater;
+
+    public void initWarehouse(String code, String name, String address, String type) {
+        this.code = code;
+        this.name = name;
+        this.address = address;
+        if (type != null) {
+            this.type = type;
+        }
+    }
+
+    public void updateDetails(String code, String name, String address, String type) {
+        if (code != null) this.code = code;
+        if (name != null) this.name = name;
+        if (address != null) this.address = address;
+        if (type != null) this.type = type;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void assignCreator(User creator) {
+        if (this.creator == null) {
+            this.creator = creator;
+        }
+    }
+
+    public void assignUpdater(User updater) {
+        this.updater = updater;
+    }
 
     @PrePersist
     protected void onCreate() {

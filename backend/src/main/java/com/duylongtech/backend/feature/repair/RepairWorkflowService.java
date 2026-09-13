@@ -605,18 +605,9 @@ public class RepairWorkflowService {
         ProductVariant componentVariant = productVariantRepository.findById(line.getComponentVariantId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy linh kiện " + line.getComponentVariantId()));
 
-        return DeviceComponentSerial.builder()
-                .sourceAssemblyOrder(sourceOrder)
-                .targetVariant(targetVariant)
-                .targetSerial(targetSerial)
-                .componentVariant(componentVariant)
-                .componentSerial(componentSerial.trim())
-                .status(COMPONENT_STATUS_ACTIVE)
-                .installedAt(now)
-                .sourceRepairId(repair.getId())
-                .note(appendNote(note, trimToNull(line.getNote())))
-                .createdBy(currentUserId)
-                .build();
+        DeviceComponentSerial dcs = new DeviceComponentSerial();
+        dcs.initForRepair(sourceOrder, targetVariant, targetSerial, componentVariant, componentSerial.trim(), repair.getId(), appendNote(note, trimToNull(line.getNote())), currentUserId);
+        return dcs;
     }
 
     private void markRemovedByRepair(DeviceComponentSerial mapping, Repair repair, LocalDateTime removedAt) {

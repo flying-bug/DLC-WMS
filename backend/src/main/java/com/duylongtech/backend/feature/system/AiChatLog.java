@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "ai_chat_logs")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AiChatLog {
 
     @Id
@@ -31,4 +28,10 @@ public class AiChatLog {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public void initLog(Long userId, String question, String answer) {
+        this.userId = userId;
+        this.question = question;
+        this.answer = answer;
+    }
 }

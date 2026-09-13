@@ -7,9 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import com.duylongtech.backend.feature.auth.RoleService;
@@ -133,20 +131,15 @@ public class DatabaseSeeder implements CommandLineRunner {
     @SuppressWarnings("unused")
     private void seedWarehouses() {
         if (warehouseRepository.count() == 0) {
-            warehouseRepository.save(Warehouse.builder()
-                    .code("K01")
-                    .name("Kho chính")
-                    .address("123 Cầu Giấy, Hà Nội")
-                    .type("STANDARD")
-                    .status("APPROVED")
-                    .build());
-            warehouseRepository.save(Warehouse.builder()
-                    .code("K02")
-                    .name("Kho phụ")
-                    .address("456 Giải Phóng, Hà Nội")
-                    .type("STANDARD")
-                    .status("APPROVED")
-                    .build());
+            Warehouse w1 = new Warehouse();
+            w1.initWarehouse("K01", "Kho chính", "123 Cầu Giấy, Hà Nội", "STANDARD");
+            w1.setStatus("APPROVED");
+            warehouseRepository.save(w1);
+            
+            Warehouse w2 = new Warehouse();
+            w2.initWarehouse("K02", "Kho phụ", "456 Giải Phóng, Hà Nội", "STANDARD");
+            w2.setStatus("APPROVED");
+            warehouseRepository.save(w2);
             System.out.println("✅ Seeded default warehouses successfully.");
         }
     }
@@ -185,9 +178,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             return roleOpt.get();
         }
         RoleEntity newRole = new RoleEntity();
-        newRole.setCode(code);
-        newRole.setName(name);
-        newRole.setStatus("APPROVED");
+        newRole.initRole(code, name, null, "APPROVED");
         return roleRepository.save(newRole);
     }
 
@@ -227,13 +218,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             for (String action : entry.getValue()) {
                 String code = module + ":" + action;
                 if (permissionRepository.findByCode(code).isEmpty()) {
-                    permissionRepository.save(PermissionEntity.builder()
-                            .code(code)
-                            .name(action.toUpperCase() + " " + module.toUpperCase())
-                            .module(module)
-                            .status("APPROVED")
-                            .createdAt(LocalDateTime.now())
-                            .build());
+                    permissionRepository.save(createPermission(code, action.toUpperCase() + " " + module.toUpperCase(), module, null, "APPROVED"));
                 }
             }
         }
@@ -259,7 +244,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             if (!isInitialized || role.getPermissions() == null || role.getPermissions().isEmpty()) {
                 Set<PermissionEntity> defaultPerms = RoleService.getDefaultPermissionsForRole(role.getCode(), allPerms);
                 if (!defaultPerms.isEmpty()) {
-                    role.setPermissions(defaultPerms);
+                    role.updatePermissions(defaultPerms);
                     roleRepository.save(role);
                 }
             }
@@ -269,14 +254,10 @@ public class DatabaseSeeder implements CommandLineRunner {
             systemSettingRepository.findBySettingKey("system.roles_permissions_initialized")
                     .ifPresentOrElse(
                             s -> {
-                                s.setSettingValue("true");
+                                s.updateValue("true");
                                 systemSettingRepository.save(s);
                             },
-                            () -> systemSettingRepository.save(SystemSetting.builder()
-                                    .settingKey("system.roles_permissions_initialized")
-                                    .settingValue("true")
-                                    .description("Đánh dấu quyền vai trò đã được khởi tạo lần đầu")
-                                    .build())
+                            () -> systemSettingRepository.save(createSystemSetting("system.roles_permissions_initialized", "true", "Đánh dấu quyền vai trò đã được khởi tạo lần đầu"))
                     );
         }
     }
@@ -297,25 +278,18 @@ public class DatabaseSeeder implements CommandLineRunner {
             User admin = adminOpt.get();
             Set<RoleEntity> roles = new HashSet<>();
             roles.add(superAdminRole);
-            admin.setStatus("APPROVED");
-            admin.setRoles(roles);
-            admin.setPermissions(adminPermissions);
+                        admin.updateRoles(roles);
+            admin.updatePermissions(adminPermissions);
             userRepository.save(admin);
         } else {
             Set<RoleEntity> roles = new HashSet<>();
             roles.add(superAdminRole);
 
-            User admin = User.builder()
-                    .username("admin")
-                    .passwordHash(passwordEncoder.encode("123456"))
-                    .fullName("System Admin")
-                    .email("admin@duylongtech.com")
-                    .phone("0123456789")
-                    .status("APPROVED")
-                    .roles(roles)
-                    .permissions(adminPermissions)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            User admin = new User();
+            admin.initUser("admin", null, passwordEncoder.encode("123456"), "System Admin", "APPROVED");
+            admin.updateProfile("System Admin", null, "admin@duylongtech.com", "0123456789", null, null, null, null);
+            admin.updateRoles(roles);
+            admin.updatePermissions(adminPermissions);
             userRepository.save(admin);
             System.out.println("✅ Đã tạo tài khoản mặc định: admin / 123456");
         }
@@ -343,22 +317,16 @@ public class DatabaseSeeder implements CommandLineRunner {
             if (user.getRoles() == null || user.getRoles().isEmpty()) {
                 Set<RoleEntity> roles = new HashSet<>();
                 roles.add(role);
-                user.setRoles(roles);
+                user.updateRoles(roles);
                 userRepository.save(user);
             }
         } else {
             Set<RoleEntity> roles = new HashSet<>();
             roles.add(role);
-            User user = User.builder()
-                    .username(username)
-                    .passwordHash(passwordEncoder.encode("123456"))
-                    .fullName(fullName)
-                    .email(email)
-                    .phone(phone)
-                    .status("APPROVED")
-                    .roles(roles)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            User user = new User();
+            user.initUser(username, null, passwordEncoder.encode("123456"), fullName, "APPROVED");
+            user.updateProfile(fullName, null, email, phone, null, null, null, null);
+            user.updateRoles(roles);
             userRepository.save(user);
             System.out.println("✅ Đã tạo tài khoản mẫu: " + username + " / 123456 (" + role.getName() + ")");
         }
@@ -381,65 +349,29 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (auditLogRepository.count() == 0) {
             User adminUser = userRepository.findByUsername("admin").orElse(null);
 
-            auditLogRepository.save(AuditLog.builder()
-                    .user(adminUser)
-                    .action("POST")
-                    .entityName("Auth")
-                    .ipAddress("192.168.1.15")
-                    .status("SUCCESS")
-                    .description("Đăng nhập hệ thống")
-                    .createdAt(Instant.now().minus(2, ChronoUnit.HOURS))
-                    .build());
+            AuditLog log1 = new AuditLog();
+            log1.initLog(adminUser, "POST", "Auth", null, null, "192.168.1.15", "SUCCESS", "Đăng nhập hệ thống");
+            auditLogRepository.save(log1);
 
-            auditLogRepository.save(AuditLog.builder()
-                    .user(adminUser)
-                    .action("UPDATE")
-                    .entityName("Product")
-                    .ipAddress("192.168.1.24")
-                    .status("SUCCESS")
-                    .description("Cập nhật số lượng sản phẩm SP-RAM-008")
-                    .createdAt(Instant.now().minus(90, ChronoUnit.MINUTES))
-                    .build());
+            AuditLog log2 = new AuditLog();
+            log2.initLog(adminUser, "UPDATE", "Product", null, null, "192.168.1.24", "SUCCESS", "Cập nhật số lượng sản phẩm SP-RAM-008");
+            auditLogRepository.save(log2);
 
-            auditLogRepository.save(AuditLog.builder()
-                    .user(adminUser)
-                    .action("CREATE")
-                    .entityName("ExportSlip")
-                    .ipAddress("192.168.1.42")
-                    .status("SUCCESS")
-                    .description("Tạo phiếu xuất kho XK-2024-0012")
-                    .createdAt(Instant.now().minus(1, ChronoUnit.HOURS))
-                    .build());
+            AuditLog log3 = new AuditLog();
+            log3.initLog(adminUser, "CREATE", "ExportSlip", null, null, "192.168.1.42", "SUCCESS", "Tạo phiếu xuất kho XK-2024-0012");
+            auditLogRepository.save(log3);
 
-            auditLogRepository.save(AuditLog.builder()
-                    .user(null) // anonymous
-                    .action("POST")
-                    .entityName("Auth")
-                    .ipAddress("203.113.152.4")
-                    .status("FAILED")
-                    .description("Thử đăng nhập sai mật khẩu")
-                    .createdAt(Instant.now().minus(45, ChronoUnit.MINUTES))
-                    .build());
+            AuditLog log4 = new AuditLog();
+            log4.initLog(null, "POST", "Auth", null, null, "203.113.152.4", "FAILED", "Thử đăng nhập sai mật khẩu");
+            auditLogRepository.save(log4);
 
-            auditLogRepository.save(AuditLog.builder()
-                    .user(adminUser)
-                    .action("UPDATE")
-                    .entityName("Permission")
-                    .ipAddress("192.168.1.15")
-                    .status("SUCCESS")
-                    .description("Phân quyền tài khoản manager@duylong.vn")
-                    .createdAt(Instant.now().minus(20, ChronoUnit.MINUTES))
-                    .build());
+            AuditLog log5 = new AuditLog();
+            log5.initLog(adminUser, "UPDATE", "Permission", null, null, "192.168.1.15", "SUCCESS", "Phân quyền tài khoản manager@duylong.vn");
+            auditLogRepository.save(log5);
 
-            auditLogRepository.save(AuditLog.builder()
-                    .user(adminUser)
-                    .action("CREATE")
-                    .entityName("Unit")
-                    .ipAddress("192.168.1.24")
-                    .status("SUCCESS")
-                    .description("Thêm mới đơn vị tính: Hộp")
-                    .createdAt(Instant.now().minus(5, ChronoUnit.MINUTES))
-                    .build());
+            AuditLog log6 = new AuditLog();
+            log6.initLog(adminUser, "CREATE", "Unit", null, null, "192.168.1.24", "SUCCESS", "Thêm mới đơn vị tính: Hộp");
+            auditLogRepository.save(log6);
             System.out.println("✅ Seeded mock audit logs successfully.");
         }
     }
@@ -508,5 +440,35 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .build();
             inventoryBalanceRepository.save(balance);
         }
+    }
+
+    
+
+    
+
+    private PermissionEntity createPermission(String code, String name, String module, String description, String status) {
+        PermissionEntity p = new PermissionEntity();
+        p.initPermission(code, name, module, description, status);
+        return p;
+    }
+
+    private SystemSetting createSystemSetting(String key, String value, String description) {
+        SystemSetting s = new SystemSetting();
+        s.initSetting(key, value, description);
+        return s;
+    }
+
+    private User createUser(String username, String passwordHash, String email, String fullName, String status, java.util.Set<RoleEntity> roles) {
+        User u = new User();
+        u.initUser(username, null, passwordHash, fullName, status);
+        u.updateProfile(fullName, null, email, null, null, null, null, null);
+        u.updateRoles(roles);
+        return u;
+    }
+
+    private AuditLog createAuditLog(String action, String entityName, Long entityId, String detail, String status) {
+        AuditLog log = new AuditLog();
+        log.initLog(null, action, entityName, entityId, detail, null, status, null);
+        return log;
     }
 }

@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "APP_NOTIFICATIONS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AppNotification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,11 +39,26 @@ public class AppNotification {
     @Column(name = "link", length = 255)
     private String link;
 
-    @Builder.Default
     @Column(name = "is_read")
     private Boolean isRead = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public void initNotification(String recipientRole, Long userId, String title, String message, String type, String referenceType, Long referenceId, String link) {
+        this.recipientRole = recipientRole;
+        this.userId = userId;
+        this.title = title;
+        this.message = message;
+        this.type = type;
+        this.referenceType = referenceType;
+        this.referenceId = referenceId;
+        this.link = link;
+        this.isRead = false;
+    }
+
+    public void markAsRead() {
+        this.isRead = true;
+    }
 }

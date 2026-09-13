@@ -323,8 +323,12 @@ public class GmailOAuthService {
 
     private void saveSetting(String key, String value) {
         SystemSetting setting = settingRepo.findBySettingKey(key)
-                .orElse(SystemSetting.builder().settingKey(key).build());
-        setting.setSettingValue(value);
+                .orElseGet(() -> {
+                    SystemSetting created = new SystemSetting();
+                    created.initSetting(key, null, null);
+                    return created;
+                });
+        setting.updateValue(value);
         settingRepo.save(setting);
     }
 
