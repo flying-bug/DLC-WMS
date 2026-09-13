@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.duylongtech.backend.enums.RepairStatus;
 import com.duylongtech.backend.feature.partner.Partner;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.warranty.Warranty;
@@ -185,7 +186,7 @@ public class Repair {
         this.referenceCode = referenceCode;
         this.receivedDate = receivedDate != null ? receivedDate : LocalDate.now();
         this.expectedDate = expectedDate;
-        this.repairStatus = com.duylongtech.backend.enums.DocumentStatus.DRAFT.name();
+        this.repairStatus = RepairStatus.DRAFT.name();
         this.issueDescription = issueDescription;
         this.diagnosisNote = diagnosisNote;
         this.underWarranty = underWarranty != null ? underWarranty : false;
@@ -286,41 +287,41 @@ public class Repair {
     }
 
     public void moveToQuotation() {
-        if (!com.duylongtech.backend.enums.DocumentStatus.DRAFT.name().equals(this.repairStatus)
-                && !"CONFIRMED".equals(this.repairStatus)
-                && !"UNDER_REPAIR".equals(this.repairStatus)) {
+        if (!RepairStatus.DRAFT.name().equals(this.repairStatus)
+                && !RepairStatus.CONFIRMED.name().equals(this.repairStatus)
+                && !RepairStatus.UNDER_REPAIR.name().equals(this.repairStatus)) {
             throw new IllegalStateException("Không thể chuyển trạng thái sang Báo Giá");
         }
-        this.repairStatus = "QUOTATION";
+        this.repairStatus = RepairStatus.QUOTATION.name();
     }
 
     public void confirm() {
-        if (!com.duylongtech.backend.enums.DocumentStatus.DRAFT.name().equals(this.repairStatus)
-                && !"QUOTATION".equals(this.repairStatus)) {
+        if (!RepairStatus.DRAFT.name().equals(this.repairStatus)
+                && !RepairStatus.QUOTATION.name().equals(this.repairStatus)) {
             throw new IllegalStateException("Không thể xác nhận ở trạng thái hiện tại");
         }
-        this.repairStatus = "CONFIRMED";
+        this.repairStatus = RepairStatus.CONFIRMED.name();
     }
 
     public void startRepair() {
-        if (!"CONFIRMED".equals(this.repairStatus)) {
+        if (!RepairStatus.CONFIRMED.name().equals(this.repairStatus)) {
             throw new IllegalStateException("Chỉ có thể tiến hành sửa chữa khi lệnh đã được xác nhận");
         }
-        this.repairStatus = "UNDER_REPAIR";
+        this.repairStatus = RepairStatus.UNDER_REPAIR.name();
     }
 
     public void complete() {
-        if (!"UNDER_REPAIR".equals(this.repairStatus)) {
+        if (!RepairStatus.UNDER_REPAIR.name().equals(this.repairStatus)) {
             throw new IllegalStateException("Chỉ có thể hoàn thành khi đang sửa chữa");
         }
-        this.repairStatus = "DONE";
+        this.repairStatus = RepairStatus.DONE.name();
         this.completedDate = LocalDate.now();
     }
 
     public void cancel() {
-        if ("DONE".equals(this.repairStatus) || com.duylongtech.backend.enums.DocumentStatus.CANCELLED.name().equals(this.repairStatus)) {
+        if (RepairStatus.DONE.name().equals(this.repairStatus) || RepairStatus.CANCELLED.name().equals(this.repairStatus)) {
             throw new IllegalStateException("Không thể hủy lệnh đã hoàn thành hoặc đã hủy");
         }
-        this.repairStatus = com.duylongtech.backend.enums.DocumentStatus.CANCELLED.name();
+        this.repairStatus = RepairStatus.CANCELLED.name();
     }
 }

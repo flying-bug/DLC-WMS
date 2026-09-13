@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.repair;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.RepairStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.repair.RepairResponse;
@@ -81,13 +82,13 @@ public class RepairWorkflowService {
     private static final String COMPONENT_STATUS_REMOVED = "REMOVED";
 
     // Định nghĩa các bước chuyển trạng thái hợp lệ
-    private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
-            DocumentStatus.DRAFT.name(),       Set.of("QUOTATION", "CONFIRMED", DocumentStatus.CANCELLED.name()),
-            "QUOTATION",   Set.of("CONFIRMED", DocumentStatus.DRAFT.name(), DocumentStatus.CANCELLED.name()),
-            "CONFIRMED",   Set.of("UNDER_REPAIR", "QUOTATION", DocumentStatus.CANCELLED.name()),
-            "UNDER_REPAIR", Set.of("DONE", "QUOTATION", DocumentStatus.CANCELLED.name()),
-            "DONE",        Set.of(),      // Terminal state
-            DocumentStatus.CANCELLED.name(),   Set.of()       // Terminal state
+    private static final Map<RepairStatus, Set<RepairStatus>> VALID_TRANSITIONS = Map.of(
+            RepairStatus.DRAFT,        Set.of(RepairStatus.QUOTATION, RepairStatus.CONFIRMED, RepairStatus.CANCELLED),
+            RepairStatus.QUOTATION,    Set.of(RepairStatus.CONFIRMED, RepairStatus.DRAFT, RepairStatus.CANCELLED),
+            RepairStatus.CONFIRMED,    Set.of(RepairStatus.UNDER_REPAIR, RepairStatus.QUOTATION, RepairStatus.CANCELLED),
+            RepairStatus.UNDER_REPAIR, Set.of(RepairStatus.DONE, RepairStatus.QUOTATION, RepairStatus.CANCELLED),
+            RepairStatus.DONE,         Set.of(),      // Terminal state
+            RepairStatus.CANCELLED,    Set.of()       // Terminal state
     );
 
     private final RepairRepository repairRepository;
@@ -117,28 +118,38 @@ public class RepairWorkflowService {
         String currentStatus = repair.getRepairStatus();
         String normalizedTarget = targetStatus.trim().toUpperCase();
 
+        RepairStatus current;
+        RepairStatus target;
+        try {
+            current = RepairStatus.valueOf(currentStatus);
+            target = RepairStatus.valueOf(normalizedTarget);
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException(SystemMessage.REP_INVALID_STATUS_TRANSITION);
+        }
+
         // Validate transition
-        Set<String> allowedNext = VALID_TRANSITIONS.getOrDefault(currentStatus, Set.of());
-        if (!allowedNext.contains(normalizedTarget)) {
+        Set<RepairStatus> allowedNext = VALID_TRANSITIONS.getOrDefault(current, Set.of());
+        if (!allowedNext.contains(target)) {
             throw new BusinessException(SystemMessage.REP_INVALID_STATUS_TRANSITION);
         }
 
         // Side-effects theo trạng thái đích
-        switch (normalizedTarget) {
-            case "CONFIRMED" -> handleConfirm(repair);
-            case "DONE"      -> handleDone(repair);
-            case "CANCELLED" -> handleCancel(repair);
-            default          -> { /* QUOTATION, UNDER_REPAIR không cần side-effects đặc biệt */ }
+        switch (target) {
+            case CONFIRMED -> handleConfirm(repair);
+            case DONE      -> handleDone(repair);
+            case CANCELLED -> handleCancel(repair);
+            default        -> { /* QUOTATION, UNDER_REPAIR không cần side-effects đặc biệt */ }
         }
 
         // Cập nhật trạng thái
         String previousStatus = repair.getRepairStatus();
-        switch (normalizedTarget) {
-            case "QUOTATION" -> repair.moveToQuotation();
-            case "CONFIRMED" -> repair.confirm();
-            case "UNDER_REPAIR" -> repair.startRepair();
-            case "DONE" -> repair.complete();
-            case "CANCELLED" -> repair.cancel();
+        switch (target) {
+            case QUOTATION -> repair.moveToQuotation();
+            case CONFIRMED -> repair.confirm();
+            case UNDER_REPAIR -> repair.startRepair();
+            case DONE -> repair.complete();
+            case CANCELLED -> repair.cancel();
+            default -> { }
         }
 
         Repair saved = repairRepository.save(repair);
@@ -383,7 +394,7 @@ public class RepairWorkflowService {
     // =====================================================================
 
     private void handleCancel(Repair repair) {
-        if ("DONE".equals(repair.getRepairStatus())) {
+        if (RepairStatus.DONE.name().equals(repair.getRepairStatus())) {
             throw new BusinessException(SystemMessage.REP_CANNOT_CANCEL);
         }
         // Với luồng mới, không có phiếu DRAFT, không giữ chỗ -> Không cần rollback inventory

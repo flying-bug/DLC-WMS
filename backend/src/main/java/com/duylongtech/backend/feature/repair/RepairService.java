@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.repair;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.RepairStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.repair.RepairFeeRequest;
@@ -85,7 +86,7 @@ import com.duylongtech.backend.feature.system.CodeGeneratorService;
 @Slf4j
 public class RepairService {
 
-    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), "QUOTATION", "UNDER_REPAIR");
+    private static final Set<String> EDITABLE_STATUSES = Set.of(RepairStatus.DRAFT.name(), RepairStatus.QUOTATION.name(), RepairStatus.UNDER_REPAIR.name());
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
     private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REPLACE", "REMOVE");
 
