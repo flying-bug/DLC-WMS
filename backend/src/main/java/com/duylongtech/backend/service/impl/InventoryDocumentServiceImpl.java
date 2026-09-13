@@ -1341,7 +1341,7 @@ public class InventoryDocumentServiceImpl  implements InventoryDocumentService {
                 .distinct()
                 .count();
         if (uniqueCount != serials.size()) {
-            throw new BusinessException("Danh s├ích serial kh├┤ng ─æ╞░ß╗úc chß╗⌐a m├ú tr├╣ng lß║╖p");
+            throw new BusinessException("Danh sách serial không được chứa mã trùng lặp");
         }
     }
 
