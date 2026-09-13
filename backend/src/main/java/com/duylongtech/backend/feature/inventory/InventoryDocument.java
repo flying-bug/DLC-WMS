@@ -27,6 +27,7 @@ public class InventoryDocument {
     @Column(name = "doc_code", nullable = false, length = 50, unique = true)
     private String docCode;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "doc_type", nullable = false, length = 30)
     private String docType;
 
@@ -120,6 +121,16 @@ public class InventoryDocument {
 
     // --- Domain Business Logic ---
 
+    public void initExportDocument(String code) {
+        assignInitialCode(code);
+        this.docType = "EX_SO";
+    }
+
+    public void initImportDocument(String code) {
+        assignInitialCode(code);
+        this.docType = "IN_PO";
+    }
+
     public void assignCreator(Long userId) {
         if (this.createdBy == null) {
             this.createdBy = userId;
@@ -139,6 +150,35 @@ public class InventoryDocument {
 
     public void updateStatus(String newStatus) {
         this.status = newStatus;
+    }
+
+    public void clearLines() {
+        if (!isEditable()) {
+            throw new com.duylongtech.backend.exception.BusinessException("Chỉ được sửa chi tiết khi phiếu ở trạng thái DRAFT, SUBMITTED hoặc UNPOSTED");
+        }
+        this.lines.clear();
+    }
+
+    public void addExportLine(InventoryDocumentLine line) {
+        if (!isEditable()) {
+            throw new com.duylongtech.backend.exception.BusinessException("Chỉ được sửa chi tiết khi phiếu ở trạng thái DRAFT, SUBMITTED hoặc UNPOSTED");
+        }
+        line.calculateExportAmounts();
+        this.lines.add(line);
+        line.setInventoryDocument(this);
+    }
+
+    public void addImportLine(InventoryDocumentLine line) {
+        if (!isEditable()) {
+            throw new com.duylongtech.backend.exception.BusinessException("Chỉ được sửa chi tiết khi phiếu ở trạng thái DRAFT, SUBMITTED hoặc UNPOSTED");
+        }
+        line.calculateImportAmounts();
+        this.lines.add(line);
+        line.setInventoryDocument(this);
+    }
+
+    private boolean isEditable() {
+        return "DRAFT".equals(this.status) || "SUBMITTED".equals(this.status) || "UNPOSTED".equals(this.status) || this.status == null;
     }
 
     public void post(Long userId) {

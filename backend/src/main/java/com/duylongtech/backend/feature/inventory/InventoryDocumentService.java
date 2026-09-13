@@ -283,7 +283,7 @@ public class InventoryDocumentService {
                 req.getReferenceId(), req.getLines());
         InventoryDocument doc = buildBaseDocument(req, EXPORT_DOC_TYPE, resolveCreateDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
-            doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
+            doc.addExportLine(toExportLineEntity(doc, req.getLines().get(i), i));
         }
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
         syncStocktakeReference(saved);
@@ -296,7 +296,7 @@ public class InventoryDocumentService {
         inventoryValidationService.validateOrderLineQuantities(req, null);
         InventoryDocument doc = buildBaseDocument(req, IMPORT_DOC_TYPE, resolveCreateImportDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
-            doc.getLines().add(toImportLineEntity(doc, req.getLines().get(i), i));
+            doc.addImportLine(toImportLineEntity(doc, req.getLines().get(i), i));
         }
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
         syncStocktakeReference(saved);
@@ -339,9 +339,9 @@ public class InventoryDocumentService {
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
-        doc.getLines().clear();
+        doc.clearLines();
         for (int i = 0; i < req.getLines().size(); i++) {
-            doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
+            doc.addExportLine(toExportLineEntity(doc, req.getLines().get(i), i));
         }
         return toResponse(inventoryDocumentRepository.save(doc));
     }
@@ -353,9 +353,9 @@ public class InventoryDocumentService {
         InventoryDocument doc = findImportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu nhập kho đã tồn tại", true);
-        doc.getLines().clear();
+        doc.clearLines();
         for (int i = 0; i < req.getLines().size(); i++) {
-            doc.getLines().add(toImportLineEntity(doc, req.getLines().get(i), i));
+            doc.addImportLine(toImportLineEntity(doc, req.getLines().get(i), i));
         }
         return toResponse(inventoryDocumentRepository.save(doc));
     }
@@ -391,8 +391,11 @@ public class InventoryDocumentService {
         }
 
         InventoryDocument doc = new InventoryDocument();
-        doc.assignInitialCode(docCode);
-        doc.setDocType(docType);
+        if (EXPORT_DOC_TYPE.equals(docType)) {
+            doc.initExportDocument(docCode);
+        } else {
+            doc.initImportDocument(docCode);
+        }
         doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
         doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
         doc.setReferenceId(req.getReferenceId());
@@ -1042,8 +1045,7 @@ public class InventoryDocumentService {
         }
 
         InventoryDocument doc = new InventoryDocument();
-        doc.assignInitialCode(resolveCreateDocCode(null));
-        doc.setDocType(EXPORT_DOC_TYPE);
+        doc.initExportDocument(resolveCreateDocCode(null));
         doc.setDocDate(LocalDate.now());
         doc.setPartnerId(so.getPartnerId());
         doc.setWarehouseId(so.getWarehouseId());
@@ -1074,9 +1076,8 @@ public class InventoryDocumentService {
             line.setVatRate(soLine.getVatRate());
             line.setVatPercent(soLine.getVatRate());
             line.setWarrantyMonths(soLine.getWarrantyMonths());
-            line.setLineAmount(soLine.getUnitPrice().multiply(remaining));
             line.setNote(soLine.getNote());
-            doc.getLines().add(line);
+            doc.addExportLine(line);
         }
 
         if (doc.getLines().isEmpty()) {

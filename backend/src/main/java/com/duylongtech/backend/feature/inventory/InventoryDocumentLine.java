@@ -40,6 +40,7 @@ public class InventoryDocumentLine {
     @Column(name = "vat_rate", precision = 5, scale = 2)
     private BigDecimal vatRate;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "line_amount", precision = 15, scale = 2)
     private BigDecimal lineAmount;
 
@@ -94,4 +95,28 @@ public class InventoryDocumentLine {
 
     @Column(name = "base_quantity", precision = 15, scale = 4)
     private BigDecimal baseQuantity;
+
+    // --- Domain Logic ---
+
+    public void calculateExportAmounts() {
+        if (this.quantityOut == null) this.quantityOut = BigDecimal.ZERO;
+        if (this.unitPrice == null) this.unitPrice = BigDecimal.ZERO;
+        
+        BigDecimal subtotal = this.quantityOut.multiply(this.unitPrice);
+        BigDecimal actualVatRate = this.vatRate != null ? this.vatRate : (this.vatPercent != null ? this.vatPercent : BigDecimal.ZERO);
+        
+        BigDecimal vatAmount = subtotal.multiply(actualVatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        this.lineAmount = subtotal.add(vatAmount).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    public void calculateImportAmounts() {
+        if (this.quantityIn == null) this.quantityIn = BigDecimal.ZERO;
+        if (this.unitCost == null) this.unitCost = BigDecimal.ZERO;
+        
+        BigDecimal subtotal = this.quantityIn.multiply(this.unitCost);
+        BigDecimal actualVatRate = this.vatRate != null ? this.vatRate : (this.vatPercent != null ? this.vatPercent : BigDecimal.ZERO);
+        
+        BigDecimal vatAmount = subtotal.multiply(actualVatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        this.lineAmount = subtotal.add(vatAmount).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
 }
