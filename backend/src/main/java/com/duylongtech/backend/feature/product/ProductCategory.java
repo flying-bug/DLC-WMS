@@ -12,10 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "PRODUCT_CATEGORIES")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ProductCategory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,9 +27,8 @@ public class ProductCategory {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 20)
-    @Builder.Default
-    private String status = DocumentStatus.APPROVED.name();
+    @Column(name = "status", length = 30)
+    private String status;
 
     @Column(columnDefinition = "TEXT")
     private String description;
@@ -44,4 +40,23 @@ public class ProductCategory {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initCategory(String name, String description, Long creatorId) {
+        this.name = name;
+        this.description = description;
+        this.status = DocumentStatus.APPROVED.name();
+    }
+
+    public void updateDetails(String name, String description) {
+        if (name != null) this.name = name;
+        if (description != null) this.description = description;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+    }
 }

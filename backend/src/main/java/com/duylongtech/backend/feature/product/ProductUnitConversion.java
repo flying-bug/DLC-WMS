@@ -11,10 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "PRODUCT_UNIT_CONVERSIONS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ProductUnitConversion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,4 +41,12 @@ public class ProductUnitConversion {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initConversion(Product product, Unit unit, String operator, BigDecimal ratio, String note) {
+        this.product = product;
+        this.unit = unit;
+        this.operator = operator;
+        this.ratio = ratio;
+        this.note = note;
+    }
 }

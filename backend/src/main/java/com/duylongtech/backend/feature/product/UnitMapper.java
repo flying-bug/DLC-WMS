@@ -12,8 +12,4 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface UnitMapper {
 
     UnitResponse toResponse(Unit unit);
-
-    Unit toEntity(UnitRequest request);
-
-    void updateEntity(@MappingTarget Unit unit, UnitRequest request);
 }

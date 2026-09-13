@@ -351,17 +351,12 @@ public class ImportOcrService {
 
         if (existing.isPresent()) {
             VendorProductMapping mapping = existing.get();
-            mapping.setProductVariantId(variantId);
-            mapping.setConfirmCount(mapping.getConfirmCount() + 1);
-            mapping.setUpdatedAt(LocalDateTime.now());
+            mapping.updateMapping(variantId);
             vendorProductMappingRepository.save(mapping);
         } else {
-            vendorProductMappingRepository.save(VendorProductMapping.builder()
-                    .partnerId(partnerId)
-                    .vendorProductName(normalized)
-                    .productVariantId(variantId)
-                    .confirmCount(1)
-                    .build());
+            VendorProductMapping m = new VendorProductMapping();
+            m.initMapping(partnerId, normalized, variantId);
+            vendorProductMappingRepository.save(m);
         }
     }
 

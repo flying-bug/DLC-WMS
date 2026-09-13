@@ -382,19 +382,10 @@ public class CustomerService {
         // 1. Insert Valid Rows
         if (request.getValidRows() != null) {
             for (CustomerExcelDTO dto : request.getValidRows()) {
-                Partner newPartner = Partner.builder()
-                        .code(generateCustomerCode()) // Tự sinh mã KH
-                        .name(dto.getName())
-                        .phone(dto.getPhone())
-                        .email(dto.getEmail())
-                        .address(dto.getAddress())
-                        .type("INDIVIDUAL")
-                        .groupType(mapGroupTypeFromExcel(dto.getGroupType()))
-                        .status(DocumentStatus.APPROVED.name())
-                        .isCustomer(true)
-                        .creditLimit(java.math.BigDecimal.ZERO)
-                        .paymentTermDays(0)
-                        .build();
+                Partner newPartner = new Partner();
+                newPartner.initPartner(generateCustomerCode(), dto.getName(), "INDIVIDUAL", true, false, mapGroupTypeFromExcel(dto.getGroupType()));
+                newPartner.updateContact(dto.getPhone(), dto.getEmail(), dto.getAddress(), null);
+                newPartner.updateFinancial(java.math.BigDecimal.ZERO, 0, null, null, null);
                 toSave.add(newPartner);
             }
         }
@@ -407,9 +398,9 @@ public class CustomerService {
                             .orElse(null);
                     if (existing != null) {
                         existing.setName(dto.getName());
-                        if (dto.getEmail() != null && !dto.getEmail().isBlank()) existing.setEmail(dto.getEmail());
-                        if (dto.getAddress() != null && !dto.getAddress().isBlank()) existing.setAddress(dto.getAddress());
-                        existing.setGroupType(mapGroupTypeFromExcel(dto.getGroupType()));
+                        if (dto.getEmail() != null && !dto.getEmail().isBlank()) existing.updateContact(existing.getPhone(), dto.getEmail(), existing.getAddress(), existing.getTaxCode());
+                        if (dto.getAddress() != null && !dto.getAddress().isBlank()) existing.updateContact(existing.getPhone(), existing.getEmail(), dto.getAddress(), existing.getTaxCode());
+                        existing.updateBasic(existing.getName(), existing.getType(), mapGroupTypeFromExcel(dto.getGroupType()), existing.getParentId());
                         toSave.add(existing);
                         
                         auditLogService.logEvent(
@@ -581,17 +572,17 @@ public class CustomerService {
             code = generateCustomerCode();
         }
 
-        Partner partner = customerMapper.toEntity(req);
-        partner.setCode(code);
-        
-        // Setup defaults that are not mapped by MapStruct
-        if (partner.getType() == null) {
-            partner.setType(INDIVIDUAL_TYPE);
-        }
-        partner.setGroupType(resolveGroupType(req.getGroupType()));
-        partner.setStatus(APPROVED);
-        partner.setIsCustomer(true);
-        partner.setIsSupplier(false);
+        Partner partner = new Partner();
+        partner.initPartner(
+            code,
+            req.getName() != null ? req.getName().trim() : "",
+            req.getType() != null && !req.getType().isBlank() ? req.getType() : INDIVIDUAL_TYPE,
+            true,
+            false,
+            resolveGroupType(req.getGroupType())
+        );
+        partner.updateContact(trimToNull(req.getPhone()), trimToNull(req.getEmail()), trimToNull(req.getAddress()), trimToNull(req.getTaxCode()));
+        partner.activate();
 
         return toResponse(partnerRepository.save(partner));
     }
@@ -629,21 +620,26 @@ public class CustomerService {
                     "Thay đổi SĐT: " + customer.getPhone() + " → " + newPhone,
                     null, null
             );
-            customer.setPhone(newPhone);
         }
 
-        customerMapper.updateEntity(customer, req);
-
-        // Update default fallback types if needed
-        if (req.getType() == null || req.getType().isBlank()) {
-             if (req.getTaxCode() != null && !req.getTaxCode().isBlank()) {
-                customer.setType("COMPANY");
-             }
+        String newName = customer.getName();
+        if (req.getName() != null && !req.getName().isBlank()) {
+            newName = req.getName().trim();
         }
-        
+        String newType = customer.getType();
+        if (req.getType() != null && !req.getType().isBlank()) {
+            newType = req.getType();
+        } else if (req.getTaxCode() != null && !req.getTaxCode().isBlank()) {
+            newType = "COMPANY";
+        }
+        String newGroupType = customer.getGroupType();
         if (req.getGroupType() != null) {
-            customer.setGroupType(resolveGroupType(req.getGroupType()));
+            newGroupType = resolveGroupType(req.getGroupType());
         }
+
+        customer.updateBasic(newName, newType, newGroupType, customer.getParentId());
+        
+        customer.updateContact(newPhone, trimToNull(req.getEmail()), trimToNull(req.getAddress()), trimToNull(req.getTaxCode()));
 
         return toResponse(partnerRepository.save(customer));
     }
@@ -670,7 +666,7 @@ public class CustomerService {
             throw new BusinessException(SystemMessage.CUST_HAS_REPAIRING_WARRANTY);
         }
 
-        customer.setStatus(INACTIVE);
+        customer.deactivate();
         partnerRepository.save(customer);
     }
 
@@ -690,7 +686,7 @@ public class CustomerService {
         if (APPROVED.equals(customer.getStatus())) {
             throw new BusinessException(SystemMessage.CUST_ALREADY_ACTIVE);
         }
-        customer.setStatus(APPROVED);
+        customer.activate();
         partnerRepository.save(customer);
     }
 

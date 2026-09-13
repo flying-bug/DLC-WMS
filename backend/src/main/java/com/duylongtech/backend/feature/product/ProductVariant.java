@@ -11,10 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "PRODUCT_VARIANTS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ProductVariant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,11 +31,11 @@ public class ProductVariant {
     private String variantName;
 
     @Column(name = "cost_price", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
+    
     private BigDecimal costPrice = BigDecimal.ZERO;
 
     @Column(name = "sale_price", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
+    
     private BigDecimal salePrice = BigDecimal.ZERO;
 
     @Column(name = "manufacturer_part_number", length = 100)
@@ -48,19 +45,19 @@ public class ProductVariant {
     private String specsJson;
 
     @Column(name = "tracking_mode", nullable = false, length = 20)
-    @Builder.Default
+    
     private String trackingMode = "NONE";
 
     @Column(name = "min_stock_qty", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
+    
     private BigDecimal minStockQty = BigDecimal.ZERO;
 
     @Column(name = "warranty_months")
-    @Builder.Default
+    
     private Integer warrantyMonths = 0;
 
     @Column(nullable = false)
-    @Builder.Default
+    
     private Boolean active = true;
 
     @CreationTimestamp
@@ -77,5 +74,70 @@ public class ProductVariant {
 
     public boolean isLotTracked() {
         return "LOT".equals(trackingMode) || "SERIAL_LOT".equals(trackingMode);
+    }
+
+    public void initVariant(Product product, String sku, String barcode, String variantName) {
+        this.product = product;
+        this.sku = sku;
+        this.barcode = barcode;
+        this.variantName = variantName;
+        this.costPrice = BigDecimal.ZERO;
+        this.salePrice = BigDecimal.ZERO;
+        this.trackingMode = "NONE";
+        this.minStockQty = BigDecimal.ZERO;
+        this.warrantyMonths = 0;
+        this.active = true;
+    }
+
+    public void updateDetails(String variantName, String barcode, String manufacturerPartNumber, String specsJson) {
+        if (variantName != null) this.variantName = variantName;
+        if (barcode != null) this.barcode = barcode;
+        if (manufacturerPartNumber != null) this.manufacturerPartNumber = manufacturerPartNumber;
+        if (specsJson != null) this.specsJson = specsJson;
+    }
+    
+    public void updatePricing(BigDecimal costPrice, BigDecimal salePrice) {
+        if (costPrice != null) this.costPrice = costPrice;
+        if (salePrice != null) this.salePrice = salePrice;
+    }
+
+    public void activate() {
+        this.active = true;
+    }
+    
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
+    }
+
+    public void setTrackingMode(String trackingMode) {
+        this.trackingMode = trackingMode;
+    }
+
+    public void setMinStockQty(BigDecimal minStockQty) {
+        this.minStockQty = minStockQty;
+    }
+
+    public void setWarrantyMonths(Integer warrantyMonths) {
+        this.warrantyMonths = warrantyMonths;
+    }
+
+    public void setSalePrice(BigDecimal salePrice) {
+        this.salePrice = salePrice;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    public void setManufacturerPartNumber(String manufacturerPartNumber) {
+        this.manufacturerPartNumber = manufacturerPartNumber;
+    }
+
+    public void setSpecsJson(String specsJson) {
+        this.specsJson = specsJson;
     }
 }

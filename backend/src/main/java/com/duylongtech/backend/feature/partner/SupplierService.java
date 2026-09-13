@@ -124,24 +124,23 @@ public class SupplierService {
     public SupplierResponse createSupplier(SupplierRequest req) {
         String code = resolveCode(req.getCode());
 
-        Partner partner = supplierMapper.toEntity(req);
-        partner.setCode(code);
-        partner.setStatus(APPROVED);
-        partner.setIsSupplier(true);
-        partner.setIsCustomer(false);
-        partner.setType(resolveType(req.getType()));
-        partner.setGroupType(resolveGroupType(req.getGroupType()));
-        partner.setCreditLimit(resolveDecimal(req.getCreditLimit()));
-        partner.setPaymentTermDays(resolveInt(req.getPaymentTermDays()));
-        
-        if (partner.getName() != null) partner.setName(partner.getName().trim());
-        if (partner.getPhone() != null) partner.setPhone(trimToNull(partner.getPhone()));
-        if (partner.getEmail() != null) partner.setEmail(trimToNull(partner.getEmail()));
-        if (partner.getAddress() != null) partner.setAddress(trimToNull(partner.getAddress()));
-        if (partner.getTaxCode() != null) partner.setTaxCode(trimToNull(partner.getTaxCode()));
-        if (partner.getBankAccountNumber() != null) partner.setBankAccountNumber(trimToNull(partner.getBankAccountNumber()));
-        if (partner.getBankName() != null) partner.setBankName(trimToNull(partner.getBankName()));
-        if (partner.getBankBeneficiaryName() != null) partner.setBankBeneficiaryName(trimToNull(partner.getBankBeneficiaryName()));
+        Partner partner = new Partner();
+        partner.initPartner(
+            code, 
+            req.getName() != null ? req.getName().trim() : "", 
+            req.getType() != null ? resolveType(req.getType()) : "INDIVIDUAL", 
+            false, 
+            true, 
+            req.getGroupType() != null ? resolveGroupType(req.getGroupType()) : "RETAIL"
+        );
+        partner.updateContact(trimToNull(req.getPhone()), trimToNull(req.getEmail()), trimToNull(req.getAddress()), trimToNull(req.getTaxCode()));
+        partner.updateFinancial(
+            req.getCreditLimit() != null ? req.getCreditLimit() : java.math.BigDecimal.ZERO, 
+            req.getPaymentTermDays() != null ? req.getPaymentTermDays() : 0, 
+            trimToNull(req.getBankAccountNumber()), 
+            trimToNull(req.getBankName()), 
+            trimToNull(req.getBankBeneficiaryName())
+        );
 
         return supplierMapper.toResponse(partnerRepository.save(partner));
     }
@@ -176,32 +175,28 @@ public class SupplierService {
             partner.setCode(requestedCode);
         }
 
-        // Cập nhật các trường
+        String newName = partner.getName();
         if (req.getName() != null && !req.getName().isBlank()) {
-            partner.setName(req.getName().trim());
+            newName = req.getName().trim();
         }
-        if (req.getType() != null) {
-            partner.setType(resolveType(req.getType()));
-        }
-        partner.setPhone(trimToNull(req.getPhone()));
-        partner.setEmail(trimToNull(req.getEmail()));
-        partner.setAddress(trimToNull(req.getAddress()));
-        partner.setTaxCode(trimToNull(req.getTaxCode()));
-        if (req.getGroupType() != null) {
-            // Bắt buộc qua resolveGroupType() để validate theo chk_partners_group constraint
-            partner.setGroupType(resolveGroupType(req.getGroupType()));
-        }
+        partner.updateBasic(newName, req.getType() != null ? resolveType(req.getType()) : partner.getType(), req.getGroupType() != null ? resolveGroupType(req.getGroupType()) : partner.getGroupType(), partner.getParentId());
+        
+        partner.updateContact(trimToNull(req.getPhone()), trimToNull(req.getEmail()), trimToNull(req.getAddress()), trimToNull(req.getTaxCode()));
+        
+        partner.updateFinancial(
+            req.getCreditLimit() != null ? req.getCreditLimit() : partner.getCreditLimit(),
+            req.getPaymentTermDays() != null ? req.getPaymentTermDays() : partner.getPaymentTermDays(),
+            trimToNull(req.getBankAccountNumber()),
+            trimToNull(req.getBankName()),
+            trimToNull(req.getBankBeneficiaryName())
+        );
+        
         if (req.getStatus() != null) {
-            partner.setStatus(resolveStatus(req.getStatus()));
-        }
-        partner.setBankAccountNumber(trimToNull(req.getBankAccountNumber()));
-        partner.setBankName(trimToNull(req.getBankName()));
-        partner.setBankBeneficiaryName(trimToNull(req.getBankBeneficiaryName()));
-        if (req.getCreditLimit() != null) {
-            partner.setCreditLimit(req.getCreditLimit());
-        }
-        if (req.getPaymentTermDays() != null) {
-            partner.setPaymentTermDays(req.getPaymentTermDays());
+            if ("INACTIVE".equals(resolveStatus(req.getStatus()))) {
+                partner.deactivate();
+            } else {
+                partner.activate();
+            }
         }
 
         return supplierMapper.toResponse(partnerRepository.save(partner));
@@ -229,7 +224,7 @@ public class SupplierService {
 
         if (hasTransactions) {
             // Có giao dịch - chuyển trạng thái sang INACTIVE
-            partner.setStatus(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name());
+            partner.deactivate();
             partnerRepository.save(partner);
         } else {
             // Chưa có giao dịch - xóa vật lý an toàn

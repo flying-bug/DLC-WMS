@@ -49,10 +49,8 @@ public class UnitService {
             throw new BusinessException(SystemMessage.UNIT_EXISTS);
         }
 
-        Unit unit = unitMapper.toEntity(dto);
-        if (unit.getStatus() == null) {
-            unit.setStatus(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name());
-        }
+        Unit unit = new Unit();
+        unit.initUnit(dto.getName(), dto.getDescription(), null);
 
         Unit savedUnit = unitRepository.save(unit);
         return unitMapper.toResponse(savedUnit);
@@ -67,7 +65,7 @@ public class UnitService {
             throw new BusinessException(SystemMessage.UNIT_EXISTS);
         }
 
-        unitMapper.updateEntity(unit, dto);
+        unit.updateDetails(dto.getName(), dto.getDescription());
 
         Unit updatedUnit = unitRepository.save(unit);
         return unitMapper.toResponse(updatedUnit);

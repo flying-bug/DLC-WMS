@@ -205,9 +205,15 @@ public class ProductService {
 
         validateProductRequest(dto);
 
-        productMapper.updateEntity(product, dto);
-        product.setProductType(resolveProductType(dto.getProductType()));
-        product.setSalePrice(resolveMoney(dto.getSalePrice()));
+        product.updateDetails(dto.getProductName(), null, null, null, dto.getDescription());
+        product.updatePricing(resolveMoney(dto.getSalePrice()), dto.getVatRate(), dto.getTaxReductionStatus());
+        product.updateTracking(dto.getTrackSerial(), dto.getTrackLot(), dto.getIsAssembly());
+        product.updateStock(dto.getStockQty(), dto.getStockValue());
+        product.setImageUrl(dto.getImageUrl());
+        if (dto.getActive() != null) {
+            if (dto.getActive()) product.activate();
+            else product.deactivate();
+        }
 
         // Cập nhật quan hệ
         updateRelations(product, dto);
@@ -406,18 +412,13 @@ public class ProductService {
             throw new BusinessException(SystemMessage.PROD_ERR_011.getMessage());
         }
 
-        ProductVariant variant = ProductVariant.builder()
-                .product(product)
-                .sku(sku)
-                .barcode(barcode)
-                .variantName(request.getVariantName().trim())
-                .costPrice(resolveMoney(request.getCostPrice()))
-                .salePrice(resolveMoney(request.getSalePrice()))
-                .manufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()))
-                .specsJson(trimToNull(request.getSpecsJson()))
-                .active(request.getActive() != null ? request.getActive() : true)
-                .warrantyMonths(request.getWarrantyMonths())
-                .build();
+        ProductVariant variant = new ProductVariant();
+        variant.initVariant(product, sku, barcode, request.getVariantName().trim());
+        variant.updatePricing(resolveMoney(request.getCostPrice()), resolveMoney(request.getSalePrice()));
+        variant.setManufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()));
+        variant.setSpecsJson(trimToNull(request.getSpecsJson()));
+        variant.setActive(request.getActive() != null ? request.getActive() : true);
+        variant.setWarrantyMonths(request.getWarrantyMonths());
         return convertVariantToDto(productVariantRepository.save(variant));
     }
 
@@ -449,13 +450,9 @@ public class ProductService {
         }
 
         variant.setSku(sku);
-        variant.setBarcode(barcode);
-        variant.setVariantName(request.getVariantName().trim());
-        variant.setCostPrice(resolveMoney(request.getCostPrice()));
-        variant.setSalePrice(resolveMoney(request.getSalePrice()));
-        variant.setManufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()));
-        variant.setSpecsJson(trimToNull(request.getSpecsJson()));
-        variant.setActive(request.getActive() != null ? request.getActive() : true);
+        variant.updateDetails(request.getVariantName().trim(), barcode, trimToNull(request.getManufacturerPartNumber()), trimToNull(request.getSpecsJson()));
+        variant.updatePricing(resolveMoney(request.getCostPrice()), resolveMoney(request.getSalePrice()));
+        if (request.getActive() != null && !request.getActive()) variant.deactivate(); else variant.activate();
         variant.setWarrantyMonths(request.getWarrantyMonths());
         return convertVariantToDto(productVariantRepository.save(variant));
     }
@@ -495,16 +492,11 @@ public class ProductService {
         if (productVariantRepository.findBySku(sku).isPresent()) {
             return;
         }
-        ProductVariant variant = ProductVariant.builder()
-                .product(product)
-                .sku(sku)
-                .barcode(generateBarcode())
-                .variantName(dto.getProductName().trim())
-                .costPrice(BigDecimal.ZERO)
-                .salePrice(resolveMoney(dto.getSalePrice()))
-                .active(dto.getActive() != null ? dto.getActive() : true)
-                .warrantyMonths(dto.getWarrantyPeriodMonths())
-                .build();
+        ProductVariant variant = new ProductVariant();
+        variant.initVariant(product, sku, generateBarcode(), dto.getProductName().trim());
+        variant.updatePricing(BigDecimal.ZERO, resolveMoney(dto.getSalePrice()));
+        variant.setActive(dto.getActive() != null ? dto.getActive() : true);
+        variant.setWarrantyMonths(dto.getWarrantyPeriodMonths());
         productVariantRepository.save(variant);
     }
 
@@ -613,19 +605,36 @@ public class ProductService {
     }
 
     private Product convertToEntity(ProductRequest dto) {
-        Product product = productMapper.toEntity(dto);
-        product.setProductType(resolveProductType(dto.getProductType()));
-        product.setSalePrice(resolveMoney(dto.getSalePrice()));
-        if (product.getVatRate() == null) product.setVatRate(BigDecimal.valueOf(8));
-        if (product.getTrackSerial() == null) product.setTrackSerial(false);
-        if (product.getTrackLot() == null) product.setTrackLot(false);
-        if (product.getIsAssembly() == null) product.setIsAssembly(false);
-        if (product.getActive() == null) product.setActive(true);
-        if (product.getTaxReductionStatus() == null) product.setTaxReductionStatus("Chưa xác định");
-        if (product.getStockQty() == null) product.setStockQty(BigDecimal.ZERO);
-        if (product.getMinStockQty() == null) product.setMinStockQty(BigDecimal.ZERO);
-        if (product.getStockValue() == null) product.setStockValue(BigDecimal.ZERO);
-
+        Product product = new Product();
+        product.initProduct(
+            dto.getProductCode(),
+            dto.getProductName(),
+            resolveProductType(dto.getProductType()),
+            null, null, null,
+            dto.getDescription()
+        );
+        product.updatePricing(
+            resolveMoney(dto.getSalePrice()),
+            dto.getVatRate() == null ? java.math.BigDecimal.valueOf(8) : dto.getVatRate(),
+            dto.getTaxReductionStatus() == null ? "Chưa xác định" : dto.getTaxReductionStatus()
+        );
+        product.updateTracking(
+            dto.getTrackSerial() == null ? false : dto.getTrackSerial(),
+            dto.getTrackLot() == null ? false : dto.getTrackLot(),
+            dto.getIsAssembly() == null ? false : dto.getIsAssembly()
+        );
+        product.updateStock(
+            dto.getStockQty() == null ? java.math.BigDecimal.ZERO : dto.getStockQty(),
+            dto.getStockValue() == null ? java.math.BigDecimal.ZERO : dto.getStockValue()
+        );
+        product.setImageUrl(dto.getImageUrl());
+        
+        if (dto.getActive() == null || dto.getActive()) {
+            product.activate();
+        } else {
+            product.deactivate();
+        }
+        
         updateRelations(product, dto);
         return product;
     }
@@ -675,13 +684,8 @@ public class ProductService {
                 Unit unit = unitRepository.findById(req.getUnitId())
                         .orElseThrow(() -> new BusinessException("Đơn vị chuyển đổi không tồn tại: ID " + req.getUnitId()));
                 String op = "DIVIDE".equalsIgnoreCase(req.getOperator()) || "/".equals(req.getOperator()) ? "DIVIDE" : "MULTIPLY";
-                ProductUnitConversion conv = ProductUnitConversion.builder()
-                        .product(product)
-                        .unit(unit)
-                        .operator(op)
-                        .ratio(req.getRatio())
-                        .note(req.getNote())
-                        .build();
+                ProductUnitConversion conv = new ProductUnitConversion();
+                conv.initConversion(product, unit, op, req.getRatio(), req.getNote());
                 product.getUnitConversions().add(conv);
             }
         }
@@ -721,20 +725,16 @@ public class ProductService {
         if (barcode == null) {
             barcode = generateBarcode();
         }
-        return ProductVariant.builder()
-                .product(product)
-                .sku(normalizeCode(request.getSku()))
-                .barcode(barcode)
-                .variantName(request.getVariantName().trim())
-                .costPrice(resolveMoney(request.getCostPrice()))
-                .salePrice(resolveMoney(request.getSalePrice()))
-                .manufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()))
-                .specsJson(trimToNull(request.getSpecsJson()))
-                .trackingMode(resolveTrackingMode(request.getTrackingMode(), product))
-                .minStockQty(resolveMoney(request.getMinStockQty()))
-                .active(request.getActive() != null ? request.getActive() : true)
-                .warrantyMonths(request.getWarrantyMonths() != null ? request.getWarrantyMonths() : defaultWarrantyMonths(product))
-                .build();
+        ProductVariant variant = new ProductVariant();
+        variant.initVariant(product, normalizeCode(request.getSku()), barcode, request.getVariantName().trim());
+        variant.updatePricing(resolveMoney(request.getCostPrice()), resolveMoney(request.getSalePrice()));
+        variant.setManufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()));
+        variant.setSpecsJson(trimToNull(request.getSpecsJson()));
+        variant.setTrackingMode(resolveTrackingMode(request.getTrackingMode(), product));
+        variant.setMinStockQty(resolveMoney(request.getMinStockQty()));
+        variant.setActive(request.getActive() != null ? request.getActive() : true);
+        variant.setWarrantyMonths(request.getWarrantyMonths() != null ? request.getWarrantyMonths() : defaultWarrantyMonths(product));
+        return variant;
     }
 
     private ProductCreateMode resolveCreateMode(ProductRequest dto) {

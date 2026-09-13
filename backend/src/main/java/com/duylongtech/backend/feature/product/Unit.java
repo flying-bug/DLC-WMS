@@ -8,12 +8,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "units")
+@Table(name = "UNITS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Unit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,9 +22,11 @@ public class Unit {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false, length = 20)
-    @Builder.Default
-    private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name(); // ACTIVE, INACTIVE
+    @Column(name = "status", length = 30)
+    private String status;
+
+    @Column(name = "created_by")
+    private Long createdBy;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -36,4 +35,16 @@ public class Unit {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initUnit(String name, String description, Long creatorId) {
+        this.name = name;
+        this.description = description;
+        this.status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        this.createdBy = creatorId;
+    }
+
+    public void updateDetails(String name, String description) {
+        if (name != null) this.name = name;
+        if (description != null) this.description = description;
+    }
 }

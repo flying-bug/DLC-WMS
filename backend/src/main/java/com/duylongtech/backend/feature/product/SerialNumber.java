@@ -16,10 +16,7 @@ import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
         @UniqueConstraint(name = "uk_serial_asset_tag", columnNames = "asset_tag")
 })
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class SerialNumber {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -85,5 +82,33 @@ public class SerialNumber {
 
     public static String normalizeSerial(String value) {
         return value == null ? null : value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    public void initSerialNumber(Long variantId, Long warehouseId, String serialNumber, String status, LocalDateTime importedAt) {
+        this.variantId = variantId;
+        this.warehouseId = warehouseId;
+        this.serialNumber = serialNumber;
+        this.status = status;
+        this.importedAt = importedAt;
+    }
+
+    public void updateWarehouse(Long warehouseId) {
+        this.warehouseId = warehouseId;
+    }
+
+    public void updateStatus(String status) {
+        this.status = status;
+    }
+    
+    public void setPurchaseOrderLineId(Long purchaseOrderLineId) {
+        this.purchaseOrderLineId = purchaseOrderLineId;
+    }
+
+    public void setSalesOrderLineId(Long salesOrderLineId) {
+        this.salesOrderLineId = salesOrderLineId;
+    }
+
+    public void setSoldAt(LocalDateTime soldAt) {
+        this.soldAt = soldAt;
     }
 }

@@ -24,19 +24,4 @@ public interface ProductMapper {
     @Mapping(target = "stockQty", ignore = true) // Handled in Service
     ProductResponse toResponse(Product product);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "brand", ignore = true) // Handled in Service
-    @Mapping(target = "category", ignore = true) // Handled in Service
-    @Mapping(target = "unit", ignore = true) // Handled in Service
-    Product toEntity(ProductRequest request);
-
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "brand", ignore = true) // Handled in Service
-    @Mapping(target = "category", ignore = true) // Handled in Service
-    @Mapping(target = "unit", ignore = true) // Handled in Service
-    void updateEntity(@MappingTarget Product entity, ProductRequest request);
 }

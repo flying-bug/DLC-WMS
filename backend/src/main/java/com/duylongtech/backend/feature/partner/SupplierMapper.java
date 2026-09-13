@@ -33,7 +33,4 @@ public abstract class SupplierMapper {
         responseBuilder.currentDebt(currentDebt);
     }
 
-    public abstract Partner toEntity(SupplierRequest request);
-
-    public abstract void updateEntity(@MappingTarget Partner partner, SupplierRequest request);
 }

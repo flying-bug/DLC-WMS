@@ -19,10 +19,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "PARTNERS")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Partner {
 
     @Id
@@ -40,7 +37,6 @@ public class Partner {
      * Loại pháp lý: COMPANY (Tổ chức) | INDIVIDUAL (Cá nhân).
      */
     @Column(nullable = false, length = 20)
-    @Builder.Default
     private String type = "COMPANY";
 
     /**
@@ -77,14 +73,12 @@ public class Partner {
      * Cờ đánh dấu đây là khách hàng.
      */
     @Column(name = "is_customer", nullable = false)
-    @Builder.Default
     private Boolean isCustomer = false;
 
     /**
      * Cờ đánh dấu đây là nhà cung cấp.
      */
     @Column(name = "is_supplier", nullable = false)
-    @Builder.Default
     private Boolean isSupplier = false;
 
     /**
@@ -97,14 +91,12 @@ public class Partner {
      * Hạn mức công nợ.
      */
     @Column(name = "credit_limit", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal creditLimit = BigDecimal.ZERO;
 
     /**
      * Số ngày được nợ.
      */
     @Column(name = "payment_term_days", nullable = false)
-    @Builder.Default
     private Integer paymentTermDays = 0;
 
     /**
@@ -131,7 +123,6 @@ public class Partner {
      * Với nhà cung cấp: nhóm ngành hàng (vd: "Sản phẩm công nghệ")
      */
     @Column(name = "group_type", nullable = false, length = 50)
-    @Builder.Default
     private String groupType = "RETAIL";
 
     /**
@@ -139,7 +130,6 @@ public class Partner {
      * BR-11: Chỉ đổi INACTIVE thay vì xóa nếu đã có giao dịch.
      */
     @Column(nullable = false, length = 20)
-    @Builder.Default
     private String status = DocumentStatus.APPROVED.name();
 
     @CreationTimestamp
@@ -149,4 +139,56 @@ public class Partner {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initPartner(String code, String name, String type, Boolean isCustomer, Boolean isSupplier, String groupType) {
+        this.code = code;
+        this.name = name;
+        this.type = type != null ? type : "COMPANY";
+        this.isCustomer = isCustomer != null ? isCustomer : false;
+        this.isSupplier = isSupplier != null ? isSupplier : false;
+        this.groupType = groupType != null ? groupType : "RETAIL";
+        this.status = DocumentStatus.APPROVED.name();
+    }
+
+    public void updateContact(String phone, String email, String address, String taxCode) {
+        this.phone = phone;
+        this.email = email;
+        this.address = address;
+        this.taxCode = taxCode;
+    }
+
+    public void updateFinancial(BigDecimal creditLimit, Integer paymentTermDays, String bankAccountNumber, String bankName, String bankBeneficiaryName) {
+        this.creditLimit = creditLimit != null ? creditLimit : BigDecimal.ZERO;
+        this.paymentTermDays = paymentTermDays != null ? paymentTermDays : 0;
+        this.bankAccountNumber = bankAccountNumber;
+        this.bankName = bankName;
+        this.bankBeneficiaryName = bankBeneficiaryName;
+    }
+
+    public void updateBasic(String name, String type, String groupType, Long parentId) {
+        this.name = name;
+        if (type != null) this.type = type;
+        if (groupType != null) this.groupType = groupType;
+        this.parentId = parentId;
+    }
+
+    public void deactivate() {
+        this.status = "INACTIVE";
+    }
+
+    public void activate() {
+        this.status = DocumentStatus.APPROVED.name();
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 }

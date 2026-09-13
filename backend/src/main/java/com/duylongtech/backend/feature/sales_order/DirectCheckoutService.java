@@ -137,15 +137,8 @@ public class DirectCheckoutService {
     }
 
     private Partner createWalkInCustomer() {
-        Partner customer = Partner.builder()
-                .code(WALK_IN_CUSTOMER_CODE)
-                .type("INDIVIDUAL")
-                .name("Khách vãng lai")
-                .groupType("RETAIL")
-                .status(DocumentStatus.APPROVED.name())
-                .isCustomer(true)
-                .isSupplier(false)
-                .build();
+        Partner customer = new Partner();
+        customer.initPartner(WALK_IN_CUSTOMER_CODE, "Khách vãng lai", "INDIVIDUAL", true, false, "RETAIL");
         return partnerRepository.save(customer);
     }
 
@@ -154,17 +147,9 @@ public class DirectCheckoutService {
         if (customerName == null) {
             customerName = "Khách " + phone;
         }
-        Partner customer = Partner.builder()
-                .code(codeGeneratorService.generateCode("PARTNERS", "code", "KH", 6))
-                .type("INDIVIDUAL")
-                .name(customerName)
-                .phone(phone)
-                .address(trimToNull(request.getCustomerAddress()))
-                .groupType("RETAIL")
-                .status(DocumentStatus.APPROVED.name())
-                .isCustomer(true)
-                .isSupplier(false)
-                .build();
+        Partner customer = new Partner();
+        customer.initPartner(codeGeneratorService.generateCode("PARTNERS", "code", "KH", 6), customerName, "INDIVIDUAL", true, false, "RETAIL");
+        customer.updateContact(phone, null, trimToNull(request.getCustomerAddress()), null);
         return partnerRepository.save(customer);
     }
 

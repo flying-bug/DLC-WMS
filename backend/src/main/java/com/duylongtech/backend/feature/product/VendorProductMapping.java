@@ -15,10 +15,7 @@ import com.duylongtech.backend.feature.partner.Partner;
 @Table(name = "VENDOR_PRODUCT_MAPPINGS",
        uniqueConstraints = @UniqueConstraint(columnNames = {"partner_id", "vendor_product_name"}))
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class VendorProductMapping {
 
     @Id
@@ -39,7 +36,6 @@ public class VendorProductMapping {
 
     /** Số lần mapping này được xác nhận (dùng để ưu tiên) */
     @Column(name = "confirm_count", nullable = false)
-    @Builder.Default
     private Integer confirmCount = 1;
 
     @CreationTimestamp
@@ -48,4 +44,17 @@ public class VendorProductMapping {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void initMapping(Long partnerId, String vendorProductName, Long productVariantId) {
+        this.partnerId = partnerId;
+        this.vendorProductName = vendorProductName;
+        this.productVariantId = productVariantId;
+        this.confirmCount = 1;
+    }
+
+    public void updateMapping(Long productVariantId) {
+        this.productVariantId = productVariantId;
+        this.confirmCount++;
+        this.updatedAt = java.time.LocalDateTime.now();
+    }
 }

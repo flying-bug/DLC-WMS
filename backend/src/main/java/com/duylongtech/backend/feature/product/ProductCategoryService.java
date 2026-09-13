@@ -66,10 +66,10 @@ public class ProductCategoryService {
 
         validateParentExists(dto.getParentId());
 
-        ProductCategory category = categoryMapper.toEntity(dto);
-        if (category.getStatus() == null) {
-            category.setStatus(DocumentStatus.APPROVED.name());
-        }
+        ProductCategory category = new ProductCategory();
+        category.initCategory(dto.getName(), dto.getDescription(), null);
+        category.setCode(dto.getCode());
+        category.setParentId(dto.getParentId());
 
         ProductCategory saved = categoryRepository.save(category);
         return categoryMapper.toResponse(saved);
@@ -82,7 +82,10 @@ public class ProductCategoryService {
 
         validateParent(id, dto.getParentId());
 
-        categoryMapper.updateEntity(category, dto);
+        category.updateDetails(dto.getName(), dto.getDescription());
+        if (dto.getParentId() != null) {
+            category.setParentId(dto.getParentId());
+        }
 
         ProductCategory updated = categoryRepository.save(category);
         return categoryMapper.toResponse(updated);

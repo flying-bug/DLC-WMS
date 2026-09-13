@@ -215,7 +215,7 @@ public class StocktakeService {
                     if ("MISSING".equals(sLine.getScanStatus())) {
                         if (sLine.getSerialNumberId() != null) {
                             serialNumberRepository.findById(sLine.getSerialNumberId()).ifPresent(sn -> {
-                                sn.setStatus("LOST");
+                                sn.updateStatus("LOST");
                                 serialNumberRepository.save(sn);
                             });
                         }
@@ -224,17 +224,12 @@ public class StocktakeService {
                                 .findByVariantIdAndSerialNumber(line.getVariantId(), sLine.getSerialNumber());
                         if (existingOpt.isPresent()) {
                             SerialNumber sn = existingOpt.get();
-                            sn.setWarehouseId(stocktake.getWarehouseId());
-                            sn.setStatus("AVAILABLE");
+                            sn.updateWarehouse(stocktake.getWarehouseId());
+                            sn.updateStatus("AVAILABLE");
                             serialNumberRepository.save(sn);
                         } else {
-                            SerialNumber newSn = SerialNumber.builder()
-                                    .variantId(line.getVariantId())
-                                    .warehouseId(stocktake.getWarehouseId())
-                                    .serialNumber(sLine.getSerialNumber())
-                                    .status("AVAILABLE")
-                                    .importedAt(LocalDateTime.now())
-                                    .build();
+                            SerialNumber newSn = new SerialNumber();
+                            newSn.initSerialNumber(line.getVariantId(), stocktake.getWarehouseId(), sLine.getSerialNumber(), "AVAILABLE", LocalDateTime.now());
                             serialNumberRepository.save(newSn);
                         }
                     }

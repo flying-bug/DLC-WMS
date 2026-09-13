@@ -1,10 +1,5 @@
 package com.duylongtech.backend.component;
 
-import com.duylongtech.backend.enums.DocumentStatus;
-
-import com.duylongtech.backend.feature.brand.Brand;
-import com.duylongtech.backend.feature.brand.BrandRepository;
-import com.duylongtech.backend.feature.auth.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,6 +11,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+
+import com.duylongtech.backend.feature.auth.RoleService;
 import com.duylongtech.backend.feature.audit.AuditLog;
 import com.duylongtech.backend.feature.audit.AuditLogRepository;
 import com.duylongtech.backend.feature.auth.PermissionEntity;
@@ -24,6 +21,7 @@ import com.duylongtech.backend.feature.auth.RoleEntity;
 import com.duylongtech.backend.feature.auth.RoleRepository;
 import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.feature.auth.UserRepository;
+
 import com.duylongtech.backend.feature.brand.Brand;
 import com.duylongtech.backend.feature.brand.BrandRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalance;
@@ -140,14 +138,14 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .name("Kho chính")
                     .address("123 Cầu Giấy, Hà Nội")
                     .type("STANDARD")
-                    .status(DocumentStatus.APPROVED.name())
+                    .status("APPROVED")
                     .build());
             warehouseRepository.save(Warehouse.builder()
                     .code("K02")
                     .name("Kho phụ")
                     .address("456 Giải Phóng, Hà Nội")
                     .type("STANDARD")
-                    .status(DocumentStatus.APPROVED.name())
+                    .status("APPROVED")
                     .build());
             System.out.println("✅ Seeded default warehouses successfully.");
         }
@@ -156,66 +154,27 @@ public class DatabaseSeeder implements CommandLineRunner {
     @SuppressWarnings("unused")
     private void seedPartners() {
         if (partnerRepository.count() == 0) {
-            partnerRepository.save(Partner.builder()
-                    .code("KH00001")
-                    .name("Ng Thu Uyên")
-                    .phone("0912 345 678")
-                    .email("uyennt@gmail.com")
-                    .address("123 Lê Lợi, Q.1, TP.HCM")
-                    .taxCode("0123456789")
-                    .isCustomer(true)
-                    .isSupplier(false)
-                    .groupType("RETAIL")
-                    .status(DocumentStatus.APPROVED.name())
-                    .build());
-            partnerRepository.save(Partner.builder()
-                    .code("KH00002")
-                    .name("Công ty TNHH ABC")
-                    .phone("0987 654 321")
-                    .email("contact@abc.com")
-                    .address("456 Nguyễn Huệ, Q.1, TP.HCM")
-                    .taxCode("0987654321")
-                    .isCustomer(true)
-                    .isSupplier(false)
-                    .groupType("WHOLESALE")
-                    .status(DocumentStatus.APPROVED.name())
-                    .build());
-            partnerRepository.save(Partner.builder()
-                    .code("KH00003")
-                    .name("Trần Văn Bình")
-                    .phone("0901 234 567")
-                    .email("binhtv@gmail.com")
-                    .address("789 Hai Bà Trưng, Q.3, TP.HCM")
-                    .taxCode("")
-                    .isCustomer(true)
-                    .isSupplier(false)
-                    .groupType("RETAIL")
-                    .status(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name())
-                    .build());
-            partnerRepository.save(Partner.builder()
-                    .code("NCC00001")
-                    .name("Công ty Máy tính Phong Vũ")
-                    .phone("19001808")
-                    .email("contact@phongvu.vn")
-                    .address("264 Nguyễn Thị Minh Khai, Q.3, TP.HCM")
-                    .taxCode("0303102148")
-                    .isCustomer(false)
-                    .isSupplier(true)
-                    .groupType("RETAIL")
-                    .status(DocumentStatus.APPROVED.name())
-                    .build());
-            partnerRepository.save(Partner.builder()
-                    .code("NCC00002")
-                    .name("FPT Shop")
-                    .phone("18006601")
-                    .email("fptshop@fpt.com.vn")
-                    .address("261-263 Khánh Hội, Q.4, TP.HCM")
-                    .taxCode("0311609355")
-                    .isCustomer(false)
-                    .isSupplier(true)
-                    .groupType("RETAIL")
-                    .status(DocumentStatus.APPROVED.name())
-                    .build());
+            Partner p1 = new Partner();
+            p1.initPartner("KH00001", "Ng Thu Uyên", "INDIVIDUAL", true, false, "RETAIL");
+            p1.updateContact("0912 345 678", "uyennt@gmail.com", "123 Lê Lợi, Q.1, TP.HCM", "0123456789");
+            partnerRepository.save(p1);
+            Partner p2 = new Partner();
+            p2.initPartner("KH00002", "Công ty TNHH ABC", "COMPANY", true, false, "WHOLESALE");
+            p2.updateContact("0987 654 321", "contact@abc.com", "456 Nguyễn Huệ, Q.1, TP.HCM", "0987654321");
+            partnerRepository.save(p2);
+            Partner p3 = new Partner();
+            p3.initPartner("KH00003", "Trần Văn Bình", "INDIVIDUAL", true, false, "RETAIL");
+            p3.updateContact("0901 234 567", "binhtv@gmail.com", "789 Hai Bà Trưng, Q.3, TP.HCM", "");
+            p3.deactivate();
+            partnerRepository.save(p3);
+            Partner p4 = new Partner();
+            p4.initPartner("NCC00001", "Công ty Máy tính Phong Vũ", "COMPANY", false, true, "RETAIL");
+            p4.updateContact("19001808", "contact@phongvu.vn", "264 Nguyễn Thị Minh Khai, Q.3, TP.HCM", "0303102148");
+            partnerRepository.save(p4);
+            Partner p5 = new Partner();
+            p5.initPartner("NCC00002", "FPT Shop", "COMPANY", false, true, "RETAIL");
+            p5.updateContact("18006601", "fptshop@fpt.com.vn", "261-263 Khánh Hội, Q.4, TP.HCM", "0311609355");
+            partnerRepository.save(p5);
             System.out.println("✅ Seeded default partners successfully.");
         }
     }
@@ -228,7 +187,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         RoleEntity newRole = new RoleEntity();
         newRole.setCode(code);
         newRole.setName(name);
-        newRole.setStatus(DocumentStatus.APPROVED.name());
+        newRole.setStatus("APPROVED");
         return roleRepository.save(newRole);
     }
 
@@ -272,7 +231,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                             .code(code)
                             .name(action.toUpperCase() + " " + module.toUpperCase())
                             .module(module)
-                            .status(DocumentStatus.APPROVED.name())
+                            .status("APPROVED")
                             .createdAt(LocalDateTime.now())
                             .build());
                 }
@@ -338,7 +297,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             User admin = adminOpt.get();
             Set<RoleEntity> roles = new HashSet<>();
             roles.add(superAdminRole);
-            admin.setStatus(DocumentStatus.APPROVED.name());
+            admin.setStatus("APPROVED");
             admin.setRoles(roles);
             admin.setPermissions(adminPermissions);
             userRepository.save(admin);
@@ -352,7 +311,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .fullName("System Admin")
                     .email("admin@duylongtech.com")
                     .phone("0123456789")
-                    .status(DocumentStatus.APPROVED.name())
+                    .status("APPROVED")
                     .roles(roles)
                     .permissions(adminPermissions)
                     .createdAt(LocalDateTime.now())
@@ -396,7 +355,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .fullName(fullName)
                     .email(email)
                     .phone(phone)
-                    .status(DocumentStatus.APPROVED.name())
+                    .status("APPROVED")
                     .roles(roles)
                     .createdAt(LocalDateTime.now())
                     .build();
@@ -490,10 +449,8 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (unitOpt.isPresent()) {
             return unitOpt.get();
         }
-        Unit newUnit = Unit.builder()
-                .name(name)
-                .status(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name())
-                .build();
+        Unit newUnit = new Unit();
+        newUnit.initUnit(name, "", null);
         return unitRepository.save(newUnit);
     }
 
@@ -505,7 +462,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Brand newBrand = Brand.builder()
                 .code(code)
                 .name(name)
-                .status(DocumentStatus.APPROVED.name())
+                .status("APPROVED")
                 .description(description)
                 .hotline(hotline)
                 .contactEmail(email)
@@ -518,12 +475,10 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (catOpt.isPresent()) {
             return catOpt.get();
         }
-        ProductCategory newCat = ProductCategory.builder()
-                .code(code)
-                .name(name)
-                .parentId(parentId)
-                .status(DocumentStatus.APPROVED.name())
-                .build();
+        ProductCategory newCat = new ProductCategory();
+        newCat.initCategory(name, "", null);
+        newCat.setCode(code);
+        newCat.setParentId(parentId);
         return categoryRepository.save(newCat);
     }
 
@@ -532,15 +487,10 @@ public class DatabaseSeeder implements CommandLineRunner {
         if (opt.isPresent()) {
             return opt.get();
         }
-        ProductVariant variant = ProductVariant.builder()
-                .product(product)
-                .sku(sku)
-                .barcode(sku)
-                .variantName(name)
-                .costPrice(costPrice)
-                .salePrice(salePrice)
-                .active(true)
-                .build();
+        ProductVariant variant = new ProductVariant();
+        variant.initVariant(product, sku, sku, name);
+        variant.updatePricing(costPrice, salePrice);
+        variant.activate();
         return productVariantRepository.save(variant);
     }
 

@@ -27,7 +27,5 @@ public abstract class ProductCategoryMapper {
         }
     }
 
-    public abstract ProductCategory toEntity(ProductCategoryRequest request);
-
     public abstract void updateEntity(@MappingTarget ProductCategory category, ProductCategoryRequest request);
 }

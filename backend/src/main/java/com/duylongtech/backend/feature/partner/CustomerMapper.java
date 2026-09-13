@@ -34,13 +34,4 @@ public abstract class CustomerMapper {
         response.setCurrentDebt(currentDebt);
     }
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "isCustomer", constant = "true")
-    @Mapping(target = "isSupplier", constant = "false")
-    public abstract Partner toEntity(CustomerRequest request);
-
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "isCustomer", ignore = true)
-    @Mapping(target = "isSupplier", ignore = true)
-    public abstract void updateEntity(@MappingTarget Partner entity, CustomerRequest request);
 }
