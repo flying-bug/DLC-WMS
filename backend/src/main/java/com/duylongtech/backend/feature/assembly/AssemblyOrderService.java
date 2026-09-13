@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.assembly;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.SerialInstallStatus;
 
 import com.duylongtech.backend.feature.assembly.AssemblyBomLineRequest;
 import com.duylongtech.backend.constant.SystemMessage;
@@ -93,8 +94,8 @@ public class AssemblyOrderService {
     private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name());
     private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.APPROVED.name());
     private static final BigDecimal ZERO = BigDecimal.ZERO;
-    private static final String COMPONENT_STATUS_ACTIVE = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
-    private static final String COMPONENT_STATUS_REMOVED = "REMOVED";
+    private static final String COMPONENT_STATUS_ACTIVE = SerialInstallStatus.ACTIVE.name();
+    private static final String COMPONENT_STATUS_REMOVED = SerialInstallStatus.REMOVED.name();
 
     private final AssemblyBomRepository assemblyBomRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;

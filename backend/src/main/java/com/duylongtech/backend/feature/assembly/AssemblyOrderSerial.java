@@ -3,6 +3,7 @@ package com.duylongtech.backend.feature.assembly;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import com.duylongtech.backend.enums.SerialInstallStatus;
 import java.time.LocalDateTime;
 import com.duylongtech.backend.feature.product.ProductVariant;
 
@@ -41,7 +42,7 @@ public class AssemblyOrderSerial {
 
     @Setter(AccessLevel.NONE)
     @Column(name = "status", nullable = false, length = 30)
-        private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        private String status = SerialInstallStatus.ACTIVE.name();
 
     @Setter(AccessLevel.NONE)
     @Column(name = "installed_at")
@@ -79,15 +80,15 @@ public class AssemblyOrderSerial {
         this.componentVariant = componentVariant;
         this.componentSerial = componentSerial;
         this.createdBy = creatorId;
-        this.status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        this.status = SerialInstallStatus.ACTIVE.name();
         this.installedAt = LocalDateTime.now();
     }
 
     public void markAsRemoved(Long repairId, String note) {
-        if (!com.duylongtech.backend.enums.EntityStatus.ACTIVE.name().equals(this.status)) {
+        if (!SerialInstallStatus.ACTIVE.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ Serial ACTIVE mới có thể được tháo");
         }
-        this.status = "REMOVED";
+        this.status = SerialInstallStatus.REMOVED.name();
         this.removedAt = LocalDateTime.now();
         this.removedByRepairId = repairId;
         this.note = note;

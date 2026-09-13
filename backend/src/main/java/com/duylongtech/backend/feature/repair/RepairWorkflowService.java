@@ -2,6 +2,7 @@ package com.duylongtech.backend.feature.repair;
 
 import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.enums.RepairStatus;
+import com.duylongtech.backend.enums.SerialInstallStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.repair.RepairResponse;
@@ -77,9 +78,9 @@ public class RepairWorkflowService {
     private static final String ACTION_ADD = "ADD";
     private static final String ACTION_REPLACE = "REPLACE";
     private static final String ACTION_REMOVE = "REMOVE";
-    private static final String COMPONENT_STATUS_ACTIVE = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+    private static final String COMPONENT_STATUS_ACTIVE = SerialInstallStatus.ACTIVE.name();
     private static final String COMPONENT_STATUS_REPLACED = "REPLACED";
-    private static final String COMPONENT_STATUS_REMOVED = "REMOVED";
+    private static final String COMPONENT_STATUS_REMOVED = SerialInstallStatus.REMOVED.name();
 
     // Định nghĩa các bước chuyển trạng thái hợp lệ
     private static final Map<RepairStatus, Set<RepairStatus>> VALID_TRANSITIONS = Map.of(

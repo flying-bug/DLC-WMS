@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.duylongtech.backend.enums.SerialInstallStatus;
 import java.time.LocalDateTime;
 import com.duylongtech.backend.feature.product.ProductVariant;
 
@@ -48,7 +49,7 @@ public class DeviceComponentSerial {
 
     @Setter(AccessLevel.NONE)
     @Column(name = "status", nullable = false, length = 30)
-        private String status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        private String status = SerialInstallStatus.ACTIVE.name();
 
     @Setter(AccessLevel.NONE)
     @Column(name = "installed_at")
@@ -90,7 +91,7 @@ public class DeviceComponentSerial {
         this.componentVariant = componentVariant;
         this.componentSerial = componentSerial;
         this.createdBy = creatorId;
-        this.status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        this.status = SerialInstallStatus.ACTIVE.name();
         this.installedAt = LocalDateTime.now();
     }
 
@@ -102,7 +103,7 @@ public class DeviceComponentSerial {
         this.componentVariant = componentVariant;
         this.componentSerial = componentSerial;
         this.createdBy = creatorId;
-        this.status = "REMOVED";
+        this.status = SerialInstallStatus.REMOVED.name();
         this.removedAt = LocalDateTime.now();
         this.note = note;
     }
@@ -116,15 +117,15 @@ public class DeviceComponentSerial {
         this.sourceRepairId = repairId;
         this.note = note;
         this.createdBy = creatorId;
-        this.status = com.duylongtech.backend.enums.EntityStatus.ACTIVE.name();
+        this.status = SerialInstallStatus.ACTIVE.name();
         this.installedAt = LocalDateTime.now();
     }
 
     public void markAsRemoved(Long repairId, AssemblyOrder removedByAssemblyOrder, String note) {
-        if (!com.duylongtech.backend.enums.EntityStatus.ACTIVE.name().equals(this.status)) {
+        if (!SerialInstallStatus.ACTIVE.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ Serial ACTIVE mới có thể được tháo");
         }
-        this.status = "REMOVED";
+        this.status = SerialInstallStatus.REMOVED.name();
         this.removedAt = LocalDateTime.now();
         this.removedByRepairId = repairId;
         this.removedByAssemblyOrder = removedByAssemblyOrder;
