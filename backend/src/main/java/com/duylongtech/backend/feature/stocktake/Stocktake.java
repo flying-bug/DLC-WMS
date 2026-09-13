@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.duylongtech.backend.enums.StocktakeStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -75,11 +76,11 @@ public class Stocktake {
         this.purpose = purpose;
         this.stocktakeDate = stocktakeDate != null ? stocktakeDate : LocalDate.now();
         this.createdBy = creatorId;
-        this.status = "DRAFT";
+        this.status = StocktakeStatus.DRAFT.name();
     }
-    
+
     public void updateDetails(String purpose, LocalDate stocktakeDate) {
-        if (!"DRAFT".equals(this.status)) {
+        if (!StocktakeStatus.DRAFT.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ được cập nhật phiếu kiểm kê khi ở trạng thái DRAFT");
         }
         if (purpose != null) this.purpose = purpose;
@@ -105,33 +106,33 @@ public class Stocktake {
     }
     
     public void startCounting() {
-        if (!"DRAFT".equals(this.status)) {
+        if (!StocktakeStatus.DRAFT.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ phiếu kiểm kê DRAFT mới có thể bắt đầu kiểm");
         }
-        this.status = "COUNTING";
+        this.status = StocktakeStatus.COUNTING.name();
     }
 
     public void complete(String conclusion, Long referenceExportId, Long referenceImportId) {
-        if (!"COUNTING".equals(this.status)) {
+        if (!StocktakeStatus.COUNTING.name().equals(this.status)) {
             throw new IllegalStateException("Chỉ phiếu kiểm kê đang kiểm mới có thể hoàn thành");
         }
         this.conclusion = conclusion;
         this.referenceExportId = referenceExportId;
         this.referenceImportId = referenceImportId;
-        this.status = "COMPLETED";
+        this.status = StocktakeStatus.COMPLETED.name();
     }
 
     public void markAsPosted() {
-        if (!"DRAFT".equals(this.status) && !"COMPLETED".equals(this.status)) {
+        if (!StocktakeStatus.DRAFT.name().equals(this.status) && !StocktakeStatus.COMPLETED.name().equals(this.status)) {
             throw new IllegalStateException("Phiếu kiểm kê chưa hoàn thành");
         }
-        this.status = "POSTED";
+        this.status = StocktakeStatus.POSTED.name();
     }
 
     public void cancel() {
-        if ("COMPLETED".equals(this.status) || "POSTED".equals(this.status)) {
+        if (StocktakeStatus.COMPLETED.name().equals(this.status) || StocktakeStatus.POSTED.name().equals(this.status)) {
             throw new IllegalStateException("Không thể hủy phiếu kiểm kê đã hoàn thành hoặc vào sổ");
         }
-        this.status = "CANCELLED";
+        this.status = StocktakeStatus.CANCELLED.name();
     }
 }
