@@ -1,6 +1,6 @@
 package com.duylongtech.backend.exception;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.constant.SystemMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package com.duylongtech.backend.service.einvoice;
+package com.duylongtech.backend.feature.einvoice;
 
 import com.duylongtech.backend.enums.DocumentStatus;
 
@@ -9,65 +9,65 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import com.duylongtech.backend.feature.einvoice.EInvoice;
 
 @Slf4j
-@Component("viettelSinvoiceProvider")
+@Component("xInvoiceProvider")
 @RequiredArgsConstructor
-public class ViettelSinvoiceProvider implements EInvoiceProvider {
+public class XInvoiceProvider implements EInvoiceProvider {
 
-    @Value("${einvoice.viettel.base-url:https://api-sinvoice-demo.viettel.vn}")
+    @Value("${einvoice.xinvoice.base-url:https://api.xinvoice.vn}")
     private String baseUrl;
 
-    @Value("${einvoice.viettel.username:demo_user}")
-    private String username;
+    @Value("${einvoice.xinvoice.client-id:demo-client-id}")
+    private String clientId;
 
-    @Value("${einvoice.viettel.password:demo_pass}")
-    private String password;
+    @Value("${einvoice.xinvoice.api-key:demo-api-key}")
+    private String apiKey;
 
-    @Value("${einvoice.viettel.supplier-tax-code:0100109106}")
-    private String supplierTaxCode;
+    @Value("${einvoice.xinvoice.auth-token:demo-auth-token}")
+    private String authToken;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
     public String getProviderName() {
-        return "VIETTEL";
+        return "XINVOICE";
     }
 
     @Override
     public EInvoiceProviderResult issueInvoice(EInvoiceProviderData data) {
-        log.info("[ViettelSinvoiceProvider] Calling Viettel S-Invoice for SO: {}", data.getTransactionUuid());
-        String url = baseUrl + "/InvoiceAPI/InvoiceWS/createInvoiceApiWithCert";
+        log.info("[XInvoiceProvider] Calling XInvoice API for SO: {}", data.getTransactionUuid());
+        String url = baseUrl + "/invoice-api/invoice";
 
         try {
-            String auth = username + ":" + password;
-            String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
-
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Basic " + encodedAuth);
+            headers.set("client-id", clientId);
+            headers.set("api-key", apiKey);
+            headers.set("Authorization", "Bearer " + authToken);
 
             Map<String, Object> payload = buildPayload(data);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
 
-            if ("demo_user".equals(username)) {
-                log.info("[ViettelSinvoiceProvider] Demo credentials detected, generating mock sandbox response.");
+            // In production/demo, attempt the HTTP call; if credentials not configured, fallback with simulated response
+            if ("demo-api-key".equals(apiKey)) {
+                log.info("[XInvoiceProvider] Demo API key detected, generating sandbox response.");
                 String invoiceNo = String.format("%07d", (int)(Math.random() * 900000) + 100000);
                 return EInvoiceProviderResult.builder()
                         .success(true)
                         .invoiceNumber(invoiceNo)
                         .invoiceSeries(data.getInvoiceSeries() != null ? data.getInvoiceSeries() : "1C26TLL")
                         .templateCode(data.getTemplateCode() != null ? data.getTemplateCode() : "1/001")
-                        .cqtCode("26" + supplierTaxCode + invoiceNo)
+                        .cqtCode("26" + (data.getSellerTaxCode() != null ? data.getSellerTaxCode() : "0100109106") + invoiceNo)
                         .cqtStatus("VALID")
                         .issuedAt(LocalDateTime.now())
-                        .viewUrl("https://sinvoice.viettel.vn/tra-cuu-hoa-don?id=" + data.getTransactionUuid())
+                        .viewUrl("/api/v1/einvoices/preview/" + data.getTransactionUuid())
+                        .pdfUrl("/api/v1/einvoices/download/" + data.getTransactionUuid())
                         .rawRequest(payload.toString())
-                        .rawResponse("{\"result\":\"SUCCESS\",\"invoiceNo\":\"" + invoiceNo + "\"}")
+                        .rawResponse("{\"success\":true,\"provider\":\"XINVOICE\",\"invoiceNo\":\"" + invoiceNo + "\"}")
                         .build();
             }
 
@@ -76,29 +76,32 @@ public class ViettelSinvoiceProvider implements EInvoiceProvider {
             if (response.getStatusCode().is2xxSuccessful() && body != null) {
                 return EInvoiceProviderResult.builder()
                         .success(true)
-                        .invoiceNumber(String.valueOf(body.getOrDefault("invoiceNo", "")))
+                        .invoiceNumber(String.valueOf(body.getOrDefault("invoiceNumber", "")))
                         .invoiceSeries(String.valueOf(body.getOrDefault("invoiceSeries", data.getInvoiceSeries())))
                         .templateCode(String.valueOf(body.getOrDefault("templateCode", data.getTemplateCode())))
                         .cqtCode(String.valueOf(body.getOrDefault("cqtCode", "")))
                         .cqtStatus("VALID")
+                        .viewUrl(String.valueOf(body.getOrDefault("viewUrl", "")))
+                        .pdfUrl(String.valueOf(body.getOrDefault("pdfUrl", "")))
                         .issuedAt(LocalDateTime.now())
                         .rawRequest(payload.toString())
                         .rawResponse(body.toString())
                         .build();
             }
         } catch (Exception e) {
-            log.error("[ViettelSinvoiceProvider] Error issuing invoice: {}", e.getMessage(), e);
+            log.error("[XInvoiceProvider] Error issuing invoice: {}", e.getMessage(), e);
         }
 
+        // Fallback gracefully
         return EInvoiceProviderResult.builder()
                 .success(false)
-                .errorMessage("Không thể kết nối máy chủ Viettel S-Invoice hoặc tài khoản chưa được phân quyền.")
+                .errorMessage("Không thể kết nối máy chủ XInvoice hoặc cấu hình API Key chưa chính xác.")
                 .build();
     }
 
     @Override
     public EInvoiceProviderResult cancelInvoice(String invoiceSeries, String invoiceNumber, String transactionUuid, String reason) {
-        log.info("[ViettelSinvoiceProvider] Cancelling invoice: {}/{}", invoiceSeries, invoiceNumber);
+        log.info("[XInvoiceProvider] Cancelling invoice: {}/{}", invoiceSeries, invoiceNumber);
         return EInvoiceProviderResult.builder()
                 .success(true)
                 .invoiceNumber(invoiceNumber)
@@ -116,34 +119,26 @@ public class ViettelSinvoiceProvider implements EInvoiceProvider {
 
     @Override
     public String getViewUrl(String invoiceSeries, String invoiceNumber, String transactionUuid) {
-        return baseUrl + "/tra-cuu-hoa-don?id=" + transactionUuid;
+        return baseUrl + "/tra-cuu/" + transactionUuid;
     }
 
     private Map<String, Object> buildPayload(EInvoiceProviderData data) {
         Map<String, Object> map = new HashMap<>();
-
-        Map<String, Object> general = new HashMap<>();
-        general.put("invoiceType", data.getInvoiceType() != null ? data.getInvoiceType() : "1");
-        general.put("templateCode", data.getTemplateCode());
-        general.put("invoiceSeries", data.getInvoiceSeries());
-        general.put("currencyCode", data.getCurrencyCode() != null ? data.getCurrencyCode() : "VND");
-        general.put("exchangeRate", data.getExchangeRate() != null ? data.getExchangeRate() : 1.0);
-        general.put("paymentType", data.getPaymentMethod() != null ? data.getPaymentMethod() : "TM/CK");
-        general.put("transactionUuid", data.getTransactionUuid());
-        map.put("generalInvoiceInfo", general);
+        map.put("invoiceCreationType", "ISSUED");
+        map.put("invoiceType", "01GTKT");
+        map.put("templateCode", data.getTemplateCode());
+        map.put("invoiceSeries", data.getInvoiceSeries());
+        map.put("currencyCode", data.getCurrencyCode() != null ? data.getCurrencyCode() : "VND");
+        map.put("adjustmentType", "1");
+        map.put("paymentStatus", true);
 
         Map<String, Object> buyer = new HashMap<>();
         buyer.put("buyerName", data.getBuyerName());
         buyer.put("buyerLegalName", data.getBuyerLegalName());
         buyer.put("buyerTaxCode", data.getBuyerTaxCode());
         buyer.put("buyerAddressLine", data.getBuyerAddress());
-        buyer.put("buyerPhoneNumber", data.getBuyerPhone());
         buyer.put("buyerEmail", data.getBuyerEmail());
         map.put("buyerInfo", buyer);
-
-        Map<String, Object> seller = new HashMap<>();
-        seller.put("sellerTaxCode", supplierTaxCode);
-        map.put("sellerInfo", seller);
 
         List<Map<String, Object>> items = new ArrayList<>();
         if (data.getItems() != null) {
@@ -155,13 +150,13 @@ public class ViettelSinvoiceProvider implements EInvoiceProvider {
                 item.put("unitName", line.getUnitName());
                 item.put("quantity", line.getQuantity());
                 item.put("unitPrice", line.getUnitPrice());
-                item.put("taxPercentage", line.getVatRate());
+                item.put("taxRate", line.getVatRate());
                 item.put("taxAmount", line.getVatAmount());
                 item.put("itemTotalAmountWithoutTax", line.getLineTotalAmount());
                 items.add(item);
             }
         }
-        map.put("itemInfo", items);
+        map.put("items", items);
 
         Map<String, Object> summarize = new HashMap<>();
         summarize.put("totalAmountWithoutTax", data.getSubTotalAmount());

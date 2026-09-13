@@ -4,7 +4,7 @@ import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.sales_order.DirectCheckoutRequest;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.sales_order.SalesOrderResponse;
 import com.duylongtech.backend.feature.sales_order.DirectCheckoutService;
 import com.duylongtech.backend.feature.sales_order.SalesOrderService;

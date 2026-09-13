@@ -1,4 +1,4 @@
-package com.duylongtech.backend.dto.response;
+package com.duylongtech.backend.common;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;

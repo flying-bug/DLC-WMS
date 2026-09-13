@@ -4,7 +4,7 @@ import com.duylongtech.backend.feature.assembly.AssemblyBomRequest;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderRequest;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderSerialRequest;
 import com.duylongtech.backend.feature.repair.WorkflowActionRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.assembly.AssemblyBomResponse;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderResponse;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderSerialResponse;

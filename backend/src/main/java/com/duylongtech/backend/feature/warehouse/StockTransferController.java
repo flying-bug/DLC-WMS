@@ -1,9 +1,5 @@
 package com.duylongtech.backend.feature.warehouse;
 
-import com.duylongtech.backend.dto.StockTransferDispatchDTO;
-import com.duylongtech.backend.dto.StockTransferReceiptDTO;
-import com.duylongtech.backend.dto.StockTransferRequestDTO;
-import com.duylongtech.backend.dto.StockTransferResponseDTO;
 import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.feature.warehouse.StockTransferService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,9 +22,9 @@ public class StockTransferController {
 
     @GetMapping("/next-code")
     @PreAuthorize("hasAuthority('transfer:view') or hasAuthority('transfer:add')")
-    public ResponseEntity<com.duylongtech.backend.dto.response.ApiResponse<String>> getNextTransferCode() {
+    public ResponseEntity<com.duylongtech.backend.common.ApiResponse<String>> getNextTransferCode() {
         String nextCode = stockTransferService.generateNextTransferCode();
-        return ResponseEntity.ok(com.duylongtech.backend.dto.response.ApiResponse.<String>builder()
+        return ResponseEntity.ok(com.duylongtech.backend.common.ApiResponse.<String>builder()
                 .success(true)
                 .data(nextCode)
                 .build());

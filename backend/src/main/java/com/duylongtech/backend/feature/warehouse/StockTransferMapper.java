@@ -1,7 +1,5 @@
 package com.duylongtech.backend.feature.warehouse;
 
-import com.duylongtech.backend.dto.StockTransferLineDTO;
-import com.duylongtech.backend.dto.StockTransferResponseDTO;
 import com.duylongtech.backend.feature.warehouse.StockTransfer;
 import com.duylongtech.backend.feature.warehouse.StockTransferLine;
 import org.mapstruct.Mapper;

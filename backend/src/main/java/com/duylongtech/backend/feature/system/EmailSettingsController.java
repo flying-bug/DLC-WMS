@@ -1,8 +1,7 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.GmailConnectionStatusDto;
 import com.duylongtech.backend.feature.system.SendTestEmailRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.system.GmailOAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

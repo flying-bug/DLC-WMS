@@ -3,7 +3,7 @@ package com.duylongtech.backend.feature.partner;
 import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.partner.SupplierRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.partner.SupplierResponse;
 import com.duylongtech.backend.feature.partner.SupplierService;
 import io.swagger.v3.oas.annotations.Operation;

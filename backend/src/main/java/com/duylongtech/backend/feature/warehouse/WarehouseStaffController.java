@@ -1,7 +1,7 @@
 package com.duylongtech.backend.feature.warehouse;
 
 import com.duylongtech.backend.feature.auth.AssignRolesRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.warehouse.WarehouseStaffResponse;
 import com.duylongtech.backend.feature.warehouse.WarehouseStaffService;
 import jakarta.validation.Valid;

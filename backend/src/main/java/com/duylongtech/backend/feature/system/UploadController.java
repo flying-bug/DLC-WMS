@@ -1,6 +1,6 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.system.UploadResponse;
 import com.duylongtech.backend.feature.system.CloudinaryService;
 import lombok.RequiredArgsConstructor;

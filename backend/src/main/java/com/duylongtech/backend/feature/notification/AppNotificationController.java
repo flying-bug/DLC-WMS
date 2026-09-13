@@ -1,6 +1,6 @@
 package com.duylongtech.backend.feature.notification;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.notification.AppNotification;
 import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.feature.notification.AppNotificationService;

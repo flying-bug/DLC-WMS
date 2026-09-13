@@ -1,8 +1,6 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.BackupRecordDto;
 import com.duylongtech.backend.constant.SystemMessage;
-import com.duylongtech.backend.dto.BackupScheduleDto;
 import com.duylongtech.backend.feature.system.BackupRecord;
 import com.duylongtech.backend.feature.system.SystemSetting;
 import com.duylongtech.backend.feature.system.BackupRecordRepository;

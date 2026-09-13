@@ -1,6 +1,6 @@
 package com.duylongtech.backend.feature.stocktake;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.stocktake.StocktakeRequest;
 import com.duylongtech.backend.feature.stocktake.StocktakeResponse;
 import com.duylongtech.backend.security.UserDetailsImpl;

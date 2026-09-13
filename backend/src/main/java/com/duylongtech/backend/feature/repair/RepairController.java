@@ -4,7 +4,7 @@ import com.duylongtech.backend.feature.repair.RepairFeeRequest;
 import com.duylongtech.backend.feature.repair.RepairLineRequest;
 import com.duylongtech.backend.feature.repair.RepairRequest;
 import com.duylongtech.backend.feature.repair.RepairStatusRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.repair.RepairFeeResponse;
 import com.duylongtech.backend.feature.repair.RepairLineResponse;
 import com.duylongtech.backend.feature.repair.RepairResponse;

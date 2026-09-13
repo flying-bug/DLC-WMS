@@ -3,7 +3,7 @@ package com.duylongtech.backend.feature.purchase_order;
 import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderResponse;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderService;
 import io.swagger.v3.oas.annotations.Operation;

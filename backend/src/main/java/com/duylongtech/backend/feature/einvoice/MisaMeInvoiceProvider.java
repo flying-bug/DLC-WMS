@@ -1,4 +1,4 @@
-package com.duylongtech.backend.service.einvoice;
+package com.duylongtech.backend.feature.einvoice;
 
 import com.duylongtech.backend.enums.DocumentStatus;
 

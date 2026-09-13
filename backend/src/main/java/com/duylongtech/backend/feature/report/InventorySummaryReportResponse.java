@@ -1,4 +1,4 @@
-package com.duylongtech.backend.dto.response.report;
+package com.duylongtech.backend.feature.report;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

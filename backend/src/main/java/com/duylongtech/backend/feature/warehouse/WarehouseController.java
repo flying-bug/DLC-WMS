@@ -5,7 +5,7 @@ import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.warehouse.WarehouseRequest;
 import com.duylongtech.backend.feature.warehouse.WarehouseDetailResponse;
 import com.duylongtech.backend.feature.warehouse.WarehouseResponse;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.audit.AuditLogService;
 import com.duylongtech.backend.feature.warehouse.WarehouseService;

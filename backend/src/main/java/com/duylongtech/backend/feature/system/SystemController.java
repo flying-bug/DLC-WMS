@@ -1,9 +1,6 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.SystemHealthDto;
-import com.duylongtech.backend.dto.SystemLogDto;
-import com.duylongtech.backend.dto.SystemSettingsDto;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.system.SystemHealthService;
 import com.duylongtech.backend.feature.system.SystemLogService;
 import com.duylongtech.backend.feature.system.SystemSettingsService;

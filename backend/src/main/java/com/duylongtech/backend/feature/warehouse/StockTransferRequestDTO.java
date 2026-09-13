@@ -1,9 +1,8 @@
-package com.duylongtech.backend.dto;
+package com.duylongtech.backend.feature.warehouse;
 
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -11,19 +10,17 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class StockTransferResponseDTO {
-    private Long id;
+public class StockTransferRequestDTO {
     private String transferCode;
     private Long fromWarehouseId;
     private Long toWarehouseId;
     private LocalDate transferDate;
-    private String status;
     private String note;
+    private String status;
     private String deliverer;
     private String attachedDocument;
     private Long referenceId;
     private String referenceType;
     private String referenceCode;
-    private LocalDateTime createdAt;
     private List<StockTransferLineDTO> lines;
 }

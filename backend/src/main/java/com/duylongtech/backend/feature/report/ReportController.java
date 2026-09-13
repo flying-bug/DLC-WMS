@@ -1,7 +1,6 @@
 package com.duylongtech.backend.feature.report;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
-import com.duylongtech.backend.dto.response.report.*;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.report.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;

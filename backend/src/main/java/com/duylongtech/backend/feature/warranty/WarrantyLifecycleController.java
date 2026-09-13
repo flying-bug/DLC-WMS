@@ -2,7 +2,7 @@ package com.duylongtech.backend.feature.warranty;
 
 import com.duylongtech.backend.feature.warranty.WarrantyRequest;
 import com.duylongtech.backend.feature.warranty.WarrantyStatusRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.warranty.WarrantyResponse;
 import com.duylongtech.backend.feature.warranty.WarrantyLifecycleService;
 import io.swagger.v3.oas.annotations.Operation;

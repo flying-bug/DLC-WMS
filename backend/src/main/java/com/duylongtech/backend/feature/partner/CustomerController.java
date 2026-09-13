@@ -3,7 +3,7 @@ package com.duylongtech.backend.feature.partner;
 import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.partner.CustomerRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.partner.CustomerResponse;
 import com.duylongtech.backend.feature.sales_order.SalesHistoryResponse;
 import com.duylongtech.backend.feature.warranty.WarrantyHistoryResponse;

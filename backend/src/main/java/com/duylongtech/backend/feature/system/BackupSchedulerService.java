@@ -31,7 +31,7 @@ public class BackupSchedulerService {
     @Scheduled(fixedDelay = 30_000)
     public void checkAndRunSchedule() {
         try {
-            com.duylongtech.backend.dto.BackupScheduleDto schedule = backupService.getSchedule();
+            BackupScheduleDto schedule = backupService.getSchedule();
             if (!schedule.isEnabled()) return;
 
             LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);

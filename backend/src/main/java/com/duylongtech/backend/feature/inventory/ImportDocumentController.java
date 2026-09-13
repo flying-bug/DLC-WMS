@@ -4,7 +4,7 @@ import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
 import jakarta.validation.Valid;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentResponse;
 import com.duylongtech.backend.feature.inventory.OcrImportResponse;
 import com.duylongtech.backend.feature.audit.AuditLogService;

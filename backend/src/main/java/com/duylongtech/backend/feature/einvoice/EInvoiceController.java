@@ -4,7 +4,7 @@ import com.duylongtech.backend.enums.DocumentStatus;
 
 import com.duylongtech.backend.feature.einvoice.EInvoiceCancelRequest;
 import com.duylongtech.backend.feature.einvoice.EInvoiceIssueRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.einvoice.EInvoiceResponse;
 import com.duylongtech.backend.feature.einvoice.EInvoice;
 import com.duylongtech.backend.feature.einvoice.EInvoiceRepository;

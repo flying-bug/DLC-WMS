@@ -2,7 +2,7 @@ package com.duylongtech.backend.feature.system;
 
 import com.duylongtech.backend.feature.system.AiChatRequest;
 import com.duylongtech.backend.feature.system.AiChatResponse;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.system.VoiceCommandResponse;
 import com.duylongtech.backend.feature.system.AiChatService;
 import com.duylongtech.backend.feature.system.VoiceCommandService;

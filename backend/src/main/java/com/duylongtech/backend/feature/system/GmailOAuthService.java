@@ -1,6 +1,5 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.GmailConnectionStatusDto;
 import com.duylongtech.backend.feature.system.SystemSetting;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.feature.system.SystemSettingRepository;

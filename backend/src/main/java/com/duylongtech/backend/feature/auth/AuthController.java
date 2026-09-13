@@ -4,7 +4,7 @@ import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.auth.LoginRequest;
 import com.duylongtech.backend.feature.auth.ChangePasswordRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.auth.AuthService;
 import com.duylongtech.backend.feature.audit.AuditLogService;
 import jakarta.validation.Valid;

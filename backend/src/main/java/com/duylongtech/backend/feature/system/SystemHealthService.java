@@ -1,6 +1,5 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.SystemHealthDto;
 import com.duylongtech.backend.feature.system.BackupRecord;
 import com.duylongtech.backend.feature.system.BackupRecordRepository;
 import com.duylongtech.backend.feature.system.SystemSettingRepository;

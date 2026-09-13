@@ -1,6 +1,5 @@
 package com.duylongtech.backend.feature.report;
 
-import com.duylongtech.backend.dto.response.report.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;

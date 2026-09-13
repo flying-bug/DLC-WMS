@@ -1,7 +1,7 @@
 package com.duylongtech.backend.feature.auth;
 
 import com.duylongtech.backend.annotation.Auditable;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.auth.RoleEntity;
 import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.auth.RoleService;

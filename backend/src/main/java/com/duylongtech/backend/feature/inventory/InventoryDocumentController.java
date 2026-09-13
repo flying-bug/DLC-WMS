@@ -6,7 +6,7 @@ import jakarta.validation.Valid;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
 import com.duylongtech.backend.feature.inventory.ScanResolveRequest;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentResponse;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.inventory.ScanResolveResponse;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.audit.AuditLogService;

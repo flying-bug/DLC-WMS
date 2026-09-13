@@ -1,4 +1,4 @@
-package com.duylongtech.backend.dto;
+package com.duylongtech.backend.feature.system;
 
 import com.duylongtech.backend.feature.system.BackupRecord;
 import lombok.*;

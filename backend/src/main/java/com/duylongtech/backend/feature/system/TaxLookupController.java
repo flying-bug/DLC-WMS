@@ -1,6 +1,6 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.system.TaxLookupResponse;
 import com.duylongtech.backend.feature.system.TaxLookupService;
 import lombok.RequiredArgsConstructor;

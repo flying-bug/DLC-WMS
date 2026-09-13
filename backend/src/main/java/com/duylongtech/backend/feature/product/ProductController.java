@@ -2,7 +2,7 @@ package com.duylongtech.backend.feature.product;
 
 import com.duylongtech.backend.feature.product.ProductRequest;
 import com.duylongtech.backend.feature.product.ProductVariantRequest;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.product.ProductResponse;
 import com.duylongtech.backend.feature.product.ProductVariantResponse;
 import com.duylongtech.backend.feature.product.StockAlertSummaryResponse;

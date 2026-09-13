@@ -1,6 +1,6 @@
 package com.duylongtech.backend.feature.warranty;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.warranty.WarrantyResponse;
 import com.duylongtech.backend.feature.warranty.WarrantyService;
 import io.swagger.v3.oas.annotations.Operation;

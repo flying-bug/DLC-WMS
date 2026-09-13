@@ -77,7 +77,7 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     List<String> findCodesByPrefix(@Param("prefixLike") String prefixLike);
 
     @Query("""
-        SELECT new com.duylongtech.backend.dto.response.report.SalesProfitReportResponse(
+        SELECT new com.duylongtech.backend.feature.report.SalesProfitReportResponse(
             v.sku,
             v.variantName,
             u.name,
@@ -99,7 +99,7 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
         GROUP BY v.sku, v.variantName, u.name
         ORDER BY SUM(l.lineAmount) DESC
     """)
-    List<com.duylongtech.backend.dto.response.report.SalesProfitReportResponse> findSalesProfitReport(
+    List<com.duylongtech.backend.feature.report.SalesProfitReportResponse> findSalesProfitReport(
         @Param("keyword") String keyword,
         @Param("fromDate") LocalDate fromDate,
         @Param("toDate") LocalDate toDate

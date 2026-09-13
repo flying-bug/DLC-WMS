@@ -1,8 +1,6 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.BackupRecordDto;
-import com.duylongtech.backend.dto.BackupScheduleDto;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.system.BackupRecord;
 import com.duylongtech.backend.feature.system.BackupService;
 import io.swagger.v3.oas.annotations.Operation;

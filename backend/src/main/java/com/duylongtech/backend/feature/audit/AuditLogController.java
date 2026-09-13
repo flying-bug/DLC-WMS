@@ -1,6 +1,6 @@
 package com.duylongtech.backend.feature.audit;
 
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.audit.AuditLogResponse;
 import com.duylongtech.backend.feature.audit.AuditLog;
 import com.duylongtech.backend.feature.audit.AuditLogService;

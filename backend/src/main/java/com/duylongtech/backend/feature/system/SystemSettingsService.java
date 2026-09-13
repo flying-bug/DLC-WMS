@@ -1,6 +1,5 @@
 package com.duylongtech.backend.feature.system;
 
-import com.duylongtech.backend.dto.SystemSettingsDto;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.system.SystemSetting;
 import com.duylongtech.backend.feature.system.SystemSettingRepository;
@@ -148,8 +147,8 @@ public class SystemSettingsService {
         return java.util.List.of(0, 5, 8, 10);
     }
 
-    public com.duylongtech.backend.dto.BusinessSettingsDto getBusinessSettings() {
-        return com.duylongtech.backend.dto.BusinessSettingsDto.builder()
+    public BusinessSettingsDto getBusinessSettings() {
+        return BusinessSettingsDto.builder()
                 .defaultVatRate(getDefaultVatRate())
                 .allowedVatRates(getAllowedVatRates())
                 .companyName(getSetting("company.name", "Công ty TNHH Công nghệ Thương mại Duy Long Techcom"))
@@ -162,7 +161,7 @@ public class SystemSettingsService {
     }
 
     @Transactional
-    public void saveBusinessSettings(com.duylongtech.backend.dto.BusinessSettingsDto dto) {
+    public void saveBusinessSettings(BusinessSettingsDto dto) {
         if (dto.getDefaultVatRate() != null) {
             upsert("tax.default_vat_rate", String.valueOf(dto.getDefaultVatRate()));
         }

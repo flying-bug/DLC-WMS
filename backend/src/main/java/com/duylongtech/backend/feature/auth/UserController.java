@@ -3,7 +3,7 @@ package com.duylongtech.backend.feature.auth;
 import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
 import com.duylongtech.backend.feature.auth.UserDto;
-import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.auth.UserDetailResponseDTO;
 import com.duylongtech.backend.feature.auth.UserService;
 import com.duylongtech.backend.feature.notification.RealtimeSessionService;
