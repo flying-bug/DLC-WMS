@@ -2,6 +2,7 @@ package com.duylongtech.backend.feature.inventory;
 
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRequest;
 import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
 import com.duylongtech.backend.feature.inventory.ScanResolveRequest;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineResponse;
@@ -133,11 +134,11 @@ public class InventoryDocumentService {
 
     private static final String EXPORT_DOC_TYPE = "EX_SO";
     private static final String IMPORT_DOC_TYPE = "IN_PO";
-    private static final String DEFAULT_STATUS = "DRAFT";
+    private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
-    private static final Set<String> VALID_STATUSES = Set.of("DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED",
-            "UNPOSTED");
-    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "SUBMITTED", "UNPOSTED");
+    private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(),
+            DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name(), DocumentStatus.UNPOSTED.name());
+    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.UNPOSTED.name());
 
     // Phân loại phiếu xuất kho thủ công (do người dùng tạo)
     public static final String ISSUE_PURPOSE_SALES = "SALES"; // Xuất kho bán hàng — tự sinh bảo hành
@@ -312,7 +313,7 @@ public class InventoryDocumentService {
                     stocktake.setReferenceExportId(doc.getId());
                 }
 
-                if ("POSTED".equals(doc.getStatus())) {
+                if (DocumentStatus.POSTED.name().equals(doc.getStatus())) {
                     boolean hasSurplus = stocktake.getLines().stream()
                             .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(BigDecimal.ZERO) > 0);
                     boolean hasShortage = stocktake.getLines().stream()
@@ -557,47 +558,6 @@ public class InventoryDocumentService {
             throw new BusinessException(SystemMessage.INV_ERR_028.getMessage());
         }
     }
-    private com.duylongtech.backend.feature.warranty.WarrantyLineRequest generateWarrantyLineIfNeeded(InventoryDocument doc,
-            InventoryDocumentLine line, SerialNumber serial) {
-        // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
-        // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh
-        // bảo hành
-        if (doc.getIssuePurpose() == null || !ISSUE_PURPOSE_SALES.equalsIgnoreCase(doc.getIssuePurpose().trim())) {
-            return null;
-        }
-
-        Integer warrantyMonths = line.getWarrantyMonths();
-        if (warrantyMonths == null || warrantyMonths <= 0) {
-            ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
-            if (variant != null) {
-                warrantyMonths = variant.getWarrantyMonths();
-                if ((warrantyMonths == null || warrantyMonths <= 0) && variant.getProduct() != null) {
-                    warrantyMonths = variant.getProduct().getWarrantyPeriodMonths();
-                }
-            }
-        }
-
-        if (warrantyMonths == null || warrantyMonths <= 0) {
-            return null;
-        }
-
-        if (doc.getPartnerId() == null) {
-            return null;
-        }
-
-        LocalDate startDate = doc.getDocDate() != null ? doc.getDocDate() : LocalDate.now();
-        LocalDate endDate = startDate.plusMonths(warrantyMonths);
-
-        com.duylongtech.backend.feature.warranty.WarrantyLineRequest wLine = new com.duylongtech.backend.feature.warranty.WarrantyLineRequest();
-        wLine.setSerialNumberId(serial != null ? serial.getId() : null);
-        wLine.setProductVariantId(line.getVariantId());
-        wLine.setQuantity(serial != null ? BigDecimal.ONE : line.getQuantityOut());
-        wLine.setStartDate(startDate);
-        wLine.setEndDate(endDate);
-        wLine.setWarrantyStatus("APPROVED");
-        return wLine;
-    }
-
     private int requireWholeNumber(BigDecimal value, String fieldName) {
         try {
             return value.stripTrailingZeros().intValueExact();
@@ -1040,7 +1000,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse createExportFromSalesOrder(Long soId, Long actorUserId) {
         SalesOrder so = salesOrderRepository.findById(soId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn hàng SO " + soId));
-        if (!"APPROVED".equals(so.getStatus())) {
+        if (!DocumentStatus.APPROVED.name().equals(so.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_002.getMessage());
         }
 
@@ -1239,7 +1199,7 @@ public class InventoryDocumentService {
 
     private boolean isPostedDocument(Long documentId) {
         return documentId != null && inventoryDocumentRepository.findById(documentId)
-                .map(document -> "POSTED".equals(document.getStatus()))
+                .map(document -> DocumentStatus.POSTED.name().equals(document.getStatus()))
                 .orElse(false);
     }
 
@@ -1248,13 +1208,13 @@ public class InventoryDocumentService {
             return;
         }
         AssemblyOrder order = assemblyOrderRepository.findById(doc.getReferenceId())
-                .orElseThrow(() -> new BusinessException("Kh├┤ng t├¼m thß║Ñy lß╗çnh cß╗ºa phiß║┐u kho"));
-        if (!"CANCELLED".equals(order.getStatus())
-                || !"PENDING_UNPOST".equals(order.getCancellationSettlementStatus())) {
+                .orElseThrow(() -> new BusinessException("Không tìm thấy lệnh của phiếu kho"));
+        if (!DocumentStatus.CANCELLED.name().equals(order.getStatus())
+                || !com.duylongtech.backend.enums.SettlementStatus.PENDING.name().equals(order.getCancellationSettlementStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_046.getMessage());
         }
         if (inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", order.getId()).stream()
-                .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()))) {
+                .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()))) {
             throw new BusinessException(SystemMessage.ASM_ERR_044.getMessage());
         }
     }
@@ -1271,10 +1231,10 @@ public class InventoryDocumentService {
         List<InventoryDocument> pair = inventoryDocumentRepository
                 .findByReferenceWithLines("ASSEMBLY_ORDER", order.getId());
         boolean exportPosted = pair.stream()
-                .anyMatch(d -> EXPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()));
+                .anyMatch(d -> EXPORT_DOC_TYPE.equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
         boolean importPosted = pair.stream()
-                .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && "POSTED".equals(d.getStatus()));
-        if ("CANCELLED".equals(order.getStatus()) && "UNPOSTED".equals(document.getStatus())) {
+                .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
+        if (DocumentStatus.CANCELLED.name().equals(order.getStatus()) && DocumentStatus.UNPOSTED.name().equals(document.getStatus())) {
             // order.setCancellationSettlementStatus("SETTLED"); // Handled in domain if needed
         } else if (exportPosted && importPosted) {
             order.markAsPosted();

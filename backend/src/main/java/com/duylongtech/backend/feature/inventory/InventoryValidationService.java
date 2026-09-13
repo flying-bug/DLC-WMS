@@ -135,8 +135,8 @@ public class InventoryValidationService {
     private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name(),
-            "UNPOSTED");
-    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), "UNPOSTED");
+            DocumentStatus.UNPOSTED.name());
+    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.UNPOSTED.name());
 
     // PhÃƒÆ’Ã‚Â¢n loÃƒÂ¡Ã‚ÂºÃ‚Â¡i phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho thÃƒÂ¡Ã‚Â»Ã‚Â§ cÃƒÆ’Ã‚Â´ng (do ngÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Âi dÃƒÆ’Ã‚Â¹ng tÃƒÂ¡Ã‚ÂºÃ‚Â¡o)
     public static final String ISSUE_PURPOSE_SALES = "SALES"; // XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho bÃƒÆ’Ã‚Â¡n hÃƒÆ’Ã‚Â ng ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â tÃƒÂ¡Ã‚Â»Ã‚Â± sinh bÃƒÂ¡Ã‚ÂºÃ‚Â£o hÃƒÆ’Ã‚Â nh

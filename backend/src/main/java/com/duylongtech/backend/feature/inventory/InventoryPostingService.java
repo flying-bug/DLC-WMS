@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.inventory;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.WarrantyStatus;
 
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRequest;
 import com.duylongtech.backend.constant.SystemMessage;
@@ -137,8 +138,8 @@ public class InventoryPostingService {
     private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name(),
-            "UNPOSTED");
-    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), "UNPOSTED");
+            DocumentStatus.UNPOSTED.name());
+    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.UNPOSTED.name());
 
     // PhÃƒÆ’Ã‚Â¢n loÃƒÂ¡Ã‚ÂºÃ‚Â¡i phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho thÃƒÂ¡Ã‚Â»Ã‚Â§ cÃƒÆ’Ã‚Â´ng (do ngÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Âi dÃƒÆ’Ã‚Â¹ng tÃƒÂ¡Ã‚ÂºÃ‚Â¡o)
     public static final String ISSUE_PURPOSE_SALES = "SALES"; // XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho bÃƒÆ’Ã‚Â¡n hÃƒÆ’Ã‚Â ng ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â tÃƒÂ¡Ã‚Â»Ã‚Â± sinh bÃƒÂ¡Ã‚ÂºÃ‚Â£o hÃƒÆ’Ã‚Â nh
@@ -192,7 +193,7 @@ public class InventoryPostingService {
     public InventoryDocumentResponse postExport(Long id) {
         InventoryDocument doc = findExportOrThrow(id);
         if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
-                && !"UNPOSTED".equals(doc.getStatus())) {
+                && !DocumentStatus.UNPOSTED.name().equals(doc.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_046.getMessage());
         }
 
@@ -358,7 +359,7 @@ public class InventoryPostingService {
                     .map(com.duylongtech.backend.feature.warranty.WarrantyLineRequest::getEndDate).max(LocalDate::compareTo)
                     .orElse(LocalDate.now());
             w.setEndDate(maxEndDate);
-            w.setWarrantyStatus(com.duylongtech.backend.enums.EntityStatus.ACTIVE.name());
+            w.setWarrantyStatus(WarrantyStatus.ACTIVE.name());
             w.setNote("TÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng sinh tÃƒÂ¡Ã‚Â»Ã‚Â« phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t " + doc.getDocCode());
             for (com.duylongtech.backend.feature.warranty.WarrantyLineRequest reqLine : warrantyLines) {
                 com.duylongtech.backend.feature.warranty.WarrantyLine wLine = new com.duylongtech.backend.feature.warranty.WarrantyLine();
@@ -427,7 +428,7 @@ public class InventoryPostingService {
     public InventoryDocumentResponse postImport(Long id) {
         InventoryDocument doc = findImportOrThrow(id);
         if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
-                && !"UNPOSTED".equals(doc.getStatus())) {
+                && !DocumentStatus.UNPOSTED.name().equals(doc.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_040.getMessage());
         }
 
@@ -885,7 +886,7 @@ public class InventoryPostingService {
         wLine.setQuantity(serial != null ? BigDecimal.ONE : line.getQuantityOut());
         wLine.setStartDate(startDate);
         wLine.setEndDate(endDate);
-        wLine.setWarrantyStatus(DocumentStatus.APPROVED.name());
+        wLine.setWarrantyStatus(WarrantyStatus.ACTIVE.name());
         return wLine;
     }
 

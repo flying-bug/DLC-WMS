@@ -3,6 +3,7 @@ package com.duylongtech.backend.feature.inventory;
 import jakarta.persistence.*;
 import lombok.*;
 
+import com.duylongtech.backend.enums.DocumentStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -175,23 +176,24 @@ public class InventoryDocument {
     }
 
     private boolean isEditable() {
-        return "DRAFT".equals(this.status) || "SUBMITTED".equals(this.status) || "UNPOSTED".equals(this.status) || this.status == null;
+        return DocumentStatus.DRAFT.name().equals(this.status) || DocumentStatus.SUBMITTED.name().equals(this.status)
+                || DocumentStatus.UNPOSTED.name().equals(this.status) || this.status == null;
     }
 
     public void post(Long userId) {
-        if (com.duylongtech.backend.enums.DocumentStatus.POSTED.name().equals(this.status)) {
+        if (DocumentStatus.POSTED.name().equals(this.status)) {
             throw new com.duylongtech.backend.exception.BusinessException("Chứng từ đã được ghi sổ.");
         }
-        this.status = com.duylongtech.backend.enums.DocumentStatus.POSTED.name();
+        this.status = DocumentStatus.POSTED.name();
         this.postedAt = LocalDateTime.now();
         this.approvedBy = userId;
     }
 
     public void unpost(Long userId, String reason) {
-        if (!com.duylongtech.backend.enums.DocumentStatus.POSTED.name().equals(this.status)) {
+        if (!DocumentStatus.POSTED.name().equals(this.status)) {
             throw new com.duylongtech.backend.exception.BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đã ghi sổ.");
         }
-        this.status = "UNPOSTED";
+        this.status = DocumentStatus.UNPOSTED.name();
         this.unpostedBy = userId;
         this.unpostedAt = LocalDateTime.now();
         this.unpostReason = reason;
