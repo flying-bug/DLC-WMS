@@ -2,6 +2,7 @@ package com.duylongtech.backend.feature.warranty;
 
 import com.duylongtech.backend.feature.warranty.WarrantyRequest;
 import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.enums.WarrantyStatus;
 import com.duylongtech.backend.feature.warranty.WarrantyStatusRequest;
 import com.duylongtech.backend.feature.warranty.WarrantyLineRequest;
 import com.duylongtech.backend.feature.warranty.WarrantyLineResponse;
@@ -39,7 +40,7 @@ import com.duylongtech.backend.feature.warranty.WarrantyStatusRequest;
 public class WarrantyLifecycleService {
 
     private static final Set<String> VALID_STATUSES = Set.of(
-            com.duylongtech.backend.enums.EntityStatus.ACTIVE.name(), "EXPIRED", "VOIDED"
+            WarrantyStatus.ACTIVE.name(), WarrantyStatus.EXPIRED.name(), WarrantyStatus.VOIDED.name()
     );
 
     private final WarrantyRepository warrantyRepository;
@@ -51,7 +52,7 @@ public class WarrantyLifecycleService {
         Warranty warranty = new Warranty();
         warranty.initWarranty(resolveCreateCode(request.getWarrantyCode()), request.getPartnerId(), request.getSalesOrderId(),
                 request.getStartDate(), request.getEndDate(),
-                normalizeStatusOrDefault(request.getWarrantyStatus(), com.duylongtech.backend.enums.EntityStatus.ACTIVE.name()),
+                normalizeStatusOrDefault(request.getWarrantyStatus(), WarrantyStatus.ACTIVE.name()),
                 trimToNull(request.getNote()));
 
         List<WarrantyLine> lines = mapLines(request.getLines(), warranty);
@@ -136,7 +137,7 @@ public class WarrantyLifecycleService {
         if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new BusinessException(SystemMessage.WARR_ERR_003.getMessage());
         }
-        String status = normalizeStatusOrDefault(request.getWarrantyStatus(), com.duylongtech.backend.enums.EntityStatus.ACTIVE.name());
+        String status = normalizeStatusOrDefault(request.getWarrantyStatus(), WarrantyStatus.ACTIVE.name());
         if (!VALID_STATUSES.contains(status)) {
             throw new BusinessException(SystemMessage.WARR_ERR_002.getMessage());
         }
