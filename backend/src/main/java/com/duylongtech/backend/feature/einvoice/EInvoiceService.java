@@ -343,42 +343,41 @@ public class EInvoiceService {
         }
 
         // Lưu vào Database
-        EInvoice einvoice = EInvoice.builder()
-                .salesOrderId(so != null ? so.getId() : null)
-                .inventoryDocumentId(exportDoc != null ? exportDoc.getId() : null)
-                .partnerId(partner.getId())
-                .invoiceType(providerData.getInvoiceType())
-                .templateCode(result.getTemplateCode())
-                .invoiceSeries(result.getInvoiceSeries())
-                .invoiceNumber(result.getInvoiceNumber())
-                .invoiceDate(providerData.getInvoiceDate())
-                .issuedAt(result.getIssuedAt() != null ? result.getIssuedAt() : LocalDateTime.now())
-                .status("ISSUED")
-                .buyerName(buyerName)
-                .buyerLegalName(buyerLegalName)
-                .buyerTaxCode(buyerTaxCode)
-                .buyerAddress(buyerAddress)
-                .buyerPhone(buyerPhone)
-                .buyerEmail(buyerEmail)
-                .currencyCode("VND")
-                .exchangeRate(BigDecimal.ONE)
-                .paymentMethod(providerData.getPaymentMethod())
-                .subTotalAmount(calculatedSubTotal)
-                .vatAmount(calculatedVat)
-                .totalAmount(grandTotal)
-                .totalAmountInWords(amountInWords)
-                .cqtCode(result.getCqtCode())
-                .cqtStatus(result.getCqtStatus() != null ? result.getCqtStatus() : "VALID")
-                .transactionUuid(txUuid)
-                .provider(provider.getProviderName())
-                .viewUrl(result.getViewUrl())
-                .pdfUrl(result.getPdfUrl())
-                .pdfData(result.getPdfBase64())
-                .xmlData(result.getXmlData())
-                .rawRequest(result.getRawRequest())
-                .rawResponse(result.getRawResponse())
-                .createdBy(currentUserId != null ? currentUserId : 1L)
-                .build();
+        EInvoice einvoice = new EInvoice();
+        einvoice.setSalesOrderId(so != null ? so.getId() : null);
+        einvoice.setInventoryDocumentId(exportDoc != null ? exportDoc.getId() : null);
+        einvoice.setPartnerId(partner.getId());
+        einvoice.setInvoiceType(providerData.getInvoiceType());
+        einvoice.setTemplateCode(result.getTemplateCode());
+        einvoice.setInvoiceSeries(result.getInvoiceSeries());
+        einvoice.setInvoiceNumber(result.getInvoiceNumber());
+        einvoice.setInvoiceDate(providerData.getInvoiceDate());
+        einvoice.setIssuedAt(result.getIssuedAt() != null ? result.getIssuedAt() : LocalDateTime.now());
+        einvoice.setStatus("ISSUED");
+        einvoice.setBuyerName(buyerName);
+        einvoice.setBuyerLegalName(buyerLegalName);
+        einvoice.setBuyerTaxCode(buyerTaxCode);
+        einvoice.setBuyerAddress(buyerAddress);
+        einvoice.setBuyerPhone(buyerPhone);
+        einvoice.setBuyerEmail(buyerEmail);
+        einvoice.setCurrencyCode("VND");
+        einvoice.setExchangeRate(BigDecimal.ONE);
+        einvoice.setPaymentMethod(providerData.getPaymentMethod());
+        einvoice.setSubTotalAmount(calculatedSubTotal);
+        einvoice.setVatAmount(calculatedVat);
+        einvoice.setTotalAmount(grandTotal);
+        einvoice.setTotalAmountInWords(amountInWords);
+        einvoice.setCqtCode(result.getCqtCode());
+        einvoice.setCqtStatus(result.getCqtStatus() != null ? result.getCqtStatus() : "VALID");
+        einvoice.setTransactionUuid(txUuid);
+        einvoice.setProvider(provider.getProviderName());
+        einvoice.setViewUrl(result.getViewUrl());
+        einvoice.setPdfUrl(result.getPdfUrl());
+        einvoice.setPdfData(result.getPdfBase64());
+        einvoice.setXmlData(result.getXmlData());
+        einvoice.setRawRequest(result.getRawRequest());
+        einvoice.setRawResponse(result.getRawResponse());
+        einvoice.setCreatedBy(currentUserId != null ? currentUserId : 1L);
 
         EInvoice saved = einvoiceRepository.save(einvoice);
 

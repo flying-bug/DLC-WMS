@@ -12,8 +12,6 @@ import com.duylongtech.backend.feature.product.SerialNumber;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class WarrantyLine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,4 +46,14 @@ public class WarrantyLine {
 
     @Column(name = "warranty_status", nullable = false, length = 30)
     private String warrantyStatus;
+
+    public void initLine(Warranty warranty, Long serialNumberId, Long productVariantId, BigDecimal quantity, LocalDate startDate, LocalDate endDate, String warrantyStatus) {
+        this.warranty = warranty;
+        this.serialNumberId = serialNumberId;
+        this.productVariantId = productVariantId;
+        this.quantity = quantity;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.warrantyStatus = warrantyStatus;
+    }
 }

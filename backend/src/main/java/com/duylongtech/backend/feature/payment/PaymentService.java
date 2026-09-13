@@ -64,16 +64,9 @@ public class PaymentService {
 
         String paymentMethod = normalizePaymentMethod(request.getPaymentMethod());
 
-        PaymentTransaction transaction = PaymentTransaction.builder()
-                .transactionCode(codeGeneratorService.generateCode("PAYMENT_TRANSACTIONS", "transaction_code", prefix, 5))
-                .type(type)
-                .partnerId(partner.getId())
-                .amount(amount)
-                .status(DocumentStatus.DRAFT.name())
-                .paymentMethod(paymentMethod)
-                .note(trimToNull(request.getNote()))
-                .createdAt(LocalDateTime.now())
-                .build();
+        PaymentTransaction transaction = new PaymentTransaction();
+        transaction.initTransaction(codeGeneratorService.generateCode("PAYMENT_TRANSACTIONS", "transaction_code", prefix, 5),
+                type, partner.getId(), amount, DocumentStatus.DRAFT.name(), paymentMethod, trimToNull(request.getNote()));
 
         PaymentTransaction saved = paymentTransactionRepository.save(transaction);
         return toResponse(saved, partner);

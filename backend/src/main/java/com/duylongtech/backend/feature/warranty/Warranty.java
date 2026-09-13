@@ -11,8 +11,6 @@ import com.duylongtech.backend.feature.partner.Partner;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Warranty {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,7 +48,16 @@ public class Warranty {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    @Builder.Default
     @OneToMany(mappedBy = "warranty", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<WarrantyLine> lines = new java.util.ArrayList<>();
+
+    public void initWarranty(String warrantyCode, Long partnerId, Long salesOrderId, LocalDate startDate, LocalDate endDate, String warrantyStatus, String note) {
+        this.warrantyCode = warrantyCode;
+        this.partnerId = partnerId;
+        this.salesOrderId = salesOrderId;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.warrantyStatus = warrantyStatus;
+        this.note = note;
+    }
 }

@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class PartnerLedger {
 
     @Id
@@ -37,15 +35,12 @@ public class PartnerLedger {
     private String referenceCode;
 
     @Column(name = "amount_debt", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal amountDebt = BigDecimal.ZERO;
 
     @Column(name = "amount_receipt", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal amountReceipt = BigDecimal.ZERO;
 
     @Column(name = "balance_after", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal balanceAfter = BigDecimal.ZERO;
 
     @Column(name = "note", columnDefinition = "TEXT")
@@ -54,4 +49,15 @@ public class PartnerLedger {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public void initEntry(Long partnerId, String entityType, Long entityId, String referenceCode, BigDecimal amountDebt, BigDecimal amountReceipt, BigDecimal balanceAfter, String note) {
+        this.partnerId = partnerId;
+        this.entityType = entityType;
+        this.entityId = entityId;
+        this.referenceCode = referenceCode;
+        this.amountDebt = amountDebt != null ? amountDebt : BigDecimal.ZERO;
+        this.amountReceipt = amountReceipt != null ? amountReceipt : BigDecimal.ZERO;
+        this.balanceAfter = balanceAfter;
+        this.note = note;
+    }
 }

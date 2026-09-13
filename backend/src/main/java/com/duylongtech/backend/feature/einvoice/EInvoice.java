@@ -18,8 +18,6 @@ import com.duylongtech.backend.feature.sales_order.SalesOrder;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class EInvoice {
 
     @Id
@@ -48,7 +46,6 @@ public class EInvoice {
     private Partner partner;
 
     @Column(name = "invoice_type", nullable = false, length = 20)
-    @Builder.Default
     private String invoiceType = "1";
 
     @Column(name = "template_code", nullable = false, length = 50)
@@ -67,7 +64,6 @@ public class EInvoice {
     private LocalDateTime issuedAt;
 
     @Column(name = "status", nullable = false, length = 30)
-    @Builder.Default
     private String status = "ISSUED"; // DRAFT, ISSUED, CANCELED, REPLACED, ADJUSTED
 
     // Buyer Information
@@ -91,27 +87,21 @@ public class EInvoice {
 
     // Currency & Amounts
     @Column(name = "currency_code", nullable = false, length = 10)
-    @Builder.Default
     private String currencyCode = "VND";
 
     @Column(name = "exchange_rate", nullable = false, precision = 15, scale = 4)
-    @Builder.Default
     private BigDecimal exchangeRate = BigDecimal.ONE;
 
     @Column(name = "payment_method", nullable = false, length = 50)
-    @Builder.Default
     private String paymentMethod = "TM/CK";
 
     @Column(name = "sub_total_amount", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal subTotalAmount = BigDecimal.ZERO;
 
     @Column(name = "vat_amount", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal vatAmount = BigDecimal.ZERO;
 
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
-    @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Column(name = "total_amount_in_words", length = 500)
@@ -122,14 +112,12 @@ public class EInvoice {
     private String cqtCode;
 
     @Column(name = "cqt_status", nullable = false, length = 50)
-    @Builder.Default
     private String cqtStatus = "VALID"; // VALID, PENDING, REJECTED, NONE
 
     @Column(name = "transaction_uuid", nullable = false, unique = true, length = 100)
     private String transactionUuid;
 
     @Column(name = "provider", nullable = false, length = 50)
-    @Builder.Default
     private String provider = "MOCK"; // VIETTEL, MISA, XINVOICE, MOCK
 
     // URLs & Data

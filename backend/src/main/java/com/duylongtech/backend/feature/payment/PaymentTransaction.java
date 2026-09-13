@@ -11,8 +11,6 @@ import com.duylongtech.backend.feature.partner.Partner;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class PaymentTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,4 +43,15 @@ public class PaymentTransaction {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    public void initTransaction(String transactionCode, String type, Long partnerId, BigDecimal amount, String status, String paymentMethod, String note) {
+        this.transactionCode = transactionCode;
+        this.type = type;
+        this.partnerId = partnerId;
+        this.amount = amount;
+        this.status = status;
+        this.paymentMethod = paymentMethod;
+        this.note = note;
+        this.createdAt = LocalDateTime.now();
+    }
 }

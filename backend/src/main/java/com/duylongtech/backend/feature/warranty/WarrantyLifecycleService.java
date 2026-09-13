@@ -48,16 +48,12 @@ public class WarrantyLifecycleService {
     @Transactional
     public WarrantyResponse createWarranty(WarrantyRequest request) {
         validateRequest(request, null);
-        Warranty warranty = Warranty.builder()
-                .warrantyCode(resolveCreateCode(request.getWarrantyCode()))
-                .partnerId(request.getPartnerId())
-                .salesOrderId(request.getSalesOrderId())
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .warrantyStatus(normalizeStatusOrDefault(request.getWarrantyStatus(), com.duylongtech.backend.enums.EntityStatus.ACTIVE.name()))
-                .note(trimToNull(request.getNote()))
-                .build();
-        
+        Warranty warranty = new Warranty();
+        warranty.initWarranty(resolveCreateCode(request.getWarrantyCode()), request.getPartnerId(), request.getSalesOrderId(),
+                request.getStartDate(), request.getEndDate(),
+                normalizeStatusOrDefault(request.getWarrantyStatus(), com.duylongtech.backend.enums.EntityStatus.ACTIVE.name()),
+                trimToNull(request.getNote()));
+
         List<WarrantyLine> lines = mapLines(request.getLines(), warranty);
         warranty.setLines(lines);
 
@@ -86,16 +82,14 @@ public class WarrantyLifecycleService {
         if (lineRequests == null || lineRequests.isEmpty()) {
             return new ArrayList<>();
         }
-        return lineRequests.stream().map(req -> WarrantyLine.builder()
-                .warranty(warranty)
-                .serialNumberId(req.getSerialNumberId())
-                .productVariantId(req.getProductVariantId())
-                .quantity(req.getQuantity())
-                .startDate(req.getStartDate() != null ? req.getStartDate() : warranty.getStartDate())
-                .endDate(req.getEndDate() != null ? req.getEndDate() : warranty.getEndDate())
-                .warrantyStatus(normalizeStatusOrDefault(req.getWarrantyStatus(), warranty.getWarrantyStatus()))
-                .build()
-        ).collect(Collectors.toList());
+        return lineRequests.stream().map(req -> {
+            WarrantyLine line = new WarrantyLine();
+            line.initLine(warranty, req.getSerialNumberId(), req.getProductVariantId(), req.getQuantity(),
+                    req.getStartDate() != null ? req.getStartDate() : warranty.getStartDate(),
+                    req.getEndDate() != null ? req.getEndDate() : warranty.getEndDate(),
+                    normalizeStatusOrDefault(req.getWarrantyStatus(), warranty.getWarrantyStatus()));
+            return line;
+        }).collect(Collectors.toList());
     }
 
     @Transactional

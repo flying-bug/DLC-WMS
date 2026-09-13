@@ -34,16 +34,8 @@ public class PartnerLedgerService {
 
         BigDecimal balanceAfter = prevBalance.add(safeDebt).subtract(safeReceipt);
 
-        PartnerLedger ledger = PartnerLedger.builder()
-                .partnerId(partnerId)
-                .entityType(entityType)
-                .entityId(entityId)
-                .referenceCode(referenceCode)
-                .amountDebt(safeDebt)
-                .amountReceipt(safeReceipt)
-                .balanceAfter(balanceAfter)
-                .note(note)
-                .build();
+        PartnerLedger ledger = new PartnerLedger();
+        ledger.initEntry(partnerId, entityType, entityId, referenceCode, safeDebt, safeReceipt, balanceAfter, note);
 
         PartnerLedger saved = partnerLedgerRepository.save(ledger);
         log.info("[PartnerLedger] Ghi nhận công nợ cho PartnerID {}. Loại={}. Mã={}. Dư nợ mới={}", 
