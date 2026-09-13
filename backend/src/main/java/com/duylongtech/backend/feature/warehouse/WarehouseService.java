@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.warehouse;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.SerialNumberStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.warehouse.WarehouseRequest;
@@ -365,7 +366,7 @@ public class WarehouseService {
 
     @Transactional(readOnly = true)
     public List<String> getAvailableSerials(Long warehouseId, Long variantId) {
-        List<String> availableSerials = serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, "AVAILABLE")
+        List<String> availableSerials = serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, SerialNumberStatus.AVAILABLE.name())
                 .stream()
                 .map(SerialNumber::getSerialNumber)
                 .collect(Collectors.toList());

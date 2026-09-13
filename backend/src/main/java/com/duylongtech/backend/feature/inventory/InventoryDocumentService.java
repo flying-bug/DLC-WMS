@@ -3,6 +3,7 @@ package com.duylongtech.backend.feature.inventory;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRequest;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.SerialNumberStatus;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
 import com.duylongtech.backend.feature.inventory.ScanResolveRequest;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineResponse;
@@ -466,7 +467,7 @@ public class InventoryDocumentService {
     }
 
     private ScanResolveResponse resolveSerialScan(SerialNumber serial, Long warehouseId, String code) {
-        if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
+        if (!SerialNumberStatus.AVAILABLE.name().equalsIgnoreCase(serial.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.INV_ERR_038.getMessage(), code));
         }
         if (!warehouseId.equals(serial.getWarehouseId())) {
@@ -554,7 +555,7 @@ public class InventoryDocumentService {
         if (whId != null && !whId.equals(serial.getWarehouseId())) {
             throw new BusinessException(SystemMessage.INV_ERR_029.getMessage());
         }
-        if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
+        if (!SerialNumberStatus.AVAILABLE.name().equalsIgnoreCase(serial.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_028.getMessage());
         }
     }
@@ -753,7 +754,7 @@ public class InventoryDocumentService {
                     if (!lineWarehouseId.equals(snObj.getWarehouseId())) {
                         throw new BusinessException(String.format("Serial %s không thuộc kho đã chọn", snValue));
                     }
-                    if (!"AVAILABLE".equals(snObj.getStatus())) {
+                    if (!SerialNumberStatus.AVAILABLE.name().equals(snObj.getStatus())) {
                         throw new BusinessException(
                                 String.format(SystemMessage.INV_ERR_009.getMessage(), snValue, snObj.getStatus()));
                     }
@@ -772,7 +773,7 @@ public class InventoryDocumentService {
                     throw new BusinessException(
                             String.format("Serial %s không thuộc kho đã chọn", snObj.getSerialNumber()));
                 }
-                if (!"AVAILABLE".equals(snObj.getStatus())) {
+                if (!SerialNumberStatus.AVAILABLE.name().equals(snObj.getStatus())) {
                     throw new BusinessException(String.format(SystemMessage.INV_ERR_009.getMessage(),
                             snObj.getSerialNumber(), snObj.getStatus()));
                 }

@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.inventory;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.SerialNumberStatus;
 import com.duylongtech.backend.enums.WarrantyStatus;
 
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRequest;
@@ -227,7 +228,7 @@ public class InventoryPostingService {
             }
 
             for (SerialNumber snObj : serialsToExport) {
-                if (!"AVAILABLE".equals(snObj.getStatus())) {
+                if (!SerialNumberStatus.AVAILABLE.name().equals(snObj.getStatus())) {
                     throw new BusinessException(String.format(SystemMessage.INV_ERR_045.getMessage(),
                             snObj.getSerialNumber(), snObj.getStatus()));
                 }
@@ -634,7 +635,7 @@ public class InventoryPostingService {
                 continue;
 
             Optional<InventoryBalance> balanceOpt = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "AVAILABLE");
+                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), SerialNumberStatus.AVAILABLE.name());
             if (balanceOpt.isPresent()) {
                 InventoryBalance balance = balanceOpt.get();
                 balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyIn));
@@ -710,7 +711,7 @@ public class InventoryPostingService {
                 continue;
 
             Optional<InventoryBalance> balanceOpt = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "AVAILABLE");
+                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), SerialNumberStatus.AVAILABLE.name());
             if (balanceOpt.isPresent()) {
                 InventoryBalance balance = balanceOpt.get();
                 balance.setQuantityOnHand(balance.getQuantityOnHand().add(qtyOut));
@@ -730,7 +731,7 @@ public class InventoryPostingService {
                     if (!clean.isEmpty()) {
                         serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), clean)
                                 .ifPresent(s -> {
-                                    s.updateStatus("AVAILABLE");
+                                    s.updateStatus(SerialNumberStatus.AVAILABLE.name());
                                     s.setSoldAt(null);
                                     s.setSalesOrderLineId(null);
                                     serialNumberRepository.save(s);
@@ -841,9 +842,9 @@ public class InventoryPostingService {
         }
 
         if (ISSUE_PURPOSE_TRANSFER_OUT.equals(doc.getIssuePurpose())) {
-            serial.updateStatus("IN_TRANSIT");
+            serial.updateStatus(SerialNumberStatus.IN_TRANSIT.name());
         } else {
-            serial.updateStatus(com.duylongtech.backend.enums.SerialStatus.SOLD.name());
+            serial.updateStatus(SerialNumberStatus.SOLD.name());
             serial.setSoldAt(LocalDateTime.now());
         }
         serialNumberRepository.save(serial);
@@ -916,7 +917,7 @@ public class InventoryPostingService {
             if (existingOpt.isPresent()) {
                 if ("SCRAP".equals(doc.getIssuePurpose())) {
                     SerialNumber serial = existingOpt.get();
-                    serial.updateStatus("SCRAP");
+                    serial.updateStatus(SerialNumberStatus.SCRAP.name());
                     serial.updateWarehouse(effectiveWh);
                     SerialNumber savedSerial = serialNumberRepository.save(serial);
                     InventoryBalance scrapBalance = new InventoryBalance();
@@ -925,10 +926,10 @@ public class InventoryPostingService {
                     continue;
                 } else if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
                     SerialNumber serial = existingOpt.get();
-                    if (!"IN_TRANSIT".equals(serial.getStatus())) {
+                    if (!SerialNumberStatus.IN_TRANSIT.name().equals(serial.getStatus())) {
                         throw new BusinessException(String.format(SystemMessage.INV_ERR_024.getMessage(), serialValue));
                     }
-                    serial.updateStatus("AVAILABLE");
+                    serial.updateStatus(SerialNumberStatus.AVAILABLE.name());
                     serial.updateWarehouse(effectiveWh);
                     SerialNumber savedSerial = serialNumberRepository.save(serial);
                     InventoryBalance transferBalance = new InventoryBalance();
@@ -940,7 +941,7 @@ public class InventoryPostingService {
                 }
             }
             SerialNumber serial = new SerialNumber();
-            serial.initSerialNumber(line.getVariantId(), effectiveWh, serialValue, "AVAILABLE", LocalDateTime.now());
+            serial.initSerialNumber(line.getVariantId(), effectiveWh, serialValue, SerialNumberStatus.AVAILABLE.name(), LocalDateTime.now());
             SerialNumber savedSerial = serialNumberRepository.save(serial);
             InventoryBalance newSerialBalance = new InventoryBalance();
             newSerialBalance.initBalance(effectiveWh, line.getVariantId(), savedSerial.getId(), "GOOD", BigDecimal.ONE, ZERO, unitCost);

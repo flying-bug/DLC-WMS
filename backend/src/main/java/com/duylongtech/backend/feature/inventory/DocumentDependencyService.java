@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.inventory;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.SerialNumberStatus;
 
 import com.duylongtech.backend.feature.inventory.DependencyCheckResponse;
 
@@ -90,7 +91,7 @@ public class DocumentDependencyService {
                     if (snOpt.isPresent()) {
                         SerialNumber snEntity = snOpt.get();
                         String status = snEntity.getStatus();
-                        if (!"AVAILABLE".equalsIgnoreCase(status)) {
+                        if (!SerialNumberStatus.AVAILABLE.name().equalsIgnoreCase(status)) {
                             conflictingSerials.add(cleanSn);
                             conflicts.add(String.format("Serial [%s] của sản phẩm #%d đã phát sinh giao dịch (trạng thái hiện tại: %s)!",
                                     cleanSn, line.getVariantId(), status));

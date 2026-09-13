@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.stocktake;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.enums.SerialNumberStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.stocktake.StocktakeLineRequest;
@@ -156,7 +157,7 @@ public class StocktakeService {
         if (warehouseId == null || variantId == null) {
             return new ArrayList<>();
         }
-        return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, "AVAILABLE");
+        return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, SerialNumberStatus.AVAILABLE.name());
     }
 
     @Transactional
@@ -215,7 +216,7 @@ public class StocktakeService {
                     if ("MISSING".equals(sLine.getScanStatus())) {
                         if (sLine.getSerialNumberId() != null) {
                             serialNumberRepository.findById(sLine.getSerialNumberId()).ifPresent(sn -> {
-                                sn.updateStatus("LOST");
+                                sn.updateStatus(SerialNumberStatus.LOST.name());
                                 serialNumberRepository.save(sn);
                             });
                         }
@@ -225,11 +226,11 @@ public class StocktakeService {
                         if (existingOpt.isPresent()) {
                             SerialNumber sn = existingOpt.get();
                             sn.updateWarehouse(stocktake.getWarehouseId());
-                            sn.updateStatus("AVAILABLE");
+                            sn.updateStatus(SerialNumberStatus.AVAILABLE.name());
                             serialNumberRepository.save(sn);
                         } else {
                             SerialNumber newSn = new SerialNumber();
-                            newSn.initSerialNumber(line.getVariantId(), stocktake.getWarehouseId(), sLine.getSerialNumber(), "AVAILABLE", LocalDateTime.now());
+                            newSn.initSerialNumber(line.getVariantId(), stocktake.getWarehouseId(), sLine.getSerialNumber(), SerialNumberStatus.AVAILABLE.name(), LocalDateTime.now());
                             serialNumberRepository.save(newSn);
                         }
                     }
