@@ -580,7 +580,7 @@ function AssemblyBomFormPage() {
                                                 {canEdit && (
                                                     <div className={styles.bomItemActions}>
                                                         <button className={`${styles.bomActionBtn} ${styles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
-                                                            <i className="bi bi-pencil-square"></i>
+                                                            <i className="bi bi-pencil"></i>
                                                         </button>
                                                         {!line.componentRole && (
                                                             <button className={`${styles.bomActionBtn} ${styles.delete}`} type="button" title="Xóa" onClick={() => removeLine(index)}>

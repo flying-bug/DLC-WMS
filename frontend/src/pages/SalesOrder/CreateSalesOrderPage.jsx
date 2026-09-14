@@ -1209,7 +1209,7 @@ function CreateSalesOrderPage() {
                         className={styles.btnTableAction}
                         onClick={() => setLines([emptyLine()])}
                       >
-                        <i className="bi bi-trash3" /> Xóa hết dòng
+                        <i className="bi bi-trash" /> Xóa hết dòng
                       </button>
                     )}
                   </div>

@@ -1273,7 +1273,7 @@ function AssemblyOrderFormPage() {
                                                         </div>
                                                         <div className={bomStyles.bomItemActions}>
                                                             <button className={`${bomStyles.bomActionBtn} ${bomStyles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
-                                                                <i className="bi bi-pencil-square"></i>
+                                                                <i className="bi bi-pencil"></i>
                                                             </button>
                                                             {!line.componentRole && (
                                                                 <button className={`${bomStyles.bomActionBtn} ${bomStyles.delete}`} type="button" title="Xóa" onClick={() => removeBomLine(index)}>

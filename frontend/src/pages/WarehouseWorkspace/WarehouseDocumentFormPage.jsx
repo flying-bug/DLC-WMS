@@ -287,7 +287,7 @@ export default function WarehouseDocumentFormPage() {
     return (
       <AdminLayout>
         <div className={styles.loadingContainer}>
-          <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', color: 'var(--color-primary)' }}></i>
+          <i className="bi bi-arrow-repeat" style={{ fontSize: '2rem', color: 'var(--color-primary)', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
           <span>Đang tải chi tiết chứng từ kho...</span>
         </div>
       </AdminLayout>
@@ -300,12 +300,12 @@ export default function WarehouseDocumentFormPage() {
         <div className={styles.emptyContainer}>
           <div className={styles.emptyStateCard}>
             <div className={styles.emptyStateIcon} aria-hidden="true">
-              <i className="fas fa-file-invoice"></i>
+              <i className="bi bi-receipt"></i>
             </div>
             <h2>Không tìm thấy chứng từ kho</h2>
             <p>Chứng từ không tồn tại hoặc không còn khả dụng. Hãy quay lại danh sách để chọn chứng từ khác.</p>
             <button type="button" className={styles.emptyStateAction} onClick={() => navigate('/warehouse-workspace')}>
-              <i className="fas fa-arrow-left"></i> Quay lại danh sách
+              <i className="bi bi-arrow-left"></i> Quay lại danh sách
             </button>
           </div>
         </div>
@@ -329,7 +329,7 @@ export default function WarehouseDocumentFormPage() {
               onClick={() => navigate('/warehouse-workspace')}
               title="Quay lại bàn làm việc thủ kho"
             >
-              <i className="fas fa-arrow-left"></i> Quay lại
+              <i className="bi bi-arrow-left"></i> Quay lại
             </button>
             <span className={styles.divider}>/</span>
             <h1 className={styles.docTitle}>
@@ -338,7 +338,7 @@ export default function WarehouseDocumentFormPage() {
                 className={`${styles.statusBadge} ${isPosted ? styles.statusPosted : doc.status === 'UNPOSTED' ? styles.statusUnposted : styles.statusDraft
                   }`}
               >
-                <i className={`fas ${isPosted ? 'fa-check' : doc.status === 'UNPOSTED' ? 'fa-undo' : 'fa-clock'}`} style={{ marginRight: 4 }}></i>
+                <i className={`bi ${isPosted ? 'bi-check' : doc.status === 'UNPOSTED' ? 'bi-arrow-counterclockwise' : 'bi-clock'}`} style={{ marginRight: 4 }}></i>
                 {isPosted ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : 'Chưa ghi sổ'}
               </span>
             </h1>
@@ -346,7 +346,7 @@ export default function WarehouseDocumentFormPage() {
 
           <div className={styles.headerActions}>
             <button type="button" className={styles.btnSecondary} onClick={handlePrint} title="In phiếu chứng từ">
-              <i className="fas fa-print"></i> In phiếu
+              <i className="bi bi-printer"></i> In phiếu
             </button>
             {isPosted ? (
               <button
@@ -354,7 +354,7 @@ export default function WarehouseDocumentFormPage() {
                 className={styles.btnUnpost}
                 onClick={() => setUnpostModalOpen(true)}
               >
-                <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
+                <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
               </button>
             ) : (
               <button
@@ -363,7 +363,7 @@ export default function WarehouseDocumentFormPage() {
                 onClick={() => setConfirmPostOpen(true)}
                 disabled={saving || lines.length === 0}
               >
-                <i className="fas fa-check-circle"></i> {saving ? 'Đang ghi sổ...' : 'Xác nhận Ghi sổ kho'}
+                <i className="bi bi-check-circle"></i> {saving ? 'Đang ghi sổ...' : 'Xác nhận Ghi sổ kho'}
               </button>
             )}
           </div>
@@ -383,7 +383,7 @@ export default function WarehouseDocumentFormPage() {
               alignItems: 'flex-start',
               gap: '12px'
             }}>
-              <i className="fas fa-history" style={{ color: '#d97706', fontSize: '18px', marginTop: '2px' }}></i>
+              <i className="bi bi-clock-history" style={{ color: '#d97706', fontSize: '18px', marginTop: '2px' }}></i>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, color: '#92400e', fontSize: '14px', marginBottom: '2px' }}>
                   Lịch sử Bỏ ghi sổ:
@@ -409,7 +409,7 @@ export default function WarehouseDocumentFormPage() {
               alignItems: 'flex-start',
               gap: '12px'
             }}>
-              <i className="fas fa-exclamation-triangle" style={{ color: 'var(--wms-danger)', fontSize: '18px', marginTop: '2px' }}></i>
+              <i className="bi bi-exclamation-triangle" style={{ color: 'var(--wms-danger)', fontSize: '18px', marginTop: '2px' }}></i>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, color: '#991b1b', fontSize: '14px', marginBottom: '2px' }}>
                   Cảnh báo Chênh lệch Kiểm nhận (Hàng thiếu / Hàng lỗi):
@@ -435,7 +435,7 @@ export default function WarehouseDocumentFormPage() {
               <div className={styles.formRow}>
                 <span className={styles.fieldLabel}>{isImport ? 'Kho nhập:' : 'Kho xuất:'}</span>
                 <span className={styles.fieldValueBadge}>
-                  <i className="fas fa-warehouse" style={{ marginRight: 4 }}></i>
+                  <i className="bi bi-building" style={{ marginRight: 4 }}></i>
                   {doc.warehouseName || doc.warehouseCode || 'Kho chính'}
                 </span>
               </div>
@@ -466,7 +466,7 @@ export default function WarehouseDocumentFormPage() {
           {/* SCANNER BAR */}
           {!isPosted && (
             <form onSubmit={handleScannerSubmit} className={styles.scannerBar}>
-              <i className="fas fa-barcode" style={{ color: 'var(--color-primary)', fontSize: '1.25rem' }}></i>
+              <i className="bi bi-upc" style={{ color: 'var(--color-primary)', fontSize: '1.25rem' }}></i>
               <input
                 ref={scanInputRef}
                 type="text"
@@ -570,17 +570,17 @@ export default function WarehouseDocumentFormPage() {
                             >
                               {isMatch ? (
                                 <>
-                                  <i className="fas fa-check-circle"></i>
+                                  <i className="bi bi-check-circle"></i>
                                   {snCount} serial (Đủ)
                                 </>
                               ) : isMismatch ? (
                                 <>
-                                  <i className="fas fa-exclamation-triangle"></i>
+                                  <i className="bi bi-exclamation-triangle"></i>
                                   {snCount}/{actNum} serial
                                 </>
                               ) : (
                                 <>
-                                  <i className="fas fa-barcode"></i>
+                                  <i className="bi bi-upc"></i>
                                   {(l.invoiceSerials && l.invoiceSerials.length > 0) ? `Đối soát (${l.invoiceSerials.length})` : 'Quét serial'}
                                 </>
                               )}
@@ -622,7 +622,7 @@ export default function WarehouseDocumentFormPage() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--wms-text-strong)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fas fa-stream" style={{ color: 'var(--color-info-hover)' }}></i>
+                <i className="bi bi-list-ul" style={{ color: 'var(--color-info-hover)' }}></i>
                 Nhật ký thao tác & Lịch sử chứng từ ({auditLogs.length > 0 ? auditLogs.length : 1} sự kiện)
               </h4>
               <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>
@@ -639,19 +639,19 @@ export default function WarehouseDocumentFormPage() {
 
                   let badgeBg = 'var(--wms-bg-hover)';
                   let badgeColor = 'var(--wms-text-muted)';
-                  let icon = 'fas fa-info-circle';
+                  let icon = 'bi bi-info-circle';
                   if (isUnpost) {
                     badgeBg = '#fef3c7';
                     badgeColor = '#92400e';
-                    icon = 'fas fa-undo-alt';
+                    icon = 'bi bi-arrow-counterclockwise';
                   } else if (isPost) {
                     badgeBg = 'var(--color-success-bg)';
                     badgeColor = '#166534';
-                    icon = 'fas fa-check-circle';
+                    icon = 'bi bi-check-circle';
                   } else if (isCreate) {
                     badgeBg = '#e0f2fe';
                     badgeColor = '#0369a1';
-                    icon = 'fas fa-plus-circle';
+                    icon = 'bi bi-plus-circle';
                   }
 
                   return (

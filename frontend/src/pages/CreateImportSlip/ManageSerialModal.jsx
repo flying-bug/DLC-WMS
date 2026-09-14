@@ -144,7 +144,7 @@ export default function ManageSerialModal({
       <div className={styles.header}>
         <div>
           <h2 className={styles.headerTitle}>
-            <i className="fas fa-barcode"></i> Quản lý & Đối soát Serial Number Thực Tế
+            <i className="bi bi-upc"></i> Quản lý & Đối soát Serial Number Thực Tế
           </h2>
           <p className={styles.headerSubtitle}>
             Sản phẩm: <strong>{productName}</strong> | SKU: <strong>{sku || '-'}</strong> | Cần kiểm:{' '}
@@ -164,7 +164,7 @@ export default function ManageSerialModal({
 
           <form onSubmit={handleScanSubmit} className={styles.scannerBox}>
             <div className={styles.inputWrapper}>
-              <i className={`fas fa-qrcode ${styles.inputIcon}`}></i>
+              <i className={`bi bi-qr-code ${styles.inputIcon}`}></i>
               <input
                 ref={inputRef}
                 type="text"
@@ -175,7 +175,7 @@ export default function ManageSerialModal({
               />
             </div>
             <button type="submit" className={styles.addBtn}>
-              <i className="fas fa-plus"></i> Nhận
+              <i className="bi bi-plus"></i> Nhận
             </button>
           </form>
 
@@ -199,7 +199,7 @@ export default function ManageSerialModal({
           {/* HINT & RULES */}
           <div className={styles.scanHintCard}>
             <div style={{ fontWeight: '700', marginBottom: '6px', color: 'var(--wms-text-strong)' }}>
-              <i className="fas fa-shield-alt" style={{ color: 'var(--wms-primary)', marginRight: '6px' }}></i>
+              <i className="bi bi-shield-check" style={{ color: 'var(--wms-primary)', marginRight: '6px' }}></i>
               Nguyên tắc kiểm đếm Zero-Trust:
             </div>
             <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -258,7 +258,7 @@ export default function ManageSerialModal({
             {activeSubTab === 'verified' ? (
               verifiedSerials.length === 0 ? (
                 <div style={{ color: 'var(--wms-text-subtle)', fontSize: '0.8125rem', textAlign: 'center', padding: '32px' }}>
-                  <i className="fas fa-barcode" style={{ fontSize: '1.5rem', marginBottom: '8px', display: 'block' }}></i>
+                  <i className="bi bi-upc" style={{ fontSize: '1.5rem', marginBottom: '8px', display: 'block' }}></i>
                   Chưa quét chiếc nào. Hãy dùng máy quét bắn mã trên vỏ hộp!
                 </div>
               ) : (
@@ -281,7 +281,7 @@ export default function ManageSerialModal({
                         onClick={() => handleRemoveVerified(idx)}
                         title="Xóa mã này để quét lại"
                       >
-                        <i className="fas fa-trash-alt"></i>
+                        <i className="bi bi-trash"></i>
                       </button>
                     </div>
                   );
@@ -332,7 +332,7 @@ export default function ManageSerialModal({
             Hủy
           </button>
           <button type="button" className={styles.btnConfirm} onClick={handleConfirm}>
-            <i className="fas fa-check"></i> Xác nhận SL thực nhận ({verifiedSerials.length})
+            <i className="bi bi-check"></i> Xác nhận SL thực nhận ({verifiedSerials.length})
           </button>
         </div>
       </div>

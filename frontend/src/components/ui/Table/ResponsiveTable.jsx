@@ -27,7 +27,7 @@ const ResponsiveTable = ({
     if (!data || data.length === 0) {
         return (
             <div className={styles.emptyContainer}>
-                <i className="fas fa-inbox"></i>
+                <i className="bi bi-inbox"></i>
                 <p>{emptyMessage}</p>
             </div>
         );

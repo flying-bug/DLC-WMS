@@ -551,19 +551,19 @@ function ExportSlipPage() {
                       <td>
                         {slip.status === 'POSTED' || slip.status === 'COMPLETED' ? (
                           <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                            <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+                            <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
                           </span>
                         ) : slip.status === 'UNPOSTED' ? (
                           <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                            <i className="fas fa-undo" style={{ marginRight: 4 }}></i>Bỏ ghi sổ
+                            <i className="bi bi-arrow-counterclockwise" style={{ marginRight: 4 }}></i>Bỏ ghi sổ
                           </span>
                         ) : slip.status === 'APPROVED' ? (
                           <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                            <i className="fas fa-check-double" style={{ marginRight: 4 }}></i>Đã duyệt
+                            <i className="bi bi-check2-all" style={{ marginRight: 4 }}></i>Đã duyệt
                           </span>
                         ) : (
                           <span className={`${styles.badge} ${styles.badgeDraft}`}>
-                            <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+                            <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
                           </span>
                         )}
                       </td>
@@ -583,7 +583,7 @@ function ExportSlipPage() {
                                 setSelectedSlip(slip);
                               }}
                             >
-                              <i className="fas fa-eye"></i> Xem chi tiết
+                              <i className="bi bi-eye"></i> Xem chi tiết
                             </button>
                             <button
                               type="button"
@@ -597,7 +597,7 @@ function ExportSlipPage() {
                                 }
                               }}
                             >
-                              <i className="fas fa-edit"></i> Sửa phiếu xuất kho
+                              <i className="bi bi-pencil"></i> Sửa phiếu xuất kho
                             </button>
                             {slip.status === 'POSTED' && (
                               <button
@@ -608,7 +608,7 @@ function ExportSlipPage() {
                                   setUnpostTarget(slip);
                                 }}
                               >
-                                <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
+                                <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
                               </button>
                             )}
                       </RowActionMenu>

@@ -102,7 +102,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                         <span style={{ color: 'var(--color-text-placeholder)' }}>Tìm kiếm danh mục</span>
                     )
                 )}
-                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
+                <i className={`bi bi-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
             </div>
 
             {isOpen && rect && createPortal(
@@ -366,7 +366,7 @@ const QuickAddProductModal = ({
             <div className="misa-modal" style={{ width: '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
                     <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-heading)' }}>Thêm nhanh {effectiveProductType}</span>
-                    <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
+                    <i className="bi bi-x" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
                 </div>
                 
                 <div className="misa-modal-body" style={{ padding: '20px 24px', backgroundColor: '#fff', overflowY: 'auto', flex: 1 }}>
@@ -530,7 +530,7 @@ const QuickAddProductModal = ({
                                                 onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-placeholder)'; e.currentTarget.style.background = 'transparent'; }}
                                                 title="Xóa danh mục"
                                             >
-                                                <i className="bi bi-trash3"></i>
+                                                <i className="bi bi-trash"></i>
                                             </button>
                                         </div>
                                     ))}

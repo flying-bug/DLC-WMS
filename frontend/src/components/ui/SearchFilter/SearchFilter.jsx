@@ -28,7 +28,7 @@ const SearchFilter = ({
                             onClick={onReset}
                             title="Đặt lại bộ lọc"
                         >
-                            <i className="fas fa-undo"></i>
+                            <i className="bi bi-arrow-counterclockwise"></i>
                             <span className={styles.btnText}>Đặt lại</span>
                         </button>
                     )}

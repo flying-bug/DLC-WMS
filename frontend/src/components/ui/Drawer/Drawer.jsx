@@ -45,7 +45,7 @@ const Drawer = ({
                             onClick={onClose}
                             aria-label="Đóng"
                         >
-                            <i className="fas fa-times"></i>
+                            <i className="bi bi-x"></i>
                         </button>
                     </div>
                 )}

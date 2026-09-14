@@ -82,7 +82,7 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                 {step === 1 && (
                     <div className={styles.uploadSection}>
                         <div className={styles.uploadBox} onClick={() => fileInputRef.current.click()}>
-                            <i className="fas fa-cloud-upload-alt fa-3x"></i>
+                            <i className="bi bi-cloud-upload"></i>
                             <p>Kéo thả file vào đây hoặc <b>Bấm để chọn file</b></p>
                             <span>Hỗ trợ định dạng .xlsx, tối đa 5MB</span>
                             <input 
@@ -97,7 +97,7 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
 
                         <div className={styles.downloadTemplateBox}>
                             <button className={styles.btnTemplate} onClick={handleDownloadTemplate}>
-                                <i className="fas fa-file-download"></i> Tải file mẫu
+                                <i className="bi bi-file-earmark-arrow-down"></i> Tải file mẫu
                             </button>
                             <span className={styles.templateNote}>Vui lòng nhập dữ liệu theo đúng định dạng file mẫu.</span>
                         </div>

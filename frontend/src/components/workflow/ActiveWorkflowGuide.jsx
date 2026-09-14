@@ -46,9 +46,9 @@ function ActiveWorkflowGuide() {
         return (
             <aside className={styles.minimizedGuide} aria-label="Quy trình đang thực hiện">
                 <button type="button" className={styles.restoreButton} onClick={() => setMinimized(false)}>
-                    <i className="fas fa-route" aria-hidden="true"></i>
+                    <i className="bi bi-signpost-2" aria-hidden="true"></i>
                     <span>{session.workflowLabel}: bước {safeStepIndex + 1}/{session.steps.length}</span>
-                    <i className="fas fa-chevron-up" aria-hidden="true"></i>
+                    <i className="bi bi-chevron-up" aria-hidden="true"></i>
                 </button>
             </aside>
         );
@@ -61,7 +61,7 @@ function ActiveWorkflowGuide() {
             </div>
 
             <div className={styles.guideIdentity}>
-                <span className={styles.guideIcon}><i className="fas fa-route" aria-hidden="true"></i></span>
+                <span className={styles.guideIcon}><i className="bi bi-signpost-2" aria-hidden="true"></i></span>
                 <div>
                     <small>Quy trình đang thực hiện</small>
                     <strong>{session.workflowLabel}</strong>
@@ -77,13 +77,13 @@ function ActiveWorkflowGuide() {
                 <button type="button" className={styles.nextButton} onClick={completeCurrentStep}>
                     <span>{nextStep ? 'Đã xong · Tiếp theo' : 'Hoàn tất quy trình'}</span>
                     {nextStep && <strong>{nextStep.title}</strong>}
-                    <i className={`fas ${nextStep ? 'fa-arrow-right' : 'fa-check'}`} aria-hidden="true"></i>
+                    <i className={`bi ${nextStep ? 'bi-arrow-right' : 'bi-check'}`} aria-hidden="true"></i>
                 </button>
                 <button type="button" className={`${styles.iconButton} ${styles.minimizeButton}`} onClick={() => setMinimized(true)} aria-label="Thu gọn hướng dẫn quy trình">
-                    <i className="fas fa-chevron-down" aria-hidden="true"></i>
+                    <i className="bi bi-chevron-down" aria-hidden="true"></i>
                 </button>
                 <button type="button" className={styles.iconButton} onClick={stopWorkflow} aria-label="Dừng quy trình">
-                    <i className="fas fa-times" aria-hidden="true"></i>
+                    <i className="bi bi-x" aria-hidden="true"></i>
                 </button>
             </div>
         </aside>

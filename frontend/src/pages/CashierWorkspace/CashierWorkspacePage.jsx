@@ -250,13 +250,13 @@ export default function CashierWorkspacePage() {
     if (s === 'POSTED') {
       return (
         <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-          <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ quỹ
+          <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ quỹ
         </span>
       );
     }
     return (
       <span className={`${styles.badge} ${styles.badgeDraft}`}>
-        <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+        <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
       </span>
     );
   };
@@ -324,11 +324,11 @@ export default function CashierWorkspacePage() {
         render: (v) =>
           v === 'BANK_TRANSFER' ? (
             <span className={styles.paymentMethodText}>
-              <i className="fas fa-credit-card" style={{ marginRight: 4 }}></i>Chuyển khoản
+              <i className="bi bi-credit-card" style={{ marginRight: 4 }}></i>Chuyển khoản
             </span>
           ) : (
             <span className={styles.paymentMethodText}>
-              <i className="fas fa-money-bill-wave" style={{ marginRight: 4 }}></i>Tiền mặt
+              <i className="bi bi-cash" style={{ marginRight: 4 }}></i>Tiền mặt
             </span>
           ),
       },
@@ -365,7 +365,7 @@ export default function CashierWorkspacePage() {
                 className={styles.misaActionLink}
                 onClick={() => setOpenDropdownId(isOpen ? null : row.id)}
               >
-                Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
               </button>
               {isOpen && (
                 <div className={styles.actionDropdownMenu}>
@@ -378,7 +378,7 @@ export default function CashierWorkspacePage() {
                         setConfirmPostItem(row);
                       }}
                     >
-                      <i className="fas fa-check"></i> Ghi sổ quỹ
+                      <i className="bi bi-check"></i> Ghi sổ quỹ
                     </button>
                   )}
                   {row.status === 'POSTED' && (
@@ -391,7 +391,7 @@ export default function CashierWorkspacePage() {
                         setUnpostReason('');
                       }}
                     >
-                      <i className="fas fa-undo"></i> Bỏ ghi sổ
+                      <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
                     </button>
                   )}
                   <button
@@ -402,8 +402,8 @@ export default function CashierWorkspacePage() {
                       handlePrint(row);
                     }}
                   >
-                    <i className="fas fa-print"></i> In phiếu
-                  </button>
+                    <i className="bi bi-printer"></i> In phiếu
+    </button>
                 </div>
               )}
             </div>
@@ -502,7 +502,7 @@ export default function CashierWorkspacePage() {
                   : 'Đề nghị thu, chi tiền'}
             </h1>
             <span className={styles.personaBadge}>
-              <i className="fas fa-cash-register"></i> Chế độ Thủ quỹ
+              <i className="bi bi-cash-stack"></i> Chế độ Thủ quỹ
             </span>
           </div>
 
@@ -513,7 +513,7 @@ export default function CashierWorkspacePage() {
               onClick={() => navigate('/payments/receipt')}
               title="Lập phiếu thu tiền mới"
             >
-              <i className="fas fa-plus"></i> Lập phiếu thu
+              <i className="bi bi-plus"></i> Lập phiếu thu
             </button>
 
             <button
@@ -522,7 +522,7 @@ export default function CashierWorkspacePage() {
               onClick={() => navigate('/payments/expense')}
               title="Lập phiếu chi tiền mới"
             >
-              <i className="fas fa-plus"></i> Lập phiếu chi
+              <i className="bi bi-plus"></i> Lập phiếu chi
             </button>
 
             <button
@@ -532,7 +532,7 @@ export default function CashierWorkspacePage() {
               onClick={() => handlePrint()}
               title="In phiếu đang chọn"
             >
-              <i className="fas fa-print"></i> In phiếu
+              <i className="bi bi-printer"></i> In phiếu
             </button>
 
             {selectedItem && selectedItem.status === 'DRAFT' && (
@@ -541,7 +541,7 @@ export default function CashierWorkspacePage() {
                 className={styles.btnPrimary}
                 onClick={() => setConfirmPostItem(selectedItem)}
               >
-                <i className="fas fa-check"></i> Ghi sổ quỹ
+                <i className="bi bi-check"></i> Ghi sổ quỹ
               </button>
             )}
 
@@ -555,7 +555,7 @@ export default function CashierWorkspacePage() {
                 }}
                 title="Bỏ ghi sổ để hoàn tác dòng tiền và đưa về trạng thái Chờ ghi sổ"
               >
-                <i className="fas fa-undo"></i> Bỏ ghi sổ
+                <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
               </button>
             )}
 
@@ -565,7 +565,7 @@ export default function CashierWorkspacePage() {
               onClick={fetchMasterData}
               title="Tải lại dữ liệu"
             >
-              <i className="fas fa-sync-alt"></i> Nạp lại
+              <i className="bi bi-arrow-repeat"></i> Nạp lại
             </button>
           </div>
         </div>
@@ -574,7 +574,7 @@ export default function CashierWorkspacePage() {
         <div className={styles.kpiGrid}>
           <div className={styles.kpiCard}>
             <div className={styles.kpiIconWrapper}>
-              <i className="fas fa-arrow-down"></i>
+              <i className="bi bi-arrow-down"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Tổng thu trong kỳ</span>
@@ -586,7 +586,7 @@ export default function CashierWorkspacePage() {
 
           <div className={styles.kpiCard}>
             <div className={styles.kpiIconWrapper}>
-              <i className="fas fa-arrow-up"></i>
+              <i className="bi bi-arrow-up"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Tổng chi trong kỳ</span>
@@ -598,7 +598,7 @@ export default function CashierWorkspacePage() {
 
           <div className={styles.kpiCard}>
             <div className={styles.kpiIconWrapper}>
-              <i className="fas fa-wallet"></i>
+              <i className="bi bi-wallet2"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Dòng tiền ròng (Thu - Chi)</span>
@@ -610,7 +610,7 @@ export default function CashierWorkspacePage() {
 
           <div className={styles.kpiCard}>
             <div className={styles.kpiIconWrapper}>
-              <i className="fas fa-clock"></i>
+              <i className="bi bi-clock"></i>
             </div>
             <div className={styles.kpiContent}>
               <span className={styles.kpiLabel}>Chờ ghi sổ quỹ</span>
@@ -645,7 +645,7 @@ export default function CashierWorkspacePage() {
                     setPage(1);
                   }}
                 >
-                  <i className="fas fa-arrow-down" style={{ marginRight: 4 }}></i>
+                  <i className="bi bi-arrow-down" style={{ marginRight: 4 }}></i>
                   Thu tiền
                 </button>
                 <button
@@ -656,7 +656,7 @@ export default function CashierWorkspacePage() {
                     setPage(1);
                   }}
                 >
-                  <i className="fas fa-arrow-up" style={{ marginRight: 4 }}></i>
+                  <i className="bi bi-arrow-up" style={{ marginRight: 4 }}></i>
                   Chi tiền
                 </button>
               </div>
@@ -704,7 +704,7 @@ export default function CashierWorkspacePage() {
             </div>
 
             <div className={styles.searchBox}>
-              <i className={`fas fa-search ${styles.searchIcon}`}></i>
+              <i className={`bi bi-search ${styles.searchIcon}`}></i>
               <input
                 type="text"
                 className={styles.searchInput}
@@ -723,7 +723,7 @@ export default function CashierWorkspacePage() {
                   aria-label="Xóa từ khóa tìm kiếm"
                   title="Xóa tìm kiếm"
                 >
-                  <i className="fas fa-times"></i>
+                  <i className="bi bi-x"></i>
                 </button>
               )}
             </div>
@@ -736,7 +736,7 @@ export default function CashierWorkspacePage() {
             <div className={styles.emptyStateShell}>
               <div className={styles.emptyStateCard}>
                 <div className={styles.emptyStateIcon} aria-hidden="true">
-                  <i className="fas fa-file-invoice-dollar"></i>
+                  <i className="bi bi-receipt"></i>
                 </div>
                 <h2>Không tìm thấy phiếu thu, chi</h2>
                 <p>
@@ -745,7 +745,7 @@ export default function CashierWorkspacePage() {
                     : 'Chưa có chứng từ thu, chi khả dụng trong danh sách.'}
                 </p>
                 <button type="button" className={styles.emptyStateAction} onClick={handleReturnToList}>
-                  <i className="fas fa-arrow-left"></i> Quay lại danh sách
+                  <i className="bi bi-arrow-left"></i> Quay lại danh sách
                 </button>
               </div>
             </div>
@@ -791,7 +791,7 @@ export default function CashierWorkspacePage() {
             <div className={styles.modalCard}>
               <div className={styles.modalHeader}>
                 <h3 className={styles.modalTitle}>
-                  <i className="fas fa-undo" style={{ color: 'var(--wms-danger)', marginRight: 8 }}></i>
+                  <i className="bi bi-arrow-counterclockwise" style={{ color: 'var(--wms-danger)', marginRight: 8 }}></i>
                   Bỏ ghi sổ phiếu: {unpostItem.code}
                 </h3>
                 <button

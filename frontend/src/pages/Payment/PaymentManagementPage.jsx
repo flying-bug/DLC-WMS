@@ -616,11 +616,11 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                       <td className={styles.textCenter}>
                         {item.status === 'POSTED' ? (
                           <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                            <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+                            <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
                           </span>
                         ) : (
                           <span className={`${styles.badge} ${styles.badgeDraft}`}>
-                            <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+                            <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
                           </span>
                         )}
                       </td>
@@ -644,7 +644,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                               setOpenDropdownId(item.id);
                             }}
                           >
-                            Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                            Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
                           </button>
                           {openDropdownId === item.id && createPortal(
                             <div
@@ -659,7 +659,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                   setDetailItem(item);
                                 }}
                               >
-                                <i className="fas fa-eye"></i> Xem chi tiết
+                                <i className="bi bi-eye"></i> Xem chi tiết
                               </button>
                               <button
                                 type="button"
@@ -669,7 +669,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                   printPaymentReceipt(item, { partnerName: item.partnerName, salespersonName: '' });
                                 }}
                               >
-                                <i className="fas fa-print"></i> In phiếu
+                                <i className="bi bi-printer"></i> In phiếu
                               </button>
                               {item.status === 'DRAFT' && (
                                 <>
@@ -681,7 +681,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                       handleStartEdit(item);
                                     }}
                                   >
-                                    <i className="fas fa-edit"></i> Sửa phiếu nháp
+                                    <i className="bi bi-pencil"></i> Sửa phiếu nháp
                                   </button>
                                   <button
                                     type="button"
@@ -691,7 +691,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                       setDeletingItem(item);
                                     }}
                                   >
-                                    <i className="fas fa-trash-alt"></i> Xóa phiếu nháp
+                                    <i className="bi bi-trash"></i> Xóa phiếu nháp
                                   </button>
                                 </>
                               )}

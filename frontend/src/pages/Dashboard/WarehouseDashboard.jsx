@@ -16,20 +16,20 @@ function WarehouseDashboard() {
     };
 
     const processItems = [
-        { label: 'Lắp ráp, tháo dỡ', icon: 'fas fa-tools', module: 'assembly', action: () => navigate('/assembly-orders') },
-        { label: 'Xuất kho', icon: 'fas fa-truck-loading', module: 'export', action: () => navigate('/export-slips') },
-        { label: 'Nhập kho', icon: 'fas fa-boxes', module: 'import', action: () => navigate('/import-history') },
-        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', module: 'transfer', action: () => navigate('/transfer-history') },
-        { label: 'Quản lý Cấu hình', icon: 'fas fa-sitemap', module: 'assembly_config', action: () => navigate('/assembly-boms') },
-        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check', module: 'stocktake', action: () => navigate('/stocktakes') },
+        { label: 'Lắp ráp, tháo dỡ', icon: 'bi bi-tools', module: 'assembly', action: () => navigate('/assembly-orders') },
+        { label: 'Xuất kho', icon: 'bi bi-truck', module: 'export', action: () => navigate('/export-slips') },
+        { label: 'Nhập kho', icon: 'bi bi-boxes', module: 'import', action: () => navigate('/import-history') },
+        { label: 'Chuyển kho', icon: 'bi bi-arrow-left-right', module: 'transfer', action: () => navigate('/transfer-history') },
+        { label: 'Quản lý Cấu hình', icon: 'bi bi-diagram-3', module: 'assembly_config', action: () => navigate('/assembly-boms') },
+        { label: 'Kiểm kê', icon: 'bi bi-clipboard-check', module: 'stocktake', action: () => navigate('/stocktakes') },
     ].filter(item => hasModule(item.module));
 
     const toolbarItems = [
-        { label: 'Kho', icon: 'fas fa-warehouse', module: 'warehouse_master', action: () => navigate('/warehouses') },
-        { label: 'Hàng hóa dịch vụ', icon: 'fas fa-box', module: 'product', action: () => navigate('/products') },
-        { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', module: 'unit', action: () => navigate('/units') },
-        { label: 'Danh mục sản phẩm', icon: 'fas fa-list', module: 'product_category', action: () => navigate('/product-categories') },
-        { label: 'Bảo hành', icon: 'fas fa-shield-alt', module: 'warranty', action: () => navigate('/warranties') }
+        { label: 'Kho', icon: 'bi bi-building', module: 'warehouse_master', action: () => navigate('/warehouses') },
+        { label: 'Hàng hóa dịch vụ', icon: 'bi bi-box', module: 'product', action: () => navigate('/products') },
+        { label: 'Đơn vị tính', icon: 'bi bi-rulers', module: 'unit', action: () => navigate('/units') },
+        { label: 'Danh mục sản phẩm', icon: 'bi bi-list', module: 'product_category', action: () => navigate('/product-categories') },
+        { label: 'Bảo hành', icon: 'bi bi-shield-check', module: 'warranty', action: () => navigate('/warranties') }
     ].filter(item => hasModule(item.module));
 
     const reportItems = [
@@ -88,7 +88,7 @@ function WarehouseDashboard() {
                     <ul className={styles.reportList}>
                         {reportItems.map((report) => (
                             <li key={report.id} onClick={() => navigate('/reports', { state: { reportId: report.id, fromDashboard: true } })} style={{ cursor: 'pointer' }}>
-                                <i className="fas fa-chart-line"></i>
+                                <i className="bi bi-graph-up"></i>
                                 <span>{report.name}</span>
                             </li>
                         ))}
@@ -96,7 +96,7 @@ function WarehouseDashboard() {
                     <div className={styles.allReports}>
                         <a href="#" onClick={(e) => { e.preventDefault(); navigate('/reports'); }}>
                             Tất cả báo cáo
-                            <i className="fas fa-arrow-right"></i>
+                            <i className="bi bi-arrow-right"></i>
                         </a>
                     </div>
                 </aside>

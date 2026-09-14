@@ -821,7 +821,7 @@ function CreatePurchaseOrderPage() {
                                 onClick={() => removeLine(idx)}
                                 title="Xóa dòng"
                               >
-                                <i className="bi bi-trash3" />
+                                <i className="bi bi-trash" />
                               </button>
                             )}
                           </td>
