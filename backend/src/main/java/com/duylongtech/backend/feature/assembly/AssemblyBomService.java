@@ -58,26 +58,37 @@ public class AssemblyBomService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy sản phẩm thành phẩm"));
 
-        List<AssemblyBom> existingBoms = assemblyBomRepository.findAllWithLines(null, product.getId());
-        BigDecimal nextVersion = BigDecimal.ONE;
+        // bomCode embeds a version number derived from existing BOMs for this product;
+        // re-reading that list each attempt means a retry after a concurrent create
+        // naturally computes the next version instead of colliding again.
+        org.springframework.dao.DataIntegrityViolationException lastConflict = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                List<AssemblyBom> existingBoms = assemblyBomRepository.findAllWithLines(null, product.getId());
+                BigDecimal nextVersion = BigDecimal.ONE;
 
-        for (AssemblyBom existingBom : existingBoms) {
-            if (existingBom.getVersionNo() != null && existingBom.getVersionNo().compareTo(nextVersion) >= 0) {
-                nextVersion = existingBom.getVersionNo().add(BigDecimal.ONE);
-            }
-            if (isSameComponents(existingBom.getLines(), request.getLines())) {
-                throw new BusinessException(String.format(SystemMessage.ASM_ERR_039.getMessage(), existingBom.getBomCode()));
+                for (AssemblyBom existingBom : existingBoms) {
+                    if (existingBom.getVersionNo() != null && existingBom.getVersionNo().compareTo(nextVersion) >= 0) {
+                        nextVersion = existingBom.getVersionNo().add(BigDecimal.ONE);
+                    }
+                    if (isSameComponents(existingBom.getLines(), request.getLines())) {
+                        throw new BusinessException(String.format(SystemMessage.ASM_ERR_039.getMessage(), existingBom.getBomCode()));
+                    }
+                }
+
+                String productCode = trimToNull(product.getProductCode()) != null ? product.getProductCode().trim() : String.valueOf(product.getId());
+                String bomCode = "CH-" + productCode + "-v" + nextVersion.stripTrailingZeros().toPlainString();
+
+                AssemblyBom bom = new AssemblyBom();
+                bom.initBom(product, bomCode, trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName(), nextVersion, null);
+                bom.forceUpdateStatus(normalizeBomStatus(request.getStatus(), DocumentStatus.APPROVED.name()));
+                rebuildBomLines(bom, request.getLines());
+                return toBomResponse(assemblyBomRepository.saveAndFlush(bom));
+            } catch (org.springframework.dao.DataIntegrityViolationException conflict) {
+                lastConflict = conflict;
             }
         }
-
-        String productCode = trimToNull(product.getProductCode()) != null ? product.getProductCode().trim() : String.valueOf(product.getId());
-        String bomCode = "CH-" + productCode + "-v" + nextVersion.stripTrailingZeros().toPlainString();
-
-        AssemblyBom bom = new AssemblyBom();
-        bom.initBom(product, bomCode, trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName(), nextVersion, null);
-        bom.forceUpdateStatus(normalizeBomStatus(request.getStatus(), DocumentStatus.APPROVED.name()));
-        rebuildBomLines(bom, request.getLines());
-        return toBomResponse(assemblyBomRepository.save(bom));
+        throw lastConflict;
     }
 
     @Transactional

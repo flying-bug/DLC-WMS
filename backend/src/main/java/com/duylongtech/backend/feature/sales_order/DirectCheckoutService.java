@@ -272,26 +272,7 @@ public class DirectCheckoutService {
     }
 
     private String generateNextSoCode() {
-        String prefix = "SO";
-        List<String> existing = salesOrderRepository.findCodesByPrefix(prefix + "%");
-        long max = 0;
-        for (String code : existing) {
-            if (code != null && code.length() > prefix.length()) {
-                try {
-                    long val = Long.parseLong(code.substring(prefix.length()));
-                    if (val > max) {
-                        max = val;
-                    }
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
-        long next = max + 1;
-        String candidate = String.format("%s%04d", prefix, next);
-        while (salesOrderRepository.existsBySoCode(candidate)) {
-            candidate = String.format("%s%04d", prefix, ++next);
-        }
-        return candidate;
+        return codeGeneratorService.generateCode("sales_orders", "so_code", "SO", 4);
     }
 
     private BigDecimal normalizePaymentAmount(BigDecimal amount, BigDecimal total) {

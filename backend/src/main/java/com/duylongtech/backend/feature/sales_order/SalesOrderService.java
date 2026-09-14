@@ -74,6 +74,7 @@ public class SalesOrderService {
     private final PaymentService paymentService;
     private final SystemSettingsService systemSettingsService;
     private final SalesOrderMapper salesOrderMapper;
+    private final com.duylongtech.backend.feature.system.CodeGeneratorService codeGeneratorService;
 
     // =========================================================
     // QUERY
@@ -105,18 +106,7 @@ public class SalesOrderService {
     }
 
     public String generateNextSoCode() {
-        String prefix = "SO";
-        List<String> existing = salesOrderRepository.findCodesByPrefix(prefix + "%");
-        long max = 0;
-        for (String code : existing) {
-            if (code != null && code.length() > prefix.length()) {
-                try {
-                    long val = Long.parseLong(code.substring(prefix.length()));
-                    if (val > max) max = val;
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        return String.format("%s%04d", prefix, max + 1);
+        return codeGeneratorService.generateCode("sales_orders", "so_code", "SO", 4);
     }
 
     // =========================================================

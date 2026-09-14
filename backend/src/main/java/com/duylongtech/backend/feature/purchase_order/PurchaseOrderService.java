@@ -47,6 +47,7 @@ public class PurchaseOrderService {
     private final PartnerLedgerService partnerLedgerService;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final PurchaseOrderMapper purchaseOrderMapper;
+    private final com.duylongtech.backend.feature.system.CodeGeneratorService codeGeneratorService;
 
     // =========================================================
     // QUERY
@@ -71,18 +72,7 @@ public class PurchaseOrderService {
     }
 
     public String generateNextPoCode() {
-        String prefix = "PO";
-        List<String> existing = purchaseOrderRepository.findCodesByPrefix(prefix + "%");
-        long max = 0;
-        for (String code : existing) {
-            if (code != null && code.length() > prefix.length()) {
-                try {
-                    long val = Long.parseLong(code.substring(prefix.length()));
-                    if (val > max) max = val;
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        return String.format("%s%04d", prefix, max + 1);
+        return codeGeneratorService.generateCode("purchase_orders", "po_code", "PO", 4);
     }
 
     // =========================================================

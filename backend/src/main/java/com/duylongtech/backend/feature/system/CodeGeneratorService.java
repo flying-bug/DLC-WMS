@@ -1,21 +1,24 @@
 package com.duylongtech.backend.feature.system;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import com.duylongtech.backend.feature.system.CodeGeneratorService;
 
 @Service
 @RequiredArgsConstructor
 public class CodeGeneratorService {
 
-    private final EntityManager entityManager;
+    private final CodeSequenceAllocator codeSequenceAllocator;
 
     /**
      * Tự động sinh mã tuần tự dựa trên tiền tố (prefix) và số lượng chữ số (padding).
      * VD: generateCode("BRANDS", "code", "TH", 3) -> "TH001" (nếu chưa có) -> "TH002"
+     * <p>
+     * Việc cấp số được thực hiện nguyên tử qua một bộ đếm riêng (bảng CODE_SEQUENCES,
+     * xem {@link CodeSequenceAllocator}) thay vì quét lại toàn bộ bảng mỗi lần gọi,
+     * để tránh race condition khi nhiều request tạo mã đồng thời (2 request có thể
+     * tính ra cùng một "số tiếp theo" trước khi request nào commit). Lần gọi đầu
+     * tiên cho mỗi (tableName, columnName, prefix) sẽ quét bảng một lần để khởi
+     * tạo bộ đếm đúng với dữ liệu đã có; các lần sau chỉ tăng bộ đếm.
      *
      * @param tableName  Tên bảng trong CSDL (vd: BRANDS)
      * @param columnName Tên cột lưu mã (vd: code)
@@ -23,35 +26,10 @@ public class CodeGeneratorService {
      * @param padding    Số lượng chữ số (vd: 3 -> 001)
      * @return Mã sinh tự động
      */
-    @Transactional(readOnly = true)
     public String generateCode(String tableName, String columnName, String prefix, int padding) {
-        String sql = String.format(
-                "SELECT %s FROM %s WHERE %s LIKE :prefixLike",
-                columnName.toLowerCase(), tableName.toLowerCase(), columnName.toLowerCase()
-        );
-
-        Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("prefixLike", prefix + "%");
-
-        @SuppressWarnings("unchecked")
-        java.util.List<String> codes = query.getResultList();
-        
-        long maxVal = 0;
-        for (String code : codes) {
-            if (code != null && code.length() > prefix.length()) {
-                String suffix = code.substring(prefix.length());
-                try {
-                    long val = Long.parseLong(suffix);
-                    if (val > maxVal) {
-                        maxVal = val;
-                    }
-                } catch (NumberFormatException e) {
-                    // Bỏ qua các mã có hậu tố không phải số
-                }
-            }
-        }
-
+        String sequenceKey = tableName.toLowerCase() + "." + columnName.toLowerCase() + "." + prefix;
+        long next = codeSequenceAllocator.nextValue(sequenceKey, tableName, columnName, prefix);
         String format = "%s%0" + padding + "d";
-        return String.format(format, prefix, maxVal + 1);
+        return String.format(format, prefix, next);
     }
 }

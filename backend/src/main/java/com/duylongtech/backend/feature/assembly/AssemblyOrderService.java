@@ -211,12 +211,23 @@ public class AssemblyOrderService {
     private AssemblyOrderResponse createOrder(AssemblyOrderRequest request, String orderType) {
         validateRequest(request, true);
         AssemblyBom bom = assemblyBomService.getApprovedBomOrThrow(request.getBomId());
-        String orderCode = resolveCreateOrderCode(request.getOrderCode(), orderType);
 
-        AssemblyOrder order = new AssemblyOrder();
-        order.initOrder(orderCode, orderType, bom, resolveTargetVariant(bom), request.getWarehouseId(), request.getQuantity(), request.getExecutionDate(), request.getNote(), request.getCreatedBy());
-        rebuildLines(order, bom, request);
-        return toOrderResponse(assemblyOrderRepository.save(order));
+        // resolveCreateOrderCode() embeds System.currentTimeMillis() when no code was
+        // requested, so on a rare collision (two concurrent creates in the same ms) a
+        // fresh attempt gets a different code; retry a few times before giving up.
+        org.springframework.dao.DataIntegrityViolationException lastConflict = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                String orderCode = resolveCreateOrderCode(request.getOrderCode(), orderType);
+                AssemblyOrder order = new AssemblyOrder();
+                order.initOrder(orderCode, orderType, bom, resolveTargetVariant(bom), request.getWarehouseId(), request.getQuantity(), request.getExecutionDate(), request.getNote(), request.getCreatedBy());
+                rebuildLines(order, bom, request);
+                return toOrderResponse(assemblyOrderRepository.saveAndFlush(order));
+            } catch (org.springframework.dao.DataIntegrityViolationException conflict) {
+                lastConflict = conflict;
+            }
+        }
+        throw lastConflict;
     }
 
     private void validateRequest(AssemblyOrderRequest request, boolean create) {

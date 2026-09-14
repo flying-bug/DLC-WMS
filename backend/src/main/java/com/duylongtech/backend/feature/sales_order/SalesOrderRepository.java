@@ -73,9 +73,6 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     """)
     Optional<SalesOrder> findByIdWithDetails(@Param("id") Long id);
 
-    @Query("SELECT so.soCode FROM SalesOrder so WHERE so.soCode LIKE :prefixLike ORDER BY so.soCode DESC")
-    List<String> findCodesByPrefix(@Param("prefixLike") String prefixLike);
-
     @Query("""
         SELECT new com.duylongtech.backend.feature.report.SalesProfitReportResponse(
             v.sku,
