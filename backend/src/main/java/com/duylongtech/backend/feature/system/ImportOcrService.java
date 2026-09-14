@@ -680,7 +680,7 @@ public class ImportOcrService {
 
         // Step 3: Fuzzy search by product name
         if (rawName != null && !rawName.isBlank()) {
-            Page<ProductVariant> candidates = productVariantRepository.searchVariants(rawName.trim(), PageRequest.of(0, 20));
+            Page<ProductVariant> candidates = productVariantRepository.searchVariants(rawName.trim(), false, PageRequest.of(0, 20));
             String normalizedRaw = normalize(rawName);
 
             List<ScoredVariant> scored = candidates.getContent().stream()

@@ -88,8 +88,9 @@ public class ProductController {
     public ResponseEntity<Page<ProductVariantResponse>> getVariants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "1000") int size,
-            @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(productService.getVariants(page, size, search));
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "false") boolean excludeServices) {
+        return ResponseEntity.ok(productService.getVariants(page, size, search, excludeServices));
     }
 
     @GetMapping("/{id}")

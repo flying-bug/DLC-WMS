@@ -282,8 +282,12 @@ public class ProductService {
     }
 
     public Page<ProductVariantResponse> getVariants(int page, int size, String search) {
+        return getVariants(page, size, search, false);
+    }
+
+    public Page<ProductVariantResponse> getVariants(int page, int size, String search, boolean excludeServices) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return productVariantRepository.searchVariants(search, pageable).map(this::convertVariantToDto);
+        return productVariantRepository.searchVariants(search, excludeServices, pageable).map(this::convertVariantToDto);
     }
 
     public List<ProductVariantResponse> getVariantsByProduct(Long productId) {

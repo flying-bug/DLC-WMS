@@ -373,7 +373,7 @@ function CreateImportSlipPage() {
       const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
         importApi.getWarehouses({ size: 100 }),
         importApi.getSuppliers({ status: 'APPROVED' }),
-        importApi.getProducts({ size: 1000 }),
+        importApi.getProducts({ size: 1000, excludeServices: true }),
         customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         assemblyOrderApi.getAssemblyOrders({ size: 100 }),
         exportApi.getUsers({ size: 1000 })
@@ -573,7 +573,7 @@ function CreateImportSlipPage() {
 
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
-      const response = await importApi.getProducts({ size: 1000 });
+      const response = await importApi.getProducts({ size: 1000, excludeServices: true });
       const refreshedProducts = filterWarehouseProducts(pageContent(unwrap(response)));
       setProducts(refreshedProducts);
       const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));

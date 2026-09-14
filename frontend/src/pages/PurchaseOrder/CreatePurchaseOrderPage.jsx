@@ -175,7 +175,7 @@ function CreatePurchaseOrderPage() {
       try {
         const [supplierRes, variantRes, warehouseRes, codeRes] = await Promise.allSettled([
           poApi.getSuppliers({ isSupplier: true, status: 'APPROVED', size: 1000 }),
-          poApi.getProducts({ size: 500 }),
+          poApi.getProducts({ size: 500, excludeServices: true }),
           poApi.getWarehouses({ size: 100 }),
           !isEdit ? poApi.getNextPoCode() : Promise.resolve(null),
         ]);
@@ -313,7 +313,7 @@ function CreatePurchaseOrderPage() {
 
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
-      const response = await poApi.getProducts({ size: 500 });
+      const response = await poApi.getProducts({ size: 500, excludeServices: true });
       const refreshedVariants = pageContent(unwrap(response));
       setVariants(refreshedVariants);
       const createdVariant = refreshedVariants.find(v =>
