@@ -5,7 +5,6 @@ import com.duylongtech.backend.enums.RepairStatus;
 import com.duylongtech.backend.enums.SerialInstallStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
-import com.duylongtech.backend.feature.repair.RepairResponse;
 
 import com.duylongtech.backend.exception.BusinessException;
 
@@ -33,12 +32,9 @@ import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalance;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
-import com.duylongtech.backend.feature.inventory.InventoryDocument;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
-import com.duylongtech.backend.feature.partner.Partner;
-import com.duylongtech.backend.feature.product.Product;
+import com.duylongtech.backend.feature.inventory.RepairScrapLineRequest;
+import com.duylongtech.backend.feature.inventory.RepairStockOutLineRequest;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.SerialNumber;
@@ -50,7 +46,6 @@ import com.duylongtech.backend.feature.repair.RepairLineRepository;
 import com.duylongtech.backend.feature.repair.RepairRepository;
 import com.duylongtech.backend.feature.repair.RepairResponse;
 import com.duylongtech.backend.feature.repair.RepairService;
-import com.duylongtech.backend.feature.repair.RepairWorkflowService;
 import com.duylongtech.backend.feature.warehouse.Warehouse;
 import com.duylongtech.backend.feature.warehouse.WarehouseRepository;
 
@@ -98,7 +93,6 @@ public class RepairWorkflowService {
     private final RepairRepository repairRepository;
     private final RepairLineRepository repairLineRepository;
     private final RepairFeeRepository repairFeeRepository;
-    private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final WarehouseRepository warehouseRepository;
     private final UserRepository userRepository;
@@ -276,35 +270,17 @@ public class RepairWorkflowService {
     }
 
     /**
-     * Tạo và POST trực tiếp phiếu xuất kho (trừ kho thực tế) cho các linh kiện ADD.
+     * Chuẩn bị dữ liệu và ủy quyền cho InventoryDocumentService tạo + POST phiếu xuất
+     * kho (trừ kho thực tế) cho các linh kiện ADD - RepairWorkflowService không tự
+     * new Entity/gọi thẳng repository của module Inventory nữa.
      */
     private void createFinalInventoryDocuments(Repair repair, List<RepairLine> addLines, Map<Long, SerialNumber> serialById) {
         Long warehouseId = resolveRepairWarehouseId(repair);
         Long currentUserId = resolveCurrentUserId();
-        String docCode = "REP-EX-" + repair.getRepairCode();
 
-        if (inventoryDocumentRepository.existsByDocCode(docCode)) {
-            log.warn("[Repair {}] Phiếu xuất kho {} đã tồn tại", repair.getRepairCode(), docCode);
-            return;
-        }
-
-        InventoryDocument exportDoc = new InventoryDocument();
-        exportDoc.initExportDocument(docCode);
-        exportDoc.setIssuePurpose("REPAIR");
-        exportDoc.setReferenceType("REPAIR");
-        exportDoc.setReferenceId(repair.getId());
-        exportDoc.setWarehouseId(warehouseId);
-        exportDoc.setPartnerId(repair.getPartnerId());
-        exportDoc.setDocDate(LocalDate.now());
-        exportDoc.updateStatus(DocumentStatus.DRAFT.name()); // Lưu tạm trước khi post
-        exportDoc.setNote("Phiếu xuất linh kiện sửa chữa - Lệnh " + repair.getRepairCode());
-        exportDoc.assignCreator(currentUserId);
-        exportDoc.setSalespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId);
-        exportDoc.setRecipientName(repair.getResponsiblePerson());
-
+        List<RepairStockOutLineRequest> lineRequests = new java.util.ArrayList<>();
         for (RepairLine rLine : addLines) {
             BigDecimal actualDoneQty = rLine.getQuantity();
-            
             if (actualDoneQty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
             Long stockOutSerialNumberId = resolveStockOutSerialNumberId(rLine);
@@ -316,35 +292,41 @@ public class RepairWorkflowService {
                 }
             }
 
-            InventoryDocumentLine docLine = new InventoryDocumentLine();
-            docLine.setInventoryDocument(exportDoc);
-            docLine.setVariantId(rLine.getComponentVariantId());
-            docLine.setQuantityIn(BigDecimal.ZERO);
-            docLine.setQuantityOut(actualDoneQty);
-            docLine.setUnitCost(BigDecimal.ZERO);
-            docLine.setUnitPrice(rLine.getUnitPrice());
-            docLine.setLineAmount(rLine.getUnitPrice().multiply(actualDoneQty));
-            docLine.setSerialNumberId(stockOutSerialNumberId);
-            docLine.setSerialNumbersText(serialNumbersText);
-            docLine.setNote((ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
-                    + (rLine.getNote() != null ? rLine.getNote() : ""));
-            exportDoc.getLines().add(docLine);
+            String lineNote = (ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
+                    + (rLine.getNote() != null ? rLine.getNote() : "");
+            lineRequests.add(new RepairStockOutLineRequest(rLine.getComponentVariantId(), actualDoneQty,
+                    rLine.getUnitPrice(), stockOutSerialNumberId, serialNumbersText, lineNote));
         }
 
-        if (!exportDoc.getLines().isEmpty()) {
-            InventoryDocument savedDoc = inventoryDocumentRepository.save(exportDoc);
-            try {
-                inventoryDocumentService.postExport(savedDoc.getId());
-                log.info("[Repair {}] Đã tạo và POST phiếu xuất kho {} thành công qua InventoryDocumentService", repair.getRepairCode(), docCode);
-            } catch (Exception e) {
-                log.error("[Repair {}] Lỗi khi POST phiếu xuất kho {}: {}", repair.getRepairCode(), docCode, e.getMessage());
-                throw new BusinessException(String.format(SystemMessage.REP_ERR_009.getMessage(), e.getMessage()));
-            }
+        if (lineRequests.isEmpty()) {
+            return;
+        }
+
+        Long docId = inventoryDocumentService.createExportForRepair(repair.getId(), repair.getRepairCode(), warehouseId,
+                repair.getPartnerId(), currentUserId,
+                repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId,
+                repair.getResponsiblePerson(), lineRequests);
+
+        if (docId == null) {
+            log.warn("[Repair {}] Phiếu xuất kho REP-EX-{} đã tồn tại hoặc không có dòng hợp lệ, bỏ qua",
+                    repair.getRepairCode(), repair.getRepairCode());
+            return;
+        }
+
+        try {
+            inventoryDocumentService.postExport(docId);
+            log.info("[Repair {}] Đã tạo và POST phiếu xuất kho REP-EX-{} thành công qua InventoryDocumentService",
+                    repair.getRepairCode(), repair.getRepairCode());
+        } catch (Exception e) {
+            log.error("[Repair {}] Lỗi khi POST phiếu xuất kho REP-EX-{}: {}",
+                    repair.getRepairCode(), repair.getRepairCode(), e.getMessage());
+            throw new BusinessException(String.format(SystemMessage.REP_ERR_009.getMessage(), e.getMessage()));
         }
     }
 
     /**
-     * Tạo và POST phiếu nhập kho Scrap cho linh kiện bị tháo ra (REMOVE).
+     * Chuẩn bị dữ liệu và ủy quyền cho InventoryDocumentService tạo + POST phiếu nhập
+     * kho Scrap cho linh kiện bị tháo ra (REMOVE).
      */
     private void createScrapDocument(Repair repair, List<RepairLine> removeLines, Map<Long, SerialNumber> serialById) {
         Long scrapWarehouseId = resolveScrapWarehouseId();
@@ -354,28 +336,8 @@ public class RepairWorkflowService {
         }
 
         Long currentUserId = resolveCurrentUserId();
-        String scrapDocCode = "REP-SCRAP-" + repair.getRepairCode();
 
-        // Tránh tạo trùng
-        if (inventoryDocumentRepository.existsByDocCode(scrapDocCode)) {
-            log.warn("[Repair {}] Phiếu Scrap {} đã tồn tại", repair.getRepairCode(), scrapDocCode);
-            return;
-        }
-
-        InventoryDocument scrapDoc = new InventoryDocument();
-        scrapDoc.initImportDocument(scrapDocCode);
-        scrapDoc.setIssuePurpose("SCRAP");
-        scrapDoc.setReferenceType("REPAIR");
-        scrapDoc.setReferenceId(repair.getId());
-        scrapDoc.setWarehouseId(scrapWarehouseId);
-        scrapDoc.setPartnerId(repair.getPartnerId());
-        scrapDoc.setDocDate(LocalDate.now());
-        scrapDoc.updateStatus(DocumentStatus.DRAFT.name()); // Lưu tạm trước khi post
-        scrapDoc.setNote("Phiếu nhập kho phế liệu - Lệnh sửa chữa " + repair.getRepairCode());
-        scrapDoc.assignCreator(currentUserId);
-        scrapDoc.setSalespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId);
-        scrapDoc.setRecipientName(repair.getResponsiblePerson());
-
+        List<RepairScrapLineRequest> lineRequests = new java.util.ArrayList<>();
         for (RepairLine line : removeLines) {
             String serialNumbersText = line.getSerialNumberText();
             if (line.getSerialNumberId() != null) {
@@ -384,30 +346,33 @@ public class RepairWorkflowService {
                     serialNumbersText = sn.getSerialNumber();
                 }
             }
-
-            InventoryDocumentLine scrapLine = new InventoryDocumentLine();
-            scrapLine.setInventoryDocument(scrapDoc);
-            scrapLine.setVariantId(resolveRemovedComponentVariantId(line, serialById));
-            scrapLine.setQuantityIn(line.getQuantity());
-            scrapLine.setQuantityOut(BigDecimal.ZERO);
-            scrapLine.setUnitCost(BigDecimal.ZERO); // Linh kiện tháo ra ghi nhận giá vốn = 0 (phế liệu)
-            scrapLine.setUnitPrice(BigDecimal.ZERO);
-            scrapLine.setLineAmount(BigDecimal.ZERO);
-            scrapLine.setSerialNumberId(line.getSerialNumberId());
-            scrapLine.setSerialNumbersText(serialNumbersText);
-            scrapLine.setNote("Linh kiện tháo ra từ lệnh sửa " + repair.getRepairCode());
-            scrapDoc.getLines().add(scrapLine);
+            lineRequests.add(new RepairScrapLineRequest(resolveRemovedComponentVariantId(line, serialById),
+                    line.getQuantity(), line.getSerialNumberId(), serialNumbersText));
         }
 
-        if (!scrapDoc.getLines().isEmpty()) {
-            InventoryDocument savedDoc = inventoryDocumentRepository.save(scrapDoc);
-            try {
-                inventoryDocumentService.postImport(savedDoc.getId());
-                log.info("[Repair {}] Đã tạo và POST phiếu Scrap {} thành công qua InventoryDocumentService", repair.getRepairCode(), scrapDocCode);
-            } catch (Exception e) {
-                log.error("[Repair {}] Lỗi khi POST phiếu Scrap {}: {}", repair.getRepairCode(), scrapDocCode, e.getMessage());
-                throw new BusinessException(String.format(SystemMessage.REP_ERR_008.getMessage(), e.getMessage()));
-            }
+        if (lineRequests.isEmpty()) {
+            return;
+        }
+
+        Long docId = inventoryDocumentService.createScrapImportForRepair(repair.getId(), repair.getRepairCode(),
+                scrapWarehouseId, repair.getPartnerId(), currentUserId,
+                repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId,
+                repair.getResponsiblePerson(), lineRequests);
+
+        if (docId == null) {
+            log.warn("[Repair {}] Phiếu Scrap REP-SCRAP-{} đã tồn tại hoặc không có dòng hợp lệ, bỏ qua",
+                    repair.getRepairCode(), repair.getRepairCode());
+            return;
+        }
+
+        try {
+            inventoryDocumentService.postImport(docId);
+            log.info("[Repair {}] Đã tạo và POST phiếu Scrap REP-SCRAP-{} thành công qua InventoryDocumentService",
+                    repair.getRepairCode(), repair.getRepairCode());
+        } catch (Exception e) {
+            log.error("[Repair {}] Lỗi khi POST phiếu Scrap REP-SCRAP-{}: {}",
+                    repair.getRepairCode(), repair.getRepairCode(), e.getMessage());
+            throw new BusinessException(String.format(SystemMessage.REP_ERR_008.getMessage(), e.getMessage()));
         }
     }
 

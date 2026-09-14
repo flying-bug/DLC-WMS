@@ -1048,6 +1048,106 @@ public class InventoryDocumentService {
         return toResponse(inventoryDocumentRepository.save(doc));
     }
 
+    /**
+     * Tạo (và để caller POST) phiếu xuất kho linh kiện cho 1 lệnh sửa chữa.
+     * Trả về null nếu phiếu đã tồn tại (idempotent - repair có thể retry bước DONE)
+     * hoặc không có dòng nào hợp lệ.
+     */
+    @Transactional
+    public Long createExportForRepair(Long repairId, String repairCode, Long warehouseId, Long partnerId,
+            Long createdBy, Long salespersonId, String recipientName, List<RepairStockOutLineRequest> lines) {
+        String docCode = "REP-EX-" + repairCode;
+        if (inventoryDocumentRepository.existsByDocCode(docCode)) {
+            return null;
+        }
+
+        InventoryDocument exportDoc = new InventoryDocument();
+        exportDoc.initExportDocument(docCode);
+        exportDoc.setIssuePurpose("REPAIR");
+        exportDoc.setReferenceType("REPAIR");
+        exportDoc.setReferenceId(repairId);
+        exportDoc.setWarehouseId(warehouseId);
+        exportDoc.setPartnerId(partnerId);
+        exportDoc.setDocDate(LocalDate.now());
+        exportDoc.updateStatus(DocumentStatus.DRAFT.name());
+        exportDoc.setNote("Phiếu xuất linh kiện sửa chữa - Lệnh " + repairCode);
+        exportDoc.assignCreator(createdBy);
+        exportDoc.setSalespersonId(salespersonId);
+        exportDoc.setRecipientName(recipientName);
+
+        for (RepairStockOutLineRequest lr : lines) {
+            if (lr.quantity() == null || lr.quantity().compareTo(ZERO) <= 0) {
+                continue;
+            }
+            InventoryDocumentLine docLine = new InventoryDocumentLine();
+            docLine.setInventoryDocument(exportDoc);
+            docLine.setVariantId(lr.componentVariantId());
+            docLine.setQuantityIn(ZERO);
+            docLine.setQuantityOut(lr.quantity());
+            docLine.setUnitCost(ZERO);
+            docLine.setUnitPrice(lr.unitPrice());
+            docLine.setLineAmount(lr.unitPrice().multiply(lr.quantity()));
+            docLine.setSerialNumberId(lr.serialNumberId());
+            docLine.setSerialNumbersText(lr.serialNumberText());
+            docLine.setNote(lr.note());
+            exportDoc.getLines().add(docLine);
+        }
+
+        if (exportDoc.getLines().isEmpty()) {
+            return null;
+        }
+
+        return inventoryDocumentRepository.save(exportDoc).getId();
+    }
+
+    /**
+     * Tạo (và để caller POST) phiếu nhập kho phế liệu cho linh kiện tháo ra của 1 lệnh
+     * sửa chữa. Trả về null nếu phiếu đã tồn tại hoặc không có dòng nào hợp lệ.
+     */
+    @Transactional
+    public Long createScrapImportForRepair(Long repairId, String repairCode, Long scrapWarehouseId, Long partnerId,
+            Long createdBy, Long salespersonId, String recipientName, List<RepairScrapLineRequest> lines) {
+        String scrapDocCode = "REP-SCRAP-" + repairCode;
+        if (inventoryDocumentRepository.existsByDocCode(scrapDocCode)) {
+            return null;
+        }
+
+        InventoryDocument scrapDoc = new InventoryDocument();
+        scrapDoc.initImportDocument(scrapDocCode);
+        scrapDoc.setIssuePurpose("SCRAP");
+        scrapDoc.setReferenceType("REPAIR");
+        scrapDoc.setReferenceId(repairId);
+        scrapDoc.setWarehouseId(scrapWarehouseId);
+        scrapDoc.setPartnerId(partnerId);
+        scrapDoc.setDocDate(LocalDate.now());
+        scrapDoc.updateStatus(DocumentStatus.DRAFT.name());
+        scrapDoc.setNote("Phiếu nhập kho phế liệu - Lệnh sửa chữa " + repairCode);
+        scrapDoc.assignCreator(createdBy);
+        scrapDoc.setSalespersonId(salespersonId);
+        scrapDoc.setRecipientName(recipientName);
+
+        for (RepairScrapLineRequest lr : lines) {
+            InventoryDocumentLine scrapLine = new InventoryDocumentLine();
+            scrapLine.setInventoryDocument(scrapDoc);
+            scrapLine.setVariantId(lr.componentVariantId());
+            scrapLine.setQuantityIn(lr.quantity());
+            scrapLine.setQuantityOut(ZERO);
+            scrapLine.setUnitCost(ZERO);
+            scrapLine.setUnitPrice(ZERO);
+            scrapLine.setLineAmount(ZERO);
+            scrapLine.setSerialNumberId(lr.serialNumberId());
+            scrapLine.setSerialNumbersText(lr.serialNumberText());
+            scrapLine.setNote("Linh kiện tháo ra từ lệnh sửa " + repairCode);
+            scrapDoc.getLines().add(scrapLine);
+        }
+
+        if (scrapDoc.getLines().isEmpty()) {
+            return null;
+        }
+
+        return inventoryDocumentRepository.save(scrapDoc).getId();
+    }
+
     private InventoryDocumentResponse toResponse(InventoryDocument doc, boolean includeLines) {
         InventoryDocumentResponse r = inventoryDocumentMapper.toResponse(doc);
         if (doc.getCreatedBy() != null) {
