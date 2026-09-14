@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import TabPagination from './TabPagination';
 
-const WarrantyTab = ({ data, loading, page, setPage, formatDate, styles }) => {
+const WarrantyTab = ({ data, loading, error, page, setPage, formatDate, styles }) => {
     return (
         <>
             <table className={styles.table}>
@@ -17,6 +17,15 @@ const WarrantyTab = ({ data, loading, page, setPage, formatDate, styles }) => {
                 <tbody>
                     {loading ? (
                         <tr><td colSpan="5" className={styles.loadingState}>Đang tải...</td></tr>
+                    ) : error ? (
+                        <tr>
+                            <td colSpan="5">
+                                <div className={styles.emptyState}>
+                                    <i className="bi bi-exclamation-triangle" style={{ fontSize: '32px', color: 'var(--color-danger)' }}></i>
+                                    <div className={styles.emptyText} style={{ color: 'var(--color-danger)' }}>{error}</div>
+                                </div>
+                            </td>
+                        </tr>
                     ) : data.content.length === 0 ? (
                         <tr>
                             <td colSpan="5">

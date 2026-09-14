@@ -33,6 +33,7 @@ const CustomerDetailPage = () => {
     const [page, setPage] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [tabError, setTabError] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', title: '', message: '' });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: '' });
 
@@ -62,6 +63,7 @@ const CustomerDetailPage = () => {
     const fetchTabData = useCallback(async (currentTab, currentPage = 0) => {
         try {
             setLoading(true);
+            setTabError(null);
             if (currentTab === TABS.SALES) {
                 const res = await getCustomerSalesHistory(id, currentPage, 10);
                 const payload = res.data?.data || res.data;
@@ -91,6 +93,7 @@ const CustomerDetailPage = () => {
             }
         } catch (err) {
             console.error('Lỗi tải dữ liệu tab:', err);
+            setTabError(err.response?.data?.userMessage || 'Không tải được dữ liệu. Vui lòng thử lại.');
         } finally {
             setLoading(false);
         }
@@ -304,13 +307,13 @@ const CustomerDetailPage = () => {
 
                     <div className={styles.tabContent}>
                         {activeTab === TABS.SALES && (
-                            <SalesHistoryTab data={salesData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} />
+                            <SalesHistoryTab data={salesData} loading={loading} error={tabError} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} />
                         )}
                         {activeTab === TABS.WARRANTY && (
-                            <WarrantyTab data={warrantyData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
+                            <WarrantyTab data={warrantyData} loading={loading} error={tabError} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
                         )}
                         {activeTab === TABS.RECEIPT && (
-                            <ReceiptsTab data={receiptData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} customerId={id} />
+                            <ReceiptsTab data={receiptData} loading={loading} error={tabError} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} customerId={id} />
                         )}
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import TabPagination from './TabPagination';
 
-const SalesHistoryTab = ({ data, loading, page, setPage, formatDate, formatCurrency, styles }) => {
+const SalesHistoryTab = ({ data, loading, error, page, setPage, formatDate, formatCurrency, styles }) => {
     return (
         <>
             <table className={styles.table}>
@@ -19,6 +19,15 @@ const SalesHistoryTab = ({ data, loading, page, setPage, formatDate, formatCurre
                 <tbody>
                     {loading ? (
                         <tr><td colSpan="7" className={styles.loadingState}>Đang tải...</td></tr>
+                    ) : error ? (
+                        <tr>
+                            <td colSpan="7">
+                                <div className={styles.emptyState}>
+                                    <i className="bi bi-exclamation-triangle" style={{ fontSize: '32px', color: 'var(--color-danger)' }}></i>
+                                    <div className={styles.emptyText} style={{ color: 'var(--color-danger)' }}>{error}</div>
+                                </div>
+                            </td>
+                        </tr>
                     ) : data.content.length === 0 ? (
                         <tr>
                             <td colSpan="7">
