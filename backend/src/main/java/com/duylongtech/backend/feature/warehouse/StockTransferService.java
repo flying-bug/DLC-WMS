@@ -3,22 +3,22 @@ package com.duylongtech.backend.feature.warehouse;
 import com.duylongtech.backend.enums.DocumentStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
-import com.duylongtech.backend.feature.inventory.InventoryDocument;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
-import com.duylongtech.backend.feature.product.Product;
-import com.duylongtech.backend.feature.warehouse.StockTransferService;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRequest;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentResponse;
 import com.duylongtech.backend.exception.BusinessException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +32,7 @@ import com.duylongtech.backend.feature.product.SerialNumberRepository;
 import com.duylongtech.backend.feature.system.CodeGeneratorService;
 
 @Service
+@Slf4j
 public class StockTransferService {
 
     @Autowired
@@ -258,6 +259,53 @@ public class StockTransferService {
         createAndPostImport(stockTransfer, exportedCosts, userId);
     }
 
+    /**
+     * Parse JSON danh sách serial của 1 dòng chuyển kho. Lỗi parse (dữ liệu hỏng, JSON
+     * không hợp lệ) được log lại kèm ngữ cảnh thay vì nuốt im lặng - trước đây 1 dòng
+     * bị lỗi parse sẽ âm thầm biến thành "không có serial nào" mà không ai biết.
+     */
+    private List<String> parseSerialNumbers(String serialNumbersText, String context) {
+        if (serialNumbersText == null || serialNumbersText.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            return objectMapper.readValue(serialNumbersText, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            log.warn("Không parse được danh sách serial ({}): {} - raw: {}", context, e.getMessage(), serialNumbersText);
+            return new ArrayList<>();
+        }
+    }
+
+    private String serialKey(Long variantId, String serialCode) {
+        return variantId + ":" + (serialCode == null ? "" : serialCode.trim().toUpperCase(Locale.ROOT));
+    }
+
+    /**
+     * Batch-resolve toàn bộ cặp (variantId, serial) cần dùng cho các dòng chuyển kho
+     * bằng 1 câu query duy nhất, thay vì query lại serialNumberRepository cho từng
+     * serial trong vòng lặp (N+1 khi phiếu chuyển kho có nhiều dòng theo serial).
+     */
+    private java.util.Map<String, SerialNumber> loadSerialsByVariantAndCode(
+            java.util.Map<Long, List<String>> serialsByLineId, List<StockTransferLine> lines) {
+        Set<Long> variantIds = new HashSet<>();
+        Set<String> normalizedCodes = new HashSet<>();
+        for (StockTransferLine line : lines) {
+            List<String> serials = serialsByLineId.get(line.getId());
+            if (serials == null || serials.isEmpty()) continue;
+            variantIds.add(line.getVariantId());
+            for (String code : serials) {
+                if (code != null && !code.isBlank()) {
+                    normalizedCodes.add(code.trim().toUpperCase(Locale.ROOT));
+                }
+            }
+        }
+        if (variantIds.isEmpty() || normalizedCodes.isEmpty()) {
+            return java.util.Map.of();
+        }
+        return serialNumberRepository.findByVariantIdInAndNormalizedSerialNumberIn(variantIds, normalizedCodes).stream()
+                .collect(Collectors.toMap(sn -> serialKey(sn.getVariantId(), sn.getNormalizedSerialNumber()), sn -> sn));
+    }
+
     private java.util.Map<Long, BigDecimal> createAndPostExport(StockTransfer stockTransfer, Long userId) {
         InventoryDocumentRequest exportReq = new InventoryDocumentRequest();
         exportReq.setWarehouseId(stockTransfer.getFromWarehouseId());
@@ -269,24 +317,27 @@ public class StockTransferService {
         exportReq.setNote("Tự động xuất kho cho phiếu chuyển kho " + stockTransfer.getTransferCode());
         exportReq.setLines(new ArrayList<>());
 
+        java.util.Map<Long, List<String>> serialsByLineId = new java.util.HashMap<>();
+        for (StockTransferLine line : stockTransfer.getLines()) {
+            serialsByLineId.put(line.getId(), parseSerialNumbers(line.getSerialNumbersText(),
+                    "xuất kho phiếu chuyển " + stockTransfer.getTransferCode()));
+        }
+        java.util.Map<String, SerialNumber> serialByKey = loadSerialsByVariantAndCode(serialsByLineId, stockTransfer.getLines());
+
         for (StockTransferLine line : stockTransfer.getLines()) {
             BigDecimal qty = line.getQuantity();
             if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
             BigDecimal unitCost = resolveTransferUnitCost(stockTransfer.getFromWarehouseId(), line.getVariantId(), line.getUnitCost());
-
-            List<String> serials = new ArrayList<>();
-            if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
-                try {
-                    serials = objectMapper.readValue(line.getSerialNumbersText(), new TypeReference<List<String>>(){});
-                } catch (Exception e) {}
-            }
+            List<String> serials = serialsByLineId.get(line.getId());
 
             if (!serials.isEmpty()) {
                 for (String sCode : serials) {
-                    SerialNumber serial = serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), sCode)
-                            .orElseThrow(() -> new BusinessException("Không tìm thấy Serial: " + sCode));
-                    
+                    SerialNumber serial = serialByKey.get(serialKey(line.getVariantId(), sCode));
+                    if (serial == null) {
+                        throw new BusinessException("Không tìm thấy Serial: " + sCode);
+                    }
+
                     InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
                     lineReq.setVariantId(line.getVariantId());
                     lineReq.setQuantityOut(BigDecimal.ONE);
@@ -302,7 +353,7 @@ public class StockTransferService {
                 exportReq.getLines().add(lineReq);
             }
         }
-        
+
         InventoryDocumentResponse created = inventoryDocumentService.createExport(exportReq);
         InventoryDocumentResponse posted = inventoryDocumentService.postExport(created.getId());
 
@@ -342,12 +393,8 @@ public class StockTransferService {
                 stockTransferLineRepository.save(line);
             }
 
-            List<String> serials = new ArrayList<>();
-            if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
-                try {
-                    serials = objectMapper.readValue(line.getSerialNumbersText(), new TypeReference<List<String>>(){});
-                } catch (Exception e) {}
-            }
+            List<String> serials = parseSerialNumbers(line.getSerialNumbersText(),
+                    "nhập kho phiếu chuyển " + stockTransfer.getTransferCode());
 
             InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
             lineReq.setVariantId(line.getVariantId());
@@ -382,12 +429,8 @@ public class StockTransferService {
             List<StockTransferLineDTO> lines = transfer.getLines().stream()
                     .map(line -> {
                         StockTransferLineDTO dto = stockTransferMapper.toLineDTO(line);
-                        List<String> serials = new ArrayList<>();
-                        if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
-                            try {
-                                serials = objectMapper.readValue(line.getSerialNumbersText(), new TypeReference<List<String>>(){});
-                            } catch (Exception e) {}
-                        }
+                        List<String> serials = parseSerialNumbers(line.getSerialNumbersText(),
+                                "hiển thị dòng #" + line.getId() + " phiếu chuyển " + transfer.getTransferCode());
                         dto.setSerialNumbers(serials);
                         return dto;
                     })
