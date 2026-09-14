@@ -71,7 +71,7 @@ public class PaymentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('payment:edit')")
+    @PreAuthorize("hasAuthority('payment:delete')")
     @Operation(summary = "Delete a DRAFT receipt/voucher")
     public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
         paymentService.deletePayment(id);

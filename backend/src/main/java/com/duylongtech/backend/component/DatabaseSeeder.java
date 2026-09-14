@@ -197,11 +197,15 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("purchase_order", new String[]{"view", "add", "edit"});
         moduleActions.put("sales_order", new String[]{"view", "add", "edit", "export", "print"});
         moduleActions.put("einvoice", new String[]{"view", "add", "edit"});
-        moduleActions.put("payment", new String[]{"view", "add", "edit"});
+        moduleActions.put("payment", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("transfer", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly_config", new String[]{"view", "add", "edit"});
-        moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        // approve/submit: AssemblyOrderController đã dùng "assembly:approve"/"assembly:submit"
+        // và RoleService đã có sẵn logic gán 2 quyền này cho Kế toán/Kỹ thuật viên, nhưng chưa
+        // từng được seed - nghĩa là quyền này chưa bao giờ thực sự tồn tại để cấp cho ai, nên
+        // mọi API duyệt/nộp BOM và lệnh lắp ráp/tháo dỡ trước giờ luôn trả 403 cho tất cả role.
+        moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print", "approve", "submit"});
         moduleActions.put("warranty", new String[]{"view", "add", "edit"});
         moduleActions.put("repair", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});

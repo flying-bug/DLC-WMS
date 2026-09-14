@@ -55,6 +55,7 @@ public class UserController {
 
     // 5b. Search Users for warehouse staff assignment (accessible to Manager)
     @GetMapping("/search")
+    @PreAuthorize("hasAuthority('account:view')")
     public ApiResponse<List<UserDto>> searchUsers(@RequestParam(required = false) String keyword) {
         return ApiResponse.success(userService.searchUsers(keyword));
     }

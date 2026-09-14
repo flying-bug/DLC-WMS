@@ -29,6 +29,7 @@ public class SystemController {
     // ── Public / Authenticated Features ────────────────────────────────────────
 
     @GetMapping("/features")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get public system feature flags (e.g. AI enabled)")
     public ApiResponse<Map<String, Object>> getFeatures() {
         return ApiResponse.success(Map.of(
