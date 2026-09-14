@@ -8,7 +8,8 @@ export default function WorkspaceModeDropdown() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const { workspaceMode, setWorkspaceMode, currentModeConfig, MODE_CONFIGS } = useWorkspaceMode();
+  const { workspaceMode, setWorkspaceMode, currentModeConfig, MODE_CONFIGS, allowedModes } = useWorkspaceMode();
+  const selectableModes = Object.values(MODE_CONFIGS).filter(item => allowedModes.includes(item.id));
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function WorkspaceModeDropdown() {
       {isOpen && (
         <div className={styles.dropdownMenu}>
           <div className={styles.menuHeader}>Chế độ làm việc (MISA Personas)</div>
-          {Object.values(MODE_CONFIGS).map((item) => {
+          {selectableModes.map((item) => {
             const isActive = workspaceMode === item.id;
             return (
               <button
