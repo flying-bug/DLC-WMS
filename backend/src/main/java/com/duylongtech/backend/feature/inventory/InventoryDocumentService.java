@@ -367,6 +367,7 @@ public class InventoryDocumentService {
         return inventoryPostingService.postExport(id);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postImport(Long id) {
         return inventoryPostingService.postImport(id);
     }
@@ -1288,6 +1289,7 @@ public class InventoryDocumentService {
         return inventoryPostingService.unpostImport(id, reason, currentUserId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
         return inventoryPostingService.unpostExport(id, reason, currentUserId);
     }

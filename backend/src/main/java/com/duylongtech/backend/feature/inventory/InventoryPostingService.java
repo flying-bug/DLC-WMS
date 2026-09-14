@@ -426,6 +426,7 @@ public class InventoryPostingService {
         return toResponse(saved);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postImport(Long id) {
         InventoryDocument doc = findImportOrThrow(id);
         if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
@@ -612,6 +613,7 @@ public class InventoryPostingService {
         return toResponse(savedImport);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findImportOrThrow(id);
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
@@ -688,6 +690,7 @@ public class InventoryPostingService {
         return toResponse(saved, true);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findExportOrThrow(id);
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
