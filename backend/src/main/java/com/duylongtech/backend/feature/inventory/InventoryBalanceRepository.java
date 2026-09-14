@@ -22,6 +22,18 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
   @Query("DELETE FROM InventoryBalance b WHERE b.variantId IN :variantIds")
   void deleteByVariantIdIn(@Param("variantIds") List<Long> variantIds);
 
+  /**
+   * Bulk-decrement quantityReserved for one (warehouse, variant, GOOD) row, clamped at 0 -
+   * used by StockReservationExpiryJob to release many expired reservations without a
+   * read-then-save round trip per reservation.
+   */
+  @org.springframework.data.jpa.repository.Modifying
+  @Query("UPDATE InventoryBalance b SET b.quantityReserved = " +
+      "CASE WHEN b.quantityReserved - :amount < 0 THEN 0 ELSE b.quantityReserved - :amount END " +
+      "WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.stockStatus = 'GOOD'")
+  int decrementReservedQuantity(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId,
+      @Param("amount") java.math.BigDecimal amount);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId IS NULL AND b.lotBatchId IS NULL AND b.stockStatus = :stockStatus ORDER BY b.id ASC")
   List<InventoryBalance> findListByWarehouseAndVariantForUpdate(@Param("warehouseId") Long warehouseId,
