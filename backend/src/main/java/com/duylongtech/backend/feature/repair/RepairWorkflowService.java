@@ -19,9 +19,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.duylongtech.backend.feature.assembly.AssemblyOrder;
 import com.duylongtech.backend.feature.assembly.DeviceComponentSerial;
 import com.duylongtech.backend.feature.assembly.DeviceComponentSerialRepository;
@@ -191,7 +194,16 @@ public class RepairWorkflowService {
         // Ưu tiên warehouseId từ lệnh sửa chữa, nếu không có thì lấy warehouse mặc định
         Long warehouseId = resolveRepairWarehouseId(repair);
 
-        for (RepairLine line : addLines) {
+        // Sort theo (variantId, serialNumberId) trước khi lock từng dòng bằng FOR UPDATE:
+        // nếu không sort, 2 lệnh sửa chữa CONFIRM đồng thời dùng chung linh kiện nhưng có
+        // thứ tự dòng khác nhau có thể khóa chéo nhau -> deadlock ở DB.
+        List<RepairLine> sortedLines = addLines.stream()
+                .sorted(Comparator
+                        .comparing(RepairLine::getComponentVariantId, Comparator.nullsFirst(Long::compareTo))
+                        .thenComparing(this::resolveStockOutSerialNumberId, Comparator.nullsFirst(Long::compareTo)))
+                .toList();
+
+        for (RepairLine line : sortedLines) {
             InventoryBalance balance;
             Long stockSerialNumberId = resolveStockOutSerialNumberId(line);
             if (stockSerialNumberId != null) {
@@ -227,26 +239,33 @@ public class RepairWorkflowService {
         List<RepairLine> replaceLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_REPLACE);
         List<RepairLine> removeLines = repairLineRepository.findByRepairIdAndActionType(
                 repair.getId(), ACTION_REMOVE);
-        validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD);
-        validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE);
-        validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE);
+
+        // Batch-resolve serial number & component variant 1 lần cho toàn bộ lệnh sửa,
+        // thay vì mỗi bước bên dưới (validate, tạo phiếu, cập nhật mapping) tự query lại
+        // theo từng dòng - trước đây gây N+1 (và có chỗ query trùng 2 lần cho cùng 1 dòng).
+        Map<Long, SerialNumber> serialById = loadSerialsForLines(repair, allAddLines, replaceLines, removeLines);
+        Map<Long, ProductVariant> variantById = loadVariantsForLines(allAddLines, replaceLines, removeLines);
+
+        validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD, variantById, serialById);
+        validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE, variantById, serialById);
+        validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE, variantById, serialById);
 
         // 1. Post phiếu xuất kho linh kiện ADD (nếu có)
         List<RepairLine> stockOutLines = new java.util.ArrayList<>(allAddLines);
         stockOutLines.addAll(replaceLines);
         if (!stockOutLines.isEmpty()) {
-            createFinalInventoryDocuments(repair, stockOutLines);
+            createFinalInventoryDocuments(repair, stockOutLines, serialById);
         }
 
         // 2. Sinh phiếu nhập kho Scrap cho linh kiện REMOVE (nếu có)
         List<RepairLine> scrapLines = new java.util.ArrayList<>(removeLines);
         scrapLines.addAll(replaceLines);
         if (!scrapLines.isEmpty()) {
-            createScrapDocument(repair, scrapLines);
+            createScrapDocument(repair, scrapLines, serialById);
         }
 
         // 3. Cập nhật cấu hình serial bên trong PC sau sửa chữa.
-        updateDeviceComponentSerialLifecycle(repair, allAddLines, replaceLines, removeLines);
+        updateDeviceComponentSerialLifecycle(repair, allAddLines, replaceLines, removeLines, serialById);
 
         // 4. Stub: Sinh Invoice nếu invoice_method != 'none'
         if (!"none".equals(repair.getInvoiceMethod()) && repair.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
@@ -259,7 +278,7 @@ public class RepairWorkflowService {
     /**
      * Tạo và POST trực tiếp phiếu xuất kho (trừ kho thực tế) cho các linh kiện ADD.
      */
-    private void createFinalInventoryDocuments(Repair repair, List<RepairLine> addLines) {
+    private void createFinalInventoryDocuments(Repair repair, List<RepairLine> addLines, Map<Long, SerialNumber> serialById) {
         Long warehouseId = resolveRepairWarehouseId(repair);
         Long currentUserId = resolveCurrentUserId();
         String docCode = "REP-EX-" + repair.getRepairCode();
@@ -291,9 +310,10 @@ public class RepairWorkflowService {
             Long stockOutSerialNumberId = resolveStockOutSerialNumberId(rLine);
             String serialNumbersText = resolveStockOutSerialText(rLine);
             if (stockOutSerialNumberId != null) {
-                serialNumbersText = serialNumberRepository.findById(stockOutSerialNumberId)
-                        .map(SerialNumber::getSerialNumber)
-                        .orElse(serialNumbersText);
+                SerialNumber sn = serialById.get(stockOutSerialNumberId);
+                if (sn != null) {
+                    serialNumbersText = sn.getSerialNumber();
+                }
             }
 
             InventoryDocumentLine docLine = new InventoryDocumentLine();
@@ -326,7 +346,7 @@ public class RepairWorkflowService {
     /**
      * Tạo và POST phiếu nhập kho Scrap cho linh kiện bị tháo ra (REMOVE).
      */
-    private void createScrapDocument(Repair repair, List<RepairLine> removeLines) {
+    private void createScrapDocument(Repair repair, List<RepairLine> removeLines, Map<Long, SerialNumber> serialById) {
         Long scrapWarehouseId = resolveScrapWarehouseId();
         if (scrapWarehouseId == null) {
             log.warn("[Repair {}] Không tìm thấy kho Scrap, bỏ qua nhập kho phế liệu", repair.getRepairCode());
@@ -359,14 +379,15 @@ public class RepairWorkflowService {
         for (RepairLine line : removeLines) {
             String serialNumbersText = line.getSerialNumberText();
             if (line.getSerialNumberId() != null) {
-                serialNumbersText = serialNumberRepository.findById(line.getSerialNumberId())
-                        .map(SerialNumber::getSerialNumber)
-                        .orElse(serialNumbersText);
+                SerialNumber sn = serialById.get(line.getSerialNumberId());
+                if (sn != null) {
+                    serialNumbersText = sn.getSerialNumber();
+                }
             }
 
             InventoryDocumentLine scrapLine = new InventoryDocumentLine();
             scrapLine.setInventoryDocument(scrapDoc);
-            scrapLine.setVariantId(resolveRemovedComponentVariantId(line));
+            scrapLine.setVariantId(resolveRemovedComponentVariantId(line, serialById));
             scrapLine.setQuantityIn(line.getQuantity());
             scrapLine.setQuantityOut(BigDecimal.ZERO);
             scrapLine.setUnitCost(BigDecimal.ZERO); // Linh kiện tháo ra ghi nhận giá vốn = 0 (phế liệu)
@@ -445,18 +466,19 @@ public class RepairWorkflowService {
         }
     }
 
-    private void validateSerialPresenceForTrackedLines(List<RepairLine> lines, String actionType) {
+    private void validateSerialPresenceForTrackedLines(List<RepairLine> lines, String actionType,
+            Map<Long, ProductVariant> variantById, Map<Long, SerialNumber> serialById) {
         for (RepairLine line : lines) {
-            ProductVariant variant = productVariantRepository.findById(line.getComponentVariantId()).orElse(null);
+            ProductVariant variant = variantById.get(line.getComponentVariantId());
             if (variant == null || !productTracksSerial(variant)) {
                 continue;
             }
 
             boolean missingSerial = switch (actionType) {
                 case ACTION_ADD -> line.getSerialNumberId() == null;
-                case ACTION_REPLACE -> trimToNull(resolveLineSerial(line)) == null
+                case ACTION_REPLACE -> trimToNull(resolveLineSerial(line, serialById)) == null
                         || line.getReplacementSerialNumberId() == null;
-                default -> trimToNull(resolveLineSerial(line)) == null;
+                default -> trimToNull(resolveLineSerial(line, serialById)) == null;
             };
             if (missingSerial) {
                 String variantName = variantName(variant);
@@ -466,13 +488,60 @@ public class RepairWorkflowService {
         }
     }
 
-    private void updateDeviceComponentSerialLifecycle(Repair repair, List<RepairLine> addLines,
+    /**
+     * Gom tất cả serialNumberId/replacementSerialNumberId cần dùng trong handleDone
+     * (bao gồm cả serial thành phẩm của repair) và tải 1 lần duy nhất.
+     */
+    private Map<Long, SerialNumber> loadSerialsForLines(Repair repair, List<RepairLine> addLines,
             List<RepairLine> replaceLines, List<RepairLine> removeLines) {
+        Set<Long> serialIds = new HashSet<>();
+        if (repair.getSerialNumberId() != null) {
+            serialIds.add(repair.getSerialNumberId());
+        }
+        for (List<RepairLine> lines : List.of(addLines, replaceLines, removeLines)) {
+            for (RepairLine line : lines) {
+                if (line.getSerialNumberId() != null) {
+                    serialIds.add(line.getSerialNumberId());
+                }
+                if (line.getReplacementSerialNumberId() != null) {
+                    serialIds.add(line.getReplacementSerialNumberId());
+                }
+            }
+        }
+        if (serialIds.isEmpty()) {
+            return Map.of();
+        }
+        return serialNumberRepository.findAllById(serialIds).stream()
+                .collect(Collectors.toMap(SerialNumber::getId, s -> s));
+    }
+
+    /**
+     * Gom tất cả componentVariantId cần dùng trong handleDone và tải 1 lần duy nhất.
+     */
+    private Map<Long, ProductVariant> loadVariantsForLines(List<RepairLine> addLines,
+            List<RepairLine> replaceLines, List<RepairLine> removeLines) {
+        Set<Long> variantIds = new HashSet<>();
+        for (List<RepairLine> lines : List.of(addLines, replaceLines, removeLines)) {
+            for (RepairLine line : lines) {
+                if (line.getComponentVariantId() != null) {
+                    variantIds.add(line.getComponentVariantId());
+                }
+            }
+        }
+        if (variantIds.isEmpty()) {
+            return Map.of();
+        }
+        return productVariantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(ProductVariant::getId, v -> v));
+    }
+
+    private void updateDeviceComponentSerialLifecycle(Repair repair, List<RepairLine> addLines,
+            List<RepairLine> replaceLines, List<RepairLine> removeLines, Map<Long, SerialNumber> serialById) {
         if (repair.getSerialNumberId() == null) {
             return;
         }
 
-        SerialNumber targetSerialNumber = serialNumberRepository.findById(repair.getSerialNumberId()).orElse(null);
+        SerialNumber targetSerialNumber = serialById.get(repair.getSerialNumberId());
         if (targetSerialNumber == null || targetSerialNumber.getVariantId() == null
                 || trimToNull(targetSerialNumber.getSerialNumber()) == null) {
             log.warn("[Repair {}] Không tìm thấy serial thành phẩm để cập nhật cấu hình linh kiện", repair.getRepairCode());
@@ -510,20 +579,20 @@ public class RepairWorkflowService {
         LocalDateTime now = LocalDateTime.now();
         Long currentUserId = resolveCurrentUserId();
         java.util.List<RepairLine> serialAddLines = addLines.stream()
-                .filter(line -> trimToNull(resolveLineSerial(line)) != null)
+                .filter(line -> trimToNull(resolveLineSerial(line, serialById)) != null)
                 .toList();
         java.util.List<RepairLine> serialReplaceLines = replaceLines.stream()
-                .filter(line -> trimToNull(resolveLineSerial(line)) != null)
-                .filter(line -> trimToNull(resolveReplacementLineSerial(line)) != null)
+                .filter(line -> trimToNull(resolveLineSerial(line, serialById)) != null)
+                .filter(line -> trimToNull(resolveReplacementLineSerial(line, serialById)) != null)
                 .toList();
         java.util.List<RepairLine> serialRemoveLines = removeLines.stream()
-                .filter(line -> trimToNull(resolveLineSerial(line)) != null)
+                .filter(line -> trimToNull(resolveLineSerial(line, serialById)) != null)
                 .toList();
         java.util.List<DeviceComponentSerial> changedMappings = new java.util.ArrayList<>();
 
         for (RepairLine replaceLine : serialReplaceLines) {
-            String removedSerial = resolveLineSerial(replaceLine);
-            String replacementSerial = resolveReplacementLineSerial(replaceLine);
+            String removedSerial = resolveLineSerial(replaceLine, serialById);
+            String replacementSerial = resolveReplacementLineSerial(replaceLine, serialById);
             DeviceComponentSerial currentMapping = findActiveMapping(mappings, replaceLine.getComponentVariantId(), removedSerial);
             if (currentMapping == null) {
                 throw new BusinessException(String.format(SystemMessage.REP_ERR_007.getMessage(), removedSerial, targetSerial));
@@ -547,7 +616,7 @@ public class RepairWorkflowService {
         }
 
         for (RepairLine removeLine : serialRemoveLines) {
-            String removedSerial = resolveLineSerial(removeLine);
+            String removedSerial = resolveLineSerial(removeLine, serialById);
             DeviceComponentSerial currentMapping = findActiveMapping(mappings, removeLine.getComponentVariantId(), removedSerial);
             if (currentMapping == null) {
                 throw new BusinessException(String.format(SystemMessage.REP_ERR_007.getMessage(), removedSerial, targetSerial));
@@ -562,7 +631,7 @@ public class RepairWorkflowService {
         }
 
         for (RepairLine addLine : serialAddLines) {
-            String addedSerial = resolveLineSerial(addLine);
+            String addedSerial = resolveLineSerial(addLine, serialById);
             if (findActiveMapping(mappings, addLine.getComponentVariantId(), addedSerial) != null) {
                 throw new BusinessException(String.format(SystemMessage.REP_ERR_006.getMessage(), addedSerial, targetSerial));
             }
@@ -645,14 +714,13 @@ public class RepairWorkflowService {
                 : line.getSerialNumberText();
     }
 
-    private Long resolveRemovedComponentVariantId(RepairLine line) {
+    private Long resolveRemovedComponentVariantId(RepairLine line, Map<Long, SerialNumber> serialById) {
         if (line == null) {
             return null;
         }
         if (line.getSerialNumberId() != null) {
-            return serialNumberRepository.findById(line.getSerialNumberId())
-                    .map(SerialNumber::getVariantId)
-                    .orElse(line.getComponentVariantId());
+            SerialNumber sn = serialById.get(line.getSerialNumberId());
+            return sn != null ? sn.getVariantId() : line.getComponentVariantId();
         }
         String removedSerial = trimToNull(line.getSerialNumberText());
         if (removedSerial != null) {
@@ -675,30 +743,26 @@ public class RepairWorkflowService {
                 && Boolean.TRUE.equals(variant.getProduct().getTrackSerial());
     }
 
-    private String resolveLineSerial(RepairLine line) {
+    private String resolveLineSerial(RepairLine line, Map<Long, SerialNumber> serialById) {
         if (line == null) {
             return null;
         }
         if (line.getSerialNumberId() != null) {
-            return serialNumberRepository.findById(line.getSerialNumberId())
-                    .map(SerialNumber::getSerialNumber)
-                    .map(String::trim)
-                    .filter(serial -> !serial.isEmpty())
-                    .orElse(trimToNull(line.getSerialNumberText()));
+            SerialNumber sn = serialById.get(line.getSerialNumberId());
+            String serial = sn != null ? trimToNull(sn.getSerialNumber()) : null;
+            return serial != null ? serial : trimToNull(line.getSerialNumberText());
         }
         return trimToNull(line.getSerialNumberText());
     }
 
-    private String resolveReplacementLineSerial(RepairLine line) {
+    private String resolveReplacementLineSerial(RepairLine line, Map<Long, SerialNumber> serialById) {
         if (line == null) {
             return null;
         }
         if (line.getReplacementSerialNumberId() != null) {
-            return serialNumberRepository.findById(line.getReplacementSerialNumberId())
-                    .map(SerialNumber::getSerialNumber)
-                    .map(String::trim)
-                    .filter(serial -> !serial.isEmpty())
-                    .orElse(trimToNull(line.getReplacementSerialNumberText()));
+            SerialNumber sn = serialById.get(line.getReplacementSerialNumberId());
+            String serial = sn != null ? trimToNull(sn.getSerialNumber()) : null;
+            return serial != null ? serial : trimToNull(line.getReplacementSerialNumberText());
         }
         return trimToNull(line.getReplacementSerialNumberText());
     }
