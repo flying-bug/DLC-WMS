@@ -150,6 +150,51 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
   java.math.BigDecimal sumAvailableLooseQuantityByWarehouseAndVariant(@Param("warehouseId") Long warehouseId,
       @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);
 
+  /**
+   * Batched version of {@link #sumAvailableLooseQuantityByWarehouseAndVariant} - one query
+   * for a whole set of variants (e.g. every component line on a repair) instead of one per
+   * variant. Each row is [variantId, availableQty].
+   */
+  @Query("""
+      SELECT v.id,
+          (
+            COALESCE(SUM(CASE WHEN (
+                (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                    SELECT 1 FROM DeviceComponentSerial dcs
+                    WHERE dcs.componentVariant.id = b.variantId
+                      AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber)
+                      AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                ))
+                OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+            ) THEN b.quantityOnHand ELSE 0 END), 0)
+            -
+            COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0)
+          )
+      FROM InventoryBalance b
+      JOIN ProductVariant v ON v.id = b.variantId
+      JOIN v.product p
+      LEFT JOIN SerialNumber sn ON sn.id = b.serialNumberId
+      WHERE b.warehouseId = :warehouseId
+        AND b.variantId IN :variantIds
+        AND b.stockStatus = :stockStatus
+        AND (
+            (p.trackSerial = true)
+            OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+        )
+      GROUP BY v.id
+      """)
+  List<Object[]> sumAvailableLooseQuantitiesGroupedByVariant(@Param("warehouseId") Long warehouseId,
+      @Param("variantIds") List<Long> variantIds, @Param("stockStatus") String stockStatus);
+
+  /**
+   * Batched version of {@link #findByWarehouseVariantSerial} - fetches every matching balance
+   * row for a set of (variant, serial) candidates in one query instead of one per line.
+   */
+  @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId IN :variantIds AND b.serialNumberId IN :serialNumberIds AND b.stockStatus = :stockStatus")
+  List<InventoryBalance> findByWarehouseAndVariantInAndSerialNumberIn(@Param("warehouseId") Long warehouseId,
+      @Param("variantIds") List<Long> variantIds, @Param("serialNumberIds") List<Long> serialNumberIds,
+      @Param("stockStatus") String stockStatus);
+
   @Query("""
       SELECT
           v.id AS variantId,

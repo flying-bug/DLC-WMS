@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRepository;
@@ -191,11 +192,15 @@ public class PurchaseOrderService {
     }
 
     private PurchaseOrderResponse toDetailResponse(PurchaseOrder po) {
+        // One aggregate query for the whole PO instead of one per line (was N+1).
+        Map<Long, BigDecimal> importedByVariant = inventoryDocumentLineRepository
+                .sumImportedQuantitiesGroupedByVariant(po.getId())
+                .stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (BigDecimal) row[1]));
+
         List<PurchaseOrderResponse.PurchaseOrderLineResponse> lineResponses = po.getLines().stream()
                 .map(line -> {
-                    BigDecimal imported = inventoryDocumentLineRepository
-                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), line.getVariantId());
-                    if (imported == null) imported = BigDecimal.ZERO;
+                    BigDecimal imported = importedByVariant.getOrDefault(line.getVariantId(), BigDecimal.ZERO);
                     BigDecimal remaining = line.getQuantity().subtract(imported);
                     if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
 

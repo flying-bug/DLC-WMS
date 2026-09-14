@@ -41,7 +41,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -506,10 +510,8 @@ public class RepairService {
 
     public RepairResponse toDetailResponse(Repair repair) {
         RepairResponse response = repairMapper.toResponse(repair);
-        
-        List<RepairLineResponse> lineResponses = repair.getRepairLines().stream()
-                .map(this::toLineResponse)
-                .collect(Collectors.toList());
+
+        List<RepairLineResponse> lineResponses = toLineResponsesBatched(repair);
 
         List<RepairFeeResponse> feeResponses = repair.getFees().stream()
                 .map(this::toFeeResponse)
@@ -551,9 +553,81 @@ public class RepairService {
         return response;
     }
 
+    /**
+     * Maps every line of a repair to a response in a fixed number of queries instead of
+     * O(n) - batches the serial-number text fallback and the available-quantity lookups
+     * that {@link #toLineResponse(RepairLine)} otherwise performs once per line. Only
+     * used by {@link #toDetailResponse}; single-line endpoints (add/update one line) keep
+     * calling the simpler per-line {@link #toLineResponse(RepairLine)} since there's no
+     * batch to build for just one line.
+     */
+    private List<RepairLineResponse> toLineResponsesBatched(Repair repair) {
+        List<RepairLine> lines = repair.getRepairLines();
+        if (lines == null || lines.isEmpty()) {
+            return List.of();
+        }
+        Long warehouseId = repair.getWarehouseId() != null ? repair.getWarehouseId() : 1L;
+
+        // Batch-resolve serial number display text for lines whose denormalized
+        // serialNumberText/replacementSerialNumberText snapshot is missing (legacy rows).
+        Set<Long> missingSerialIds = new HashSet<>();
+        for (RepairLine line : lines) {
+            if (trimToNull(line.getSerialNumberText()) == null && line.getSerialNumberId() != null) {
+                missingSerialIds.add(line.getSerialNumberId());
+            }
+            if (trimToNull(line.getReplacementSerialNumberText()) == null && line.getReplacementSerialNumberId() != null) {
+                missingSerialIds.add(line.getReplacementSerialNumberId());
+            }
+        }
+        Map<Long, String> serialTextById = missingSerialIds.isEmpty() ? Map.of()
+                : serialNumberRepository.findAllById(missingSerialIds).stream()
+                        .collect(Collectors.toMap(SerialNumber::getId, SerialNumber::getSerialNumber));
+
+        // Batch-resolve available quantity per (variant, serial) or per variant, matching
+        // the exact branching toLineResponse(RepairLine) uses per line.
+        Set<Long> serialTrackedVariantIds = new HashSet<>();
+        Set<Long> serialTrackedSerialIds = new HashSet<>();
+        Set<Long> looseVariantIds = new HashSet<>();
+        for (RepairLine line : lines) {
+            Long stockSerialNumberId = "REPLACE".equals(line.getActionType())
+                    ? line.getReplacementSerialNumberId()
+                    : line.getSerialNumberId();
+            if (stockSerialNumberId != null && !"REMOVE".equals(line.getActionType())) {
+                serialTrackedVariantIds.add(line.getComponentVariantId());
+                serialTrackedSerialIds.add(stockSerialNumberId);
+            } else {
+                looseVariantIds.add(line.getComponentVariantId());
+            }
+        }
+
+        Map<String, InventoryBalance> serialBalanceByKey = new HashMap<>();
+        if (!serialTrackedVariantIds.isEmpty() && !serialTrackedSerialIds.isEmpty()) {
+            try {
+                for (InventoryBalance balance : inventoryBalanceRepository.findByWarehouseAndVariantInAndSerialNumberIn(
+                        warehouseId, new ArrayList<>(serialTrackedVariantIds), new ArrayList<>(serialTrackedSerialIds), "GOOD")) {
+                    serialBalanceByKey.put(balance.getVariantId() + ":" + balance.getSerialNumberId(), balance);
+                }
+            } catch (Exception ignored) { /* best-effort, matches original per-line try/catch */ }
+        }
+
+        Map<Long, BigDecimal> looseQtyByVariant = new HashMap<>();
+        if (!looseVariantIds.isEmpty()) {
+            try {
+                for (Object[] row : inventoryBalanceRepository.sumAvailableLooseQuantitiesGroupedByVariant(
+                        warehouseId, new ArrayList<>(looseVariantIds), "GOOD")) {
+                    looseQtyByVariant.put((Long) row[0], (BigDecimal) row[1]);
+                }
+            } catch (Exception ignored) { /* best-effort, matches original per-line try/catch */ }
+        }
+
+        return lines.stream()
+                .map(line -> toLineResponseFromBatch(line, serialTextById, serialBalanceByKey, looseQtyByVariant))
+                .collect(Collectors.toList());
+    }
+
     public RepairLineResponse toLineResponse(RepairLine line) {
         RepairLineResponse response = repairMapper.toLineResponse(line);
-        
+
         // Resolve component name (best effort)
         if (line.getComponentVariant() != null) {
             response.setComponentName(line.getComponentVariant().getVariantName());
@@ -568,23 +642,30 @@ public class RepairService {
             } catch (Exception ignored) { /* best-effort */ }
         }
 
-        // Resolve serial number
+        // Resolve serial number: prefer the denormalized text snapshot already on the
+        // line (zero queries); only hit the DB for legacy rows missing that snapshot.
         if (response.getSerialNumber() == null && line.getSerialNumberId() != null) {
-            try {
-                var snOpt = serialNumberRepository.findById(line.getSerialNumberId());
-                if (snOpt.isPresent()) {
-                    response.setSerialNumber(snOpt.get().getSerialNumber());
-                }
-            } catch (Exception ignored) { /* best-effort */ }
+            String text = trimToNull(line.getSerialNumberText());
+            if (text != null) {
+                response.setSerialNumber(text);
+            } else {
+                try {
+                    var snOpt = serialNumberRepository.findById(line.getSerialNumberId());
+                    snOpt.ifPresent(sn -> response.setSerialNumber(sn.getSerialNumber()));
+                } catch (Exception ignored) { /* best-effort */ }
+            }
         }
 
         if (response.getReplacementSerialNumber() == null && line.getReplacementSerialNumberId() != null) {
-            try {
-                var snOpt = serialNumberRepository.findById(line.getReplacementSerialNumberId());
-                if (snOpt.isPresent()) {
-                    response.setReplacementSerialNumber(snOpt.get().getSerialNumber());
-                }
-            } catch (Exception ignored) { /* best-effort */ }
+            String text = trimToNull(line.getReplacementSerialNumberText());
+            if (text != null) {
+                response.setReplacementSerialNumber(text);
+            } else {
+                try {
+                    var snOpt = serialNumberRepository.findById(line.getReplacementSerialNumberId());
+                    snOpt.ifPresent(sn -> response.setReplacementSerialNumber(sn.getSerialNumber()));
+                } catch (Exception ignored) { /* best-effort */ }
+            }
         }
 
         // Calculate available quantity
@@ -606,6 +687,60 @@ public class RepairService {
             }
             if (availableQty.compareTo(BigDecimal.ZERO) < 0) availableQty = BigDecimal.ZERO;
         } catch (Exception ignored) {}
+
+        BigDecimal lineAmount = line.getUnitPrice().multiply(line.getQuantity());
+
+        response.setAvailableQuantity(availableQty);
+        response.setLineAmount(lineAmount);
+        return response;
+    }
+
+    /**
+     * Same mapping as {@link #toLineResponse(RepairLine)}, but resolves the serial-text
+     * fallback and available quantity purely from the batch maps built once in
+     * {@link #toLineResponsesBatched} - no per-line query, including when a lookup is
+     * legitimately absent from the batch (e.g. no InventoryBalance row exists for that
+     * variant/serial, which correctly means zero available, not "go query it").
+     */
+    private RepairLineResponse toLineResponseFromBatch(RepairLine line, Map<Long, String> serialTextById,
+            Map<String, InventoryBalance> serialBalanceByKey, Map<Long, BigDecimal> looseQtyByVariant) {
+        RepairLineResponse response = repairMapper.toLineResponse(line);
+
+        if (line.getComponentVariant() != null) {
+            response.setComponentName(line.getComponentVariant().getVariantName());
+            response.setComponentSku(line.getComponentVariant().getSku());
+        } else if (line.getComponentVariantId() != null) {
+            try {
+                var variantOpt = productVariantRepository.findById(line.getComponentVariantId());
+                if (variantOpt.isPresent()) {
+                    response.setComponentName(variantOpt.get().getVariantName());
+                    response.setComponentSku(variantOpt.get().getSku());
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
+        if (response.getSerialNumber() == null && line.getSerialNumberId() != null) {
+            String text = trimToNull(line.getSerialNumberText());
+            response.setSerialNumber(text != null ? text : serialTextById.get(line.getSerialNumberId()));
+        }
+        if (response.getReplacementSerialNumber() == null && line.getReplacementSerialNumberId() != null) {
+            String text = trimToNull(line.getReplacementSerialNumberText());
+            response.setReplacementSerialNumber(text != null ? text : serialTextById.get(line.getReplacementSerialNumberId()));
+        }
+
+        BigDecimal availableQty = BigDecimal.ZERO;
+        Long stockSerialNumberId = "REPLACE".equals(line.getActionType())
+                ? line.getReplacementSerialNumberId()
+                : line.getSerialNumberId();
+        if (stockSerialNumberId != null && !"REMOVE".equals(line.getActionType())) {
+            InventoryBalance balance = serialBalanceByKey.get(line.getComponentVariantId() + ":" + stockSerialNumberId);
+            if (balance != null) {
+                availableQty = balance.getQuantityOnHand().subtract(balance.getQuantityReserved());
+            }
+        } else {
+            availableQty = looseQtyByVariant.getOrDefault(line.getComponentVariantId(), BigDecimal.ZERO);
+        }
+        if (availableQty.compareTo(BigDecimal.ZERO) < 0) availableQty = BigDecimal.ZERO;
 
         BigDecimal lineAmount = line.getUnitPrice().multiply(line.getQuantity());
 

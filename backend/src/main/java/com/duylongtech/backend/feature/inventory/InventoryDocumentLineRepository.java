@@ -25,4 +25,11 @@ public interface InventoryDocumentLineRepository extends JpaRepository<Inventory
 
     @Query("SELECT COALESCE(SUM(l.quantityIn), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.purchaseOrderId = :purchaseOrderId AND l.variantId = :variantId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED')")
     BigDecimal sumImportedQuantityByPurchaseOrderIdAndVariantId(@Param("purchaseOrderId") Long purchaseOrderId, @Param("variantId") Long variantId);
+
+    /**
+     * Batched version of {@link #sumImportedQuantityByPurchaseOrderIdAndVariantId} - one
+     * query for the whole PO instead of one per line. Each row is [variantId, importedQty].
+     */
+    @Query("SELECT l.variantId, COALESCE(SUM(l.quantityIn), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.purchaseOrderId = :purchaseOrderId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED') GROUP BY l.variantId")
+    List<Object[]> sumImportedQuantitiesGroupedByVariant(@Param("purchaseOrderId") Long purchaseOrderId);
 }
