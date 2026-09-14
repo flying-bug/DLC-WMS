@@ -3,6 +3,7 @@ package com.duylongtech.backend.exception;
 import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.constant.SystemMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -18,6 +19,14 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    /**
+     * Chỉ true khi bật tường minh qua APP_EXPOSE_ERROR_DETAILS (local/dev).
+     * Mặc định false để không lộ chi tiết lỗi (stack trace, SQL message...) ra
+     * client ở Production - xem SystemMessage.INTERNAL_ERROR.
+     */
+    @Value("${app.expose-error-details:false}")
+    private boolean exposeErrorDetails;
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentialsException(BadCredentialsException ex) {
@@ -91,15 +100,18 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("ERR400", "Số Serial đã tồn tại trong hệ thống. Vui lòng kiểm tra lại."));
         }
+        // Không rõ nguyên nhân cụ thể -> không lộ nguyên văn message DB (tên bảng/cột,
+        // engine...) cho client; chỉ đính kèm khi bật tường minh để debug ở local/dev.
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("ERR400", "Lỗi ràng buộc dữ liệu: " + causeMsg));
+                .body(ApiResponse.error("ERR400", "Lỗi ràng buộc dữ liệu, vui lòng kiểm tra lại thông tin.",
+                        exposeErrorDetails ? causeMsg : null));
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
-        log.error("Unhandled runtime exception caught: ", ex);
-        String devMessage = ex.getClass().getSimpleName() + ": " + (ex.getMessage() != null ? ex.getMessage() : ex.toString());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(SystemMessage.INTERNAL_ERROR.getCode(), SystemMessage.INTERNAL_ERROR.getMessage(), devMessage));
+        ApiResponse<Void> body = ApiResponse.error(SystemMessage.INTERNAL_ERROR.getCode(), SystemMessage.INTERNAL_ERROR.getMessage(),
+                exposeErrorDetails ? ex.getClass().getSimpleName() + ": " + (ex.getMessage() != null ? ex.getMessage() : ex.toString()) : null);
+        log.error("Unhandled runtime exception caught (traceId={}): ", body.getTraceId(), ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

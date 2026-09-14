@@ -80,4 +80,7 @@ einvoice:
 
 app:
   frontend-url: ${FRONTEND_URL:https://dlc-wms.vercel.app}
+  # Chỉ bật ở local/dev để debug - KHÔNG bật ở Production vì sẽ lộ chi tiết lỗi
+  # (stack trace class name, message SQL/constraint...) cho client.
+  expose-error-details: ${APP_EXPOSE_ERROR_DETAILS:false}
 
