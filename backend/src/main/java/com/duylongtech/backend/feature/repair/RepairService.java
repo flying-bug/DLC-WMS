@@ -26,6 +26,7 @@ import com.duylongtech.backend.feature.repair.RepairLineRepository;
 import com.duylongtech.backend.feature.repair.RepairRepository;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
 import com.duylongtech.backend.feature.auth.UserRepository;
+import com.duylongtech.backend.feature.audit.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,35 +50,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.data.domain.PageRequest;
-import com.duylongtech.backend.feature.audit.AuditLogService;
-import com.duylongtech.backend.feature.auth.User;
-import com.duylongtech.backend.feature.auth.UserRepository;
-import com.duylongtech.backend.feature.inventory.InventoryBalance;
-import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
-import com.duylongtech.backend.feature.partner.Partner;
-import com.duylongtech.backend.feature.partner.PartnerRepository;
-import com.duylongtech.backend.feature.product.Product;
-import com.duylongtech.backend.feature.product.ProductRepository;
-import com.duylongtech.backend.feature.product.ProductVariant;
-import com.duylongtech.backend.feature.product.ProductVariantRepository;
-import com.duylongtech.backend.feature.product.SerialNumber;
-import com.duylongtech.backend.feature.product.SerialNumberRepository;
-import com.duylongtech.backend.feature.repair.Repair;
-import com.duylongtech.backend.feature.repair.RepairFee;
-import com.duylongtech.backend.feature.repair.RepairFeeRepository;
-import com.duylongtech.backend.feature.repair.RepairFeeRequest;
-import com.duylongtech.backend.feature.repair.RepairFeeResponse;
-import com.duylongtech.backend.feature.repair.RepairLine;
-import com.duylongtech.backend.feature.repair.RepairLineRepository;
-import com.duylongtech.backend.feature.repair.RepairLineRequest;
-import com.duylongtech.backend.feature.repair.RepairLineResponse;
-import com.duylongtech.backend.feature.repair.RepairMapper;
-import com.duylongtech.backend.feature.repair.RepairRepository;
-import com.duylongtech.backend.feature.repair.RepairRequest;
-import com.duylongtech.backend.feature.repair.RepairResponse;
-import com.duylongtech.backend.feature.repair.RepairService;
-import com.duylongtech.backend.feature.repair.RepairWorkflowService;
 import com.duylongtech.backend.feature.system.CodeGeneratorService;
 
 /**
@@ -482,7 +454,9 @@ public class RepairService {
                     response.setPartnerName(partnerOpt.get().getName());
                     response.setPartnerPhone(partnerOpt.get().getPhone());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được thông tin đối tác #{} cho lệnh sửa chữa #{}: {}", repair.getPartnerId(), repair.getId(), ex.getMessage());
+            }
         }
 
         // Resolve product name (best effort)
@@ -492,7 +466,9 @@ public class RepairService {
                 if (prodOpt.isPresent()) {
                     response.setProductName(prodOpt.get().getProductName());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được tên sản phẩm #{} cho lệnh sửa chữa #{}: {}", repair.getProductId(), repair.getId(), ex.getMessage());
+            }
         }
 
         // Resolve main serial number (best effort)
@@ -502,7 +478,9 @@ public class RepairService {
                 if (snOpt.isPresent()) {
                     response.setSerialNumber(snOpt.get().getSerialNumber());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được serial #{} cho lệnh sửa chữa #{}: {}", repair.getSerialNumberId(), repair.getId(), ex.getMessage());
+            }
         }
 
         return response;
@@ -525,7 +503,9 @@ public class RepairService {
                     response.setPartnerName(partnerOpt.get().getName());
                     response.setPartnerPhone(partnerOpt.get().getPhone());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được thông tin đối tác #{} cho lệnh sửa chữa #{}: {}", repair.getPartnerId(), repair.getId(), ex.getMessage());
+            }
         }
 
         // Resolve product name (best effort)
@@ -535,7 +515,9 @@ public class RepairService {
                 if (prodOpt.isPresent()) {
                     response.setProductName(prodOpt.get().getProductName());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được tên sản phẩm #{} cho lệnh sửa chữa #{}: {}", repair.getProductId(), repair.getId(), ex.getMessage());
+            }
         }
 
         // Resolve main serial number (best effort)
@@ -545,7 +527,9 @@ public class RepairService {
                 if (snOpt.isPresent()) {
                     response.setSerialNumber(snOpt.get().getSerialNumber());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được serial #{} cho lệnh sửa chữa #{}: {}", repair.getSerialNumberId(), repair.getId(), ex.getMessage());
+            }
         }
 
         response.setLines(lineResponses);
@@ -607,7 +591,9 @@ public class RepairService {
                         warehouseId, new ArrayList<>(serialTrackedVariantIds), new ArrayList<>(serialTrackedSerialIds), "GOOD")) {
                     serialBalanceByKey.put(balance.getVariantId() + ":" + balance.getSerialNumberId(), balance);
                 }
-            } catch (Exception ignored) { /* best-effort, matches original per-line try/catch */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được tồn kho theo serial cho lệnh sửa chữa #{}: {}", repair.getId(), ex.getMessage());
+            }
         }
 
         Map<Long, BigDecimal> looseQtyByVariant = new HashMap<>();
@@ -617,7 +603,9 @@ public class RepairService {
                         warehouseId, new ArrayList<>(looseVariantIds), "GOOD")) {
                     looseQtyByVariant.put((Long) row[0], (BigDecimal) row[1]);
                 }
-            } catch (Exception ignored) { /* best-effort, matches original per-line try/catch */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được tồn kho khả dụng theo lô cho lệnh sửa chữa #{}: {}", repair.getId(), ex.getMessage());
+            }
         }
 
         return lines.stream()
@@ -639,7 +627,9 @@ public class RepairService {
                     response.setComponentName(variantOpt.get().getVariantName());
                     response.setComponentSku(variantOpt.get().getSku());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được thông tin linh kiện #{} cho dòng sửa chữa #{}: {}", line.getComponentVariantId(), line.getId(), ex.getMessage());
+            }
         }
 
         // Resolve serial number: prefer the denormalized text snapshot already on the
@@ -652,7 +642,9 @@ public class RepairService {
                 try {
                     var snOpt = serialNumberRepository.findById(line.getSerialNumberId());
                     snOpt.ifPresent(sn -> response.setSerialNumber(sn.getSerialNumber()));
-                } catch (Exception ignored) { /* best-effort */ }
+                } catch (Exception ex) {
+                    log.warn("Không lấy được serial #{} cho dòng sửa chữa #{}: {}", line.getSerialNumberId(), line.getId(), ex.getMessage());
+                }
             }
         }
 
@@ -664,7 +656,9 @@ public class RepairService {
                 try {
                     var snOpt = serialNumberRepository.findById(line.getReplacementSerialNumberId());
                     snOpt.ifPresent(sn -> response.setReplacementSerialNumber(sn.getSerialNumber()));
-                } catch (Exception ignored) { /* best-effort */ }
+                } catch (Exception ex) {
+                    log.warn("Không lấy được serial thay thế #{} cho dòng sửa chữa #{}: {}", line.getReplacementSerialNumberId(), line.getId(), ex.getMessage());
+                }
             }
         }
 
@@ -686,7 +680,9 @@ public class RepairService {
                         warehouseId, line.getComponentVariantId(), "GOOD");
             }
             if (availableQty.compareTo(BigDecimal.ZERO) < 0) availableQty = BigDecimal.ZERO;
-        } catch (Exception ignored) {}
+        } catch (Exception ex) {
+            log.warn("Không tính được tồn kho khả dụng cho dòng sửa chữa #{}: {}", line.getId(), ex.getMessage());
+        }
 
         BigDecimal lineAmount = line.getUnitPrice().multiply(line.getQuantity());
 
@@ -716,7 +712,9 @@ public class RepairService {
                     response.setComponentName(variantOpt.get().getVariantName());
                     response.setComponentSku(variantOpt.get().getSku());
                 }
-            } catch (Exception ignored) { /* best-effort */ }
+            } catch (Exception ex) {
+                log.warn("Không lấy được thông tin linh kiện #{} cho dòng sửa chữa #{}: {}", line.getComponentVariantId(), line.getId(), ex.getMessage());
+            }
         }
 
         if (response.getSerialNumber() == null && line.getSerialNumberId() != null) {
