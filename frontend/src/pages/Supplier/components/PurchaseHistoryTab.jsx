@@ -5,7 +5,7 @@ const statusText = (status) => ({
     CANCELLED: 'Đã hủy'
 }[status] || status || '-');
 
-const PurchaseHistoryTab = ({ data, loading, formatDate, formatCurrency, styles }) => (
+const PurchaseHistoryTab = ({ data, loading, error, formatDate, formatCurrency, styles }) => (
     <table className={styles.table}>
         <thead>
             <tr>
@@ -21,6 +21,15 @@ const PurchaseHistoryTab = ({ data, loading, formatDate, formatCurrency, styles 
         <tbody>
             {loading ? (
                 <tr><td colSpan="7" className={styles.loadingState}>Đang tải lịch sử mua hàng...</td></tr>
+            ) : error ? (
+                <tr>
+                    <td colSpan="7">
+                        <div className={styles.emptyState}>
+                            <i className="bi bi-exclamation-triangle" style={{ fontSize: '32px', color: 'var(--color-danger)' }}></i>
+                            <div className={styles.emptyText} style={{ color: 'var(--color-danger)' }}>{error}</div>
+                        </div>
+                    </td>
+                </tr>
             ) : data.length === 0 ? (
                 <tr>
                     <td colSpan="7">

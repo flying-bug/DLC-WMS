@@ -2,7 +2,7 @@ const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'D
 const paymentTypeText = (type) => type === 'VOUCHER' ? 'Phiếu chi' : 'Phiếu thu';
 const paymentMethodText = (method) => method === 'CASH' ? 'Tiền mặt' : method === 'BANK_TRANSFER' ? 'Chuyển khoản' : method || '-';
 
-const PaymentHistoryTab = ({ data, debtBalance, loading, formatDateTime, formatCurrency, styles }) => {
+const PaymentHistoryTab = ({ data, debtBalance, loading, error, formatDateTime, formatCurrency, styles }) => {
     const totalPaidOut = data
         .filter(item => item.type === 'VOUCHER' && ['POSTED', 'APPROVED'].includes(item.status))
         .reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -35,6 +35,15 @@ const PaymentHistoryTab = ({ data, debtBalance, loading, formatDateTime, formatC
                 <tbody>
                     {loading ? (
                         <tr><td colSpan="7" className={styles.loadingState}>Đang tải lịch sử thu chi...</td></tr>
+                    ) : error ? (
+                        <tr>
+                            <td colSpan="7">
+                                <div className={styles.emptyState}>
+                                    <i className="bi bi-exclamation-triangle" style={{ fontSize: '32px', color: 'var(--color-danger)' }}></i>
+                                    <div className={styles.emptyText} style={{ color: 'var(--color-danger)' }}>{error}</div>
+                                </div>
+                            </td>
+                        </tr>
                     ) : data.length === 0 ? (
                         <tr>
                             <td colSpan="7">
