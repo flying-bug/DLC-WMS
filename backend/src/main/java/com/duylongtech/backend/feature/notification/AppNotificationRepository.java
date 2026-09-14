@@ -19,8 +19,8 @@ public interface AppNotificationRepository extends JpaRepository<AppNotification
     long countUnreadForUserAndRoles(@Param("userId") Long userId, @Param("roles") List<String> roles, @Param("isAdmin") boolean isAdmin);
 
     @Modifying
-    @Query("UPDATE AppNotification n SET n.isRead = true WHERE n.id = :id")
-    void markAsRead(@Param("id") Long id);
+    @Query("UPDATE AppNotification n SET n.isRead = true WHERE n.id = :id AND (:isAdmin = true OR n.userId = :userId OR n.recipientRole IN :roles)")
+    int markAsRead(@Param("id") Long id, @Param("userId") Long userId, @Param("roles") List<String> roles, @Param("isAdmin") boolean isAdmin);
 
     @Modifying
     @Query("UPDATE AppNotification n SET n.isRead = true WHERE :isAdmin = true OR n.userId = :userId OR n.recipientRole IN :roles")

@@ -21,6 +21,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -51,6 +52,7 @@ public class EInvoiceController {
 
     @GetMapping
     @Operation(summary = "Danh sách hóa đơn điện tử phân trang")
+    @PreAuthorize("hasAuthority('einvoice:view')")
     public ApiResponse<Page<EInvoiceResponse>> getInvoices(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
@@ -64,24 +66,28 @@ public class EInvoiceController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Chi tiết hóa đơn điện tử theo ID")
+    @PreAuthorize("hasAuthority('einvoice:view')")
     public ApiResponse<EInvoiceResponse> getInvoiceById(@PathVariable Long id) {
         return ApiResponse.success(einvoiceService.getInvoiceById(id));
     }
 
     @GetMapping("/by-so/{soId}")
     @Operation(summary = "Lấy danh sách hóa đơn điện tử của đơn bán hàng")
+    @PreAuthorize("hasAuthority('einvoice:view')")
     public ApiResponse<java.util.List<EInvoiceResponse>> getInvoicesBySalesOrderId(@PathVariable Long soId) {
         return ApiResponse.success(einvoiceService.getInvoicesBySalesOrderId(soId));
     }
 
     @GetMapping("/by-export/{exportId}")
     @Operation(summary = "Lấy hóa đơn điện tử của phiếu xuất kho")
+    @PreAuthorize("hasAuthority('einvoice:view')")
     public ApiResponse<EInvoiceResponse> getInvoiceByInventoryDocumentId(@PathVariable Long exportId) {
         return ApiResponse.success(einvoiceService.getInvoiceByInventoryDocumentId(exportId));
     }
 
     @PostMapping("/issue")
     @Operation(summary = "Phát hành hóa đơn điện tử từ đơn bán hàng hoặc phiếu xuất kho")
+    @PreAuthorize("hasAuthority('einvoice:add')")
     public ApiResponse<EInvoiceResponse> issueInvoice(@Valid @RequestBody EInvoiceIssueRequest request) {
         EInvoiceResponse response = einvoiceService.issueInvoiceFromSalesOrder(request, getCurrentUserId());
         return ApiResponse.success(response);
@@ -89,6 +95,7 @@ public class EInvoiceController {
 
     @PostMapping("/{id}/cancel")
     @Operation(summary = "Hủy hóa đơn điện tử")
+    @PreAuthorize("hasAuthority('einvoice:edit')")
     public ApiResponse<EInvoiceResponse> cancelInvoice(
             @PathVariable Long id,
             @Valid @RequestBody EInvoiceCancelRequest request

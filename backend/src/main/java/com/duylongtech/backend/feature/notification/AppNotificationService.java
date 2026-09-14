@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.notification;
 
+import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.feature.notification.AppNotification;
 import com.duylongtech.backend.feature.notification.AppNotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,8 +40,13 @@ public class AppNotificationService {
     }
 
     @Transactional
-    public void markAsRead(Long id) {
-        notificationRepository.markAsRead(id);
+    public void markAsRead(Long id, Long userId, List<String> roles) {
+        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_SUPER_ADMIN") || r.equalsIgnoreCase("SUPER_ADMIN")));
+        List<String> safeRoles = (roles == null || roles.isEmpty()) ? Collections.emptyList() : roles;
+        int updated = notificationRepository.markAsRead(id, userId, safeRoles, isAdmin);
+        if (updated == 0) {
+            throw new BusinessException("Không tìm thấy thông báo hoặc bạn không có quyền truy cập thông báo này");
+        }
     }
 
     @Transactional
