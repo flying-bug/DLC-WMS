@@ -673,6 +673,11 @@ public class InventoryPostingService {
             });
         }
 
+        // 2b. Hoàn tác công nợ nhà cung cấp đã ghi lúc post (trước đây bị bỏ sót, khiến
+        // "Dư nợ hiện tại" của NCC bị treo sai sau khi bỏ ghi sổ phiếu nhập)
+        partnerLedgerService.reverseLedger("INVENTORY_IMPORT", doc.getId(), "UNPOST_IMPORT", doc.getDocCode(),
+                "Hoàn tác công nợ do bỏ ghi sổ phiếu nhập " + doc.getDocCode());
+
         // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
         doc.unpost(currentUserId, reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu nhập");
         doc.setUpdatedAt(LocalDateTime.now());
@@ -754,6 +759,11 @@ public class InventoryPostingService {
                 }
             });
         }
+
+        // 2b. Hoàn tác công nợ khách hàng đã ghi lúc post (trước đây bị bỏ sót, khiến
+        // "Dư nợ hiện tại" của khách hàng bị treo sai sau khi bỏ ghi sổ phiếu xuất)
+        partnerLedgerService.reverseLedger("INVENTORY_EXPORT_SO", doc.getId(), "UNPOST_EXPORT_SO", doc.getDocCode(),
+                "Hoàn tác công nợ do bỏ ghi sổ phiếu xuất " + doc.getDocCode());
 
         // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
         doc.unpost(currentUserId, reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu xuất");
