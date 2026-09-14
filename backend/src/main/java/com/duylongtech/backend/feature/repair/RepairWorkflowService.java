@@ -103,6 +103,26 @@ public class RepairWorkflowService {
     private final SerialNumberRepository serialNumberRepository;
     private final DeviceComponentSerialRepository deviceComponentSerialRepository;
 
+    @FunctionalInterface
+    private interface RepairTransitionHandler {
+        void handle(Repair repair);
+    }
+
+    // Mỗi trạng thái đích tự khai báo side-effect + cách mutate Repair của mình ở đây.
+    // Thêm 1 trạng thái mới (vd. WAITING_FOR_PART) chỉ cần thêm 1 entry vào map này,
+    // không cần sửa switch nào trong transitionStatus().
+    // Lưu ý: DRAFT là target hợp lệ theo VALID_TRANSITIONS (từ QUOTATION) nhưng Repair
+    // chưa có method mutate về DRAFT - cố tình không có entry cho nó ở đây, giữ đúng
+    // hành vi hiện tại (no-op, không đổi status) - đây là 1 vấn đề riêng, không thuộc
+    // phạm vi refactor OCP này.
+    private final Map<RepairStatus, RepairTransitionHandler> transitionHandlers = Map.of(
+            RepairStatus.QUOTATION, Repair::moveToQuotation,
+            RepairStatus.CONFIRMED, repair -> { handleConfirm(repair); repair.confirm(); },
+            RepairStatus.UNDER_REPAIR, Repair::startRepair,
+            RepairStatus.DONE, repair -> { handleDone(repair); repair.complete(); },
+            RepairStatus.CANCELLED, repair -> { handleCancel(repair); repair.cancel(); }
+    );
+
     /**
      * Chuyển trạng thái chính.
      * Mỗi bước có thể kích hoạt side-effects khác nhau.
@@ -131,23 +151,13 @@ public class RepairWorkflowService {
             throw new BusinessException(SystemMessage.REP_INVALID_STATUS_TRANSITION);
         }
 
-        // Side-effects theo trạng thái đích
-        switch (target) {
-            case CONFIRMED -> handleConfirm(repair);
-            case DONE      -> handleDone(repair);
-            case CANCELLED -> handleCancel(repair);
-            default        -> { /* QUOTATION, UNDER_REPAIR không cần side-effects đặc biệt */ }
-        }
-
-        // Cập nhật trạng thái
         String previousStatus = repair.getRepairStatus();
-        switch (target) {
-            case QUOTATION -> repair.moveToQuotation();
-            case CONFIRMED -> repair.confirm();
-            case UNDER_REPAIR -> repair.startRepair();
-            case DONE -> repair.complete();
-            case CANCELLED -> repair.cancel();
-            default -> { }
+
+        // Side-effects + cập nhật trạng thái, tra theo bảng transitionHandlers ở trên
+        // thay vì 2 khối switch riêng biệt.
+        RepairTransitionHandler handler = transitionHandlers.get(target);
+        if (handler != null) {
+            handler.handle(repair);
         }
 
         Repair saved = repairRepository.save(repair);
