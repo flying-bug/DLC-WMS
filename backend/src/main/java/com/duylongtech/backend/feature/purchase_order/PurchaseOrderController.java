@@ -110,4 +110,28 @@ public class PurchaseOrderController {
         return ApiResponse.success(purchaseOrderService.cancelPurchaseOrder(id, actor));
     }
 
+    // ─── PUT: Đóng đơn hụt (không chờ nhận thêm hàng) ──────────────────
+    @PutMapping("/{id}/short-close")
+    @Operation(summary = "Đóng đơn hụt — không chờ nhận thêm hàng dù chưa đủ số lượng")
+    @PreAuthorize("hasAuthority('purchase_order:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "PurchaseOrder", actionDescription = "Đóng đơn hụt")
+    public ApiResponse<PurchaseOrderResponse> shortClosePurchaseOrder(
+            @PathVariable Long id
+    ) {
+        String actor = getCurrentUser();
+        return ApiResponse.success(purchaseOrderService.shortClosePurchaseOrder(id, actor));
+    }
+
+    // ─── PUT: Hủy đóng đơn hụt ──────────────────────────────────────────
+    @PutMapping("/{id}/revert-short-close")
+    @Operation(summary = "Hủy đóng đơn hụt")
+    @PreAuthorize("hasAuthority('purchase_order:edit')")
+    @Auditable(action = AuditAction.UPDATE, entityName = "PurchaseOrder", actionDescription = "Hủy đóng đơn hụt")
+    public ApiResponse<PurchaseOrderResponse> revertShortClosePurchaseOrder(
+            @PathVariable Long id
+    ) {
+        String actor = getCurrentUser();
+        return ApiResponse.success(purchaseOrderService.revertShortClosePurchaseOrder(id, actor));
+    }
+
 }

@@ -19,6 +19,7 @@ public interface PurchaseOrderMapper {
     @Mapping(source = "partner.name", target = "partnerName")
     @Mapping(source = "partner.phone", target = "partnerPhone")
     @Mapping(source = "createdByUser.fullName", target = "createdByName")
+    @Mapping(source = "isShortClosed", target = "isShortClosed")
     PurchaseOrderResponse toSummaryResponse(PurchaseOrder po);
 
     @Mapping(source = "variant.product.productName", target = "productName")

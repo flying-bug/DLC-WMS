@@ -67,6 +67,15 @@ public class PurchaseOrder {
     @Column(name = "expected_delivery_date")
     private LocalDate expectedDeliveryDate;
 
+    /**
+     * Đánh dấu đơn đã được kế toán chủ động "đóng hụt" - không chờ nhận thêm hàng
+     * dù số lượng đã nhập chưa đủ so với đơn. Dùng flag riêng thay vì thêm trạng thái
+     * mới vào {@link com.duylongtech.backend.enums.DocumentStatus} (enum dùng chung
+     * cho 40+ nơi trong hệ thống) - đơn vẫn giữ status APPROVED như bình thường.
+     */
+    @Column(name = "is_short_closed")
+    private Boolean isShortClosed = false;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
@@ -185,5 +194,22 @@ public class PurchaseOrder {
             throw new IllegalStateException("Chỉ có thể chuyển về APPROVED khi đang ở trạng thái POSTED");
         }
         this.status = DocumentStatus.APPROVED.name();
+    }
+
+    public void shortClose() {
+        if (!DocumentStatus.APPROVED.name().equals(this.status)) {
+            throw new IllegalStateException("Chỉ có thể đóng đơn hụt khi đơn đang ở trạng thái APPROVED");
+        }
+        if (Boolean.TRUE.equals(this.isShortClosed)) {
+            throw new IllegalStateException("Đơn mua hàng đã được đóng hụt trước đó");
+        }
+        this.isShortClosed = true;
+    }
+
+    public void revertShortClose() {
+        if (!Boolean.TRUE.equals(this.isShortClosed)) {
+            throw new IllegalStateException("Đơn mua hàng chưa được đóng hụt");
+        }
+        this.isShortClosed = false;
     }
 }

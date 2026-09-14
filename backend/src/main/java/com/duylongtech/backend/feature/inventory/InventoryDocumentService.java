@@ -50,6 +50,7 @@ import com.duylongtech.backend.feature.repair.RepairRepository;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderSerialRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -128,6 +129,7 @@ import com.duylongtech.backend.feature.warranty.WarrantyRepository;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryDocumentService {
 
     private final CodeGeneratorService codeGeneratorService;
@@ -150,6 +152,10 @@ public class InventoryDocumentService {
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
     public static final String ISSUE_PURPOSE_TRANSFER_IN = "TRANSFER_IMPORT"; // Nhập kho từ chuyển về
     public static final String ISSUE_PURPOSE_INVENTORY_ADJUSTMENT = "INVENTORY_ADJUSTMENT"; // Xử lý chênh lệch kiểm kê
+    public static final String ISSUE_PURPOSE_PO_BACKORDER = "PO_BACKORDER"; // Phiếu nhập bù cho phần hàng còn thiếu của PO
+
+    // Các trạng thái coi là "còn mở" khi chống tạo trùng phiếu nhập bù
+    private static final List<String> OPEN_DOCUMENT_STATUSES = List.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name());
 
     // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
     private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE,
@@ -1047,6 +1053,70 @@ public class InventoryDocumentService {
         }
 
         return toResponse(inventoryDocumentRepository.save(doc));
+    }
+
+    /**
+     * Tạo phiếu nhập kho DRAFT "bù" cho phần hàng còn thiếu của 1 đơn mua hàng (PO).
+     * Dùng đúng công thức "PO line qty - sum(đã nhập)" mà postImport() dùng để tính
+     * fullyImported, đảm bảo nhất quán giữa 2 nơi. quantityIn được set bằng luôn
+     * remaining (không để trống) vì createImport() bắt buộc quantityIn > 0 - kế toán/
+     * thủ kho tự điều chỉnh lại khi hàng về thực tế trước khi ghi sổ.
+     */
+    @Transactional
+    public InventoryDocumentResponse createBackorderForPO(Long poId, Long warehouseId, Long currentUserId) {
+        if (currentUserId == null) {
+            throw new BusinessException("Không xác định được người tạo phiếu");
+        }
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(poId)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + poId));
+
+        if (inventoryDocumentRepository.existsByPurchaseOrderIdAndIssuePurposeAndStatusIn(
+                poId, ISSUE_PURPOSE_PO_BACKORDER, OPEN_DOCUMENT_STATUSES)) {
+            throw new BusinessException("Đơn mua hàng " + po.getPoCode() + " đã có phiếu nhập bù đang chờ xử lý.");
+        }
+
+        List<InventoryDocumentLineRequest> lineRequests = new java.util.ArrayList<>();
+        for (PurchaseOrderLine poLine : po.getLines()) {
+            BigDecimal imported = inventoryDocumentLineRepository
+                    .sumImportedQuantityByPurchaseOrderIdAndVariantId(poId, poLine.getVariantId());
+            if (imported == null) {
+                imported = ZERO;
+            }
+            BigDecimal remaining = poLine.getQuantity().subtract(imported);
+            if (remaining.compareTo(ZERO) <= 0) {
+                continue;
+            }
+
+            InventoryDocumentLineRequest lr = new InventoryDocumentLineRequest();
+            lr.setVariantId(poLine.getVariantId());
+            lr.setQuantityIn(remaining);
+            lr.setExpectedQuantity(remaining);
+            lr.setUnitCost(poLine.getUnitPrice());
+            lr.setVatRate(poLine.getVatRate());
+            lr.setVatPercent(poLine.getVatRate());
+            lr.setWarehouseId(poLine.getWarehouseId());
+            lineRequests.add(lr);
+        }
+
+        if (lineRequests.isEmpty()) {
+            throw new BusinessException("Đơn mua hàng " + po.getPoCode() + " đã được nhập đủ số lượng, không thể tạo phiếu nhập bù.");
+        }
+
+        InventoryDocumentRequest req = new InventoryDocumentRequest();
+        req.setPurchaseOrderId(poId);
+        req.setPartnerId(po.getPartnerId());
+        req.setWarehouseId(warehouseId);
+        req.setIssuePurpose(ISSUE_PURPOSE_PO_BACKORDER);
+        req.setReferenceType("PURCHASE_ORDER");
+        req.setReferenceId(poId);
+        req.setDocDate(LocalDate.now());
+        req.setCreatedBy(currentUserId);
+        req.setNote("Phiếu nhập bù cho đơn mua hàng " + po.getPoCode());
+        req.setLines(lineRequests);
+
+        InventoryDocumentResponse created = createImport(req);
+        log.info("Đã tạo phiếu nhập bù {} cho đơn mua hàng {}", created.getDocCode(), po.getPoCode());
+        return created;
     }
 
     /**

@@ -95,6 +95,19 @@ public class ImportDocumentController {
         return ApiResponse.success(inventoryDocumentService.postImport(id));
     }
 
+    @PostMapping("/backorder/{poId}")
+    @Operation(summary = "Tạo phiếu nhập bù cho phần hàng còn thiếu của đơn mua hàng")
+    @PreAuthorize("hasAuthority('import:add')")
+    @Auditable(action = AuditAction.CREATE, entityName = "ImportSlip", actionDescription = "Tạo phiếu nhập bù cho đơn mua hàng")
+    public ApiResponse<InventoryDocumentResponse> createBackorderForPurchaseOrder(
+            @PathVariable Long poId,
+            @RequestParam Long warehouseId
+    ) {
+        String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Long currentUserId = userRepository.findByUsername(actor).map(com.duylongtech.backend.feature.auth.User::getId).orElse(null);
+        return ApiResponse.success(inventoryDocumentService.createBackorderForPO(poId, warehouseId, currentUserId));
+    }
+
     // ==========================================
     // OCR - AI Document Processing
     // ==========================================

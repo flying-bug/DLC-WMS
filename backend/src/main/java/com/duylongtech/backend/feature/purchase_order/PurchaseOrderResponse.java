@@ -42,6 +42,7 @@ public class PurchaseOrderResponse {
 
     // Import tracking
     private Boolean isFullyImported;
+    private Boolean isShortClosed;
 
     // Lines
     private List<PurchaseOrderLineResponse> lines;

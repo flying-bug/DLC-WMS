@@ -184,6 +184,34 @@ public class PurchaseOrderService {
     }
 
     // =========================================================
+    // SHORT CLOSE — đóng đơn hụt khi không nhận thêm hàng dù chưa đủ số lượng
+    // =========================================================
+
+    @Transactional
+    public PurchaseOrderResponse shortClosePurchaseOrder(Long id, String actor) {
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
+
+        po.shortClose();
+        PurchaseOrder saved = purchaseOrderRepository.save(po);
+        log.info("Đóng đơn hụt (short close) đơn mua hàng {} bởi {}", saved.getPoCode(), actor);
+
+        return toSummaryResponse(saved);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse revertShortClosePurchaseOrder(Long id, String actor) {
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
+
+        po.revertShortClose();
+        PurchaseOrder saved = purchaseOrderRepository.save(po);
+        log.info("Hủy đóng đơn hụt (revert short close) đơn mua hàng {} bởi {}", saved.getPoCode(), actor);
+
+        return toSummaryResponse(saved);
+    }
+
+    // =========================================================
     // MAPPING
     // =========================================================
 

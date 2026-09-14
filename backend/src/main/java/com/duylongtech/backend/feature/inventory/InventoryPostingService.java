@@ -523,7 +523,8 @@ public class InventoryPostingService {
         if (savedImport.getPurchaseOrderId() != null) {
             PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(savedImport.getPurchaseOrderId())
                     .orElse(null);
-            if (po != null && !DocumentStatus.POSTED.name().equals(po.getStatus()) && !DocumentStatus.CANCELLED.name().equals(po.getStatus())) {
+            if (po != null && !DocumentStatus.POSTED.name().equals(po.getStatus()) && !DocumentStatus.CANCELLED.name().equals(po.getStatus())
+                    && !Boolean.TRUE.equals(po.getIsShortClosed())) {
                 boolean fullyImported = !po.getLines().isEmpty() && po.getLines().stream().allMatch(l -> {
                     BigDecimal imported = inventoryDocumentLineRepository
                             .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), l.getVariantId());
