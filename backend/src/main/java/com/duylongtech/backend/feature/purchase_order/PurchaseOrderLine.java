@@ -17,11 +17,14 @@ public class PurchaseOrderLine {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "purchase_order_id", nullable = false)
+    // Chỉ đọc - FK thật sự do quan hệ purchaseOrder bên dưới ghi (xem SalesOrderLine
+    // cho cùng 1 lỗi/cách sửa: field thô này không thể set được lúc addLine() vì đơn
+    // mới còn chưa có id, gây "Column 'purchase_order_id' cannot be null").
+    @Column(name = "purchase_order_id", nullable = false, insertable = false, updatable = false)
     private Long purchaseOrderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "purchase_order_id", insertable = false, updatable = false)
+    @JoinColumn(name = "purchase_order_id", nullable = false, updatable = false)
     private PurchaseOrder purchaseOrder;
 
     @Column(name = "variant_id", nullable = false)
@@ -67,10 +70,6 @@ public class PurchaseOrderLine {
 
     void setPurchaseOrder(PurchaseOrder purchaseOrder) {
         this.purchaseOrder = purchaseOrder;
-    }
-
-    void setPurchaseOrderId(Long purchaseOrderId) {
-        this.purchaseOrderId = purchaseOrderId;
     }
 
     public void calculateAmounts() {
