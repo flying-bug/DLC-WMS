@@ -288,6 +288,10 @@
   font-weight: 500;
 }
 
+.textCenter {
+  text-align: center !important;
+}
+
 /* Action Icons */
 .rowActions {
   display: flex;
