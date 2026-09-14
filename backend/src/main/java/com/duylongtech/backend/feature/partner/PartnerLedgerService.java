@@ -16,12 +16,25 @@ import java.math.BigDecimal;
 public class PartnerLedgerService {
 
     private final PartnerLedgerRepository partnerLedgerRepository;
+    private final PartnerRepository partnerRepository;
+
     @Transactional
-    public PartnerLedger recordLedger(Long partnerId, String entityType, Long entityId, 
-                                       String referenceCode, BigDecimal amountDebt, 
+    public PartnerLedger recordLedger(Long partnerId, String entityType, Long entityId,
+                                       String referenceCode, BigDecimal amountDebt,
                                        BigDecimal amountReceipt, String note) {
         if (partnerId == null) {
             log.warn("[PartnerLedger] Bỏ qua ghi nhận công nợ do partnerId null. RefCode={}", referenceCode);
+            return null;
+        }
+
+        // Khóa dòng Partner trước khi đọc "số dư gần nhất" - nếu không khóa, 2 giao dịch
+        // ghi công nợ đồng thời cho cùng 1 partner (vd 2 nhân viên cùng ghi sổ phiếu xuất
+        // cho cùng khách hàng) có thể cùng đọc 1 prevBalance rồi cùng ghi đè lên nhau,
+        // làm "Dư nợ hiện tại" chạy sai. Khóa dòng cụ thể (thay vì khóa PartnerLedger, bảng
+        // chỉ insert-thêm) mới thật sự tuần tự hóa được các lần ghi cho cùng 1 partner.
+        if (partnerRepository.findByIdForUpdate(partnerId).isEmpty()) {
+            log.warn("[PartnerLedger] Bỏ qua ghi nhận công nợ do không tìm thấy Partner ID {}. RefCode={}",
+                    partnerId, referenceCode);
             return null;
         }
 
