@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
-import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
 
@@ -116,7 +115,6 @@ function ImportHistoryPage() {
   const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [confirmPost, setConfirmPost] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const [selectedSlip, setSelectedSlip] = useState(null);
@@ -774,15 +772,6 @@ function ImportHistoryPage() {
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
-                  {selectedSlip.status === 'DRAFT' && guard.check('import:post') && (
-                    <button
-                      onClick={() => setConfirmPost(true)}
-                      className={styles.btnPrimary}
-                      style={{ padding: '6px 12px', fontSize: '13px' }}
-                    >
-                      <i className="bi bi-journal-check" style={{ marginRight: '6px' }}></i> Ghi sổ
-                    </button>
-                  )}
                   <button className={styles.modalClose} onClick={() => setSelectedSlip(null)}>&times;</button>
                 </div>
               </div>
@@ -1016,23 +1005,6 @@ function ImportHistoryPage() {
             </div>
           </div>
         )}
-        <ConfirmModal
-          isOpen={confirmPost}
-          title="Xác nhận ghi sổ"
-          message="Bạn có chắc chắn muốn ghi sổ phiếu nhập này không? Thao tác này không thể hoàn tác và sẽ cập nhật lại số lượng hàng hóa trong kho."
-          onConfirm={async () => {
-            setConfirmPost(false);
-            try {
-              await importApi.postImportSlip(selectedSlip.id);
-              loadSlips();
-              setSelectedSlip(prev => ({ ...prev, status: 'POSTED', statusLabel: STATUS_LABELS['POSTED'].label, statusCode: STATUS_LABELS['POSTED'].code }));
-              showToast('success', 'Ghi sổ phiếu nhập thành công!');
-            } catch (err) {
-              showToast('error', err.response?.data?.userMessage || 'Không thể ghi sổ phiếu nhập kho');
-            }
-          }}
-          onCancel={() => setConfirmPost(false)}
-        />
         <Modal
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}

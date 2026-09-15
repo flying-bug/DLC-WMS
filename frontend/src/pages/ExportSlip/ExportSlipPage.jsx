@@ -7,7 +7,6 @@ import * as importApi from '../../api/inventoryImportApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
-import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
 
@@ -153,7 +152,6 @@ function ExportSlipPage() {
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [confirmPost, setConfirmPost] = useState(false);
   const [unpostTarget, setUnpostTarget] = useState(null);
 
 
@@ -751,15 +749,6 @@ function ExportSlipPage() {
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
-                  {selectedSlip.status === 'DRAFT' && guard.check('export:post') && (
-                    <button
-                      onClick={() => setConfirmPost(true)}
-                      className={styles.btnPrimary}
-                      style={{ padding: '6px 12px', fontSize: '13px' }}
-                    >
-                      <i className="bi bi-journal-check" style={{ marginRight: '6px' }}></i> Ghi sổ
-                    </button>
-                  )}
                   <button className={styles.modalClose} onClick={() => setSelectedSlip(null)}>&times;</button>
                 </div>
               </div>
@@ -991,23 +980,6 @@ function ExportSlipPage() {
             </div>
           </div>
         )}
-        <ConfirmModal
-          isOpen={confirmPost}
-          title="Xác nhận ghi sổ"
-          message="Bạn có chắc chắn muốn ghi sổ phiếu xuất này không? Thao tác này không thể hoàn tác và sẽ cập nhật lại số lượng hàng hóa trong kho."
-          onConfirm={async () => {
-            setConfirmPost(false);
-            try {
-              await exportApi.postExportSlip(selectedSlip.id);
-              loadSlips();
-              setSelectedSlip(prev => ({ ...prev, status: 'POSTED', statusLabel: STATUS_LABELS['POSTED'].label, statusCode: STATUS_LABELS['POSTED'].code }));
-              showToast('success', 'Ghi sổ phiếu xuất thành công!');
-            } catch (err) {
-              showToast('error', err.response?.data?.userMessage || 'Không thể ghi sổ phiếu xuất kho');
-            }
-          }}
-          onCancel={() => setConfirmPost(false)}
-        />
         <Modal
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
