@@ -941,7 +941,18 @@ function UpdateExportSlipPage() {
                       <input
                         type="text"
                         className="misa-input"
-                        value={users.find(u => String(u.id) === String(form.salespersonId)) ? (users.find(u => String(u.id) === String(form.salespersonId)).fullName || users.find(u => String(u.id) === String(form.salespersonId)).username) : 'Đang tải...'}
+                        value={(() => {
+                          // Toàn trang đã qua khỏi màn hình "Đang tải dữ liệu..." nên mọi lần
+                          // fetch ban đầu - kể cả getUsers() - đã hoàn tất, không còn ca "đang
+                          // tải" hợp lệ nào ở đây nữa. Tách rõ 2 trường hợp: chưa từng gán ai
+                          // (salespersonId trống) vs. có gán nhưng không tra được tên - ví dụ
+                          // getUsers() bị 403 với vai trò không có account:view như Kế toán -
+                          // để không báo nhầm "Chưa phân công" khi thực ra đã có người phụ
+                          // trách, chỉ là không đủ quyền xem tên.
+                          if (!form.salespersonId) return 'Chưa phân công';
+                          const assignedUser = users.find(u => String(u.id) === String(form.salespersonId));
+                          return assignedUser ? (assignedUser.fullName || assignedUser.username) : 'Đã phân công (không đủ quyền xem tên)';
+                        })()}
                         readOnly
                         style={{ backgroundColor: 'var(--color-bg)' }}
                       />
@@ -1054,8 +1065,7 @@ function UpdateExportSlipPage() {
                   <thead>
                     <tr>
                       <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                      <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '220px', width: '24%' }}>Sản phẩm</th>
                       <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                       <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                       <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
@@ -1091,19 +1101,8 @@ function UpdateExportSlipPage() {
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
                               onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                              displayMode="code"
-                              placeholder="Chọn mã"
-                            />
-                          </td>
-                          <td style={{ maxWidth: '300px' }}>
-                            <ProductGridSelect
-                              products={warehouseScopedProducts}
-                              inventoryMap={inventoryMap}
-                              value={item.variantId}
-                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                              onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                              displayMode="name"
-                              placeholder="Chọn hàng"
+                              displayMode="code-name"
+                              placeholder="Chọn mã hoặc tên hàng"
                             />
                           </td>
                           <td>

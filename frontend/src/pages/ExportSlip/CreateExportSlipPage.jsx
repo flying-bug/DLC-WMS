@@ -1211,8 +1211,7 @@ function CreateExportSlipPage({ mode: propMode }) {
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '160px', width: '18%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
+                  <th style={{ minWidth: '220px', width: '24%' }}>{exportMode === 'ASSEMBLY' ? 'Linh kiện' : 'Sản phẩm'}</th>
                   <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                   <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
@@ -1246,19 +1245,8 @@ function CreateExportSlipPage({ mode: propMode }) {
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
                           onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                          displayMode="code"
-                          placeholder="Chọn mã"
-                        />
-                      </td>
-                      <td>
-                        <ProductGridSelect
-                          products={warehouseScopedProducts}
-                          inventoryMap={inventoryMap}
-                          value={item.variantId}
-                          onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                          onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                          displayMode="name"
-                          placeholder="Chọn hàng hóa / linh kiện"
+                          displayMode="code-name"
+                          placeholder="Chọn mã hoặc tên hàng hóa / linh kiện"
                         />
                       </td>
                       <td>

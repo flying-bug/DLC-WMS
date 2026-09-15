@@ -1258,8 +1258,7 @@ function CreateImportSlipPage() {
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
+                  <th style={{ minWidth: '230px', width: '30%' }}>Sản phẩm</th>
                   <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
                   <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>
@@ -1293,19 +1292,8 @@ function CreateImportSlipPage() {
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
                           onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                          displayMode="code"
-                          placeholder="Chọn mã"
-                        />
-                      </td>
-                      <td>
-                        <ProductGridSelect
-                          products={filteredProducts}
-                          inventoryMap={inventoryMap}
-                          value={item.variantId}
-                          onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                          onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                          displayMode="name"
-                          placeholder="Chọn hàng"
+                          displayMode="code-name"
+                          placeholder="Chọn mã hoặc tên hàng"
                         />
                       </td>
                       <td>
@@ -1385,7 +1373,7 @@ function CreateImportSlipPage() {
               </tbody>
               <tfoot>
                 <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
-                  <td colSpan={4} style={{ borderRight: 'none' }}></td>
+                  <td colSpan={3} style={{ borderRight: 'none' }}></td>
                   <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
                   <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
                     {Number(items.reduce((sum, it) => {

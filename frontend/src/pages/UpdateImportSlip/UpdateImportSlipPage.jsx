@@ -351,6 +351,13 @@ function UpdateImportSlipPage() {
   // dòng thực sự quy đổi (tỷ lệ khác 1 hoặc ĐVT khác ĐVC) - còn lại thì 4 cột này
   // luôn lặp lại y hệt ĐVT/SL Nhận, chỉ tổ chiếm chỗ trong bảng vốn đã rất nhiều cột.
   const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
+  // SL HĐ / SL Lỗi / Lý do chênh lệch chỉ có ý nghĩa khi phiếu thực sự nhận thiếu hoặc
+  // có hàng lỗi so với hóa đơn NCC - còn lại (đa số trường hợp khớp đủ) thì SL HĐ luôn
+  // bằng SL Nhận và SL Lỗi luôn bằng 0, 3 cột này chỉ lặp lại thông tin không cần thiết.
+  const hasAnyDiscrepancy = items.some(item => {
+    const expected = Number(item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? item.expectedQuantity : (item.quantity || 0));
+    return expected > Number(item.quantity || 0) || Number(item.rejectedQuantity || 0) > 0;
+  });
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);
@@ -904,7 +911,18 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       <input
                         type="text"
                         className="misa-input"
-                        value={users.find(u => String(u.id) === String(form.purchaser)) ? (users.find(u => String(u.id) === String(form.purchaser)).fullName || users.find(u => String(u.id) === String(form.purchaser)).username) : 'Đang tải...'}
+                        value={(() => {
+                          // Toàn trang đã qua khỏi màn hình "Đang tải dữ liệu..." (xem điều kiện
+                          // `loading` bọc ngoài form) nên mọi lần fetch ban đầu - kể cả getUsers()
+                          // - đã hoàn tất, không còn ca "đang tải" hợp lệ nào ở đây nữa. Tách rõ 2
+                          // trường hợp: chưa từng gán ai (purchaser trống) vs. có gán nhưng không
+                          // tra được tên - ví dụ getUsers() bị 403 với vai trò không có
+                          // account:view như Kế toán - để không báo nhầm "Chưa phân công" khi
+                          // thực ra đã có người phụ trách, chỉ là không đủ quyền xem tên.
+                          if (!form.purchaser) return 'Chưa phân công';
+                          const assignedUser = users.find(u => String(u.id) === String(form.purchaser));
+                          return assignedUser ? (assignedUser.fullName || assignedUser.username) : 'Đã phân công (không đủ quyền xem tên)';
+                        })()}
                         readOnly
                         style={{ backgroundColor: 'var(--color-bg)' }}
                       />
@@ -1001,8 +1019,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                   <thead>
                     <tr>
                       <th style={{ width: '35px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
-                      <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '150px', width: '16%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '220px', width: '24%' }}>Sản phẩm</th>
                       <th style={{ minWidth: '85px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
                       <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng ghi trên Hóa đơn NCC">SL HĐ</th>
                       <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng thực tế dỡ vào kho">SL Nhận</th>
@@ -1016,7 +1033,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       {showPricing && <th style={{ minWidth: '85px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
                       {showPricing && <th style={{ minWidth: '85px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>}
                       {showPricing && <th style={{ minWidth: '55px', width: '4%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>}
-                      <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }}>Lý do chênh lệch</th>
+                      {hasAnyDiscrepancy && <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }}>Lý do chênh lệch</th>}
                       <th style={{ width: '35px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -1041,19 +1058,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
                               onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                              displayMode="code"
-                              placeholder="Chọn mã"
-                            />
-                          </td>
-                          <td>
-                            <ProductGridSelect
-                              products={filteredProducts}
-                              inventoryMap={inventoryMap}
-                              value={item.variantId}
-                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                              onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                              displayMode="name"
-                              placeholder="Chọn hàng"
+                              displayMode="code-name"
+                              placeholder="Chọn mã hoặc tên hàng"
                             />
                           </td>
                           <td>
@@ -1144,16 +1150,18 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                               <input id={`import-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
                             </td>
                           )}
-                          <td>
-                            <input
-                              type="text"
-                              className="misa-input"
-                              style={{ height: '32px', padding: '0 6px', fontSize: '12px' }}
-                              value={item.discrepancyReason || ''}
-                              onChange={(e) => handleItemChange(item.localId, 'discrepancyReason', e.target.value)}
-                              placeholder={isDiscrepant ? "Nhập lý do thiếu/lỗi..." : "—"}
-                            />
-                          </td>
+                          {hasAnyDiscrepancy && (
+                            <td>
+                              <input
+                                type="text"
+                                className="misa-input"
+                                style={{ height: '32px', padding: '0 6px', fontSize: '12px' }}
+                                value={item.discrepancyReason || ''}
+                                onChange={(e) => handleItemChange(item.localId, 'discrepancyReason', e.target.value)}
+                                placeholder={isDiscrepant ? "Nhập lý do thiếu/lỗi..." : "—"}
+                              />
+                            </td>
+                          )}
                           <td><button className={styles.deleteBtn} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button></td>
                         </tr>
                       );
@@ -1161,7 +1169,6 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                   </tbody>
                   <tfoot>
                     <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
-                      <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td></td>
@@ -1186,7 +1193,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       {showPricing && <td></td>}
                       {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}
                       {showPricing && <td style={{ borderRight: 'none' }}></td>}
-                      <td></td>
+                      {hasAnyDiscrepancy && <td></td>}
                       <td></td>
                     </tr>
                   </tfoot>
