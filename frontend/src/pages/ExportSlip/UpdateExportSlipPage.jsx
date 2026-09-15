@@ -19,7 +19,7 @@ import styles from './UpdateExportSlipPage.module.css';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
-import { canViewPricing } from '../../auth/session';
+import { canViewPricing, hasPermission } from '../../auth/session';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -1220,9 +1220,11 @@ function UpdateExportSlipPage() {
           <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
             <i className="bi bi-save"></i> Lưu tạm
           </button>
-          <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
-          </button>
+          {hasPermission('export:post') && (
+            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            </button>
+          )}
         </div>
       </div>
       <CustomerModal

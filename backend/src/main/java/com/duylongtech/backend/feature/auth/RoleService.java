@@ -111,7 +111,7 @@ public class RoleService {
                         result.add(perm);
                     } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print", "import:post").contains(code)) {
                         result.add(perm);
-                    } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
+                    } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print", "export:post").contains(code)) {
                         result.add(perm);
                     } else if (Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
                         result.add(perm);
