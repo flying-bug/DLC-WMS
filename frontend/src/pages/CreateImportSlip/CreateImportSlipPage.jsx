@@ -489,6 +489,7 @@ function CreateImportSlipPage() {
     return filterWarehouseProducts(products);
   }, [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
@@ -1261,7 +1262,7 @@ function CreateImportSlipPage() {
                   <th style={{ minWidth: '230px', width: '30%' }}>Sản phẩm</th>
                   <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                  <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>
+                  {hasAnyConversion && <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>}
                   <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                   <th style={{ minWidth: '55px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                   {showPricing && <th style={{ minWidth: '95px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
@@ -1316,20 +1317,22 @@ function CreateImportSlipPage() {
                       <td align="right">
                         <input id={`import-line-qty-${index}`} type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                       </td>
-                      <td style={{ textAlign: 'center', fontSize: '12px' }}>
-                        {ratio === 1 ? (
-                          <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
-                        ) : (
-                          <span
-                            title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
-                          >
-                            <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
-                            {' = '}
-                            <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
-                            <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
-                          </span>
-                        )}
-                      </td>
+                      {hasAnyConversion && (
+                        <td style={{ textAlign: 'center', fontSize: '12px' }}>
+                          {ratio === 1 ? (
+                            <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
+                          ) : (
+                            <span
+                              title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
+                            >
+                              <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
+                              {' = '}
+                              <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
+                              <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td align="center">
                         <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
                           {product?.trackSerial && (
@@ -1375,14 +1378,16 @@ function CreateImportSlipPage() {
                 <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
                   <td colSpan={3} style={{ borderRight: 'none' }}></td>
                   <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
-                  <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
-                    {Number(items.reduce((sum, it) => {
-                      const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
-                      const op = it.conversionOperator || 'MULTIPLY';
-                      const qty = Number(it.quantity || 0);
-                      return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
-                    }, 0).toFixed(4))}
-                  </td>
+                  {hasAnyConversion && (
+                    <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
+                      {Number(items.reduce((sum, it) => {
+                        const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
+                        const op = it.conversionOperator || 'MULTIPLY';
+                        const qty = Number(it.quantity || 0);
+                        return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
+                      }, 0).toFixed(4))}
+                    </td>
+                  )}
                   <td colSpan={2} style={{ borderRight: 'none' }}></td>
                   {showPricing && <td></td>}
                   {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}

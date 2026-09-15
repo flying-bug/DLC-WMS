@@ -470,6 +470,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   }, [products]);
 
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
@@ -1215,7 +1216,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                   <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                  <th style={{ minWidth: '110px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>
+                  {hasAnyConversion && <th style={{ minWidth: '110px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>}
                   <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                   <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                   {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
@@ -1272,20 +1273,22 @@ function CreateExportSlipPage({ mode: propMode }) {
                       <td className={styles.textRight}>
                         <input id={`export-line-qty-${index}`} type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                       </td>
-                      <td style={{ textAlign: 'center', fontSize: '12px' }}>
-                        {ratio === 1 ? (
-                          <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
-                        ) : (
-                          <span
-                            title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
-                          >
-                            <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
-                            {' = '}
-                            <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
-                            <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
-                          </span>
-                        )}
-                      </td>
+                      {hasAnyConversion && (
+                        <td style={{ textAlign: 'center', fontSize: '12px' }}>
+                          {ratio === 1 ? (
+                            <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
+                          ) : (
+                            <span
+                              title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
+                            >
+                              <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
+                              {' = '}
+                              <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
+                              <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td align="center">
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {product?.trackSerial && (
