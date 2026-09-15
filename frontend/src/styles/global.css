@@ -101,6 +101,18 @@ textarea {
   box-shadow: var(--shadow-focus-primary);
 }
 
+/* An mui ten tang/giam mac dinh cua trinh duyet tren input number cho gon giao dien. */
+input[type='number'].misa-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number'].misa-input::-webkit-outer-spin-button,
+input[type='number'].misa-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .btn-misa-outline {
   border: 1px solid var(--color-border);
   background-color: var(--button-outline-bg);
@@ -591,7 +603,7 @@ html, body, #root {
   background-color: rgba(14, 165, 233, 0.1);
   color: var(--color-primary, #0ea5e9);
   font-weight: 600;
-}
+}
 
 :is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-draft:hover,
 :is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterDraft"]:hover {
