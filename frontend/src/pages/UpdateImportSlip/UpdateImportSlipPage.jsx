@@ -347,6 +347,10 @@ function UpdateImportSlipPage() {
   const grandTotal = totalPrice + totalVat;
   const totalExpectedQuantity = items.reduce((sum, item) => sum + Number(item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? item.expectedQuantity : (item.quantity || 0)), 0);
   const totalRejectedQuantity = items.reduce((sum, item) => sum + Number(item.rejectedQuantity || 0), 0);
+  // Cột quy đổi đơn vị (ĐVC/Tỷ lệ CĐ/Phép tính/SL ĐVC) chỉ có ý nghĩa khi ít nhất 1
+  // dòng thực sự quy đổi (tỷ lệ khác 1 hoặc ĐVT khác ĐVC) - còn lại thì 4 cột này
+  // luôn lặp lại y hệt ĐVT/SL Nhận, chỉ tổ chiếm chỗ trong bảng vốn đã rất nhiều cột.
+  const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);
@@ -1002,10 +1006,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       <th style={{ minWidth: '85px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
                       <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng ghi trên Hóa đơn NCC">SL HĐ</th>
                       <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng thực tế dỡ vào kho">SL Nhận</th>
-                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
-                      <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
-                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
-                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                      {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>}
                       <th style={{ minWidth: '50px', width: '4%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng hàng hỏng/móp méo từ chối nhận">SL Lỗi</th>
                       <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                       <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
@@ -1092,10 +1096,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                               title="Số lượng thực nhận vào kho"
                             />
                           </td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>}
                           <td align="right">
                             <input
                               type="number"
@@ -1163,17 +1167,19 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       <td></td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalExpectedQuantity)}</td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
-                      <td style={{ borderRight: 'none' }}></td>
-                      <td style={{ borderRight: 'none' }}></td>
-                      <td style={{ borderRight: 'none' }}></td>
-                      <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
-                        {Number(items.reduce((sum, it) => {
-                          const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
-                          const op = it.conversionOperator || 'MULTIPLY';
-                          const qty = Number(it.quantity || 0);
-                          return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
-                        }, 0).toFixed(4))}
-                      </td>
+                      {hasAnyConversion && <td style={{ borderRight: 'none' }}></td>}
+                      {hasAnyConversion && <td style={{ borderRight: 'none' }}></td>}
+                      {hasAnyConversion && <td style={{ borderRight: 'none' }}></td>}
+                      {hasAnyConversion && (
+                        <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
+                          {Number(items.reduce((sum, it) => {
+                            const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
+                            const op = it.conversionOperator || 'MULTIPLY';
+                            const qty = Number(it.quantity || 0);
+                            return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
+                          }, 0).toFixed(4))}
+                        </td>
+                      )}
                       <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-danger)' }}>{money(totalRejectedQuantity)}</td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>

@@ -207,7 +207,11 @@ textarea.formInput {
   width: 100%;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  overflow: visible;
+  /* table-layout: fixed bên dưới ép các cột co lại khi không đủ chỗ thay vì
+     giữ nguyên min-width - nếu container không cho cuộn ngang, input/số liệu
+     trong ô sẽ bị bóp méo/gãy dòng giữa chừng. overflow-x: auto để bảng tự
+     cuộn ngang khi tổng min-width các cột vượt quá chiều rộng khả dụng. */
+  overflow-x: auto;
 }
 
 .table {

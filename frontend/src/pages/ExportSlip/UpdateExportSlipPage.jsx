@@ -378,6 +378,10 @@ function UpdateExportSlipPage() {
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
+  // Cột quy đổi đơn vị (ĐVC/Tỷ lệ CĐ/Phép tính/SL ĐVC) chỉ có ý nghĩa khi ít nhất 1
+  // dòng thực sự quy đổi (tỷ lệ khác 1) - còn lại thì 4 cột này luôn lặp lại y hệt
+  // ĐVT/SL, chỉ tổ chiếm chỗ trong bảng vốn đã rất nhiều cột.
+  const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -1055,10 +1059,10 @@ function UpdateExportSlipPage() {
                       <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                       <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                       <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
-                      <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
-                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
-                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                      {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>}
                       <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                       <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                       {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
@@ -1125,10 +1129,10 @@ function UpdateExportSlipPage() {
                           <td className={styles.textRight}>
                             <input id={`export-line-qty-${index}`} type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                           </td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>}
                           <td align="center">
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               {product?.trackSerial && (
