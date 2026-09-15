@@ -8,6 +8,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { searchCustomers, deactivateCustomer, activateCustomer, exportCustomersToExcel } from '../../api/customerApi';
 import styles from './CustomerListPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -23,6 +24,7 @@ const GROUP_LABELS = {
 
 const CustomerListPage = () => {
     const navigate = useNavigate();
+    const guard = usePermissionGuard();
     
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -117,6 +119,7 @@ const CustomerListPage = () => {
 
     const handleToggleStatus = (e, customer) => {
         e.stopPropagation();
+        if (!guard('customer:edit')) return;
         const action = customer.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt';
         setConfirmModal({ isOpen: true, customer, action });
     };
@@ -169,7 +172,7 @@ const CustomerListPage = () => {
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
                     <h1 className={styles.pageTitle}>Danh sách khách hàng</h1>
-                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                    <button className={styles.btnPrimary} onClick={() => guard('customer:add', () => setModalConfig({ isOpen: true, data: null }))}>
                         <i className="bi bi-plus"></i> Thêm mới
                     </button>
                 </div>
@@ -324,7 +327,7 @@ const CustomerListPage = () => {
                                                     className="bi bi-pencil" 
                                                     style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
                                                     title="Chỉnh sửa" 
-                                                    onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, data: item }); }}
+                                                    onClick={(e) => { e.stopPropagation(); guard('customer:edit', () => setModalConfig({ isOpen: true, data: item })); }}
                                                 ></i>
                                                 {item.status === 'APPROVED' ? (
                                                     <i 

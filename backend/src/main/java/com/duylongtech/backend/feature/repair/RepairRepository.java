@@ -22,6 +22,8 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
 
     List<Repair> findByWarrantyId(Long warrantyId);
 
+    List<Repair> findByWarrantyIdIn(List<Long> warrantyIds);
+
     boolean existsBySerialNumberId(Long serialNumberId);
 
     /**

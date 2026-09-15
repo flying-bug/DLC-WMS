@@ -149,7 +149,6 @@ public class PurchaseOrder {
         }
         line.calculateAmounts();
         line.setPurchaseOrder(this);
-        line.setPurchaseOrderId(this.id); // might be null initially
         this.lines.add(line);
         recalculateTotals();
     }

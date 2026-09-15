@@ -16,11 +16,15 @@ public class SalesOrderLine {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "sales_order_id", nullable = false)
+    // Chỉ đọc - FK thật sự do quan hệ salesOrder bên dưới ghi, tránh 2 mapping cùng
+    // ghi 1 cột (trước đây field này là mapping ghi duy nhất nhưng addLine() không
+    // set được giá trị khi đơn còn chưa lưu, gây "Column 'sales_order_id' cannot be
+    // null" mỗi khi tạo đơn mới có dòng hàng).
+    @Column(name = "sales_order_id", nullable = false, insertable = false, updatable = false)
     private Long salesOrderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sales_order_id", insertable = false, updatable = false)
+    @JoinColumn(name = "sales_order_id", nullable = false, updatable = false)
     private SalesOrder salesOrder;
 
     @Column(name = "variant_id", nullable = false)
@@ -75,10 +79,6 @@ public class SalesOrderLine {
 
     void setSalesOrder(SalesOrder salesOrder) {
         this.salesOrder = salesOrder;
-    }
-
-    void setSalesOrderId(Long salesOrderId) {
-        this.salesOrderId = salesOrderId;
     }
 
     void setCostAmount(BigDecimal costAmount) {

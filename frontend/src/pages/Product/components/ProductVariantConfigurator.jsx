@@ -172,7 +172,7 @@ export default function ProductVariantConfigurator({
       <div style={{ padding: '10px 12px', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#374151' }}>
           <input type="checkbox" checked={Boolean(draft.enabled)} disabled={isEdit || isService} onChange={(event) => setEnabled(event.target.checked)} />
-          <span>Hàng hóa có nhiều phiên bản / quy cách</span>
+          <span>Hàng hóa có biến thể</span>
         </label>
         {draft.enabled && (
           <span style={{ fontSize: 12, color: combinationCount > MAX_VARIANT_COMBINATIONS ? '#dc2626' : '#6b7280' }}>

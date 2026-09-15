@@ -160,7 +160,7 @@ public class SalesOrderController {
     // ─── POST: Gửi email báo giá ─────────────────────────────────────────
     @PostMapping("/{id}/send-quote-email")
     @Operation(summary = "Gửi email báo giá cho khách hàng")
-    @PreAuthorize("hasAuthority('sales_order:view')")
+    @PreAuthorize("hasAuthority('sales_order:edit')")
     @Auditable(action = AuditAction.SEND_QUOTE_EMAIL, entityName = "SalesOrder", actionDescription = "Gửi email báo giá")
     public ApiResponse<Void> sendQuoteEmail(
             @PathVariable Long id,

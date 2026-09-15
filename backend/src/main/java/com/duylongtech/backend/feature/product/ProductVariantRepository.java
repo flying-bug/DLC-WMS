@@ -36,12 +36,14 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')))",
+            "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:excludeServices = false OR p.productType IS NULL OR p.productType NOT IN ('Dịch vụ', 'Dich vu'))",
             countQuery = "SELECT COUNT(v) FROM ProductVariant v JOIN v.product p " +
                     "WHERE (:search IS NULL OR :search = '' " +
                     "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%')) " +
                     "OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', :search, '%')) " +
                     "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
-                    "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<ProductVariant> searchVariants(@Param("search") String search, Pageable pageable);
+                    "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                    "AND (:excludeServices = false OR p.productType IS NULL OR p.productType NOT IN ('Dịch vụ', 'Dich vu'))")
+    Page<ProductVariant> searchVariants(@Param("search") String search, @Param("excludeServices") boolean excludeServices, Pageable pageable);
 }

@@ -470,34 +470,55 @@ public class CustomerService {
     public Page<WarrantyHistoryResponse> getWarrantyHistory(Long customerId, int page, int size) {
         Partner customer = findCustomerOrThrow(idCheckSeed(customerId));
         PageRequest pageReq = PageRequest.of(page, size);
-        Page<Warranty> warranties = warrantyRepository.findWarrantiesByCustomerId(customerId, pageReq);
-        
-        return warranties.map(w -> {
-            java.util.List<Repair> repairs = repairRepository.findByWarrantyId(w.getId());
-            java.util.List<WarrantyHistoryResponse.RepairHistory> repairDtos = repairs.stream()
-                .map(r -> WarrantyHistoryResponse.RepairHistory.builder()
-                        .repairId(r.getId())
-                        .repairCode(r.getRepairCode())
-                        .receivedDate(r.getReceivedDate())
-                        .repairStatus(r.getRepairStatus())
-                        .build())
+
+        // Phân trang trên id trước (không JOIN FETCH) để DB cắt trang đúng bằng LIMIT/OFFSET,
+        // rồi mới fetch chi tiết (lines/serial) cho đúng các id của trang đó - tránh Hibernate
+        // phải nạp toàn bộ bảo hành của khách hàng vào bộ nhớ rồi tự cắt trang thủ công.
+        Page<Long> idPage = warrantyRepository.findWarrantyIdsByCustomerId(customerId, pageReq);
+        List<Long> ids = idPage.getContent();
+        if (ids.isEmpty()) {
+            return new org.springframework.data.domain.PageImpl<>(List.of(), pageReq, idPage.getTotalElements());
+        }
+
+        java.util.Map<Long, Warranty> warrantyById = warrantyRepository.findByIdInWithLines(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(Warranty::getId, w -> w));
+
+        // Batch 1 query lấy repairs cho cả trang thay vì 1 query/bảo hành như trước.
+        java.util.Map<Long, java.util.List<Repair>> repairsByWarrantyId = repairRepository.findByWarrantyIdIn(ids).stream()
+                .collect(java.util.stream.Collectors.groupingBy(Repair::getWarrantyId));
+
+        List<WarrantyHistoryResponse> content = ids.stream()
+                .map(warrantyById::get)
+                .filter(java.util.Objects::nonNull)
+                .map(w -> {
+                    java.util.List<WarrantyHistoryResponse.RepairHistory> repairDtos = repairsByWarrantyId
+                            .getOrDefault(w.getId(), List.of()).stream()
+                            .map(r -> WarrantyHistoryResponse.RepairHistory.builder()
+                                    .repairId(r.getId())
+                                    .repairCode(r.getRepairCode())
+                                    .receivedDate(r.getReceivedDate())
+                                    .repairStatus(r.getRepairStatus())
+                                    .build())
+                            .toList();
+
+                    String serials = w.getLines().stream()
+                        .filter(l -> l.getSerialNumber() != null)
+                        .map(l -> l.getSerialNumber().getSerialNumber())
+                        .collect(java.util.stream.Collectors.joining(", "));
+
+                    return WarrantyHistoryResponse.builder()
+                            .warrantyId(w.getId())
+                            .warrantyCode(w.getWarrantyCode())
+                            .serialNumber(serials.isEmpty() ? null : serials)
+                            .startDate(w.getStartDate())
+                            .endDate(w.getEndDate())
+                            .warrantyStatus(w.getWarrantyStatus())
+                            .repairs(repairDtos)
+                            .build();
+                })
                 .toList();
 
-            String serials = w.getLines().stream()
-                .filter(l -> l.getSerialNumber() != null)
-                .map(l -> l.getSerialNumber().getSerialNumber())
-                .collect(java.util.stream.Collectors.joining(", "));
-
-            return WarrantyHistoryResponse.builder()
-                    .warrantyId(w.getId())
-                    .warrantyCode(w.getWarrantyCode())
-                    .serialNumber(serials.isEmpty() ? null : serials)
-                    .startDate(w.getStartDate())
-                    .endDate(w.getEndDate())
-                    .warrantyStatus(w.getWarrantyStatus())
-                    .repairs(repairDtos)
-                    .build();
-        });
+        return new org.springframework.data.domain.PageImpl<>(content, pageReq, idPage.getTotalElements());
     }
 
     /**

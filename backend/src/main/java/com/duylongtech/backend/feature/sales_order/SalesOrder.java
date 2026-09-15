@@ -138,9 +138,6 @@ public class SalesOrder {
         line.calculateAmounts();
         this.lines.add(line);
         line.setSalesOrder(this);
-        if (this.id != null) {
-            line.setSalesOrderId(this.id);
-        }
         recalculateTotals();
     }
 

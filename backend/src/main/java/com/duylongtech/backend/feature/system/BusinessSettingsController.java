@@ -34,6 +34,7 @@ public class BusinessSettingsController {
     }
 
     @GetMapping("/vat")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Lấy mức thuế VAT mặc định hệ thống cho các màn hình nghiệp vụ")
     public ApiResponse<Map<String, Object>> getDefaultVat() {
         return ApiResponse.success(Map.of(

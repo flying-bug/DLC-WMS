@@ -44,8 +44,14 @@ public class AppNotificationController {
     }
 
     @PutMapping("/{id}/read")
-    public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable Long id) {
-        notificationService.markAsRead(id);
+    public ResponseEntity<ApiResponse<Void>> markAsRead(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+        Long userId = currentUser != null ? currentUser.getId() : null;
+        List<String> roles = currentUser != null
+                ? currentUser.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList())
+                : List.of();
+        notificationService.markAsRead(id, userId, roles);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 

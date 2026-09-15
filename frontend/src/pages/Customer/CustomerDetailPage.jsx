@@ -10,6 +10,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './CustomerDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const TABS = {
     SALES: 'SALES',
@@ -20,6 +21,7 @@ const TABS = {
 const CustomerDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const guard = usePermissionGuard();
 
     const [customer, setCustomer] = useState(null);
     const [activeTab, setActiveTab] = useState(TABS.SALES);
@@ -33,6 +35,7 @@ const CustomerDetailPage = () => {
     const [page, setPage] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [tabError, setTabError] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', title: '', message: '' });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: '' });
 
@@ -62,6 +65,7 @@ const CustomerDetailPage = () => {
     const fetchTabData = useCallback(async (currentTab, currentPage = 0) => {
         try {
             setLoading(true);
+            setTabError(null);
             if (currentTab === TABS.SALES) {
                 const res = await getCustomerSalesHistory(id, currentPage, 10);
                 const payload = res.data?.data || res.data;
@@ -91,6 +95,7 @@ const CustomerDetailPage = () => {
             }
         } catch (err) {
             console.error('Lỗi tải dữ liệu tab:', err);
+            setTabError(err.response?.data?.userMessage || 'Không tải được dữ liệu. Vui lòng thử lại.');
         } finally {
             setLoading(false);
         }
@@ -106,6 +111,7 @@ const CustomerDetailPage = () => {
     };
 
     const handleToggleStatus = () => {
+        if (!guard('customer:edit')) return;
         const action = customer.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt';
         setConfirmModal({ isOpen: true, action });
     };
@@ -187,7 +193,7 @@ const CustomerDetailPage = () => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
+                        <button className={styles.btnOutline} onClick={() => guard('customer:edit', () => setIsEditModalOpen(true))}>
                             <i className="bi bi-pencil"></i> Chỉnh sửa
                         </button>
                         {customer.status === 'APPROVED' ? (
@@ -304,13 +310,13 @@ const CustomerDetailPage = () => {
 
                     <div className={styles.tabContent}>
                         {activeTab === TABS.SALES && (
-                            <SalesHistoryTab data={salesData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} />
+                            <SalesHistoryTab data={salesData} loading={loading} error={tabError} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} />
                         )}
                         {activeTab === TABS.WARRANTY && (
-                            <WarrantyTab data={warrantyData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
+                            <WarrantyTab data={warrantyData} loading={loading} error={tabError} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
                         )}
                         {activeTab === TABS.RECEIPT && (
-                            <ReceiptsTab data={receiptData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} customerId={id} />
+                            <ReceiptsTab data={receiptData} loading={loading} error={tabError} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} customerId={id} />
                         )}
                     </div>
                 </div>

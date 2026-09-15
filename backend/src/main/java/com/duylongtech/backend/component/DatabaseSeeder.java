@@ -116,6 +116,14 @@ public class DatabaseSeeder implements CommandLineRunner {
         // 3. Gán Permissions cho các Roles
         associatePermissionsWithRoles();
 
+        // 3b. Vá các quyền module mới thêm sau khi hệ thống đã khởi tạo (vd. "einvoice")
+        // - associatePermissionsWithRoles() ở trên chỉ gán full bộ quyền mặc định cho role
+        // đang trống hẳn, để không ghi đè quyền admin đã tùy chỉnh qua màn Phân quyền. Nếu
+        // module mới được thêm vào seedPermissions() sau khi hệ thống đã chạy, role không còn
+        // trống nữa nên sẽ không tự nhận được quyền mới đó. Hàm này chỉ merge thêm đúng những
+        // quyền còn thiếu của module mới, không đụng tới bất kỳ quyền nào khác của role.
+        backfillNewModulePermissions();
+
         // 4. Seed Users mẫu cho 6 Roles
         seedUsers(superAdminRole, managerRole, whControllerRole, technicianRole, accountantRole, cashierRole);
 
@@ -188,11 +196,16 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("export", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("purchase_order", new String[]{"view", "add", "edit"});
         moduleActions.put("sales_order", new String[]{"view", "add", "edit", "export", "print"});
-        moduleActions.put("payment", new String[]{"view", "add", "edit"});
+        moduleActions.put("einvoice", new String[]{"view", "add", "edit"});
+        moduleActions.put("payment", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("transfer", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly_config", new String[]{"view", "add", "edit"});
-        moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        // approve/submit: AssemblyOrderController đã dùng "assembly:approve"/"assembly:submit"
+        // và RoleService đã có sẵn logic gán 2 quyền này cho Kế toán/Kỹ thuật viên, nhưng chưa
+        // từng được seed - nghĩa là quyền này chưa bao giờ thực sự tồn tại để cấp cho ai, nên
+        // mọi API duyệt/nộp BOM và lệnh lắp ráp/tháo dỡ trước giờ luôn trả 403 cho tất cả role.
+        moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print", "approve", "submit"});
         moduleActions.put("warranty", new String[]{"view", "add", "edit"});
         moduleActions.put("repair", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
@@ -259,6 +272,37 @@ public class DatabaseSeeder implements CommandLineRunner {
                             },
                             () -> systemSettingRepository.save(createSystemSetting("system.roles_permissions_initialized", "true", "Đánh dấu quyền vai trò đã được khởi tạo lần đầu"))
                     );
+        }
+    }
+
+    private void backfillNewModulePermissions() {
+        // PermissionEntity không override equals()/hashCode() (mặc định theo tham chiếu object),
+        // nên so sánh "đã có quyền X chưa" phải dựa theo id - nếu dùng thẳng Set.contains(entity)
+        // như associatePermissionsWithRoles(), 2 instance khác nhau cùng trỏ 1 dòng DB (permission
+        // vừa fetch riêng vs. permission đã có sẵn trong role.getPermissions()) sẽ bị coi là khác
+        // nhau, merge xong role sẽ có 2 bản ghi trùng permission_id trong ROLE_PERMISSIONS.
+        Set<PermissionEntity> allPerms = new HashSet<>(permissionRepository.findAll());
+        for (RoleEntity role : roleRepository.findAll()) {
+            Set<PermissionEntity> defaults = RoleService.getDefaultPermissionsForRole(role.getCode(), allPerms);
+            Set<PermissionEntity> current = role.getPermissions();
+            Set<Long> currentIds = new HashSet<>();
+            if (current != null) {
+                for (PermissionEntity p : current) {
+                    currentIds.add(p.getId());
+                }
+            }
+            Set<PermissionEntity> missing = new HashSet<>();
+            for (PermissionEntity perm : defaults) {
+                if (!currentIds.contains(perm.getId())) {
+                    missing.add(perm);
+                }
+            }
+            if (!missing.isEmpty()) {
+                Set<PermissionEntity> merged = new HashSet<>(current != null ? current : Set.of());
+                merged.addAll(missing);
+                role.updatePermissions(merged);
+                roleRepository.save(role);
+            }
         }
     }
 

@@ -11,12 +11,14 @@ import PurchaseHistoryTab from './components/PurchaseHistoryTab';
 import PaymentHistoryTab from './components/PaymentHistoryTab';
 import styles from './SupplierDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const guard = usePermissionGuard();
     
     const [supplier, setSupplier] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -25,6 +27,8 @@ const SupplierDetailPage = () => {
     const [purchaseHistory, setPurchaseHistory] = useState([]);
     const [paymentHistory, setPaymentHistory] = useState([]);
     const [debtBalance, setDebtBalance] = useState(0);
+    const [purchaseError, setPurchaseError] = useState(null);
+    const [paymentError, setPaymentError] = useState(null);
     
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -47,6 +51,8 @@ const SupplierDetailPage = () => {
                 setDebtBalance(Number(supplierData.currentDebt || 0));
 
                 setHistoryLoading(true);
+                setPurchaseError(null);
+                setPaymentError(null);
                 const [ordersRes, paymentRes, balanceRes] = await Promise.allSettled([
                     purchaseOrderApi.getPurchaseOrders({ partnerId: id }),
                     paymentApi.getPartnerPaymentHistory(id),
@@ -55,9 +61,15 @@ const SupplierDetailPage = () => {
 
                 if (balanceRes.status === 'fulfilled') {
                     setDebtBalance(Number(unwrap(balanceRes.value) || supplierData.currentDebt || 0));
+                } else {
+                    console.error('Lỗi tải dư nợ NCC:', balanceRes.reason);
+                    setPaymentError('Không tải được dư nợ hiện tại');
                 }
                 if (paymentRes.status === 'fulfilled') {
                     setPaymentHistory(unwrap(paymentRes.value) || []);
+                } else {
+                    console.error('Lỗi tải lịch sử thu chi:', paymentRes.reason);
+                    setPaymentError('Không tải được lịch sử thu chi');
                 }
                 if (ordersRes.status === 'fulfilled') {
                     const orders = (unwrap(ordersRes.value) || [])
@@ -65,6 +77,11 @@ const SupplierDetailPage = () => {
                     const detailResults = await Promise.allSettled(
                         orders.map(order => purchaseOrderApi.getPurchaseOrderById(order.id))
                     );
+                    const failedDetail = detailResults.some(result => result.status !== 'fulfilled');
+                    if (failedDetail) {
+                        console.error('Lỗi tải chi tiết một số đơn mua:', detailResults.filter(r => r.status !== 'fulfilled'));
+                        setPurchaseError('Một số đơn mua không tải được, danh sách có thể chưa đầy đủ');
+                    }
                     const lines = detailResults.flatMap((result, index) => {
                         if (result.status !== 'fulfilled') return [];
                         const order = unwrap(result.value) || orders[index];
@@ -76,6 +93,9 @@ const SupplierDetailPage = () => {
                         }));
                     });
                     setPurchaseHistory(lines);
+                } else {
+                    console.error('Lỗi tải lịch sử mua hàng:', ordersRes.reason);
+                    setPurchaseError('Không tải được lịch sử mua hàng');
                 }
                 setHistoryLoading(false);
             }
@@ -147,10 +167,10 @@ const SupplierDetailPage = () => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
+                        <button className={styles.btnOutline} onClick={() => guard('supplier:edit', () => setIsEditModalOpen(true))}>
                             <i className="bi bi-pencil"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => setIsDeleteModalOpen(true)}>
+                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => guard('supplier:delete', () => setIsDeleteModalOpen(true))}>
                             <i className="bi bi-trash"></i> Xóa
                         </button>
                     </div>
@@ -249,6 +269,7 @@ const SupplierDetailPage = () => {
                             <PurchaseHistoryTab
                                 data={purchaseHistory}
                                 loading={historyLoading}
+                                error={purchaseError}
                                 formatDate={formatDate}
                                 formatCurrency={formatCurrency}
                                 styles={styles}
@@ -258,6 +279,7 @@ const SupplierDetailPage = () => {
                                 data={paymentHistory}
                                 debtBalance={debtBalance}
                                 loading={historyLoading}
+                                error={paymentError}
                                 formatDateTime={formatPaymentDateTime}
                                 formatCurrency={formatCurrency}
                                 styles={styles}

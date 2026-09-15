@@ -12,6 +12,7 @@ import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import styles from './AssemblyOrderListPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_META = {
@@ -19,8 +20,8 @@ const STATUS_META = {
     PENDING_APPROVAL: { label: 'Chờ duyệt', code: 'warning' },
     REJECTED: { label: 'Từ chối', code: 'danger' },
     APPROVED: { label: 'Đã duyệt', code: 'primary' },
-    IN_PROGRESS: { label: 'Đang thực hiện', code: 'warning' },
-    COMPLETED: { label: 'Hoàn thành', code: 'success' },
+    SUBMITTED: { label: 'Đang thực hiện', code: 'warning' },
+    POSTED: { label: 'Hoàn thành', code: 'success' },
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
@@ -64,6 +65,7 @@ const formatDate = (value) => value ? formatDateOnly(value) : '---';
 
 function AssemblyOrderListPage() {
     const navigate = useNavigate();
+    const guard = usePermissionGuard();
 
     // Data states
     const [orders, setOrders] = useState([]);
@@ -225,10 +227,10 @@ function AssemblyOrderListPage() {
                         </p>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className={styles.btnOutline} onClick={() => navigate('/assembly-orders/create?type=DISASSEMBLY')}>
+                        <button className={styles.btnOutline} onClick={() => guard('assembly:add', () => navigate('/assembly-orders/create?type=DISASSEMBLY'))}>
                             <i className="bi bi-box-arrow-down"></i> Tạo tháo dỡ
                         </button>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/assembly-orders/create?type=ASSEMBLY')}>
+                        <button className={styles.btnPrimary} onClick={() => guard('assembly:add', () => navigate('/assembly-orders/create?type=ASSEMBLY'))}>
                             <i className="bi bi-plus"></i> Tạo lắp ráp
                         </button>
                     </div>
@@ -360,11 +362,13 @@ function AssemblyOrderListPage() {
                                                     title="Cập nhật lệnh"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (!['DRAFT', 'REJECTED'].includes(item.status)) {
-                                                            showToast('error', 'Lệnh đã hoàn thành không được phép chỉnh sửa.');
-                                                        } else {
-                                                            navigate(`/assembly-orders/${item.id}?mode=edit`);
-                                                        }
+                                                        guard('assembly:edit', () => {
+                                                            if (!['DRAFT', 'REJECTED'].includes(item.status)) {
+                                                                showToast('error', 'Lệnh đã hoàn thành không được phép chỉnh sửa.');
+                                                            } else {
+                                                                navigate(`/assembly-orders/${item.id}?mode=edit`);
+                                                            }
+                                                        });
                                                     }}
                                                 ></i>
                                             </td>

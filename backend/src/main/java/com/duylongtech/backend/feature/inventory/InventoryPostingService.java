@@ -142,21 +142,21 @@ public class InventoryPostingService {
             DocumentStatus.UNPOSTED.name());
     private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.UNPOSTED.name());
 
-    // PhÃƒÆ’Ã‚Â¢n loÃƒÂ¡Ã‚ÂºÃ‚Â¡i phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho thÃƒÂ¡Ã‚Â»Ã‚Â§ cÃƒÆ’Ã‚Â´ng (do ngÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Âi dÃƒÆ’Ã‚Â¹ng tÃƒÂ¡Ã‚ÂºÃ‚Â¡o)
-    public static final String ISSUE_PURPOSE_SALES = "SALES"; // XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho bÃƒÆ’Ã‚Â¡n hÃƒÆ’Ã‚Â ng ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â tÃƒÂ¡Ã‚Â»Ã‚Â± sinh bÃƒÂ¡Ã‚ÂºÃ‚Â£o hÃƒÆ’Ã‚Â nh
-    public static final String ISSUE_PURPOSE_USAGE = "USAGE"; // XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho sÃƒÂ¡Ã‚Â»Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã‚Â¥ng nÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢i bÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â khÃƒÆ’Ã‚Â´ng sinh bÃƒÂ¡Ã‚ÂºÃ‚Â£o hÃƒÆ’Ã‚Â nh
-    public static final String ISSUE_PURPOSE_ASSEMBLY = "ASSEMBLY"; // XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho lÃƒÂ¡Ã‚ÂºÃ‚Â¯p rÃƒÆ’Ã‚Â¡p/thÃƒÆ’Ã‚Â¡o dÃƒÂ¡Ã‚Â»Ã‚Â¡
+    // Phân loại phiếu xuất kho thủ công (do người dùng tạo)
+    public static final String ISSUE_PURPOSE_SALES = "SALES"; // Xuất kho bán hàng – tự sinh bảo hành
+    public static final String ISSUE_PURPOSE_USAGE = "USAGE"; // Xuất kho sử dụng nội bộ – không sinh bảo hành
+    public static final String ISSUE_PURPOSE_ASSEMBLY = "ASSEMBLY"; // Xuất kho lắp ráp/tháo dỡ
 
-    // PhÃƒÆ’Ã‚Â¢n loÃƒÂ¡Ã‚ÂºÃ‚Â¡i phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t/nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng tÃƒÂ¡Ã‚Â»Ã‚Â« module ChuyÃƒÂ¡Ã‚Â»Ã†â€™n kho
-    public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho chuyÃƒÂ¡Ã‚Â»Ã†â€™n Ãƒâ€žÃ¢â‚¬Ëœi
-    public static final String ISSUE_PURPOSE_TRANSFER_IN = "TRANSFER_IMPORT"; // NhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho tÃƒÂ¡Ã‚Â»Ã‚Â« chuyÃƒÂ¡Ã‚Â»Ã†â€™n vÃƒÂ¡Ã‚Â»Ã‚Â
-    public static final String ISSUE_PURPOSE_INVENTORY_ADJUSTMENT = "INVENTORY_ADJUSTMENT"; // XÃƒÂ¡Ã‚Â»Ã‚Â­ lÃƒÆ’Ã‚Â½ chÃƒÆ’Ã‚Âªnh lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡ch kiÃƒÂ¡Ã‚Â»Ã†â€™m kÃƒÆ’Ã‚Âª
+    // Phân loại phiếu xuất/nhập kho tự động từ module Chuyển kho
+    public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
+    public static final String ISSUE_PURPOSE_TRANSFER_IN = "TRANSFER_IMPORT"; // Nhập kho từ chuyển về
+    public static final String ISSUE_PURPOSE_INVENTORY_ADJUSTMENT = "INVENTORY_ADJUSTMENT"; // Xử lý chênh lệch kiểm kê
 
-    // TÃƒÂ¡Ã‚ÂºÃ‚Â­p hÃƒÂ¡Ã‚Â»Ã‚Â£p cÃƒÆ’Ã‚Â¡c mÃƒÂ¡Ã‚Â»Ã‚Â¥c Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â­ch hÃƒÂ¡Ã‚Â»Ã‚Â£p lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡ khi ngÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Âi dÃƒÆ’Ã‚Â¹ng tÃƒÂ¡Ã‚ÂºÃ‚Â¡o phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t thÃƒÂ¡Ã‚Â»Ã‚Â§ cÃƒÆ’Ã‚Â´ng
+    // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
     private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE,
             ISSUE_PURPOSE_ASSEMBLY);
 
-    // TÃƒÂ¡Ã‚ÂºÃ‚Â­p hÃƒÂ¡Ã‚Â»Ã‚Â£p cÃƒÆ’Ã‚Â¡c mÃƒÂ¡Ã‚Â»Ã‚Â¥c Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â­ch hÃƒÂ¡Ã‚Â»Ã‚Â£p lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡ toÃƒÆ’Ã‚Â n bÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ (bÃƒÂ¡Ã‚ÂºÃ‚Â¯t cÃƒÂ¡Ã‚ÂºÃ‚Â£ nÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢i bÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ vÃƒÆ’Ã‚Â  ngÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Âi dÃƒÆ’Ã‚Â¹ng)
+    // Tập hợp các mục đích hợp lệ toàn bộ (bắt cả nội bộ và người dùng)
     private static final Set<String> VALID_ALL_EXPORT_PURPOSES = Set.of(
             ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_TRANSFER_OUT,
             ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
@@ -203,7 +203,7 @@ public class InventoryPostingService {
         for (InventoryDocumentLine line : doc.getLines()) {
             Long effectiveWarehouseId = line.getWarehouseId() != null ? line.getWarehouseId() : doc.getWarehouseId();
             if (effectiveWarehouseId == null) {
-                throw new BusinessException("DÃƒÆ’Ã‚Â²ng sÃƒÂ¡Ã‚ÂºÃ‚Â£n phÃƒÂ¡Ã‚ÂºÃ‚Â©m chÃƒâ€ Ã‚Â°a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Â£c chÃƒÂ¡Ã‚Â»Ã‚Ân kho xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t");
+                throw new BusinessException("Dòng sản phẩm chưa được chọn kho xuất");
             }
             BigDecimal qtyToExport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
                     ? line.getBaseQuantity()
@@ -223,7 +223,7 @@ public class InventoryPostingService {
                 }
             } else if (targetSerialId != null) {
                 SerialNumber snObj = serialNumberRepository.findByIdForUpdate(targetSerialId)
-                        .orElseThrow(() -> new BusinessException("KhÃƒÆ’Ã‚Â´ng tÃƒÆ’Ã‚Â¬m thÃƒÂ¡Ã‚ÂºÃ‚Â¥y serial cÃƒÂ¡Ã‚ÂºÃ‚Â§n xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t"));
+                        .orElseThrow(() -> new BusinessException("Không tìm thấy serial cần xuất"));
                 serialsToExport.add(snObj);
             }
 
@@ -361,7 +361,7 @@ public class InventoryPostingService {
                     .orElse(LocalDate.now());
             w.setEndDate(maxEndDate);
             w.setWarrantyStatus(WarrantyStatus.ACTIVE.name());
-            w.setNote("TÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng sinh tÃƒÂ¡Ã‚Â»Ã‚Â« phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t " + doc.getDocCode());
+            w.setNote("Tự động sinh từ phiếu xuất " + doc.getDocCode());
             for (com.duylongtech.backend.feature.warranty.WarrantyLineRequest reqLine : warrantyLines) {
                 com.duylongtech.backend.feature.warranty.WarrantyLine wLine = new com.duylongtech.backend.feature.warranty.WarrantyLine();
                 wLine.setWarranty(w);
@@ -405,19 +405,22 @@ public class InventoryPostingService {
                             doc.getDocCode(),
                             totalDebt,
                             BigDecimal.ZERO,
-                            "Ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n cÃƒÆ’Ã‚Â´ng nÃƒÂ¡Ã‚Â»Ã‚Â£ xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho bÃƒÆ’Ã‚Â¡n hÃƒÆ’Ã‚Â ng " + doc.getDocCode());
+                            "Ghi nhận công nợ xuất kho bán hàng " + doc.getDocCode());
                 }
             }
         }
 
-        doc.post(null);
+        String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Long currentUserId = userRepository.findByUsername(actor)
+                .map(com.duylongtech.backend.feature.auth.User::getId).orElse(null);
+        doc.post(currentUserId);
         doc.setUpdatedAt(LocalDateTime.now());
 
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
 
         try {
             auditLogService.logEvent(null, "POST_EXPORT", "InventoryDocument", saved.getId(), "SUCCESS",
-                    "Ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho " + saved.getDocCode() + " ("
+                    "Ghi sổ phiếu xuất kho " + saved.getDocCode() + " ("
                             + (saved.getIssuePurpose() != null ? saved.getIssuePurpose() : "EX_SO") + ")",
                     null, null);
         } catch (Exception ignored) {
@@ -439,7 +442,7 @@ public class InventoryPostingService {
             Long effectiveWarehouseId = line.getWarehouseId() != null ? line.getWarehouseId()
                     : savedDoc.getWarehouseId();
             if (effectiveWarehouseId == null) {
-                throw new BusinessException("DÃƒÆ’Ã‚Â²ng sÃƒÂ¡Ã‚ÂºÃ‚Â£n phÃƒÂ¡Ã‚ÂºÃ‚Â©m chÃƒâ€ Ã‚Â°a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Â£c chÃƒÂ¡Ã‚Â»Ã‚Ân kho nhÃƒÂ¡Ã‚ÂºÃ‚Â­p");
+                throw new BusinessException("Dòng sản phẩm chưa được chọn kho nhập");
             }
             BigDecimal qtyToImport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
                     ? line.getBaseQuantity()
@@ -486,12 +489,15 @@ public class InventoryPostingService {
             createImportedSerialsIfNeeded(savedDoc, line, unitCost, effectiveWarehouseId);
         }
 
-        savedDoc.post(null);
+        String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Long currentUserId = userRepository.findByUsername(actor)
+                .map(com.duylongtech.backend.feature.auth.User::getId).orElse(null);
+        savedDoc.post(currentUserId);
         savedDoc.setUpdatedAt(LocalDateTime.now());
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);
 
-        // Ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n tÃƒâ€žÃ†â€™ng cÃƒÆ’Ã‚Â´ng nÃƒÂ¡Ã‚Â»Ã‚Â£ nhÃƒÆ’Ã‚Â  cung cÃƒÂ¡Ã‚ÂºÃ‚Â¥p khi nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho (luÃƒÆ’Ã‚Â´n luÃƒÆ’Ã‚Â´n ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n nÃƒÂ¡Ã‚ÂºÃ‚Â¿u cÃƒÆ’Ã‚Â³
+        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (luôn luôn ghi nhận nếu có
         // partnerId)
         if (savedImport.getPartnerId() != null) {
             BigDecimal totalImportValue = savedImport.getLines().stream()
@@ -517,7 +523,7 @@ public class InventoryPostingService {
                     savedImport.getDocCode(),
                     totalImportValue,
                     BigDecimal.ZERO,
-                    "Ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n cÃƒÆ’Ã‚Â´ng nÃƒÂ¡Ã‚Â»Ã‚Â£ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho " + savedImport.getDocCode());
+                    "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode());
         }
 
         if (savedImport.getPurchaseOrderId() != null) {
@@ -540,14 +546,14 @@ public class InventoryPostingService {
             }
         }
 
-        // TÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng kiÃƒÂ¡Ã‚Â»Ã†â€™m tra vÃƒÆ’Ã‚Â  chuyÃƒÂ¡Ã‚Â»Ã†â€™n BACKORDERED thÃƒÆ’Ã‚Â nh HOLDING cho cÃƒÆ’Ã‚Â¡c Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n hÃƒÆ’Ã‚Â ng bÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹
-        // thiÃƒÂ¡Ã‚ÂºÃ‚Â¿u hÃƒÆ’Ã‚Â ng trÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã¢â‚¬Âºc Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â¢y
+        // Tự động kiểm tra và chuyển BACKORDERED thành HOLDING cho các đơn hàng bị
+        // thiếu hàng trước đây
         savedImport.getLines().stream()
                 .map(InventoryDocumentLine::getVariantId)
                 .distinct()
                 .forEach(variantId -> salesOrderService.reEvaluateBackorders(savedImport.getWarehouseId(), variantId));
 
-        // KiÃƒÂ¡Ã‚Â»Ã†â€™m tra chÃƒÆ’Ã‚Âªnh lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡ch giÃƒÂ¡Ã‚Â»Ã‚Â¯a sÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœ lÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Â£ng dÃƒÂ¡Ã‚Â»Ã‚Â± kiÃƒÂ¡Ã‚ÂºÃ‚Â¿n vÃƒÆ’Ã‚Â  thÃƒÂ¡Ã‚Â»Ã‚Â±c nhÃƒÂ¡Ã‚ÂºÃ‚Â­n
+        // Kiểm tra chênh lệch giữa số lượng dự kiến và thực nhận
         boolean hasDiscrepancy = false;
         StringBuilder discrepancyDetails = new StringBuilder();
         for (InventoryDocumentLine line : savedImport.getLines()) {
@@ -565,10 +571,10 @@ public class InventoryPostingService {
                 String sku = pv != null ? pv.getSku() : String.valueOf(line.getVariantId());
                 BigDecimal diff = exp.subtract(act);
                 discrepancyDetails.append(
-                        String.format("ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ %s: DÃƒÂ¡Ã‚Â»Ã‚Â± kiÃƒÂ¡Ã‚ÂºÃ‚Â¿n %s, ThÃƒÂ¡Ã‚Â»Ã‚Â±c nhÃƒÂ¡Ã‚ÂºÃ‚Â­n %s (ThiÃƒÂ¡Ã‚ÂºÃ‚Â¿u: %s, LÃƒÂ¡Ã‚Â»Ã¢â‚¬â€i: %s). Chi tiÃƒÂ¡Ã‚ÂºÃ‚Â¿t lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡ch: %s\n",
+                        String.format("• %s: Dự kiến %s, Thực nhận %s (Thiếu: %s, Lỗi: %s). Chi tiết lệch: %s\n",
                                 sku, exp.stripTrailingZeros().toPlainString(), act.stripTrailingZeros().toPlainString(),
                                 diff.stripTrailingZeros().toPlainString(), rej.stripTrailingZeros().toPlainString(),
-                                line.getDiscrepancyReason() != null ? line.getDiscrepancyReason() : "ChÃƒâ€ Ã‚Â°a nhÃƒÂ¡Ã‚ÂºÃ‚Â­p lÃƒÆ’Ã‚Â½ do"));
+                                line.getDiscrepancyReason() != null ? line.getDiscrepancyReason() : "Chưa nhập lý do"));
             }
 
         }
@@ -584,9 +590,9 @@ public class InventoryPostingService {
                     partnerName = partnerRepository.findById(savedImport.getPartnerId()).map(Partner::getName)
                             .orElse("");
                 }
-                String notifTitle = "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â CÃƒÂ¡Ã‚ÂºÃ‚Â£nh bÃƒÆ’Ã‚Â¡o nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho thiÃƒÂ¡Ã‚ÂºÃ‚Â¿u: " + savedImport.getDocCode();
+                String notifTitle = "⚠️ Cảnh báo nhập kho thiếu: " + savedImport.getDocCode();
                 String notifMsg = String.format(
-                        "ThÃƒÂ¡Ã‚Â»Ã‚Â§ kho Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â£ kiÃƒÂ¡Ã‚Â»Ã†â€™m nhÃƒÂ¡Ã‚ÂºÃ‚Â­n phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u %s %s nhÃƒâ€ Ã‚Â°ng phÃƒÆ’Ã‚Â¡t hiÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡n thiÃƒÂ¡Ã‚ÂºÃ‚Â¿u/hÃƒÆ’Ã‚Â ng lÃƒÂ¡Ã‚Â»Ã¢â‚¬â€i:\n%s\nVui lÃƒÆ’Ã‚Â²ng Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœi soÃƒÆ’Ã‚Â¡t lÃƒÂ¡Ã‚ÂºÃ‚Â¡i hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n vÃƒÆ’Ã‚Â  cÃƒÆ’Ã‚Â´ng nÃƒÂ¡Ã‚Â»Ã‚Â£ vÃƒÂ¡Ã‚Â»Ã¢â‚¬Âºi NCC.",
+                        "Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện thiếu/hàng lỗi:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với NCC.",
                         savedImport.getDocCode(), partnerName.isBlank() ? "" : "(NCC: " + partnerName + ")",
                         discrepancyDetails.toString().trim());
 
@@ -602,9 +608,9 @@ public class InventoryPostingService {
         }
 
         try {
-            String postDesc = "Ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho " + savedImport.getDocCode();
+            String postDesc = "Ghi sổ phiếu nhập kho " + savedImport.getDocCode();
             if (Boolean.TRUE.equals(savedImport.getHasDiscrepancy())) {
-                postDesc += " (CÃƒÆ’Ã‚Â³ chÃƒÆ’Ã‚Âªnh lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡ch: " + savedImport.getDiscrepancyNote() + ")";
+                postDesc += " (Có chênh lệch: " + savedImport.getDiscrepancyNote() + ")";
             }
             auditLogService.logEvent(null, "POST_IMPORT", "InventoryDocument", savedImport.getId(), "SUCCESS", postDesc,
                     null, null);
@@ -618,18 +624,18 @@ public class InventoryPostingService {
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findImportOrThrow(id);
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
-            throw new BusinessException("ChÃƒÂ¡Ã‚Â»Ã¢â‚¬Â° cÃƒÆ’Ã‚Â³ thÃƒÂ¡Ã‚Â»Ã†â€™ bÃƒÂ¡Ã‚Â»Ã‚Â ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ chÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â« Ãƒâ€žÃ¢â‚¬Ëœang ÃƒÂ¡Ã‚Â»Ã…Â¸ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i Ãƒâ€žÃ‚ÂÃƒÆ’Ã†â€™ GHI SÃƒÂ¡Ã‚Â»Ã¢â‚¬Â (POSTED).");
+            throw new BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đang ở trạng thái ĐÃ GHI SỔ (POSTED).");
         }
 
         com.duylongtech.backend.feature.inventory.DependencyCheckResponse check = documentDependencyService
                 .checkImportSlipUnpostable(id);
         if (!check.isCanUnpost()) {
-            throw new BusinessException(check.getMessage() + " Chi tiÃƒÂ¡Ã‚ÂºÃ‚Â¿t: " + String.join("; ", check.getDetails()));
+            throw new BusinessException(check.getMessage() + " Chi tiết: " + String.join("; ", check.getDetails()));
         }
 
         Long warehouseId = doc.getWarehouseId();
 
-        // 1. HoÃƒÆ’Ã‚Â n tÃƒÆ’Ã‚Â¡c tÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“n kho (giÃƒÂ¡Ã‚ÂºÃ‚Â£m sÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœ lÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Â£ng Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â£ nhÃƒÂ¡Ã‚ÂºÃ‚Â­p)
+        // 1. Hoàn tác tồn kho (giảm số lượng đã nhập)
         for (InventoryDocumentLine line : doc.getLines()) {
             if (line.getVariantId() == null)
                 continue;
@@ -650,7 +656,7 @@ public class InventoryPostingService {
                 inventoryLedgerRepository.save(ledger);
             }
 
-            // XÃƒÆ’Ã‚Â³a Serial Numbers Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â£ sinh nÃƒÂ¡Ã‚ÂºÃ‚Â¿u cÃƒÆ’Ã‚Â³
+            // Xóa Serial Numbers đã sinh nếu có
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
                 String[] rawSerials = line.getSerialNumbersText().split("[,;\\s\\n]+");
                 for (String sn : rawSerials) {
@@ -663,7 +669,7 @@ public class InventoryPostingService {
             }
         }
 
-        // 2. ChuyÃƒÂ¡Ã‚Â»Ã†â€™n trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i PO nÃƒÂ¡Ã‚ÂºÃ‚Â¿u cÃƒÆ’Ã‚Â³
+        // 2. Chuyển trạng thái PO nếu có
         if (doc.getPurchaseOrderId() != null) {
             purchaseOrderRepository.findById(doc.getPurchaseOrderId()).ifPresent(po -> {
                 if (DocumentStatus.POSTED.name().equals(po.getStatus())) {
@@ -673,7 +679,12 @@ public class InventoryPostingService {
             });
         }
 
-        // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
+        // 2b. Hoàn tác công nợ nhà cung cấp đã ghi lúc post (trước đây bị bỏ sót, khiến
+        // "Dư nợ hiện tại" của NCC bị treo sai sau khi bỏ ghi sổ phiếu nhập)
+        partnerLedgerService.reverseLedger("INVENTORY_IMPORT", doc.getId(), "UNPOST_IMPORT", doc.getDocCode(),
+                "Hoàn tác công nợ do bỏ ghi sổ phiếu nhập " + doc.getDocCode());
+
+        // 3. Cập nhật trạng thứng từ
         doc.unpost(currentUserId, reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu nhập");
         doc.setUpdatedAt(LocalDateTime.now());
 
@@ -684,7 +695,7 @@ public class InventoryPostingService {
                     ? userRepository.findById(currentUserId).map(User::getUsername).orElse(null)
                     : null;
             auditLogService.logEvent(username, "UNPOST_IMPORT", "InventoryDocument", doc.getId(), "SUCCESS",
-                    "BÃƒÂ¡Ã‚Â»Ã‚Â  ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho " + doc.getDocCode() + ". LÃƒÆ’Ã‚Â½ do: " + doc.getUnpostReason(), null, null);
+                    "Bỏ ghi sổ phiếu nhập kho " + doc.getDocCode() + ". Lý do: " + doc.getUnpostReason(), null, null);
         } catch (Exception ignored) {
         }
 
@@ -695,7 +706,7 @@ public class InventoryPostingService {
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findExportOrThrow(id);
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
-            throw new BusinessException("ChÃƒÂ¡Ã‚Â»Ã¢â‚¬Â° cÃƒÆ’Ã‚Â³ thÃƒÂ¡Ã‚Â»Ã†â€™ bÃƒÂ¡Ã‚Â»Ã‚Â  ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ chÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â« Ãƒâ€žÃ¢â‚¬Ëœang ÃƒÂ¡Ã‚Â»Ã…Â¸ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i Ãƒâ€žÃ‚Â ÃƒÆ’Ã†â€™ GHI SÃƒÂ¡Ã‚Â»Ã¢â‚¬Â  (POSTED).");
+            throw new BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đang ở trạng thái ĐÃ GHI SỔ (POSTED).");
         }
 
         com.duylongtech.backend.feature.inventory.DependencyCheckResponse check = documentDependencyService
@@ -706,7 +717,7 @@ public class InventoryPostingService {
 
         Long warehouseId = doc.getWarehouseId();
 
-        // 1. HoÃƒÆ’Ã‚Â n tÃƒÆ’Ã‚Â¡c tÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“n kho (cÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng lÃƒÂ¡Ã‚ÂºÃ‚Â¡i sÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœ lÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Â£ng Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â£ xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t)
+        // 1. Hoàn tác tồn kho (cộng lại số lượng đã xuất)
         for (InventoryDocumentLine line : doc.getLines()) {
             if (line.getVariantId() == null)
                 continue;
@@ -727,7 +738,7 @@ public class InventoryPostingService {
                 inventoryLedgerRepository.save(ledger);
             }
 
-            // TrÃƒÂ¡Ã‚ÂºÃ‚Â£ lÃƒÂ¡Ã‚ÂºÃ‚Â¡i trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i Serial = AVAILABLE
+            // Trả lại trạng thái Serial = AVAILABLE
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
                 String[] rawSerials = line.getSerialNumbersText().split("[,;\\s\\n]+");
                 for (String sn : rawSerials) {
@@ -745,7 +756,7 @@ public class InventoryPostingService {
             }
         }
 
-        // 2. ChuyÃƒÂ¡Ã‚Â»Ã†â€™n trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚ÂºÃ‚Â¿i SO nÃƒÂ¡Ã‚ÂºÃ‚Â¿u cÃƒÆ’Ã‚Â³
+        // 2. Chuyển trạng thếi SO nếu có
         if (doc.getSalesOrderId() != null) {
             salesOrderRepository.findById(doc.getSalesOrderId()).ifPresent(so -> {
                 if (DocumentStatus.POSTED.name().equals(so.getStatus())) {
@@ -755,7 +766,12 @@ public class InventoryPostingService {
             });
         }
 
-        // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÂ¡Ã‚Â»Ã‚Â©ng tÃƒÂ¡Ã‚Â»Ã‚Â«
+        // 2b. Hoàn tác công nợ khách hàng đã ghi lúc post (trước đây bị bỏ sót, khiến
+        // "Dư nợ hiện tại" của khách hàng bị treo sai sau khi bỏ ghi sổ phiếu xuất)
+        partnerLedgerService.reverseLedger("INVENTORY_EXPORT_SO", doc.getId(), "UNPOST_EXPORT_SO", doc.getDocCode(),
+                "Hoàn tác công nợ do bỏ ghi sổ phiếu xuất " + doc.getDocCode());
+
+        // 3. Cập nhật trạng thứng từ
         doc.unpost(currentUserId, reason != null && !reason.isBlank() ? reason.trim() : "Bỏ ghi sổ phiếu xuất");
         doc.setUpdatedAt(LocalDateTime.now());
 
@@ -766,7 +782,7 @@ public class InventoryPostingService {
                     ? userRepository.findById(currentUserId).map(User::getUsername).orElse(null)
                     : null;
             auditLogService.logEvent(username, "UNPOST_EXPORT", "InventoryDocument", doc.getId(), "SUCCESS",
-                    "BÃƒÂ¡Ã‚Â»Ã‚Â ghi sÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho " + doc.getDocCode() + ". LÃƒÆ’Ã‚Â½ do: " + doc.getUnpostReason(), null, null);
+                    "Bỏ ghi sổ phiếu xuất kho " + doc.getDocCode() + ". Lý do: " + doc.getUnpostReason(), null, null);
         } catch (Exception ignored) {
         }
 
@@ -856,9 +872,9 @@ public class InventoryPostingService {
 
     private com.duylongtech.backend.feature.warranty.WarrantyLineRequest generateWarrantyLineIfNeeded(InventoryDocument doc,
             InventoryDocumentLine line, SerialNumber serial) {
-        // ChÃƒÂ¡Ã‚Â»Ã¢â‚¬Â° tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng sinh phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u bÃƒÂ¡Ã‚ÂºÃ‚Â£o hÃƒÆ’Ã‚Â nh khi mÃƒÂ¡Ã‚Â»Ã‚Â¥c Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â­ch lÃƒÆ’Ã‚Â  SALES (XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho bÃƒÆ’Ã‚Â¡n hÃƒÆ’Ã‚Â ng)
-        // USAGE (XuÃƒÂ¡Ã‚ÂºÃ‚Â¥t sÃƒÂ¡Ã‚Â»Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã‚Â¥ng nÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢i bÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢) vÃƒÆ’Ã‚Â  TRANSFER_EXPORT (ChuyÃƒÂ¡Ã‚Â»Ã†â€™n kho) Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã‚Âu KHÃƒÆ’Ã¢â‚¬ÂNG sinh
-        // bÃƒÂ¡Ã‚ÂºÃ‚Â£o hÃƒÆ’Ã‚Â nh
+        // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
+        // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh
+        // bảo hành
         if (doc.getIssuePurpose() == null || !ISSUE_PURPOSE_SALES.equalsIgnoreCase(doc.getIssuePurpose().trim())) {
             return null;
         }
@@ -957,7 +973,7 @@ public class InventoryPostingService {
         try {
             return value.stripTrailingZeros().intValueExact();
         } catch (ArithmeticException ex) {
-            throw new BusinessException(fieldName + " phÃƒÂ¡Ã‚ÂºÃ‚Â£i lÃƒÆ’Ã‚Â  sÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœ nguyÃƒÆ’Ã‚Âªn");
+            throw new BusinessException(fieldName + " phải là số nguyên");
         }
     }
 
@@ -966,7 +982,7 @@ public class InventoryPostingService {
             throw new BusinessException(SystemMessage.INV_ERR_022.getMessage());
         }
         return inventoryDocumentRepository.findExportByIdWithLines(id)
-                .orElseThrow(() -> new BusinessException("KhÃƒÆ’Ã‚Â´ng tÃƒÆ’Ã‚Â¬m thÃƒÂ¡Ã‚ÂºÃ‚Â¥y phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u xuÃƒÂ¡Ã‚ÂºÃ‚Â¥t kho"));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
     }
 
     public InventoryDocument findImportOrThrow(Long id) {
@@ -974,7 +990,7 @@ public class InventoryPostingService {
             throw new BusinessException(SystemMessage.INV_ERR_021.getMessage());
         }
         return inventoryDocumentRepository.findImportByIdWithLines(id)
-                .orElseThrow(() -> new BusinessException("KhÃƒÆ’Ã‚Â´ng tÃƒÆ’Ã‚Â¬m thÃƒÂ¡Ã‚ÂºÃ‚Â¥y phiÃƒÂ¡Ã‚ÂºÃ‚Â¿u nhÃƒÂ¡Ã‚ÂºÃ‚Â­p kho"));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
     }
 
     public BigDecimal nonNegativeOrZero(BigDecimal value, String fieldName) {
@@ -982,7 +998,7 @@ public class InventoryPostingService {
             return ZERO;
         }
         if (value.compareTo(ZERO) < 0) {
-            throw new BusinessException(fieldName + " phÃƒÂ¡Ã‚ÂºÃ‚Â£i lÃƒÂ¡Ã‚Â»Ã¢â‚¬Âºn hÃƒâ€ Ã‚Â¡n hoÃƒÂ¡Ã‚ÂºÃ‚Â·c bÃƒÂ¡Ã‚ÂºÃ‚Â±ng 0");
+            throw new BusinessException(fieldName + " phải lớn hơn hoặc bằng 0");
         }
         return value;
     }

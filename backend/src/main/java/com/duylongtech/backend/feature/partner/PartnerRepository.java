@@ -1,7 +1,9 @@
 package com.duylongtech.backend.feature.partner;
 
 import com.duylongtech.backend.feature.partner.Partner;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -22,6 +24,14 @@ import com.duylongtech.backend.feature.repair.Repair;
 public interface PartnerRepository extends JpaRepository<Partner, Long> {
 
     Optional<Partner> findByCode(String code);
+
+    /**
+     * Khóa dòng Partner để chống race condition khi ghi PartnerLedger - xem
+     * PartnerLedgerService.recordLedger().
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Partner p WHERE p.id = :id")
+    Optional<Partner> findByIdForUpdate(@Param("id") Long id);
 
     boolean existsByCode(String code);
 

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import com.duylongtech.backend.feature.partner.Partner;
 
@@ -19,13 +20,20 @@ public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
 
     @Query("SELECT COUNT(w) > 0 FROM Warranty w JOIN w.lines wl WHERE wl.serialNumberId = :serialNumberId")
     boolean existsBySerialNumberId(@Param("serialNumberId") Long serialNumberId);
-    
+
+    // Tách 2 bước để phân trang đúng: JOIN FETCH trên collection (w.lines) kết hợp
+    // Pageable khiến Hibernate không phát được LIMIT/OFFSET ở SQL, phải load toàn bộ
+    // kết quả vào bộ nhớ rồi tự cắt trang (cảnh báo HHH000104) - chỉ ổn khi ít dữ liệu,
+    // càng nhiều bảo hành thì càng chậm/tốn RAM. Query 1 chỉ lấy id (không fetch join)
+    // nên phân trang đúng ở DB; query 2 fetch chi tiết cho đúng các id của trang đó.
+    @Query("SELECT w.id FROM Warranty w WHERE w.partnerId = :customerId ORDER BY w.id DESC")
+    Page<Long> findWarrantyIdsByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+
     @Query("SELECT DISTINCT w FROM Warranty w " +
            "LEFT JOIN FETCH w.lines wl " +
            "LEFT JOIN FETCH wl.serialNumber sn " +
-           "WHERE w.partnerId = :customerId " +
-           "ORDER BY w.id DESC")
-    Page<Warranty> findWarrantiesByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+           "WHERE w.id IN :ids")
+    List<Warranty> findByIdInWithLines(@Param("ids") List<Long> ids);
 
     @EntityGraph(attributePaths = {"partner", "lines", "lines.serialNumber", "lines.serialNumber.variant", "lines.productVariant", "lines.productVariant.product"})
     @Query("""

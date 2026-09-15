@@ -7,9 +7,9 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import styles from './BrandListPage.module.css';
-
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const DEFAULT_COLUMNS = {
@@ -38,6 +38,7 @@ const STATUS_LABELS = {
 const BrandListPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const guard = usePermissionGuard();
     
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -146,15 +147,12 @@ const BrandListPage = () => {
 
     const handleDeleteClick = (e, brand) => {
         e.stopPropagation();
-        setDeleteConfirm({ isOpen: true, brand });
+        guard('brand:delete', () => setDeleteConfirm({ isOpen: true, brand }));
     };
 
     const handleEditClick = (e, item) => {
         e.stopPropagation();
-        setModalConfig({
-            isOpen: true,
-            data: item
-        });
+        guard('brand:edit', () => setModalConfig({ isOpen: true, data: item }));
     };
 
     const confirmDelete = async () => {
@@ -203,7 +201,7 @@ const BrandListPage = () => {
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
                     <h1 className={styles.pageTitle}>Danh sách thương hiệu</h1>
-                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                    <button className={styles.btnPrimary} onClick={() => guard('brand:add', () => setModalConfig({ isOpen: true, data: null }))}>
                         <i className="bi bi-plus"></i> Thêm mới
                     </button>
                 </div>

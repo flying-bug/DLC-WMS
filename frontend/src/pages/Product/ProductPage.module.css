@@ -1561,6 +1561,30 @@
     flex-direction: column;
 }
 
+.warrantyInputRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.warrantySyncOption {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.warrantySyncOption input {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
 /* Inline add (+) button next to select */
 .addInlineBtn {
     flex-shrink: 0;

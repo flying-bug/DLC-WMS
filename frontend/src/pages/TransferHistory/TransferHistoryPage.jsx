@@ -14,6 +14,7 @@ import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import styles from './TransferHistoryPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const DEFAULT_COLUMNS = {
@@ -52,6 +53,7 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
 function TransferHistoryPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const guard = usePermissionGuard();
   const [slips, setSlips] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
@@ -220,7 +222,7 @@ function TransferHistoryPage() {
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách phiếu chuyển kho</h1>
-          <button className={styles.btnPrimary} onClick={() => navigate('/transfer-history/create')}>
+          <button className={styles.btnPrimary} onClick={() => guard('transfer:add', () => navigate('/transfer-history/create'))}>
             <i className="bi bi-plus"></i> Thêm mới
           </button>
         </div>
@@ -374,11 +376,13 @@ function TransferHistoryPage() {
                           title="Chỉnh sửa"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (slip.status === 'DRAFT' || slip.status === 'SUBMITTED') {
-                              navigate(`/transfer-history/${slip.id}/edit`);
-                            } else {
-                              showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
-                            }
+                            guard('transfer:edit', () => {
+                              if (slip.status === 'DRAFT' || slip.status === 'SUBMITTED') {
+                                navigate(`/transfer-history/${slip.id}/edit`);
+                              } else {
+                                showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                              }
+                            });
                           }}
                         ></i>
                       </td>
