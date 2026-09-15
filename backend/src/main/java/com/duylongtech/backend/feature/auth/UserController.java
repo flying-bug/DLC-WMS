@@ -95,12 +95,11 @@ public class UserController {
     @PutMapping("/{id}/permissions")
     @PreAuthorize("hasAuthority('auth:edit')")
     @Auditable(action = AuditAction.UPDATE, entityName = "Permission", actionDescription = "Phân quyền tài khoản")
-    public ApiResponse<?> updatePermissions(@PathVariable Long id, @RequestBody List<String> permissionCodes) {
-        userService.updatePermissions(id, permissionCodes);
-        UserDto after = userService.getUserById(id);
+    public ApiResponse<UserDto> updatePermissions(@PathVariable Long id, @RequestBody List<String> permissionCodes) {
+        UserDto after = userService.updatePermissions(id, permissionCodes);
         realtimeSessionService.publishUserUpdated(after, "USER_PERMISSIONS_CHANGED");
         realtimeSessionService.forceLogoutUser(after.getId(), "PERMISSIONS_CHANGED", "Quyền truy cập của bạn vừa được cập nhật. Vui lòng đăng nhập lại");
-        return ApiResponse.success();
+        return ApiResponse.success(after);
     }
 
     // 10. Update Information

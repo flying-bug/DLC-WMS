@@ -227,7 +227,10 @@ public class UserService {
         userDto.getRoles().forEach(roleCode -> {
             findRoleByCode(roleCode).ifPresent(roles::add);
         });
-        
+        if (roles.isEmpty()) {
+            throw new BusinessException(SystemMessage.ROLE_REQUIRED);
+        }
+        user.updateRoles(roles);
 
         User savedUser = userRepository.save(user);
         try {
@@ -261,7 +264,8 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void updatePermissions(Long id, List<String> permissionCodes) {
+    @Transactional
+    public UserDto updatePermissions(Long id, List<String> permissionCodes) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         boolean isSuperAdmin = user.getRoles() != null && user.getRoles().stream()
                 .anyMatch(role -> "ROLE_SUPER_ADMIN".equalsIgnoreCase(role.getCode()) || "SUPER_ADMIN".equalsIgnoreCase(role.getCode()));
@@ -271,13 +275,19 @@ public class UserService {
         Set<PermissionEntity> permissions = new HashSet<>();
         if (permissionCodes != null) {
             permissionCodes.forEach(code -> {
-                permissionRepository.findByCode(code).ifPresent(permissions::add);
+                if (code != null && !code.isBlank()) {
+                    String normalizedCode = code.trim();
+                    PermissionEntity permission = permissionRepository.findByCode(normalizedCode)
+                            .orElseThrow(() -> new BusinessException("Quyền không tồn tại: " + normalizedCode));
+                    permissions.add(permission);
+                }
             });
         }
         user.updatePermissions(permissions);
-        userRepository.save(user);
+        return userMapper.toDto(userRepository.save(user));
     }
 
+    @Transactional
     public UserDto updateUser(Long id, UserDto userDto) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         if (userDto.getEmail() != null) {
@@ -324,7 +334,7 @@ public class UserService {
             if (roles.isEmpty()) {
                 throw new BusinessException(SystemMessage.ROLE_REQUIRED);
             }
-            
+            user.updateRoles(roles);
         }
         userMapper.updateEntity(user, userDto);
 
