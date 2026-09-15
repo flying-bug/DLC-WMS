@@ -751,7 +751,7 @@ function ExportSlipPage() {
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
-                  {selectedSlip.status === 'DRAFT' && guard.check('export:edit') && (
+                  {selectedSlip.status === 'DRAFT' && guard.check('export:post') && (
                     <button
                       onClick={() => setConfirmPost(true)}
                       className={styles.btnPrimary}

@@ -774,7 +774,7 @@ function ImportHistoryPage() {
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
-                  {selectedSlip.status === 'DRAFT' && guard.check('import:edit') && (
+                  {selectedSlip.status === 'DRAFT' && guard.check('import:post') && (
                     <button
                       onClick={() => setConfirmPost(true)}
                       className={styles.btnPrimary}
