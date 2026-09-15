@@ -79,10 +79,14 @@ const isValidToken = () => {
 const getDefaultAuthenticatedPath = () => {
     const roles = getAuthRoles().map(role => String(role || '').toUpperCase());
     if (roles.some(role => ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN'].includes(role))) return '/dashboard';
-    if (hasPermission('report_summary:view')) return '/main-dashboard';
-    if (roles.some(role => ['TECHNICIAN', 'ROLE_TECHNICIAN'].includes(role))) return '/dashboard';
+    // Thủ kho / Thủ quỹ bị khóa cứng vào bàn làm việc riêng - phải xét TRƯỚC nhánh
+    // report_summary:view chung, vì 2 role này vẫn được cấp report_balance/report_ledger/
+    // report_transfer (thuộc module report_summary), nên trước đây luôn rơi vào nhánh đó
+    // và bị đưa thẳng tới /main-dashboard thay vì bàn làm việc của họ.
     if (roles.some(role => ['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER'].includes(role))) return '/warehouse-workspace';
     if (roles.some(role => ['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER'].includes(role))) return '/cashier-workspace';
+    if (hasPermission('report_summary:view')) return '/main-dashboard';
+    if (roles.some(role => ['TECHNICIAN', 'ROLE_TECHNICIAN'].includes(role))) return '/dashboard';
     return '/dashboard';
 };
 
@@ -98,11 +102,11 @@ const ProtectedRoute = ({ allowedRoles, disallowedRoles, requiredPermission }) =
     const currentRole = userRole.toUpperCase();
 
     if (allowedRoles && !allowedRoles.includes(currentRole)) {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to={getDefaultAuthenticatedPath()} replace />;
     }
 
     if (disallowedRoles && disallowedRoles.includes(currentRole)) {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to={getDefaultAuthenticatedPath()} replace />;
     }
 
     if (requiredPermission && !hasPermission(requiredPermission)) {
@@ -153,8 +157,11 @@ function AppRouter() {
 
                 {/* Business Routes for Staff & Manager only */}
                 <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN']} />}>
-                    <Route element={<ProtectedRoute requiredPermission="report_summary:view" />}>
-                        <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
+                    {/* Thủ kho / Thủ quỹ bị khóa vào bàn làm việc riêng, không được vào Tổng quan chung */}
+                    <Route element={<ProtectedRoute disallowedRoles={['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER', 'CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER']} />}>
+                        <Route element={<ProtectedRoute requiredPermission="report_summary:view" />}>
+                            <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
+                        </Route>
                     </Route>
                     <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
                     <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
