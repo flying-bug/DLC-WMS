@@ -886,7 +886,7 @@ function UpdateExportSlipPage() {
                 <div className={styles.cardBody}>
                   <div className="misa-form-row">
                     <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                      <label className="misa-label">Mã KH <span className="required">*</span></label>
+                      <label className="misa-label">Mã KH {form.issuePurpose === 'SALES' && <span className="required">*</span>}</label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
                           <Select

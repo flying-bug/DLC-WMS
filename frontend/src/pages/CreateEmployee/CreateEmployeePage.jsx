@@ -308,7 +308,7 @@ function CreateEmployeePage() {
                     {/* Card 2: Roles */}
                     <div className={styles.card}>
                         <h2 className={styles.cardTitle}>
-                            <i className="bi bi-shield-check"></i> Vai trò & Quyền hạn hệ thống
+                            <i className="bi bi-shield-check"></i> Vai trò & Quyền hạn hệ thống <span className={styles.required}>*</span>
                         </h2>
                         <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
                             Chọn một hoặc nhiều vai trò cho tài khoản. Hệ thống sẽ tự động gộp các quyền tương ứng.

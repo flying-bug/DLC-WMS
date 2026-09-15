@@ -855,7 +855,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
             <div className={styles.modalBody}>
               <div className={styles.fieldRow}>
                 <label className={styles.label}>
-                  {mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'} <span>*</span>
+                  {mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'} <span style={{ color: 'var(--wms-danger)' }}>*</span>
                 </label>
                 <Select
                   options={partnerOptions}
@@ -886,7 +886,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                 <div className={styles.fieldRow}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <label className={styles.label} style={{ margin: 0 }}>
-                      Số tiền <span>*</span>
+                      Số tiền <span style={{ color: 'var(--wms-danger)' }}>*</span>
                     </label>
                     {Number(debtBalance || 0) > 0 && formPartnerId && (
                       <button
