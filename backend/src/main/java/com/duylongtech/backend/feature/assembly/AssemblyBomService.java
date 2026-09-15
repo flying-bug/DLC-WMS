@@ -9,6 +9,8 @@ import com.duylongtech.backend.feature.product.Product;
 import com.duylongtech.backend.feature.product.ProductRepository;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.feature.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,7 @@ public class AssemblyBomService {
     private final ProductVariantRepository productVariantRepository;
     private final AppNotificationService appNotificationService;
     private final AssemblyOrderMapper assemblyOrderMapper;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public List<AssemblyBomResponse> getBoms(String status, Long productId) {
@@ -127,8 +130,13 @@ public class AssemblyBomService {
         requireState(bom.getStatus(), DocumentStatus.DRAFT.name(), DocumentStatus.REJECTED.name());
         validateBomEntity(bom);
         bom.submitForApproval(actorId);
+        
+        String technicianName = userRepository.findById(actorId)
+                .map(User::getFullName)
+                .orElse("Một kỹ thuật viên");
+                
         notifyRole("ROLE_ACCOUNTANT", "BOM chờ duyệt: " + bom.getBomCode(),
-                "Kỹ thuật viên đã gửi BOM " + bom.getBomCode() + " để duyệt.", "ASSEMBLY_BOM", bom.getId(),
+                "Kỹ thuật viên " + technicianName + " vừa tạo BOM " + bom.getBomCode() + " cần duyệt.", "ASSEMBLY_BOM", bom.getId(),
                 "/assembly-boms/" + bom.getId());
         return toBomResponse(assemblyBomRepository.save(bom));
     }
@@ -219,7 +227,7 @@ public class AssemblyBomService {
                     .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện " + requestLine.getComponentVariantId()));
             AssemblyBomLine line = new AssemblyBomLine();
             line.initLine(component, requestLine.getQuantity(), requestLine.getComponentRole(), requestLine.getNote(), requestLine.getUnitPrice() != null ? requestLine.getUnitPrice() : component.getSalePrice(), requestLine.getComponentSku() != null ? requestLine.getComponentSku() : component.getSku(), requestLine.getComponentName() != null ? requestLine.getComponentName() : variantName(component), requestLine.getWarrantyMonths() != null ? requestLine.getWarrantyMonths() : ((component.getWarrantyMonths() == null || component.getWarrantyMonths() <= 0) && component.getProduct() != null ? component.getProduct().getWarrantyPeriodMonths() : component.getWarrantyMonths()));
-            bom.getLines().add(line);
+            bom.addLine(line);
         }
     }
 

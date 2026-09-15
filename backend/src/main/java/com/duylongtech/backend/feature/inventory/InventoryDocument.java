@@ -187,6 +187,9 @@ public class InventoryDocument {
         this.status = DocumentStatus.POSTED.name();
         this.postedAt = LocalDateTime.now();
         this.approvedBy = userId;
+        if (this.salespersonId == null) {
+            this.salespersonId = userId;
+        }
     }
 
     public void unpost(Long userId, String reason) {
