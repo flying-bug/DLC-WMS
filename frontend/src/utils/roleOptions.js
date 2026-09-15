@@ -3,8 +3,8 @@
 // tự định nghĩa một danh sách riêng rồi lệch nhau theo thời gian.
 export const ROLE_OPTIONS = [
     { value: 'ROLE_WAREHOUSE_CONTROLLER', label: 'Thủ kho (Warehouse Controller)', icon: 'bi-box-seam', desc: 'Nhập / Xuất / Chuyển kho / Kiểm kê, Quét mã Scanner' },
-    { value: 'ROLE_TECHNICIAN', label: 'Kỹ thuật viên (Technician)', icon: 'bi-tools', desc: 'Lắp ráp PC theo BOM, Tiếp nhận Bảo hành & Sửa chữa' },
-    { value: 'ROLE_ACCOUNTANT', label: 'Kế toán (Accountant)', icon: 'bi-receipt', desc: 'Phiếu nhập dự kiến, Đơn bán SO, Hóa đơn & Công nợ' },
+    { value: 'ROLE_TECHNICIAN', label: 'Kỹ thuật viên (Technician)', icon: 'bi-tools', desc: 'Lắp ráp PC theo BOM, tra cứu bảo hành & xử lý sửa chữa' },
+    { value: 'ROLE_ACCOUNTANT', label: 'Kế toán (Accountant)', icon: 'bi-receipt', desc: 'Bảo hành, danh mục hàng hóa, mua bán, hóa đơn & báo cáo kho' },
     { value: 'ROLE_CASHIER_CONTROLLER', label: 'Thủ quỹ / Thu ngân (Cashier Controller)', icon: 'bi-cash-stack', desc: 'Lập Phiếu thu, Phiếu chi, Quản lý quỹ tiền mặt' },
     { value: 'ROLE_MANAGER', label: 'Quản lý điều hành (Manager)', icon: 'bi-person-badge', desc: 'Toàn quyền nghiệp vụ, phê duyệt đơn, xem Dashboard' },
     { value: 'ROLE_SUPER_ADMIN', label: 'Quản trị hệ thống (Super Admin)', icon: 'bi-shield-lock', desc: 'Quản lý tài khoản, Phân quyền ma trận, Backup CSDL' }
