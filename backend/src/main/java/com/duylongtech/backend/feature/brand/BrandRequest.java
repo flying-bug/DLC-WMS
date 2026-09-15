@@ -47,10 +47,11 @@ public class BrandRequest {
     private String status;
 
     /**
-     * Hotline liên hệ thương hiệu (theo FR 3.7.3 Create Brand).
-     * Validate định dạng số điện thoại Việt Nam.
+     * Hotline liên hệ thương hiệu (theo FR 3.7.3 Create Brand) - optional.
+     * Validate định dạng số điện thoại Việt Nam khi có nhập; "^$|" cho phép chuỗi rỗng đi
+     * qua vì @Pattern (khác @NotBlank) không tự bỏ qua "", chỉ bỏ qua null.
      */
-    @Pattern(regexp = "^0[235789]\\d{8,9}$", message = "INVALID_PHONE")
+    @Pattern(regexp = "^$|^0[235789]\\d{8,9}$", message = "INVALID_PHONE")
     private String hotline;
 
     /**
