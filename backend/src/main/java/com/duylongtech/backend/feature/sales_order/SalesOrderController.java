@@ -92,7 +92,7 @@ public class SalesOrderController {
 
     // ─── PUT: Cập nhật đơn bán hàng (chỉ DRAFT) ────────────────────────
     @PostMapping("/direct-checkout")
-    @Operation(summary = "Bán hàng trực tiếp: tạo đơn, xuất kho và ghi nhận thanh toán")
+    @Operation(summary = "Bán hàng trực tiếp: tạo đơn, lập phiếu xuất & phiếu thu nháp chờ Thủ kho/Thủ quỹ ghi sổ")
     @PreAuthorize("hasAuthority('sales_order:add')")
     @Auditable(action = AuditAction.DIRECT_CHECKOUT, entityName = "SalesOrder", actionDescription = "Bán hàng trực tiếp")
     public ApiResponse<SalesOrderResponse> directCheckout(

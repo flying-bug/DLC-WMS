@@ -78,8 +78,8 @@ public class DirectCheckoutService {
         requireActiveCustomer(customer);
         LocalDate checkoutDate = request.getCheckoutDate() != null ? request.getCheckoutDate() : LocalDate.now();
 
-        SalesOrder savedOrder = createPostedSalesOrder(request, customer, actorUser, checkoutDate);
-        InventoryDocumentResponse export = createAndPostExport(request, savedOrder, customer, actorUser, checkoutDate);
+        SalesOrder savedOrder = createApprovedSalesOrder(request, customer, actorUser, checkoutDate);
+        InventoryDocumentResponse export = createDraftExport(request, savedOrder, customer, actorUser, checkoutDate);
 
         recordDirectCheckoutLedger(savedOrder, request.getPaymentAmount(), export.getDocCode());
 
@@ -153,7 +153,7 @@ public class DirectCheckoutService {
         return partnerRepository.save(customer);
     }
 
-    private SalesOrder createPostedSalesOrder(DirectCheckoutRequest request, Partner customer, User actorUser,
+    private SalesOrder createApprovedSalesOrder(DirectCheckoutRequest request, Partner customer, User actorUser,
             LocalDate checkoutDate) {
         String soCode = generateNextSoCode();
         SalesOrder order = new SalesOrder();
@@ -174,14 +174,13 @@ public class DirectCheckoutService {
         ensureDebtAllowedForCustomer(customer, paidAmount, total);
 
         order.approve();
-        order.markAsPosted();
         if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
             order.recordPayment(paidAmount);
         }
         return salesOrderRepository.save(order);
     }
 
-    private InventoryDocumentResponse createAndPostExport(DirectCheckoutRequest request, SalesOrder order,
+    private InventoryDocumentResponse createDraftExport(DirectCheckoutRequest request, SalesOrder order,
             Partner customer, User actorUser, LocalDate checkoutDate) {
         InventoryDocumentRequest exportReq = new InventoryDocumentRequest();
         exportReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_SALES);
@@ -216,24 +215,27 @@ public class DirectCheckoutService {
         }
         exportReq.setLines(exportLines);
 
-        InventoryDocumentResponse created = inventoryDocumentService.createExport(exportReq);
-        return inventoryDocumentService.postExport(created.getId());
+        // Chỉ tạo phiếu xuất ở trạng thái nháp — Thủ kho là người ghi sổ (xác nhận
+        // xuất kho thật) qua màn Phiếu xuất, giống mọi phiếu xuất khác trong hệ thống.
+        return inventoryDocumentService.createExport(exportReq);
     }
 
     private void recordDirectCheckoutLedger(SalesOrder order, BigDecimal requestedPayment, String exportCode) {
-        // Ghi chú: Việc tăng công nợ (Debt) đã được thực hiện tự động trong hàm postExport 
-        // của InventoryDocumentService, do đó không ghi nhận lại ở đây để tránh bị nhân đôi công nợ.
+        // Ghi chú: công nợ (Debt) chỉ tăng khi Thủ kho thực sự ghi sổ phiếu xuất (postExport),
+        // và số tiền dưới đây chỉ ghi sổ (ảnh hưởng công nợ/sổ quỹ) khi Thủ quỹ post phiếu thu —
+        // không có bước nào ở đây làm thay đổi công nợ/sổ quỹ ngay lập tức.
 
         BigDecimal paidAmount = normalizePaymentAmount(requestedPayment, order.getTotalAmount());
         if (paidAmount.compareTo(ZERO) > 0) {
-            // Tự động tạo và ghi sổ phiếu thu
+            // Chỉ tạo phiếu thu ở trạng thái nháp — Thủ quỹ là người ghi sổ (xác nhận tiền
+            // mặt đã thực nhận) qua màn Phiếu thu/chi, giống mọi phiếu thu khác trong hệ thống.
             PaymentRequest paymentRequest = new PaymentRequest();
             paymentRequest.setPartnerId(order.getPartnerId());
             paymentRequest.setAmount(paidAmount);
             paymentRequest.setPaymentMethod("CASH"); // Mặc định bán hàng trực tiếp dùng tiền mặt
             paymentRequest.setNote("Thu tiền bán hàng trực tiếp " + order.getSoCode() + " / " + exportCode);
-            paymentRequest.setStatus(DocumentStatus.POSTED.name()); // Ghi sổ luôn
-            
+            paymentRequest.setStatus(DocumentStatus.DRAFT.name());
+
             paymentService.createPaymentReceipt(paymentRequest);
         }
     }

@@ -619,10 +619,10 @@ function CreateSalesOrderPage() {
       const res = await soApi.directCheckout(buildDirectPayload());
       const saved = unwrap(res);
       navigate('/sales-orders', {
-        state: { toastMessage: `Bán hàng trực tiếp ${saved.soCode} thành công. Đơn hàng và phiếu xuất đã hoàn thành.`, toastType: 'success' }
+        state: { toastMessage: `Đã lưu đơn ${saved.soCode}. Chờ Thủ kho ghi sổ phiếu xuất và Thủ quỹ ghi sổ phiếu thu.`, toastType: 'success' }
       });
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Bán hàng trực tiếp thất bại');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Lưu đơn hàng thất bại');
     } finally {
       setSaving(false);
     }
@@ -1265,8 +1265,8 @@ function CreateSalesOrderPage() {
               <div style={{ display: 'flex', gap: 10 }}>
                 {mode === 'direct' && (
                   <button className={styles.btnPrimary} onClick={handleDirectCheckout} disabled={saving}>
-                    {saving ? 'Đang xử lý...' : (
-                      <><i className="bi bi-cash-coin" /> Thanh toán &amp; xuất kho ngay</>
+                    {saving ? 'Đang lưu...' : (
+                      <><i className="bi bi-floppy" /> Lưu đơn hàng</>
                     )}
                   </button>
                 )}
