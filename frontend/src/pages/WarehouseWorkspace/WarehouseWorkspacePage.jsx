@@ -348,7 +348,12 @@ export default function WarehouseWorkspacePage() {
           return isPosted ? (r.postedAt ? new Date(r.postedAt).toLocaleDateString('vi-VN') : r.docDate || '-') : '-';
         }
       },
-      { key: 'docDate', label: 'Ngày chứng từ', width: '110px' },
+      {
+        key: 'docDate',
+        label: 'Ngày chứng từ',
+        width: '110px',
+        render: (v) => v ? new Date(v).toLocaleDateString('vi-VN') : '-'
+      },
       {
         key: 'docCode',
         label: 'Số chứng từ',
