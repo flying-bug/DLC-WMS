@@ -72,6 +72,11 @@
   color: var(--wms-text-body);
 }
 
+.required {
+  color: var(--wms-danger);
+  margin-left: 4px;
+}
+
 .formInput, .formSelect {
   width: 100%;
   padding: 6px 12px;

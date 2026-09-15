@@ -281,7 +281,7 @@ function ProfilePage() {
                                 <form className={styles.formPanel} onSubmit={handleProfileSubmit} noValidate>
                                     <div className={styles.fieldGrid}>
                                         <div className={styles.detailGroup}>
-                                            <label className={styles.detailLabel} htmlFor="fullName">Họ và tên</label>
+                                            <label className={styles.detailLabel} htmlFor="fullName">Họ và tên <span className={styles.required}>*</span></label>
                                             <input
                                                 id="fullName"
                                                 name="fullName"
@@ -298,7 +298,7 @@ function ProfilePage() {
                                         </div>
 
                                         <div className={styles.detailGroup}>
-                                            <label className={styles.detailLabel} htmlFor="phone">Số điện thoại</label>
+                                            <label className={styles.detailLabel} htmlFor="phone">Số điện thoại <span className={styles.required}>*</span></label>
                                             <input
                                                 id="phone"
                                                 name="phone"

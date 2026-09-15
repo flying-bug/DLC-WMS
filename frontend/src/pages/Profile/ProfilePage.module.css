@@ -236,6 +236,11 @@
     display: block;
 }
 
+.required {
+    color: var(--color-danger);
+    margin-left: 4px;
+}
+
 .detailValue {
     min-height: 24px;
     font-size: 15px;

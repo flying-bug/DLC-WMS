@@ -1916,7 +1916,7 @@ const ProductPage = () => {
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                             <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
                                                     <label className={styles.fieldLabel}>
-                                                        {isMultiVariantCreate() ? 'Mã sản phẩm (*)' : 'Mã sản phẩm'}
+                                                        Mã sản phẩm {isMultiVariantCreate() && <span className={styles.required}>*</span>}
                                                     </label>
                                                     <input
                                                         type="text"
@@ -2391,7 +2391,9 @@ const ProductPage = () => {
                                         {/* Giá bán & Thuế VAT */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                             <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>{isMultiVariantCreate() ? 'Giá bán mặc định cho SKU' : 'Giá bán (VNĐ)'}</label>
+                                                    <label className={styles.fieldLabel}>
+                                                        {isMultiVariantCreate() ? 'Giá bán mặc định cho SKU' : <>Giá bán (VNĐ) <span className={styles.required}>*</span></>}
+                                                    </label>
                                                 <input
                                                     type="text"
                                                     className={styles.fieldInput}
