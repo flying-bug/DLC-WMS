@@ -91,7 +91,7 @@ export default function WarehouseDocumentFormPage() {
         setLines(initialLines);
       } catch (err) {
         console.error('Error loading warehouse document:', err);
-        showToast('danger', 'Không thể tải chi tiết chứng từ');
+        showToast('error', 'Không thể tải chi tiết chứng từ');
       } finally {
         setLoading(false);
       }
@@ -250,7 +250,7 @@ export default function WarehouseDocumentFormPage() {
       console.error('Lỗi khi ghi sổ kho:', err.response?.data || err);
       const resData = err.response?.data;
       const errMsg = resData?.userMessage || resData?.devMessage || resData?.message || err.message;
-      showToast('danger', 'Lỗi ghi sổ kho: ' + errMsg);
+      showToast('error', 'Lỗi ghi sổ kho: ' + errMsg);
     } finally {
       setSaving(false);
       setConfirmPostOpen(false);
@@ -270,7 +270,7 @@ export default function WarehouseDocumentFormPage() {
         navigate('/warehouse-workspace');
       }, 800);
     } catch (err) {
-      showToast('danger', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
+      showToast('error', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
     }
   };
 

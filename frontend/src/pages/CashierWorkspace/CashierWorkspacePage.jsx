@@ -86,7 +86,7 @@ export default function CashierWorkspacePage() {
       setRawList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading payments list:', err);
-      showToast('danger', 'Không thể tải danh sách phiếu thu/chi');
+      showToast('error', 'Không thể tải danh sách phiếu thu/chi');
     } finally {
       setLoadingMaster(false);
     }
@@ -206,7 +206,7 @@ export default function CashierWorkspacePage() {
       setConfirmPostItem(null);
       fetchMasterData();
     } catch (err) {
-      showToast('danger', 'Lỗi ghi sổ quỹ: ' + (err.response?.data?.message || err.message));
+      showToast('error', 'Lỗi ghi sổ quỹ: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -225,7 +225,7 @@ export default function CashierWorkspacePage() {
       setUnpostReason('');
       fetchMasterData();
     } catch (err) {
-      showToast('danger', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
+      showToast('error', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
     } finally {
       setSubmittingUnpost(false);
     }
@@ -240,7 +240,7 @@ export default function CashierWorkspacePage() {
     }
     printPaymentReceipt(item, {
       partnerName: item.partnerName || 'Chưa rõ',
-      onError: (msg) => showToast('danger', msg),
+      onError: (msg) => showToast('error', msg),
     });
   };
 

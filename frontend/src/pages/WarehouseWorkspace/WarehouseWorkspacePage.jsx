@@ -114,7 +114,7 @@ export default function WarehouseWorkspacePage() {
       }
     } catch (err) {
       console.error('Error loading warehouse master list:', err);
-      showToast('danger', 'Không thể tải danh sách chứng từ kho');
+      showToast('error', 'Không thể tải danh sách chứng từ kho');
     } finally {
       setLoadingMaster(false);
     }
@@ -181,7 +181,7 @@ export default function WarehouseWorkspacePage() {
       showToast('success', `Đã bỏ ghi sổ chứng từ ${slipToUnpost.docCode || slipToUnpost.code}`);
       fetchMasterData();
     } catch (err) {
-      showToast('danger', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
+      showToast('error', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
     }
   };
 
