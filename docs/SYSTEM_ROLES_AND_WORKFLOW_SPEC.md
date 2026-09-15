@@ -58,8 +58,8 @@ graph TD
 | **1** | **Super Admin** | `ROLE_SUPER_ADMIN` | • Quản lý tài khoản người dùng (tạo mới, khóa/mở khóa).<br/>• Cấu hình ma trận phân quyền chi tiết (Dynamic Permissions).<br/>• Xem nhật ký kiểm toán toàn hệ thống (Audit Log).<br/>• Trung tâm vận hành, sao lưu và khôi phục CSDL (Backup/Restore). |
 | **2** | **Manager** | `ROLE_MANAGER` | • Quản lý điều hành chung hoạt động kinh doanh và kho vận.<br/>• Phê duyệt các đơn mua/bán, phiếu điều chỉnh kho vượt hạn mức.<br/>• Xem toàn bộ Dashboard báo cáo phân tích doanh số, tồn kho, lợi nhuận. |
 | **3** | **Warehouse Controller** *(Thủ kho)* | `ROLE_WAREHOUSE_CONTROLLER` | • Tiếp nhận phiếu nhập `CHỜ NHẬP`, kiểm đếm, quét mã Serial thực tế và xác nhận `ĐÃ NHẬP KHO` (không thấy/sửa đơn giá).<br/>• Tạo và thực hiện Phiếu xuất kho, Phiếu chuyển kho, Phiếu kiểm kê.<br/>• Sử dụng thiết bị quét mã (Scanner) để kiểm soát hàng hóa. |
-| **4** | **Technician** *(Kỹ thuật viên)* | `ROLE_TECHNICIAN` | • Tạo & quản lý Định mức linh kiện lắp ráp PC (BOM).<br/>• Thực hiện Lệnh lắp ráp máy bộ (Assembly Orders) và tháo dỡ máy.<br/>• Tiếp nhận, xử lý và cập nhật tiến độ hồ sơ Bảo hành & Phiếu sửa chữa máy. |
-| **5** | **Accountant** *(Kế toán)* | `ROLE_ACCOUNTANT` | • Lập Phiếu nhập dự kiến dựa trên Hóa đơn NCC (nhập NCC, mã hàng, số lượng, đơn giá, VAT).<br/>• Lập Đơn bán hàng (SO), Báo giá và xuất Hóa đơn điện tử (E-Invoice).<br/>• Theo dõi, đối soát công nợ phải thu (Khách hàng) và phải trả (NCC). |
+| **4** | **Technician** *(Kỹ thuật viên)* | `ROLE_TECHNICIAN` | • Tạo & quản lý Định mức linh kiện lắp ráp PC (BOM).<br/>• Thực hiện Lệnh lắp ráp máy bộ (Assembly Orders) và tháo dỡ máy.<br/>• Tra cứu hồ sơ bảo hành và tiếp nhận, xử lý, cập nhật tiến độ Phiếu sửa chữa máy. |
+| **5** | **Accountant** *(Kế toán)* | `ROLE_ACCOUNTANT` | • Tiếp nhận và quản lý hồ sơ bảo hành.<br/>• Xem, thêm, sửa sản phẩm, linh kiện, ngành hàng, đơn vị tính và thương hiệu.<br/>• Lập Phiếu nhập dự kiến, Đơn bán hàng, Báo giá và Hóa đơn điện tử.<br/>• Theo dõi công nợ và toàn quyền xem/xuất Sổ chi tiết vật tư hàng hóa, Báo cáo luân chuyển kho, Báo cáo tồn kho hiện tại. |
 | **6** | **Cashier Controller** *(Thủ quỹ / Thu ngân)* | `ROLE_CASHIER_CONTROLLER` | • Quản lý tiền mặt tại quầy và tài khoản quỹ.<br/>• Lập & xác nhận Phiếu thu tiền (Receipt) khi khách mua hàng.<br/>• Lập & xác nhận Phiếu chi tiền (Payment Voucher) thanh toán cho NCC hoặc chi phí nội bộ.<br/>• Chốt sổ quỹ tiền mặt cuối ngày. |
 
 ---
@@ -250,8 +250,8 @@ Tất cả các tài khoản mặc định được khởi tạo sẵn trong h�
 | **1** | `admin` | `123456` | System Administrator | `ROLE_SUPER_ADMIN` | Quản trị User, phân quyền ma trận, Backup CSDL. |
 | **2** | `manager@duylong.vn` | `123456` | Quản Lý Điều Hành | `ROLE_MANAGER` | Xem full Dashboard, duyệt phiếu, quản lý toàn diện. |
 | **3** | `wh_controller@duylong.vn`| `123456` | Trưởng Kho Vận | `ROLE_WAREHOUSE_CONTROLLER` | Kiểm nhận hàng, quét Serial nhập/xuất kho, kiểm kê. |
-| **4** | `technician@duylong.vn` | `123456` | Kỹ Thuật Viên Trưởng | `ROLE_TECHNICIAN` | Lắp ráp case máy tính BOM, nhận bảo hành/sửa chữa. |
-| **5** | `accountant@duylong.vn` | `123456` | Kế Toán Tổng Hợp | `ROLE_ACCOUNTANT` | Tạo phiếu nhập dự kiến, tạo đơn bán SO, công nợ. |
+| **4** | `technician@duylong.vn` | `123456` | Kỹ Thuật Viên Trưởng | `ROLE_TECHNICIAN` | Lắp ráp case máy tính BOM, tra cứu bảo hành và xử lý sửa chữa. |
+| **5** | `accountant@duylong.vn` | `123456` | Kế Toán Tổng Hợp | `ROLE_ACCOUNTANT` | Quản lý bảo hành, danh mục hàng hóa, báo cáo kho, phiếu nhập, đơn bán và công nợ. |
 | **6** | `cashier@duylong.vn` | `123456` | Thủ Quỹ Thu Ngân | `ROLE_CASHIER_CONTROLLER` | Lập phiếu thu, phiếu chi, quản lý sổ quỹ tiền mặt. |
 
 ---

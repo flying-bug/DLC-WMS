@@ -8,10 +8,12 @@ import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseListPage.module.css';
 import { getVietnamTimestamp } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const WarehouseListPage = () => {
     const navigate = useNavigate();
+    const guard = usePermissionGuard();
     const [warehouses, setWarehouses] = useState([]);
     const [loading, setLoading] = useState(false);
     
@@ -122,9 +124,11 @@ const WarehouseListPage = () => {
     };
 
     const handleDelete = (e, warehouse) => {
-        e.stopPropagation(); // prevent row click
-        setDeletingWarehouse(warehouse);
-        setShowDeleteModal(true);
+        e.stopPropagation();
+        guard('warehouse_master:delete', () => {
+            setDeletingWarehouse(warehouse);
+            setShowDeleteModal(true);
+        });
     };
 
     const handleDeleteConfirm = async (id) => {
@@ -143,10 +147,12 @@ const WarehouseListPage = () => {
     };
 
     const handleEdit = (e, warehouse) => {
-        e.stopPropagation(); // prevent row click
-        setIsEdit(true);
-        setSelectedData(warehouse);
-        setShowModal(true);
+        e.stopPropagation();
+        guard('warehouse_master:edit', () => {
+            setIsEdit(true);
+            setSelectedData(warehouse);
+            setShowModal(true);
+        });
     };
 
     const handleRowClick = (id) => {
@@ -218,9 +224,11 @@ const WarehouseListPage = () => {
                     </div>
                     <div className={styles.actionButtons}>
                         <button className={styles.btnPrimary} type="button" onClick={() => {
-                            setIsEdit(false);
-                            setSelectedData(null);
-                            setShowModal(true);
+                            guard('warehouse_master:add', () => {
+                                setIsEdit(false);
+                                setSelectedData(null);
+                                setShowModal(true);
+                            });
                         }}>
                             <i className="bi bi-plus"></i> Thêm mới
                         </button>

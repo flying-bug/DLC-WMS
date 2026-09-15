@@ -11,12 +11,14 @@ import PurchaseHistoryTab from './components/PurchaseHistoryTab';
 import PaymentHistoryTab from './components/PaymentHistoryTab';
 import styles from './SupplierDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const guard = usePermissionGuard();
     
     const [supplier, setSupplier] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -165,10 +167,10 @@ const SupplierDetailPage = () => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
+                        <button className={styles.btnOutline} onClick={() => guard('supplier:edit', () => setIsEditModalOpen(true))}>
                             <i className="bi bi-pencil"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => setIsDeleteModalOpen(true)}>
+                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => guard('supplier:delete', () => setIsDeleteModalOpen(true))}>
                             <i className="bi bi-trash"></i> Xóa
                         </button>
                     </div>

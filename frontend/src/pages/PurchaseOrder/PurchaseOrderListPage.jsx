@@ -13,6 +13,7 @@ import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets
 import { exportToExcel } from '../../utils/excelExport';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -106,6 +107,7 @@ function renderDeliveryDateBadge(po) {
 function PurchaseOrderListPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const guard = usePermissionGuard();
 
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -234,7 +236,7 @@ function PurchaseOrderListPage() {
             <i className="bi bi-bag-plus" style={{ marginRight: 8 }} />
             Đơn mua hàng
           </h1>
-          <button className={styles.btnPrimary} onClick={() => navigate('/purchase-orders/create')}>
+          <button className={styles.btnPrimary} onClick={() => guard('purchase_order:add', () => navigate('/purchase-orders/create'))}>
             <i className="bi bi-plus" /> Tạo đơn mua hàng
           </button>
         </div>
@@ -375,7 +377,7 @@ function PurchaseOrderListPage() {
                             className="bi bi-pencil"
                             title="Sửa"
                             style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-primary)', fontSize: 15 }}
-                            onClick={() => navigate(`/purchase-orders/${po.id}/edit`)}
+                            onClick={() => guard('purchase_order:edit', () => navigate(`/purchase-orders/${po.id}/edit`))}
                           />
                         )}
                         {po.status === 'DRAFT' && (
@@ -383,7 +385,7 @@ function PurchaseOrderListPage() {
                             className="bi bi-check2-circle"
                             title="Duyệt đơn"
                             style={{ cursor: 'pointer', marginRight: 8, color: '#22c55e', fontSize: 15 }}
-                            onClick={() => setConfirmApprove(po)}
+                            onClick={() => guard('purchase_order:edit', () => setConfirmApprove(po))}
                           />
                         )}
                         {po.status === 'DRAFT' && (
@@ -391,7 +393,7 @@ function PurchaseOrderListPage() {
                             className="bi bi-x-circle"
                             title="Hủy đơn"
                             style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
-                            onClick={() => setConfirmCancel(po)}
+                            onClick={() => guard('purchase_order:edit', () => setConfirmCancel(po))}
                           />
                         )}
                       </td>

@@ -5,10 +5,10 @@ import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './ProductCategoryPage.module.css';
-
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -18,6 +18,7 @@ const STATUS_LABELS = {
 
 const ProductCategoryPage = () => {
     const [categories, setCategories] = useState([]);
+    const guard = usePermissionGuard();
     const [parentOptions, setParentOptions] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -110,15 +111,16 @@ const ProductCategoryPage = () => {
 
     const handleDeleteClick = (e, category) => {
         e.stopPropagation();
-        setDeleteConfirm({ isOpen: true, category });
+        guard('product_category:delete', () => setDeleteConfirm({ isOpen: true, category }));
     };
 
     const handleEditClick = (e, item) => {
         e.stopPropagation();
-        setModalConfig({ isOpen: true, data: item });
+        guard('product_category:edit', () => setModalConfig({ isOpen: true, data: item }));
     };
 
     const handleToggleStatus = async (item) => {
+        if (!guard('product_category:edit')) return;
         const newStatus = item.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED';
         try {
             await axiosClient.put(`/product-categories/` + item.id, {
@@ -199,7 +201,7 @@ const ProductCategoryPage = () => {
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
                     <h1 className={styles.pageTitle}>Danh mục sản phẩm</h1>
-                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                    <button className={styles.btnPrimary} onClick={() => guard('product_category:add', () => setModalConfig({ isOpen: true, data: null }))}>
                         <i className="bi bi-plus"></i> Thêm mới
                     </button>
                 </div>

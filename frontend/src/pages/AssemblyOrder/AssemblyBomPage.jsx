@@ -258,6 +258,23 @@ function AssemblyBomPage() {
                         >
                             <i className="bi bi-arrow-clockwise"></i>
                         </button>
+                        <FilterPopover
+                            filters={{ status: statusFilter }}
+                            onApply={(newFilters) => {
+                                setStatusFilter(newFilters.status || '');
+                                setPage(1);
+                            }}
+                            onReset={() => {
+                                setStatusFilter('');
+                                setPage(1);
+                            }}
+                            statusOptions={[
+                                { value: 'DRAFT', label: 'Nháp' },
+                                { value: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
+                                { value: 'APPROVED', label: 'Đã duyệt' },
+                                { value: 'REJECTED', label: 'Từ chối' }
+                            ]}
+                        />
                         <button
                             className={styles.iconBtn}
                             onClick={handleExport}

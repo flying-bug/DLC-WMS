@@ -128,6 +128,29 @@ public class ProductService {
     }
 
     @Transactional
+    public ProductResponse createQuickFinishedProduct(QuickFinishedProductRequest request) {
+        Brand defaultBrand = brandRepository.findByNameIgnoreCase("Khác")
+                .or(() -> brandRepository.findByNameIgnoreCase("Other"))
+                .orElseThrow(() -> new BusinessException("Chưa có thương hiệu mặc định 'Khác'. Vui lòng liên hệ quản lý sản phẩm."));
+        ProductRequest dto = ProductRequest.builder()
+                .productName(request.getProductName().trim())
+                .productType("Thành phẩm")
+                .brandId(defaultBrand.getId())
+                .categoryId(request.getCategoryId())
+                .unitId(request.getUnitId())
+                .salePrice(BigDecimal.ZERO)
+                .vatRate(BigDecimal.valueOf(8))
+                .trackSerial(true)
+                .trackLot(false)
+                .isAssembly(true)
+                .active(false)
+                .minStockQty(BigDecimal.ZERO)
+                .warrantyPeriodMonths(0)
+                .build();
+        return createProduct(dto);
+    }
+
+    @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest dto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
@@ -146,6 +169,9 @@ public class ProductService {
         product.updateTracking(dto.getTrackSerial(), dto.getTrackLot(), dto.getIsAssembly());
         product.updateStock(dto.getStockQty(), dto.getStockValue());
         product.setImageUrl(dto.getImageUrl());
+        if (dto.getBomTemplate() != null) {
+            product.setBomTemplate(dto.getBomTemplate());
+        }
         if (dto.getActive() != null) {
             if (dto.getActive()) product.activate();
             else product.deactivate();
@@ -553,6 +579,7 @@ public class ProductService {
             dto.getStockValue() == null ? java.math.BigDecimal.ZERO : dto.getStockValue()
         );
         product.setImageUrl(dto.getImageUrl());
+        product.setBomTemplate(dto.getBomTemplate());
 
         if (dto.getActive() == null || dto.getActive()) {
             product.activate();
@@ -690,6 +717,9 @@ public class ProductService {
             variant.setTrackingMode(resolveTrackingMode(null, product));
             variant.setMinStockQty(resolveMoney(dto.getMinStockQty()));
             variant.setWarrantyMonths(defaultWarrantyMonths(product));
+            if (dto.getActive() != null) {
+                variant.setActive(dto.getActive());
+            }
             productVariantRepository.save(variant);
             return;
         }

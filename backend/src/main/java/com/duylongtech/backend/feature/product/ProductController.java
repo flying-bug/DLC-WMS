@@ -200,6 +200,32 @@ public class ProductController {
         }
     }
 
+    @PostMapping("/quick-finished")
+    @PreAuthorize("hasAuthority('assembly_config:add')")
+    public ResponseEntity<ApiResponse<ProductResponse>> createQuickFinishedProduct(
+            @Valid @RequestBody QuickFinishedProductRequest request,
+            jakarta.servlet.http.HttpServletRequest servletRequest) {
+        ProductResponse created = productService.createQuickFinishedProduct(request);
+        try {
+            auditLogService.logEvent(
+                    getCurrentUser(),
+                    "CREATE",
+                    "Product",
+                    created.getId(),
+                    "SUCCESS",
+                    "Tạo nhanh thành phẩm nháp " + created.getProductCode() + " từ màn hình BOM",
+                    getClientIp(servletRequest),
+                    auditLogService.buildChangeDetail(null, created, "Tạo nhanh thành phẩm nháp"));
+        } catch (Exception auditException) {
+            log.warn("Audit quick finished product creation failed for product {}", created.getId(), auditException);
+        }
+        return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
+                .success(true)
+                .userMessage("Tạo thành phẩm nháp thành công")
+                .data(created)
+                .build());
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('product:edit')")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest dto, jakarta.servlet.http.HttpServletRequest servletRequest) {

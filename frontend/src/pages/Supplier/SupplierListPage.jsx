@@ -6,9 +6,9 @@ import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './SupplierListPage.module.css';
-
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -19,6 +19,7 @@ const STATUS_LABELS = {
 const SupplierListPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const guard = usePermissionGuard();
     
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -112,15 +113,12 @@ const SupplierListPage = () => {
 
     const handleDeleteClick = (e, supplier) => {
         e.stopPropagation();
-        setDeleteConfirm({ isOpen: true, supplier });
+        guard('supplier:delete', () => setDeleteConfirm({ isOpen: true, supplier }));
     };
 
     const handleEditClick = (e, item) => {
         e.stopPropagation();
-        setModalConfig({
-            isOpen: true,
-            data: item
-        });
+        guard('supplier:edit', () => setModalConfig({ isOpen: true, data: item }));
     };
 
     const confirmDelete = async () => {
@@ -169,7 +167,7 @@ const SupplierListPage = () => {
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
                     <h1 className={styles.pageTitle}>Danh sách nhà cung cấp</h1>
-                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                    <button className={styles.btnPrimary} onClick={() => guard('supplier:add', () => setModalConfig({ isOpen: true, data: null }))}>
                         <i className="bi bi-plus"></i> Thêm mới
                     </button>
                 </div>

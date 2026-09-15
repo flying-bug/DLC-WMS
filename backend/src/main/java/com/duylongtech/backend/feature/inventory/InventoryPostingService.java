@@ -410,7 +410,10 @@ public class InventoryPostingService {
             }
         }
 
-        doc.post(null);
+        String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Long currentUserId = userRepository.findByUsername(actor)
+                .map(com.duylongtech.backend.feature.auth.User::getId).orElse(null);
+        doc.post(currentUserId);
         doc.setUpdatedAt(LocalDateTime.now());
 
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
@@ -486,7 +489,10 @@ public class InventoryPostingService {
             createImportedSerialsIfNeeded(savedDoc, line, unitCost, effectiveWarehouseId);
         }
 
-        savedDoc.post(null);
+        String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Long currentUserId = userRepository.findByUsername(actor)
+                .map(com.duylongtech.backend.feature.auth.User::getId).orElse(null);
+        savedDoc.post(currentUserId);
         savedDoc.setUpdatedAt(LocalDateTime.now());
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);

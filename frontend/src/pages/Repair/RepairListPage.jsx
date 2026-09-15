@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as repairApi from '../../api/repairApi';
 import { exportToExcel } from '../../utils/excelExport';
@@ -10,6 +9,7 @@ import Modal from '../../components/ui/Modal/Modal';
 import { formatDateOnly } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -46,6 +46,7 @@ const formatDate = (value) => (value ? formatDateOnly(value) : 'Chưa có');
 function RepairListPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const guard = usePermissionGuard();
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [repairs, setRepairs] = useState([]);
@@ -185,7 +186,7 @@ function RepairListPage() {
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách phiếu sửa chữa</h1>
-          <button className={styles.btnPrimary} onClick={() => navigate('/repairs/create')}>
+          <button className={styles.btnPrimary} onClick={() => guard('repair:add', () => navigate('/repairs/create'))}>
             <i className="bi bi-plus"></i> Thêm mới
           </button>
         </div>
@@ -342,7 +343,7 @@ function RepairListPage() {
                         className="bi bi-pencil" 
                         style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
                         title="Chỉnh sửa" 
-                        onClick={() => navigate(`/repairs/${item.id}/edit`)}
+                        onClick={() => guard('repair:edit', () => navigate(`/repairs/${item.id}/edit`))}
                       ></i>
                     </td>
                   </tr>

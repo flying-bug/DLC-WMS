@@ -13,6 +13,7 @@ import com.duylongtech.backend.feature.inventory.InventoryDocumentResponse;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.inventory.GenerateInventoryDocumentRequest;
 import com.duylongtech.backend.feature.notification.AppNotificationService;
+import com.duylongtech.backend.feature.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,14 +40,23 @@ public class AssemblyOrderWorkflowService {
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentService inventoryDocumentService;
     private final AppNotificationService appNotificationService;
+    private final UserRepository userRepository;
+
+    private String getUserName(Long userId) {
+        if (userId == null) return "Hệ thống";
+        return userRepository.findById(userId)
+                .map(u -> u.getFullName() != null ? u.getFullName() : u.getUsername())
+                .orElse("Người dùng " + userId);
+    }
 
     @Transactional
     public AssemblyOrderResponse submitOrder(Long id, Long actorId) {
         AssemblyOrder order = findOrderOrThrow(id);
         requireState(order.getStatus(), DocumentStatus.DRAFT.name(), DocumentStatus.REJECTED.name());
         order.submitForApproval(actorId);
+        String creatorName = getUserName(order.getCreatedBy());
         notifyRole("ROLE_ACCOUNTANT", "Lệnh chờ duyệt: " + order.getOrderCode(),
-                "Kỹ thuật viên đã gửi lệnh " + order.getOrderCode() + " để duyệt.", "ASSEMBLY_ORDER", order.getId(),
+                "Kỹ thuật viên " + creatorName + " đã gửi lệnh " + order.getOrderCode() + " để duyệt.", "ASSEMBLY_ORDER", order.getId(),
                 "/assembly-orders/" + order.getId());
         return assemblyOrderService.toOrderResponse(assemblyOrderRepository.save(order));
     }
@@ -68,9 +78,13 @@ public class AssemblyOrderWorkflowService {
         }
         order.approve(actorId);
         assemblyOrderRepository.saveAndFlush(order);
-        createDocumentPair(order);
+        InventoryDocumentResponse exportDoc = createDocumentPair(order);
+        String approverName = getUserName(actorId);
         notifyRole("ROLE_WAREHOUSE_CONTROLLER", "Lệnh đã duyệt: " + order.getOrderCode(),
-                "Cặp phiếu kho của lệnh " + order.getOrderCode() + " đã sẵn sàng.", "ASSEMBLY_ORDER", order.getId(),
+                "Cặp phiếu kho của lệnh " + order.getOrderCode() + " đã sẵn sàng.", "EXPORT_SLIP", exportDoc.getId(),
+                "/export-slips/" + exportDoc.getId());
+        notifyUser(order.getCreatedBy(), "Lệnh đã duyệt: " + order.getOrderCode(),
+                "Kế toán " + approverName + " đã duyệt lệnh " + order.getOrderCode() + ".", "ASSEMBLY_ORDER", order.getId(),
                 "/assembly-orders/" + order.getId());
         return assemblyOrderService.toOrderResponse(order);
     }
@@ -81,7 +95,8 @@ public class AssemblyOrderWorkflowService {
         requireState(order.getStatus(), DocumentStatus.PENDING_APPROVAL.name());
         String normalizedReason = requireReason(reason);
         order.reject(actorId, normalizedReason);
-        notifyUser(order.getCreatedBy(), "Lệnh bị từ chối: " + order.getOrderCode(), order.getRejectionReason(),
+        String rejectorName = getUserName(actorId);
+        notifyUser(order.getCreatedBy(), "Lệnh bị từ chối: " + order.getOrderCode(), "Kế toán " + rejectorName + " đã từ chối: " + order.getRejectionReason(),
                 "ASSEMBLY_ORDER", order.getId(), "/assembly-orders/" + order.getId());
         return assemblyOrderService.toOrderResponse(assemblyOrderRepository.save(order));
     }
@@ -173,23 +188,40 @@ public class AssemblyOrderWorkflowService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy lệnh lắp ráp/tháo dỡ"));
     }
 
-    private void createDocumentPair(AssemblyOrder order) {
+    private com.duylongtech.backend.feature.inventory.InventoryDocumentResponse createDocumentPair(AssemblyOrder order) {
         InventoryDocumentRequest export = baseDocument(order);
         InventoryDocumentRequest receipt = baseDocument(order);
+        
+        String technicianName = getUserName(order.getCreatedBy());
+        export.setRecipientName(technicianName);
+        receipt.setRecipientName(technicianName);
+        
         List<InventoryDocumentLineRequest> componentLines = order.getLines().stream()
-                .map(line -> documentLine(line.getComponentVariant().getId(), line.getQuantityRequired()))
+                .map(line -> documentLine(line.getComponentVariant().getId(), line.getQuantityRequired(), line.getUnitCost()))
                 .toList();
+        
+        BigDecimal totalTargetCost = order.getLines().stream()
+                .map(l -> (l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO).multiply(l.getQuantityRequired()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(order.getQuantity(), 4, java.math.RoundingMode.HALF_UP);
+
         List<InventoryDocumentLineRequest> targetLines =
-                List.of(documentLine(order.getTargetVariant().getId(), order.getQuantity()));
+                List.of(documentLine(order.getTargetVariant().getId(), order.getQuantity(), totalTargetCost));
         if (ASSEMBLY.equals(order.getOrderType())) {
             export.setLines(asExportLines(componentLines));
+            export.setNote("Xuất linh kiện phục vụ lắp ráp lệnh " + order.getOrderCode());
             receipt.setLines(asImportLines(targetLines));
+            receipt.setNote("Nhập thành phẩm từ lệnh lắp ráp " + order.getOrderCode());
         } else {
             export.setLines(asExportLines(targetLines));
+            export.setNote("Xuất thành phẩm đi tháo dỡ theo lệnh " + order.getOrderCode());
             receipt.setLines(asImportLines(componentLines));
+            receipt.setNote("Nhập linh kiện thu hồi từ lệnh " + order.getOrderCode());
         }
-        inventoryDocumentService.createExport(export);
+        InventoryDocumentResponse exportDoc = inventoryDocumentService.createExport(export);
+        receipt.setIssuePurpose("PRODUCTION");
         inventoryDocumentService.createImport(receipt);
+        return exportDoc;
     }
 
     private InventoryDocumentRequest baseDocument(AssemblyOrder order) {
@@ -201,16 +233,15 @@ public class AssemblyOrderWorkflowService {
         request.setDocDate(LocalDate.now());
         request.setStatus(DocumentStatus.DRAFT.name());
         request.setCreatedBy(order.getCreatedBy());
-        request.setNote("Tự động tạo từ lệnh " + order.getOrderCode());
         return request;
     }
 
-    private InventoryDocumentLineRequest documentLine(Long variantId, BigDecimal quantity) {
+    private InventoryDocumentLineRequest documentLine(Long variantId, BigDecimal quantity, BigDecimal unitCost) {
         InventoryDocumentLineRequest line = new InventoryDocumentLineRequest();
         line.setVariantId(variantId);
         line.setWarehouseId(null);
-        line.setUnitCost(BigDecimal.ZERO);
-        line.setUnitPrice(BigDecimal.ZERO);
+        line.setUnitCost(unitCost != null ? unitCost : BigDecimal.ZERO);
+        line.setUnitPrice(unitCost != null ? unitCost : BigDecimal.ZERO);
         line.setBaseQuantity(quantity);
         return line;
     }

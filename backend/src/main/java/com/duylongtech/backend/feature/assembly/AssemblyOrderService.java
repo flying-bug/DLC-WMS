@@ -275,25 +275,30 @@ public class AssemblyOrderService {
     }
 
     private void rebuildLines(AssemblyOrder order, AssemblyBom bom, AssemblyOrderRequest request) {
-        order.getLines().clear();
+        order.clearLines();
         BigDecimal orderQuantity = request.getQuantity();
 
         if (request.getLines() != null && !request.getLines().isEmpty()) {
             for (AssemblyOrderLineRequest lineReq : request.getLines()) {
                 ProductVariant variant = productVariantRepository.findById(lineReq.getComponentVariantId())
                         .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện " + lineReq.getComponentVariantId()));
+                BigDecimal price = bom.getLines().stream()
+                        .filter(bl -> bl.getComponentVariant().getId().equals(variant.getId()))
+                        .findFirst()
+                        .map(AssemblyBomLine::getUnitPrice)
+                        .orElseGet(() -> variant.getSalePrice() != null ? variant.getSalePrice() : ZERO);
                 AssemblyOrderLine line = new AssemblyOrderLine();
-                line.initLine(variant, lineReq.getQuantityRequired() != null ? lineReq.getQuantityRequired() : lineReq.getQuantityActual(), ZERO, lineReq.getNote());
+                line.initLine(variant, lineReq.getQuantityRequired() != null ? lineReq.getQuantityRequired() : lineReq.getQuantityActual(), price, lineReq.getNote());
                 line.updateActualQuantity(lineReq.getQuantityActual() != null ? lineReq.getQuantityActual() : lineReq.getQuantityRequired());
-                order.getLines().add(line);
+                order.addLine(line);
             }
         } else {
             for (AssemblyBomLine bomLine : bom.getLines()) {
                 BigDecimal required = bomLine.getQuantity().multiply(orderQuantity);
                 AssemblyOrderLine line = new AssemblyOrderLine();
-                line.initLine(bomLine.getComponentVariant(), required, ZERO, bomLine.getNote());
+                line.initLine(bomLine.getComponentVariant(), required, bomLine.getUnitPrice(), bomLine.getNote());
                 line.updateActualQuantity(required);
-                order.getLines().add(line);
+                order.addLine(line);
             }
         }
     }
