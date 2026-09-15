@@ -10,6 +10,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './CustomerDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const TABS = {
     SALES: 'SALES',
@@ -20,6 +21,7 @@ const TABS = {
 const CustomerDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const guard = usePermissionGuard();
 
     const [customer, setCustomer] = useState(null);
     const [activeTab, setActiveTab] = useState(TABS.SALES);
@@ -109,6 +111,7 @@ const CustomerDetailPage = () => {
     };
 
     const handleToggleStatus = () => {
+        if (!guard('customer:edit')) return;
         const action = customer.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt';
         setConfirmModal({ isOpen: true, action });
     };
@@ -190,7 +193,7 @@ const CustomerDetailPage = () => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
+                        <button className={styles.btnOutline} onClick={() => guard('customer:edit', () => setIsEditModalOpen(true))}>
                             <i className="bi bi-pencil"></i> Chỉnh sửa
                         </button>
                         {customer.status === 'APPROVED' ? (

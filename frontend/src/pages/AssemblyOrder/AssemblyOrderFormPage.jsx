@@ -26,8 +26,8 @@ const STATUS_META = {
     PENDING_APPROVAL: { label: 'Chờ duyệt', code: 'warning' },
     REJECTED: { label: 'Từ chối', code: 'danger' },
     APPROVED: { label: 'Đã duyệt', code: 'primary' },
-    IN_PROGRESS: { label: 'Đang thực hiện', code: 'warning' },
-    COMPLETED: { label: 'Hoàn thành', code: 'success' },
+    SUBMITTED: { label: 'Đang thực hiện', code: 'warning' },
+    POSTED: { label: 'Hoàn thành', code: 'success' },
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
@@ -86,6 +86,7 @@ function AssemblyOrderFormPage() {
     const [showBomModal, setShowBomModal] = useState(false);
     const [bomForm, setBomForm] = useState(createDefaultBomForm);
     const [bomError, setBomError] = useState('');
+    const [actionModal, setActionModal] = useState({ visible: false, type: '', reason: '' });
 
     // Quick cấu hình Picker states
     const [pickingLineIndex, setPickingLineIndex] = useState(null);
@@ -427,33 +428,47 @@ function AssemblyOrderFormPage() {
     };
 
     const reviewOrder = async (approved) => {
-        const reason = approved ? null : window.prompt('Nhập lý do từ chối lệnh:');
-        if (!approved && !reason?.trim()) return;
-        setSaving(true);
-        try {
-            await (approved
-                ? assemblyApi.approveAssemblyOrder(id)
-                : assemblyApi.rejectAssemblyOrder(id, reason.trim()));
-            showToast('success', approved ? 'Đã duyệt lệnh và tạo cặp phiếu kho.' : 'Đã từ chối lệnh.');
-            await loadOrder();
-        } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không cập nhật được lệnh.');
-        } finally {
-            setSaving(false);
+        if (approved) {
+            setSaving(true);
+            try {
+                await assemblyApi.approveAssemblyOrder(id);
+                showToast('success', 'Đã duyệt lệnh và tạo cặp phiếu kho.');
+                await loadOrder();
+            } catch (err) {
+                showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không cập nhật được lệnh.');
+            } finally {
+                setSaving(false);
+            }
+        } else {
+            setActionModal({ visible: true, type: 'REJECT', reason: '' });
         }
     };
 
     const requestCancel = async () => {
-        const reason = window.prompt('Nhập lý do hủy lệnh:');
-        if (!reason?.trim()) return;
+        setActionModal({ visible: true, type: 'CANCEL', reason: '' });
+    };
+
+    const handleActionSubmit = async () => {
+        const { type, reason } = actionModal;
+        if (!reason.trim()) {
+            showToast('error', 'Vui lòng nhập lý do!');
+            return;
+        }
+        
+        setActionModal({ visible: false, type: '', reason: '' });
         setSaving(true);
         try {
-            await assemblyApi.requestAssemblyOrderCancel(id, reason.trim());
-            showToast('success', ['DRAFT', 'REJECTED', 'PENDING_APPROVAL'].includes(form.status)
-                ? 'Đã hủy lệnh.' : 'Đã gửi yêu cầu hủy cho Kế toán.');
+            if (type === 'REJECT') {
+                await assemblyApi.rejectAssemblyOrder(id, reason.trim());
+                showToast('success', 'Đã từ chối lệnh.');
+            } else if (type === 'CANCEL') {
+                await assemblyApi.requestAssemblyOrderCancel(id, reason.trim());
+                showToast('success', ['DRAFT', 'REJECTED', 'PENDING_APPROVAL'].includes(form.status)
+                    ? 'Đã hủy lệnh.' : 'Đã gửi yêu cầu hủy cho Kế toán.');
+            }
             await loadOrder();
         } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không hủy được lệnh.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không thực hiện được thao tác.');
         } finally {
             setSaving(false);
         }
@@ -1333,6 +1348,55 @@ function AssemblyOrderFormPage() {
                     </>
                 )}
             </Modal>
+
+            {/* Modal Từ chối / Hủy lệnh */}
+            {actionModal.visible && (
+                <div className="modal-overlay" style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div className="modal-content" style={{
+                        backgroundColor: '#fff', padding: '24px', borderRadius: '12px',
+                        width: '400px', maxWidth: '90%', boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    }}>
+                        <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: 'var(--color-text)' }}>
+                            {actionModal.type === 'REJECT' ? 'Từ chối lệnh' : 'Hủy lệnh'}
+                        </h3>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                                Lý do <span className="required">*</span>
+                            </label>
+                            <textarea
+                                className="misa-input"
+                                rows="3"
+                                placeholder={actionModal.type === 'REJECT' ? 'Nhập lý do từ chối...' : 'Nhập lý do hủy lệnh...'}
+                                value={actionModal.reason}
+                                onChange={(e) => setActionModal({ ...actionModal, reason: e.target.value })}
+                                autoFocus
+                            />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button
+                                className="btn-misa-cancel"
+                                type="button"
+                                onClick={() => setActionModal({ visible: false, type: '', reason: '' })}
+                                style={{ padding: '8px 16px', fontWeight: '600' }}
+                            >
+                                Đóng
+                            </button>
+                            <button
+                                className="btn-misa-post"
+                                type="button"
+                                onClick={handleActionSubmit}
+                                style={{ padding: '8px 16px', fontWeight: '600', backgroundColor: actionModal.type === 'REJECT' ? '#dc2626' : '#ea580c', borderColor: actionModal.type === 'REJECT' ? '#dc2626' : '#ea580c', color: '#fff' }}
+                            >
+                                Xác nhận
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Toast {...toast} onClose={hideToast} />
         </AdminLayout>

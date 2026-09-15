@@ -7,6 +7,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { hasPermission } from '../../auth/session';
 
 const STATUS_LABELS = {
   ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
@@ -36,6 +37,8 @@ function WarrantyDetailPage() {
   const [voidReason, setVoidReason] = useState('');
   const [voiding, setVoiding] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+  const canEditWarranty = hasPermission('warranty:edit');
+  const canCreateRepair = hasPermission('repair:add');
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });
@@ -128,12 +131,12 @@ function WarrantyDetailPage() {
           </div>
           <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
 
-            {currentStatus === 'ACTIVE' && (
+            {currentStatus === 'ACTIVE' && canEditWarranty && (
               <button className={styles.btnDelete} onClick={() => setShowVoidModal(true)}>
                 <i className="bi bi-shield-x"></i> Vô hiệu hóa
               </button>
             )}
-            {currentStatus !== 'VOIDED' && (
+            {currentStatus !== 'VOIDED' && canCreateRepair && (
               <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)} style={{ marginLeft: 8 }}>
                 <i className="bi bi-tools"></i> Tạo phiếu sửa
               </button>
@@ -308,7 +311,7 @@ function WarrantyDetailPage() {
         </div>
       </div>
 
-      {showVoidModal && (
+      {showVoidModal && canEditWarranty && (
         <ConfirmModal
           isOpen={showVoidModal}
           onClose={() => setShowVoidModal(false)}

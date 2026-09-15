@@ -8,6 +8,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import WarehouseInventoryList from './components/WarehouseInventoryList';
 import styles from './WarehouseDetailPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const formatCurrency = (value) => {
     if (value === undefined || value === null) return '0 ₫';
@@ -81,6 +82,7 @@ const renderLogChanges = (log) => {
 const WarehouseDetailPage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const guard = usePermissionGuard();
     const [activeTab, setActiveTab] = useState('info');
     const [warehouse, setWarehouse] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -156,7 +158,7 @@ const WarehouseDetailPage = () => {
     };
 
     const handleDelete = () => {
-        setShowDeleteModal(true);
+        guard('warehouse_master:delete', () => setShowDeleteModal(true));
     };
 
     const handleDeleteConfirm = async () => {
@@ -203,6 +205,24 @@ const WarehouseDetailPage = () => {
                             <span className={styles.statusDot}></span>
                             {getStatusLabel(warehouse.status)}
                         </div>
+                    </div>
+                    <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                            className={styles.btnEdit || ''}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '6px', border: '1px solid var(--color-primary)', background: 'transparent', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '14px' }}
+                            onClick={() => guard('warehouse_master:edit', () => setShowModal(true))}
+                            title="Chỉnh sửa kho"
+                        >
+                            <i className="bi bi-pencil"></i> Chỉnh sửa
+                        </button>
+                        <button
+                            className={styles.btnDelete || ''}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '6px', border: '1px solid var(--wms-danger)', background: 'transparent', color: 'var(--wms-danger)', cursor: 'pointer', fontSize: '14px' }}
+                            onClick={handleDelete}
+                            title="Xóa kho"
+                        >
+                            <i className="bi bi-trash"></i> Xóa
+                        </button>
                     </div>
                 </div>
 

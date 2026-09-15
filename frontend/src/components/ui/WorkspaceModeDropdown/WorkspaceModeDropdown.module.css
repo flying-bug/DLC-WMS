@@ -24,6 +24,15 @@
   border-color: var(--primary-color, var(--wms-primary));
 }
 
+.staticTrigger {
+  cursor: default;
+}
+
+.staticTrigger:hover {
+  background: var(--bg-card, var(--color-white));
+  border-color: var(--border-color, var(--wms-border-base));
+}
+
 .shopIcon {
   color: var(--color-primary-bright);
   font-size: 0.95rem;

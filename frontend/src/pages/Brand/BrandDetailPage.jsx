@@ -7,10 +7,12 @@ import Toast from '../../components/ui/Toast/Toast';
 import axiosClient from '../../api/axiosClient';
 import styles from './BrandDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const BrandDetailPage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const guard = usePermissionGuard();
     
     const [brand, setBrand] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -99,10 +101,10 @@ const BrandDetailPage = () => {
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
+                        <button className={styles.btnOutline} onClick={() => guard('brand:edit', () => setIsEditModalOpen(true))}>
                             <i className="bi bi-pencil"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => setIsDeleteModalOpen(true)}>
+                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => guard('brand:delete', () => setIsDeleteModalOpen(true))}>
                             <i className="bi bi-trash"></i> Xóa
                         </button>
                     </div>
