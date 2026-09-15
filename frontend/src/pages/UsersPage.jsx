@@ -73,8 +73,19 @@ function UsersPage() {
         const colorClasses = [styles.bgBlue, styles.bgOrange, styles.bgGray];
         const avatarColorClass = colorClasses[u.id % colorClasses.length] || styles.bgBlue;
 
+        const rolePriority = {
+            'SUPER_ADMIN': 1, 'ROLE_SUPER_ADMIN': 1,
+            'MANAGER': 2, 'ROLE_MANAGER': 2,
+            'ACCOUNTANT': 3, 'ROLE_ACCOUNTANT': 3,
+            'CASHIER_CONTROLLER': 4, 'ROLE_CASHIER_CONTROLLER': 4,
+            'WAREHOUSE_CONTROLLER': 5, 'ROLE_WAREHOUSE_CONTROLLER': 5,
+            'TECHNICIAN': 6, 'ROLE_TECHNICIAN': 6,
+            'STAFF': 7, 'ROLE_STAFF': 7
+        };
+        const sortedRoles = [...rolesList].sort((a, b) => (rolePriority[a] || 99) - (rolePriority[b] || 99));
+
         // Multi-role badges
-        const badges = rolesList.map(r => {
+        const badges = sortedRoles.map(r => {
             const cfg = ROLE_BADGE_CONFIG[r] || { label: r.replace('ROLE_', ''), className: styles.roleSecondary, dept: 'Kho' };
             return cfg;
         });
@@ -455,15 +466,9 @@ function UsersPage() {
                                         <td data-label="TÀI KHOẢN NHÂN VIÊN">{user.code}</td>
                                         <td data-label="BỘ PHẬN">{user.departmentShort}</td>
                                         <td data-label="VAI TRÒ">
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                {user.badges && user.badges.length > 0 ? (
-                                                    user.badges.map((b, bIdx) => (
-                                                        <span key={bIdx} className={`${styles.roleBadge} ${b.className}`}>{b.label}</span>
-                                                    ))
-                                                ) : (
-                                                    <span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span>
-                                                )}
-                                            </div>
+                                            <span className={`${styles.roleBadge} ${user.position?.toUpperCase().includes('QUẢN LÝ') || user.position?.toUpperCase().includes('SUPER') || user.position?.toUpperCase().includes('TRƯỞNG') ? styles.rolePrimary : styles.roleSecondary}`}>
+                                                {user.position?.toUpperCase() || 'NHÂN VIÊN'}
+                                            </span>
                                         </td>
                                         <td data-label="TRẠNG THÁI"><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
                                         <td data-label="THAO TÁC" className={styles.actionCell}>
