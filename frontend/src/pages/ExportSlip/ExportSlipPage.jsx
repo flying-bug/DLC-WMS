@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -865,7 +865,24 @@ function ExportSlipPage() {
                 {(() => {
                   const isAssembly = selectedSlip.referenceType === 'ASSEMBLY_ORDER';
                   const displayVatAndTotal = showPricing && !isAssembly;
-                  
+
+                  // Cột quy đổi đơn vị (ĐVC/Tỷ lệ CĐ/Phép tính/SL ĐVC) chỉ có ý nghĩa khi ít
+                  // nhất 1 dòng thực sự quy đổi (tỷ lệ khác 1 hoặc ĐVT khác ĐVC) - còn lại thì
+                  // 4 cột này luôn lặp lại y hệt ĐVT/Số lượng, chỉ tổ chiếm chỗ khiến bảng phải
+                  // cuộn ngang mới thấy hết.
+                  const hasAnyConversion = (selectedSlip.lines || []).some(line => {
+                    const product = productById.get(line.variantId);
+                    const baseUnitName = line.baseUnitName || product?.unitName || '-';
+                    const unitName = line.unitName || product?.unitName || '-';
+                    const ratio = Number(line.conversionRatio) > 0 ? Number(line.conversionRatio) : 1;
+                    return ratio !== 1 || baseUnitName !== unitName;
+                  });
+
+                  const columnCount = 5 // STT, Mã SP, Tên hàng, ĐVT, Số lượng
+                    + (hasAnyConversion ? 4 : 0)
+                    + (showPricing ? 1 : 0)
+                    + (displayVatAndTotal ? 3 : 0);
+
                   return (
                     <>
                       <table className={styles.detailTable}>
@@ -876,15 +893,14 @@ function ExportSlipPage() {
                             <th>Tên hàng</th>
                             <th>ĐVT</th>
                             <th className={styles.textCenter}>Số lượng</th>
-                            <th>ĐVC</th>
-                            <th className={styles.textCenter}>Tỷ lệ CĐ</th>
-                            <th className={styles.textCenter}>Phép tính</th>
-                            <th className={styles.textRight}>SL (ĐVC)</th>
+                            {hasAnyConversion && <th>ĐVC</th>}
+                            {hasAnyConversion && <th className={styles.textCenter}>Tỷ lệ CĐ</th>}
+                            {hasAnyConversion && <th className={styles.textCenter}>Phép tính</th>}
+                            {hasAnyConversion && <th className={styles.textRight}>SL (ĐVC)</th>}
                             {showPricing && <th className={styles.textRight}>Giá xuất</th>}
                             {displayVatAndTotal && <th className={styles.textRight}>% VAT</th>}
                             {displayVatAndTotal && <th className={styles.textRight}>Tiền VAT</th>}
                             {displayVatAndTotal && <th className={styles.textRight}>Thành tiền</th>}
-                            <th>Số Serial</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -898,32 +914,38 @@ function ExportSlipPage() {
                             const baseQty = line.baseQuantity != null ? Number(line.baseQuantity) : ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
                             const hasSerial = line.serialNumbers && line.serialNumbers.length > 0;
                             return (
-                              <tr key={line.id || index}>
-                                <td>{index + 1}</td>
-                                <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
-                                <td style={{ fontWeight: '500' }}>
-                                  {variantLabel(product) || 'Chưa có tên sản phẩm'}
-                                </td>
-                                <td>{unitName}</td>
-                                <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
-                                <td>{baseUnitName}</td>
-                                <td className={styles.textCenter}>{ratio}</td>
-                                <td className={styles.textCenter} style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                                <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
-                                {showPricing && <td className={styles.textRight}>{money(line.unitPrice)}</td>}
-                                {displayVatAndTotal && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
-                                {displayVatAndTotal && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
-                                {displayVatAndTotal && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
-                                <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal', fontWeight: hasSerial ? '600' : 'normal', color: hasSerial ? '#0369a1' : 'inherit' }}>
-                                  {hasSerial ? (
-                                    <span style={{ fontSize: '13px' }}>
-                                      {line.serialNumbers.join(', ')}
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
-                                  )}
-                                </td>
-                              </tr>
+                              <Fragment key={line.id || index}>
+                                <tr>
+                                  <td>{index + 1}</td>
+                                  <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
+                                  <td style={{ fontWeight: '500' }}>
+                                    {variantLabel(product) || 'Chưa có tên sản phẩm'}
+                                  </td>
+                                  <td>{unitName}</td>
+                                  <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
+                                  {hasAnyConversion && <td>{baseUnitName}</td>}
+                                  {hasAnyConversion && <td className={styles.textCenter}>{ratio}</td>}
+                                  {hasAnyConversion && <td className={styles.textCenter} style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>}
+                                  {hasAnyConversion && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>}
+                                  {showPricing && <td className={styles.textRight}>{money(line.unitPrice)}</td>}
+                                  {displayVatAndTotal && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
+                                  {displayVatAndTotal && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
+                                  {displayVatAndTotal && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
+                                </tr>
+                                {hasSerial && (
+                                  <tr>
+                                    <td colSpan={columnCount} style={{ backgroundColor: 'var(--wms-bg-soft)', padding: '8px 12px 8px 40px', whiteSpace: 'normal', wordWrap: 'break-word', borderBottom: '1px solid var(--wms-bg-hover)' }}>
+                                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#0369a1', marginRight: '6px' }}>
+                                        <i className="bi bi-upc-scan" style={{ marginRight: '4px' }}></i>
+                                        Serial ({line.serialNumbers.length}):
+                                      </span>
+                                      <span style={{ fontSize: '13px', color: 'var(--wms-text-strong)' }}>
+                                        {line.serialNumbers.join(', ')}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
                             );
                           })}
                         </tbody>
