@@ -722,6 +722,10 @@ function UpdateExportSlipPage() {
         focusField(`export-line-qty-${i}`);
         return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
       }
+      if (item.price !== undefined && item.price !== '' && Number(item.price) < 0) {
+        focusField(`export-line-price-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
+      }
       const product = productById.get(String(item.variantId));
       if (product?.trackSerial) {
         const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;

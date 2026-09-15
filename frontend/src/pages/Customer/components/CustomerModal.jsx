@@ -6,6 +6,8 @@ import styles from './CustomerModal.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
+const PHONE_REGEX = /^(?:\+84|0)(?:3[2-9]|5[5689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
+
 const GROUP_OPTIONS = [
     { value: 'RETAIL', label: 'Khách lẻ' },
     { value: 'WHOLESALE', label: 'Khách thợ' },
@@ -112,6 +114,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
         else if (form.name.trim().length > 150) newErrors.name = 'Tên không được vượt quá 150 ký tự.';
 
         if (!form.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại liên hệ!';
+        else if (!PHONE_REGEX.test(form.phone.trim())) newErrors.phone = 'Số điện thoại không đúng định dạng!';
 
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
             newErrors.email = 'Email không đúng định dạng!';

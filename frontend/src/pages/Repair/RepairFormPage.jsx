@@ -536,6 +536,10 @@ function RepairFormPage() {
     }
     if (!formData.responsiblePerson?.trim()) { showToast('error', 'Vui lòng điền Người chịu trách nhiệm (KTV).'); return; }
     if (!formData.issueDescription?.trim()) { showToast('error', 'Vui lòng điền Mô tả lỗi.'); return; }
+    if (formData.expectedDate && formData.receivedDate && formData.expectedDate < formData.receivedDate) {
+      showToast('error', 'Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.');
+      return;
+    }
 
     setSaving(true);
     try {

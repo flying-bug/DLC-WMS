@@ -557,6 +557,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         focusField(`import-line-qty-${i}`);
         return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
       }
+      if (item.price !== undefined && item.price !== '' && Number(item.price) < 0) {
+        focusField(`import-line-price-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
+      }
       const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
       if (isNaN(vat) || vat < 0 || vat > 10) {
         focusField(`import-line-vat-${i}`);

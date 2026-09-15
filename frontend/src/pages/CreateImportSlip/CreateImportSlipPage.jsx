@@ -775,6 +775,10 @@ function CreateImportSlipPage() {
         focusField(`import-line-qty-${i}`);
         return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
       }
+      if (item.price !== undefined && item.price !== '' && Number(item.price) < 0) {
+        focusField(`import-line-price-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
+      }
       const product = productById.get(String(item.variantId));
       // Kế toán chỉ lập phiếu nhập dự kiến (số lượng, đơn giá, VAT theo hóa đơn NCC) - hàng
       // thường chưa về kho nên chưa có serial thực tế để quét. Việc quét đủ serial là trách
