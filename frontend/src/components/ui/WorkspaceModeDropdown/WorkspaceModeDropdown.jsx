@@ -10,6 +10,7 @@ export default function WorkspaceModeDropdown() {
 
   const { workspaceMode, setWorkspaceMode, currentModeConfig, MODE_CONFIGS, allowedModes } = useWorkspaceMode();
   const selectableModes = Object.values(MODE_CONFIGS).filter(item => allowedModes.includes(item.id));
+  const canSwitchMode = selectableModes.length > 1;
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -31,9 +32,29 @@ export default function WorkspaceModeDropdown() {
     } else if (modeId === WORKSPACE_MODES.CASHIER) {
       navigate('/cashier-workspace');
     } else {
-      navigate('/dashboard');
+      navigate('/main-dashboard');
     }
   };
+
+  if (!currentModeConfig || selectableModes.length === 0) {
+    return null;
+  }
+
+  const triggerContent = (
+    <>
+      <i className={`fas fa-store ${styles.shopIcon}`}></i>
+      <span className={styles.brandName}>Duy Long Computer</span>
+      <span className={styles.divider}>|</span>
+      <span className={styles.modeBadge}>
+        <i className={currentModeConfig.icon}></i>
+        {currentModeConfig.shortLabel}
+      </span>
+    </>
+  );
+
+  if (!canSwitchMode) {
+    return <div className={`${styles.triggerButton} ${styles.staticTrigger}`}>{triggerContent}</div>;
+  }
 
   return (
     <div className={styles.dropdownContainer} ref={dropdownRef}>
@@ -42,21 +63,15 @@ export default function WorkspaceModeDropdown() {
         className={styles.triggerButton}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        title="Chuyển đổi Chế độ làm việc (Kế toán / Thủ kho / Thủ quỹ)"
+        title="Chuyển đổi chế độ làm việc"
       >
-        <i className={`bi bi-shop ${styles.shopIcon}`}></i>
-        <span className={styles.brandName}>Duy Long Computer</span>
-        <span className={styles.divider}>|</span>
-        <span className={styles.modeBadge}>
-          <i className={currentModeConfig.icon}></i>
-          {currentModeConfig.shortLabel}
-        </span>
-        <i className={`bi bi-chevron-down ${styles.chevron} ${isOpen ? styles.open : ''}`}></i>
+        {triggerContent}
+        <i className={`fas fa-chevron-down ${styles.chevron} ${isOpen ? styles.open : ''}`}></i>
       </button>
 
-      {isOpen && (
+      {isOpen && canSwitchMode && (
         <div className={styles.dropdownMenu}>
-          <div className={styles.menuHeader}>Chế độ làm việc (MISA Personas)</div>
+          <div className={styles.menuHeader}>Chế độ làm việc</div>
           {selectableModes.map((item) => {
             const isActive = workspaceMode === item.id;
             return (
@@ -72,7 +87,7 @@ export default function WorkspaceModeDropdown() {
                 <div className={styles.itemContent}>
                   <div className={styles.itemTitleRow}>
                     <span className={styles.itemLabel}>{item.label}</span>
-                    {isActive && <i className={`bi bi-check ${styles.activeCheck}`}></i>}
+                    {isActive && <i className={`fas fa-check ${styles.activeCheck}`}></i>}
                   </div>
                   {item.desc ? <span className={styles.itemDesc}>{item.desc}</span> : null}
                 </div>

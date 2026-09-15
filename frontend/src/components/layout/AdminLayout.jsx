@@ -71,8 +71,8 @@ const AdminLayout = ({ children }) => {
         ],
         warehouse: [
             { path: '/dashboard', label: 'Quy trình', exact: true },
-            { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'], moduleKey: 'import' },
-            { path: '/export-slips', label: 'Xuất kho', moduleKey: 'export' },
+            { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'], moduleKeys: ['import', 'assembly'] },
+            { path: '/export-slips', label: 'Xuất kho', moduleKeys: ['export', 'assembly'] },
             { path: '/transfer-history', label: 'Chuyển kho', moduleKey: 'transfer' },
             { path: '/stocktakes', label: 'Kiểm kê', moduleKey: 'stocktake' },
             { path: '/assembly-orders', label: 'Lắp ráp / Tháo dỡ', moduleKey: 'assembly' },

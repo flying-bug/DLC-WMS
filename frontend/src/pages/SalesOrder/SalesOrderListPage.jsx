@@ -13,6 +13,7 @@ import { exportToExcel } from '../../utils/excelExport';
 import { printQuotation } from '../../utils/printQuotation';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -50,6 +51,7 @@ const pageContent = (p) => p?.content ?? p ?? [];
 function SalesOrderListPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const guard = usePermissionGuard();
 
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -202,7 +204,7 @@ function SalesOrderListPage() {
           <h1 className={styles.pageTitle}>
             Đơn bán hàng
           </h1>
-          <button className={styles.btnPrimary} onClick={() => navigate('/sales-orders/create')}>
+          <button className={styles.btnPrimary} onClick={() => guard('sales_order:add', () => navigate('/sales-orders/create'))}>
             <i className="bi bi-plus" /> Tạo đơn bán hàng
           </button>
         </div>
@@ -355,7 +357,7 @@ function SalesOrderListPage() {
                             className="bi bi-pencil"
                             title="Sửa"
                             style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-primary)', fontSize: 15 }}
-                            onClick={() => navigate(`/sales-orders/${so.id}/edit`)}
+                            onClick={() => guard('sales_order:edit', () => navigate(`/sales-orders/${so.id}/edit`))}
                           />
                         )}
                         {so.status === 'DRAFT' && (
@@ -363,7 +365,7 @@ function SalesOrderListPage() {
                             className="bi bi-check2-circle"
                             title="Duyệt đơn"
                             style={{ cursor: 'pointer', marginRight: 10, color: '#22c55e', fontSize: 15 }}
-                            onClick={() => setConfirmApprove(so)}
+                            onClick={() => guard('sales_order:edit', () => setConfirmApprove(so))}
                           />
                         )}
                         {so.status === 'APPROVED' && (
@@ -371,7 +373,7 @@ function SalesOrderListPage() {
                             className="bi bi-box-arrow-right"
                             title="Tạo phiếu xuất kho"
                             style={{ cursor: 'pointer', marginRight: 10, color: '#8b5cf6', fontSize: 15 }}
-                            onClick={() => handleCreateExport(so)}
+                            onClick={() => guard('sales_order:edit', () => handleCreateExport(so))}
                           />
                         )}
                         {so.status === 'DRAFT' && (
@@ -379,7 +381,7 @@ function SalesOrderListPage() {
                             className="bi bi-x-circle"
                             title="Hủy đơn"
                             style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
-                            onClick={() => setConfirmCancel(so)}
+                            onClick={() => guard('sales_order:edit', () => setConfirmCancel(so))}
                           />
                         )}
                       </td>

@@ -80,7 +80,9 @@ const REPAIR_STATUS_LABELS = {
 const STATUS_LABELS = {
     ...ORDER_STATUS_LABELS,
     ...REPAIR_STATUS_LABELS,
-    SUBMITTED: 'Hoàn thành'
+    SUBMITTED: 'Hoàn thành',
+    COMPLETE: 'Hoàn thành',
+    COMPLETED: 'Hoàn thành'
 };
 
 const getTransactionStatusMeta = (status) => {
@@ -99,6 +101,8 @@ const getTransactionStatusMeta = (status) => {
         case 'POSTED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#f3e8ff', color: '#7e22ce', borderColor: '#d8b4fe' };
         case 'SUBMITTED':
+        case 'COMPLETE':
+        case 'COMPLETED':
         case 'DONE':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#ccfbf1', color: '#0f766e', borderColor: '#5eead4' };
         case 'CANCELLED':
@@ -161,7 +165,9 @@ function AnalyticsDashboard() {
                 break;
             case 'ASSEMBLY_ORDER':
             case 'DISASSEMBLY_ORDER':
-                navigate(`/assembly-orders/${transaction.entityId}?mode=view`);
+                navigate(`/assembly-orders/${transaction.entityId}?mode=view`, {
+                    state: { returnTo: '/main-dashboard' }
+                });
                 break;
             case 'WARRANTY_REPAIR':
                 navigate(`/warranties/${transaction.entityId}`);

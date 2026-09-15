@@ -98,7 +98,7 @@ export const getInitialPermissionsState = () => ({
     stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
 
     // Kỹ thuật & Lắp ráp
-    assembly_config: { full: false, view: false, add: false, edit: false },
+    assembly_config: { full: false, view: false, add: false, edit: false, delete: false },
     assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false, submit: false, approve: false, execute: false, complete: false },
     warranty: { full: false, view: false, add: false, edit: false },
     repair: { full: false, view: false, add: false, edit: false, delete: false },
@@ -106,13 +106,13 @@ export const getInitialPermissionsState = () => ({
     // Kinh doanh & Kế toán
     purchase_order: { full: false, view: false, add: false, edit: false },
     sales_order: { full: false, view: false, add: false, edit: false, export: false, print: false },
-    einvoice: { full: false, view: false, add: false, edit: false, export: false, print: false },
-    payment: { full: false, view: false, add: false, edit: false },
+    einvoice: { full: false, view: false, add: false, edit: false },
+    payment: { full: false, view: false, add: false, edit: false, delete: false },
 
     // Danh mục
     product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
     product_category: { full: false, view: false, add: false, edit: false, delete: false },
-    brand: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+    brand: { full: false, view: false, add: false, edit: false, delete: false },
     unit: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
     customer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
     supplier: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },

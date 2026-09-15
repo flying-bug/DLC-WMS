@@ -102,7 +102,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                         <span style={{ color: 'var(--color-text-placeholder)' }}>Tìm kiếm danh mục</span>
                     )
                 )}
-                <i className={`bi bi-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
+                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
             </div>
 
             {isOpen && rect && createPortal(
@@ -169,7 +169,9 @@ const QuickAddProductModal = ({
     initialProductName = '',
     initialUnitName = '',
     initialCategoryName = '',
-    initialWarrantyMonths = ''
+    initialWarrantyMonths = '',
+    assemblyDraft = false,
+    existingProducts = []
 }) => {
     const productTypeOptions = (Array.isArray(allowedProductTypes) && allowedProductTypes.length > 0
         ? allowedProductTypes
@@ -197,11 +199,12 @@ const QuickAddProductModal = ({
 
     const fetchLookups = async () => {
         try {
-            const [catRes, unitRes, brandRes] = await Promise.all([
+            const requests = [
                 axiosClient.get('/product-categories?size=1000'),
-                axiosClient.get('/units?size=1000'),
-                axiosClient.get('/brands?size=1000')
-            ]);
+                axiosClient.get('/units?size=1000')
+            ];
+            if (!assemblyDraft) requests.push(axiosClient.get('/brands?size=1000'));
+            const [catRes, unitRes, brandRes] = await Promise.all(requests);
             
             const getPageContent = (response) => response?.data?.data?.content || response?.data?.content || response?.data?.data || response?.data || [];
             
@@ -217,7 +220,9 @@ const QuickAddProductModal = ({
                 let newUnitId = prev.unitId;
 
                 if (initialCategoryName && !newCatId) {
-                    const matchedCat = fetchedCategories.find(c => c.name?.trim().toLowerCase() === initialCategoryName.trim().toLowerCase());
+                    const expectedName = initialCategoryName.trim().toLowerCase();
+                    const matchedCat = fetchedCategories.find(c => c.name?.trim().toLowerCase() === expectedName)
+                        || (assemblyDraft ? fetchedCategories.find(c => /máy.*bộ|pc.*lắp.*ráp|thành phẩm/i.test(c.name || '')) : null);
                     if (matchedCat) newCatId = String(matchedCat.id);
                 }
                 if (initialUnitName && !newUnitId) {
@@ -228,21 +233,23 @@ const QuickAddProductModal = ({
                 return { ...prev, categoryId: newCatId, unitId: newUnitId };
             });
             
-            let brands = getPageContent(brandRes);
-            let defaultBrand = brands.find(b => b.name.toLowerCase() === 'khác' || b.name.toLowerCase() === 'other');
-            
-            if (!defaultBrand) {
-                try {
-                    const newBrandRes = await axiosClient.post('/brands', { name: 'Khác', description: 'Thương hiệu mặc định', status: 'ACTIVE' });
-                    defaultBrand = newBrandRes.data?.data || newBrandRes.data;
-                } catch (e) {
-                    console.error('Không thể tạo thương hiệu mặc định:', e);
-                    defaultBrand = brands[0]; // fallback
-                }
-            }
+            if (!assemblyDraft) {
+                let brands = getPageContent(brandRes);
+                let defaultBrand = brands.find(b => b.name.toLowerCase() === 'khác' || b.name.toLowerCase() === 'other');
 
-            if (defaultBrand) {
-                setFormData(fd => ({ ...fd, brandId: defaultBrand.id }));
+                if (!defaultBrand) {
+                    try {
+                        const newBrandRes = await axiosClient.post('/brands', { name: 'Khác', description: 'Thương hiệu mặc định', status: 'ACTIVE' });
+                        defaultBrand = newBrandRes.data?.data || newBrandRes.data;
+                    } catch (e) {
+                        console.error('Không thể tạo thương hiệu mặc định:', e);
+                        defaultBrand = brands[0]; // fallback
+                    }
+                }
+
+                if (defaultBrand) {
+                    setFormData(fd => ({ ...fd, brandId: defaultBrand.id }));
+                }
             }
         } catch (error) {
             console.error('Lỗi lấy danh mục:', error);
@@ -260,12 +267,12 @@ const QuickAddProductModal = ({
                 warrantyPeriodMonths: initialWarrantyMonths || '',
                 salePrice: ''
             });
-            setTrackSerial(false);
+            setTrackSerial(assemblyDraft);
             setBomLines([]);
             setErrorMsg('');
             fetchLookups();
         }
-    }, [isOpen, defaultProductType, initialProductName, initialUnitName, initialCategoryName, initialWarrantyMonths]);
+    }, [isOpen, defaultProductType, initialProductName, initialUnitName, initialCategoryName, initialWarrantyMonths, assemblyDraft]);
 
     const effectiveProductType = selectedProductType || defaultProductType;
     const isAssemblyType = effectiveProductType === 'Thành phẩm';
@@ -309,8 +316,8 @@ const QuickAddProductModal = ({
         }
 
         // Validate BOM lines if there are any
-        const validBomLines = isAssemblyType ? bomLines.filter(l => l.categoryId) : [];
-        if (isAssemblyType && bomLines.length > 0 && validBomLines.length === 0) {
+        const validBomLines = isAssemblyType && !assemblyDraft ? bomLines.filter(l => l.categoryId) : [];
+        if (isAssemblyType && !assemblyDraft && bomLines.length > 0 && validBomLines.length === 0) {
             setErrorMsg('Vui lòng chọn ít nhất một vai trò linh kiện cho định mức cấu hình.');
             return;
         }
@@ -318,37 +325,44 @@ const QuickAddProductModal = ({
         setLoading(true);
         setErrorMsg('');
         try {
-            const payload = {
-                productName: formData.productName.trim(),
-                productType: effectiveProductType,
-                categoryId: Number(formData.categoryId),
-                unitId: Number(formData.unitId),
-                brandId: formData.brandId ? Number(formData.brandId) : null,
-                warrantyPeriodMonths: formData.warrantyPeriodMonths ? Number(formData.warrantyPeriodMonths) : 0,
-                salePrice: formData.salePrice ? Number(formData.salePrice) : 0,
-                vatRate: formData.vatRate !== undefined ? Number(formData.vatRate) : 8,
-                trackSerial: trackSerial,
-                isAssembly: isAssemblyType,
-                active: true,
-                minStockQty: 0
-            };
+            const payload = assemblyDraft
+                ? {
+                    productName: formData.productName.trim(),
+                    categoryId: Number(formData.categoryId),
+                    unitId: Number(formData.unitId)
+                }
+                : {
+                    productName: formData.productName.trim(),
+                    productType: effectiveProductType,
+                    categoryId: Number(formData.categoryId),
+                    unitId: Number(formData.unitId),
+                    brandId: formData.brandId ? Number(formData.brandId) : null,
+                    warrantyPeriodMonths: formData.warrantyPeriodMonths ? Number(formData.warrantyPeriodMonths) : 0,
+                    salePrice: formData.salePrice ? Number(formData.salePrice) : 0,
+                    vatRate: formData.vatRate !== undefined ? Number(formData.vatRate) : 8,
+                    trackSerial: trackSerial,
+                    isAssembly: isAssemblyType,
+                    active: true,
+                    minStockQty: 0
+                };
 
-            // Format BOM template
-            if (isAssemblyType && validBomLines.length > 0) {
-                const linesPayload = validBomLines.map(l => {
-                    const selectedCat = categories.find(c => String(c.id) === String(l.categoryId));
-                    return {
-                        componentRole: selectedCat ? selectedCat.name : '',
-                        categoryId: l.categoryId,
-                        note: l.note || ''
-                    };
-                });
-                payload.bomTemplate = JSON.stringify(linesPayload);
-            } else {
-                payload.bomTemplate = null;
+            if (!assemblyDraft) {
+                if (isAssemblyType && validBomLines.length > 0) {
+                    const linesPayload = validBomLines.map(l => {
+                        const selectedCat = categories.find(c => String(c.id) === String(l.categoryId));
+                        return {
+                            componentRole: selectedCat ? selectedCat.name : '',
+                            categoryId: l.categoryId,
+                            note: l.note || ''
+                        };
+                    });
+                    payload.bomTemplate = JSON.stringify(linesPayload);
+                } else {
+                    payload.bomTemplate = null;
+                }
             }
 
-            const res = await axiosClient.post('/products', payload);
+            const res = await axiosClient.post(assemblyDraft ? '/products/quick-finished' : '/products', payload);
             const newProduct = res.data?.data || res.data;
             onSuccess(newProduct);
             onClose();
@@ -361,12 +375,20 @@ const QuickAddProductModal = ({
 
     if (!isOpen) return null;
 
+    const normalizedName = formData.productName.trim().toLocaleLowerCase('vi-VN');
+    const similarProducts = assemblyDraft && normalizedName.length >= 3
+        ? existingProducts.filter(product => {
+            const name = String(product.productName || '').toLocaleLowerCase('vi-VN');
+            return name.includes(normalizedName) || normalizedName.includes(name);
+        }).slice(0, 3)
+        : [];
+
     return (
         <div className="misa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-            <div className="misa-modal" style={{ width: '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="misa-modal" style={{ width: assemblyDraft ? '560px' : '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-heading)' }}>Thêm nhanh {effectiveProductType}</span>
-                    <i className="bi bi-x" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-heading)' }}>{assemblyDraft ? 'Tạo nhanh thành phẩm nháp' : `Thêm nhanh ${effectiveProductType}`}</span>
+                    <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
                 </div>
                 
                 <div className="misa-modal-body" style={{ padding: '20px 24px', backgroundColor: '#fff', overflowY: 'auto', flex: 1 }}>
@@ -399,6 +421,12 @@ const QuickAddProductModal = ({
                                 placeholder={`Nhập tên ${effectiveProductType.toLowerCase()}...`}
                             />
                         </div>
+
+                        {similarProducts.length > 0 && (
+                            <div style={{ marginTop: '10px', padding: '8px 10px', borderRadius: '4px', background: '#fffbeb', color: '#92400e', fontSize: '12px' }}>
+                                Đã có sản phẩm gần giống: {similarProducts.map(product => product.productName).join(', ')}. Hãy kiểm tra trước khi tạo mới.
+                            </div>
+                        )}
                         
                         <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
                             <div className={styles.field} style={{ flex: 1 }}>
@@ -421,7 +449,7 @@ const QuickAddProductModal = ({
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
+                        {!assemblyDraft && <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Thời hạn bảo hành (Tháng)</label>
                                 <input 
@@ -454,9 +482,13 @@ const QuickAddProductModal = ({
                                     <option value={10}>10%</option>
                                 </SearchableSelect>
                             </div>
-                        </div>
+                        </div>}
 
-                        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {assemblyDraft ? (
+                            <div style={{ marginTop: '14px', padding: '10px 12px', borderRadius: '6px', background: '#eff6ff', color: '#1e40af', fontSize: '12px', lineHeight: 1.5 }}>
+                                Mã sản phẩm được tự sinh và quản lý Serial được bật sẵn. Thành phẩm chưa được kích hoạt cho đến khi quản lý hoàn thiện thông tin.
+                            </div>
+                        ) : <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <input 
                                 type="checkbox" 
                                 id="trackSerial"
@@ -467,10 +499,10 @@ const QuickAddProductModal = ({
                             <label htmlFor="trackSerial" style={{ fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', color: 'var(--color-text-heading)', margin: 0 }}>
                                 Có quản lý theo số Serial / IMEI
                             </label>
-                        </div>
+                        </div>}
                     </div>
 
-                    {isAssemblyType && (
+                    {isAssemblyType && !assemblyDraft && (
                         <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 <h5 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>2. Định mức cấu hình (Tùy chọn)</h5>
@@ -530,7 +562,7 @@ const QuickAddProductModal = ({
                                                 onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-placeholder)'; e.currentTarget.style.background = 'transparent'; }}
                                                 title="Xóa danh mục"
                                             >
-                                                <i className="bi bi-trash"></i>
+                                                <i className="bi bi-trash3"></i>
                                             </button>
                                         </div>
                                     ))}
@@ -558,7 +590,7 @@ const QuickAddProductModal = ({
                 <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
                     <button type="button" className="btn-misa-cancel" onClick={onClose}>Hủy</button>
                     <button type="button" className="btn-misa-primary" onClick={handleSave} disabled={loading}>
-                        {loading ? 'Đang lưu...' : `Lưu ${effectiveProductType}`}
+                        {loading ? 'Đang lưu...' : (assemblyDraft ? 'Tạo thành phẩm nháp' : `Lưu ${effectiveProductType}`)}
                     </button>
                 </div>
             </div>

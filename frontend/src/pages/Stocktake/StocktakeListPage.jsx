@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import { getMyWarehouses } from '../../api/warehouseApi';
@@ -12,6 +11,7 @@ import styles from './StocktakeListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -26,6 +26,7 @@ const formatDate = (value) => value ? formatDateOnly(value) : '';
 function StocktakeListPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const guard = usePermissionGuard();
   const [stocktakes, setStocktakes] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -151,7 +152,7 @@ function StocktakeListPage() {
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Kiểm kê vật tư hàng hóa</h1>
-          <button className={styles.btnPrimary} onClick={() => setShowInitModal(true)}>
+          <button className={styles.btnPrimary} onClick={() => guard('stocktake:add', () => setShowInitModal(true))}>
             Thêm bảng kiểm kê
           </button>
         </div>

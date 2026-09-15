@@ -17,6 +17,7 @@ import { formatDateTime, formatDateOnly } from '../../utils/dateFormat';
 import { getDateRangePreset } from '../../utils/datePresets';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import { exportToExcel } from '../../utils/excelExport';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -47,6 +48,7 @@ const selectStyles = {
 
 function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   const navigate = useNavigate();
+  const guard = usePermissionGuard();
   const [mode, setMode] = useState(initialMode);
 
   useEffect(() => {
@@ -437,7 +439,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
             <button
               type="button"
               className={styles.btnPrimary}
-              onClick={handleOpenCreate}
+              onClick={() => guard('payment:add', handleOpenCreate)}
             >
               <i className="bi bi-plus-lg" /> {mode === 'RECEIPT' ? 'Lập phiếu thu' : 'Lập phiếu chi'}
             </button>
@@ -678,7 +680,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                     className={styles.dropdownItem}
                                     onClick={() => {
                                       setOpenDropdownId(null);
-                                      handleStartEdit(item);
+                                      guard('payment:edit', () => handleStartEdit(item));
                                     }}
                                   >
                                     <i className="bi bi-pencil"></i> Sửa phiếu nháp
@@ -688,7 +690,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                     className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
                                     onClick={() => {
                                       setOpenDropdownId(null);
-                                      setDeletingItem(item);
+                                      guard('payment:delete', () => setDeletingItem(item));
                                     }}
                                   >
                                     <i className="bi bi-trash"></i> Xóa phiếu nháp

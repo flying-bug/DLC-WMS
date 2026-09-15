@@ -23,6 +23,7 @@ import styles from './ImportHistoryPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import { canViewPricing } from '../../auth/session';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const DEFAULT_COLUMNS = {
@@ -139,6 +140,8 @@ function ImportHistoryPage() {
   }, [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const guard = usePermissionGuard();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [unpostTarget, setUnpostTarget] = useState(null);
@@ -395,9 +398,11 @@ function ImportHistoryPage() {
       <div className={styles.pageBody} onClick={() => setOpenDropdownId(null)}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách phiếu nhập kho</h1>
-          <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create')}>
-            <i className="bi bi-plus"></i> Thêm mới
-          </button>
+          {guard.check('import:add') && (
+            <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create')}>
+              <i className="bi bi-plus"></i> Thêm mới
+            </button>
+          )}
         </div>
 
         <div className={styles.filterSection}>
@@ -550,19 +555,19 @@ function ImportHistoryPage() {
                       <td>
                         {slip.status === 'POSTED' || slip.status === 'COMPLETED' ? (
                           <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                            <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+                            <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
                           </span>
                         ) : slip.status === 'UNPOSTED' ? (
                           <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                            <i className="bi bi-arrow-counterclockwise" style={{ marginRight: 4 }}></i>Bỏ ghi sổ
+                            <i className="fas fa-undo" style={{ marginRight: 4 }}></i>Bỏ ghi sổ
                           </span>
                         ) : slip.status === 'APPROVED' ? (
                           <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                            <i className="bi bi-check2-all" style={{ marginRight: 4 }}></i>Đã duyệt
+                            <i className="fas fa-check-double" style={{ marginRight: 4 }}></i>Đã duyệt
                           </span>
                         ) : (
                           <span className={`${styles.badge} ${styles.badgeDraft}`}>
-                            <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+                            <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
                           </span>
                         )}
                         {slip.hasDiscrepancy && (
@@ -603,23 +608,25 @@ function ImportHistoryPage() {
                                 setSelectedSlip(slip);
                               }}
                             >
-                              <i className="bi bi-eye"></i> Xem chi tiết
+                              <i className="fas fa-eye"></i> Xem chi tiết
                             </button>
-                            <button
-                              type="button"
-                              className={styles.dropdownItem}
-                              onClick={() => {
-                                setOpenDropdownId(null);
-                                if (slip.status !== 'DRAFT' && slip.status !== 'UNPOSTED') {
-                                  showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm hoặc đã bỏ ghi sổ.');
-                                } else {
-                                  navigate(`/import-slips/${slip.id}/edit`);
-                                }
-                              }}
-                            >
-                              <i className="bi bi-pencil"></i> Sửa phiếu nhập kho
-                            </button>
-                            {slip.status === 'POSTED' && (
+                            {guard.check('import:edit') && (
+                              <button
+                                type="button"
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  if (slip.status !== 'DRAFT' && slip.status !== 'UNPOSTED') {
+                                    showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm hoặc đã bỏ ghi sổ.');
+                                  } else {
+                                    navigate(`/import-slips/${slip.id}/edit`);
+                                  }
+                                }}
+                              >
+                                <i className="fas fa-edit"></i> Sửa phiếu nhập kho
+                              </button>
+                            )}
+                            {slip.status === 'POSTED' && guard.check('import:edit') && (
                               <button
                                 type="button"
                                 className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
@@ -628,7 +635,7 @@ function ImportHistoryPage() {
                                   setUnpostTarget(slip);
                                 }}
                               >
-                                <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
+                                <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
                               </button>
                             )}
                       </RowActionMenu>
@@ -767,7 +774,7 @@ function ImportHistoryPage() {
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
-                  {selectedSlip.status === 'DRAFT' && (
+                  {selectedSlip.status === 'DRAFT' && guard.check('import:edit') && (
                     <button
                       onClick={() => setConfirmPost(true)}
                       className={styles.btnPrimary}
@@ -826,7 +833,7 @@ function ImportHistoryPage() {
                           : 'Nhân viên lập phiếu'}
                       </span>
                       <span className={styles.infoValue}>
-                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Quản Lý Hệ Thống')}
+                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Chưa phân công')}
                       </span>
                     </div>
 
@@ -882,91 +889,107 @@ function ImportHistoryPage() {
                   </div>
                 </div>
 
-                <table className={styles.detailTable}>
-                  <thead>
-                    <tr>
-                      <th>STT</th>
-                      <th>Mã SP</th>
-                      <th>Tên sản phẩm</th>
-                      <th>ĐVT</th>
-                      <th className={styles.textCenter}>Số lượng</th>
-                      <th>ĐVC</th>
-                      <th className={styles.textCenter}>Tỷ lệ CĐ</th>
-                      <th className={styles.textCenter}>Phép tính</th>
-                      <th className={styles.textRight}>SL (ĐVC)</th>
-                      {showPricing && <th className={styles.textRight}>Giá nhập</th>}
-                      {showPricing && <th className={styles.textRight}>% VAT</th>}
-                      {showPricing && <th className={styles.textRight}>Tiền VAT</th>}
-                      {showPricing && <th className={styles.textRight}>Thành tiền</th>}
-                      <th>Số Serial</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(selectedSlip.lines || []).map((line, index) => {
-                      const product = productById.get(line.variantId);
-                      const baseUnitName = line.baseUnitName || product?.unitName || '-';
-                      const unitName = line.unitName || product?.unitName || '-';
-                      const ratio = Number(line.conversionRatio) > 0 ? Number(line.conversionRatio) : 1;
-                      const op = line.conversionOperator || 'MULTIPLY';
-                      const qty = Number(line.quantityIn || 0);
-                      const baseQty = line.baseQuantity != null ? Number(line.baseQuantity) : ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
-                      return (
-                        <tr key={line.id || index}>
-                          <td>{index + 1}</td>
-                          <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
-                          <td style={{ fontWeight: '500' }}>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
-                          <td>{unitName}</td>
-                          <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
-                          <td>{baseUnitName}</td>
-                          <td className={styles.textCenter}>{ratio}</td>
-                          <td className={styles.textCenter} style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                          <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
-                          {showPricing && <td className={styles.textRight}>{money(line.unitCost)}</td>}
-                          {showPricing && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
-                          {showPricing && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitCost || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
-                          {showPricing && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
-                          <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
-                            {line.serialNumbers && line.serialNumbers.length > 0 ? (
-                              <span style={{ fontSize: '13px', color: 'var(--wms-text-body)', fontWeight: '500' }}>
-                                {line.serialNumbers.join(', ')}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
                 {(() => {
-                  const { attachments } = parseNoteAndAttachments(selectedSlip.note);
-                  if (!attachments || attachments.length === 0) return null;
+                  const isAssembly = selectedSlip.issuePurpose === 'PRODUCTION' && selectedSlip.referenceType === 'ASSEMBLY_ORDER';
+                  const displayVatAndTotal = showPricing && !isAssembly;
+                  
                   return (
-                    <div style={{ marginTop: '16px', padding: '12px 16px', backgroundColor: 'var(--wms-bg-soft)', borderRadius: '8px', border: '1px solid var(--wms-border-base)' }}>
-                      <AttachmentUpload
-                        files={attachments}
-                        disabled={true}
-                      />
-                    </div>
+                    <>
+                      <table className={styles.detailTable}>
+                        <thead>
+                          <tr>
+                            <th>STT</th>
+                            <th>Mã SP</th>
+                            <th>Tên sản phẩm</th>
+                            <th>ĐVT</th>
+                            <th className={styles.textCenter}>Số lượng</th>
+                            <th>ĐVC</th>
+                            <th className={styles.textCenter}>Tỷ lệ CĐ</th>
+                            <th className={styles.textCenter}>Phép tính</th>
+                            <th className={styles.textRight}>SL (ĐVC)</th>
+                            {showPricing && <th className={styles.textRight}>Giá nhập</th>}
+                            {displayVatAndTotal && <th className={styles.textRight}>% VAT</th>}
+                            {displayVatAndTotal && <th className={styles.textRight}>Tiền VAT</th>}
+                            {displayVatAndTotal && <th className={styles.textRight}>Thành tiền</th>}
+                            <th>Số Serial</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(selectedSlip.lines || []).map((line, index) => {
+                            const product = productById.get(line.variantId);
+                            const baseUnitName = line.baseUnitName || product?.unitName || '-';
+                            const unitName = line.unitName || product?.unitName || '-';
+                            const ratio = Number(line.conversionRatio) > 0 ? Number(line.conversionRatio) : 1;
+                            const op = line.conversionOperator || 'MULTIPLY';
+                            const qty = Number(line.quantityIn || 0);
+                            const baseQty = line.baseQuantity != null ? Number(line.baseQuantity) : ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
+                            const hasSerial = line.serialNumbers && line.serialNumbers.length > 0;
+                            return (
+                              <tr key={line.id || index}>
+                                <td>{index + 1}</td>
+                                <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
+                                <td style={{ fontWeight: '500' }}>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
+                                <td>{unitName}</td>
+                                <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
+                                <td>{baseUnitName}</td>
+                                <td className={styles.textCenter}>{ratio}</td>
+                                <td className={styles.textCenter} style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                                <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+                                {showPricing && <td className={styles.textRight}>{money(line.unitCost)}</td>}
+                                {displayVatAndTotal && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
+                                {displayVatAndTotal && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitCost || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
+                                {displayVatAndTotal && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
+                                <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal', fontWeight: hasSerial ? '600' : 'normal', color: hasSerial ? '#0369a1' : 'inherit' }}>
+                                  {hasSerial ? (
+                                    <span style={{ fontSize: '13px' }}>
+                                      {line.serialNumbers.join(', ')}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+
+                      {(() => {
+                        const { attachments } = parseNoteAndAttachments(selectedSlip.note);
+                        if (!attachments || attachments.length === 0) return null;
+                        return (
+                          <div style={{ marginTop: '16px', padding: '12px 16px', backgroundColor: 'var(--wms-bg-soft)', borderRadius: '8px', border: '1px solid var(--wms-border-base)' }}>
+                            <AttachmentUpload
+                              files={attachments}
+                              disabled={true}
+                            />
+                          </div>
+                        );
+                      })()}
+
+                      <div className={styles.detailFooter}>
+                        <div className={styles.footerGroup}>
+                          <span className={styles.footerTotalLabel}>Tổng số mặt hàng:</span>
+                          <span className={styles.footerQty}>{(selectedSlip.lines || []).length}</span>
+                          <span className={styles.footerTotalLabel} style={{ marginLeft: '16px' }}>Tổng SL thực nhập:</span>
+                          <span className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <div style={{ flex: 1 }}></div>
+                        {showPricing && (
+                          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>{isAssembly ? 'Tổng giá trị nhập:' : 'Tổng tiền hàng:'} <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
+                            {displayVatAndTotal && (
+                              <>
+                                <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
+                                <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumSubtotal(selectedSlip.lines) + sumVat(selectedSlip.lines))}</strong></div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   );
                 })()}
-
-                <div className={styles.detailFooter}>
-                  <div className={styles.footerGroup}>
-                    <span className={styles.footerTotalLabel}>Tổng SL thực nhập:</span>
-                    <span className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</span>
-                  </div>
-                  <div style={{ flex: 1 }}></div>
-                  {showPricing && (
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
-                      <div style={{ fontSize: '13px', color: 'var(--wms-text-muted)' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
-                      <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumSubtotal(selectedSlip.lines) + sumVat(selectedSlip.lines))}</strong></div>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>

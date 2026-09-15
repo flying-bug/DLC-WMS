@@ -39,7 +39,7 @@ public class InventoryDocumentController {
 
     @GetMapping("/history")
     @Operation(summary = "View export slip history")
-    @PreAuthorize("hasAuthority('export:view')")
+    @PreAuthorize("hasAuthority('export:view') or hasAuthority('assembly:view')")
     public ApiResponse<List<InventoryDocumentResponse>> getExportHistory(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -59,7 +59,7 @@ public class InventoryDocumentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "View export slip detail")
-    @PreAuthorize("hasAuthority('export:view')")
+    @PreAuthorize("hasAuthority('export:view') or hasAuthority('assembly:view')")
     public ApiResponse<InventoryDocumentResponse> getExportDetail(@PathVariable Long id) {
         return ApiResponse.success(inventoryDocumentService.getExportDetail(id));
     }

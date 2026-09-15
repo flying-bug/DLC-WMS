@@ -5,10 +5,10 @@ import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './UnitPage.module.css';
-
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const STATUS_LABELS = {
@@ -18,6 +18,7 @@ const STATUS_LABELS = {
 
 const UnitPage = () => {
     const [units, setUnits] = useState([]);
+    const guard = usePermissionGuard();
     const [loading, setLoading] = useState(false);
     
     // Filters and Pagination
@@ -95,15 +96,16 @@ const UnitPage = () => {
 
     const handleDeleteClick = (e, unit) => {
         e.stopPropagation();
-        setDeleteConfirm({ isOpen: true, unit });
+        guard('unit:delete', () => setDeleteConfirm({ isOpen: true, unit }));
     };
 
     const handleEditClick = (e, item) => {
         e.stopPropagation();
-        setModalConfig({ isOpen: true, data: item });
+        guard('unit:edit', () => setModalConfig({ isOpen: true, data: item }));
     };
 
     const handleToggleStatus = async (item) => {
+        if (!guard('unit:edit')) return;
         const newStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
         try {
             await axiosClient.put(`/units/` + item.id, { ...item, status: newStatus });
@@ -176,7 +178,7 @@ const UnitPage = () => {
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
                     <h1 className={styles.pageTitle}>Đơn vị tính</h1>
-                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                    <button className={styles.btnPrimary} onClick={() => guard('unit:add', () => setModalConfig({ isOpen: true, data: null }))}>
                         <i className="bi bi-plus"></i> Thêm mới
                     </button>
                 </div>

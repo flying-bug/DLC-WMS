@@ -60,6 +60,7 @@ import MobileScannerPage from '../pages/MobileScanner/MobileScannerPage';
 import WarehouseWorkspacePage from '../pages/WarehouseWorkspace/WarehouseWorkspacePage';
 import WarehouseDocumentFormPage from '../pages/WarehouseWorkspace/WarehouseDocumentFormPage';
 import CashierWorkspacePage from '../pages/CashierWorkspace/CashierWorkspacePage';
+import { getAuthRoles, hasPermission } from '../auth/session';
 
 // Chuyển hướng /email-settings sang /operations?tab=email, giữ nguyên query params (nếu có từ OAuth callback)
 const EmailSettingsRedirect = () => {
@@ -75,8 +76,18 @@ const isValidToken = () => {
     return token && token !== 'null' && token !== 'undefined' && token.trim() !== '';
 };
 
+const getDefaultAuthenticatedPath = () => {
+    const roles = getAuthRoles().map(role => String(role || '').toUpperCase());
+    if (roles.some(role => ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN'].includes(role))) return '/dashboard';
+    if (hasPermission('report_summary:view')) return '/main-dashboard';
+    if (roles.some(role => ['TECHNICIAN', 'ROLE_TECHNICIAN'].includes(role))) return '/dashboard';
+    if (roles.some(role => ['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER'].includes(role))) return '/warehouse-workspace';
+    if (roles.some(role => ['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER'].includes(role))) return '/cashier-workspace';
+    return '/dashboard';
+};
+
 // Wrapper for protected routes (requires token)
-const ProtectedRoute = ({ allowedRoles, disallowedRoles }) => {
+const ProtectedRoute = ({ allowedRoles, disallowedRoles, requiredPermission }) => {
     const tokenValid = isValidToken();
     const userRole = sessionStorage.getItem('role') || '';
 
@@ -92,6 +103,10 @@ const ProtectedRoute = ({ allowedRoles, disallowedRoles }) => {
 
     if (disallowedRoles && disallowedRoles.includes(currentRole)) {
         return <Navigate to="/dashboard" replace />;
+    }
+
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+        return <Navigate to={getDefaultAuthenticatedPath()} replace />;
     }
 
     return <Outlet />;
@@ -113,9 +128,7 @@ const NotFoundRedirect = () => {
 // Root route redirect based on role
 const RootRedirect = () => {
     if (!isValidToken()) return <Navigate to="/login" replace />;
-    const userRole = sessionStorage.getItem('role') || '';
-    const isSuperAdmin = ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN'].includes(userRole.toUpperCase());
-    return isSuperAdmin ? <Navigate to="/dashboard" replace /> : <Navigate to="/main-dashboard" replace />;
+    return <Navigate to={getDefaultAuthenticatedPath()} replace />;
 };
 
 function AppRouter() {
@@ -140,7 +153,9 @@ function AppRouter() {
 
                 {/* Business Routes for Staff & Manager only */}
                 <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN']} />}>
-                    <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
+                    <Route element={<ProtectedRoute requiredPermission="report_summary:view" />}>
+                        <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
+                    </Route>
                     <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
                     <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
                     <Route path="/warehouse-workspace/exports/:id" element={<WarehouseDocumentFormPage />} />

@@ -53,7 +53,10 @@ public class RoleService {
         if (permissionCodes != null && !permissionCodes.isEmpty()) {
             for (String code : permissionCodes) {
                 if (code != null && !code.isBlank()) {
-                    permissionRepository.findByCode(code.trim()).ifPresent(targetPermissions::add);
+                    String normalizedCode = code.trim();
+                    PermissionEntity permission = permissionRepository.findByCode(normalizedCode)
+                            .orElseThrow(() -> new BusinessException("Quyền không tồn tại: " + normalizedCode));
+                    targetPermissions.add(permission);
                 }
             }
         }
@@ -129,13 +132,15 @@ public class RoleService {
                 for (PermissionEntity perm : allPerms) {
                     String mod = perm.getModule();
                     String code = perm.getCode();
-                    if (Arrays.asList("warranty", "repair").contains(mod)) {
+                    if ("warranty".equals(mod) && "warranty:view".equals(code)) {
+                        result.add(perm);
+                    } else if ("repair".equals(mod)) {
                         result.add(perm);
                     } else if ("assembly_config".equals(mod) && Arrays.asList("assembly_config:view", "assembly_config:add", "assembly_config:edit").contains(code)) {
                         result.add(perm);
                     } else if ("assembly".equals(mod) && Arrays.asList("assembly:view", "assembly:add", "assembly:edit", "assembly:delete", "assembly:export", "assembly:print", "assembly:submit").contains(code)) {
                         result.add(perm);
-                    } else if (Arrays.asList("product", "export", "warehouse_master", "report_balance", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    } else if (Arrays.asList("product", "product_category", "unit", "export", "warehouse_master", "report_balance", "ai_chat").contains(mod) && code.endsWith(":view")) {
                         result.add(perm);
                     }
                 }
@@ -149,7 +154,12 @@ public class RoleService {
                         result.add(perm);
                     } else if ("import".equals(mod) && Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code)) {
                         result.add(perm);
-                    } else if (Arrays.asList("report_debt", "report_sales", "report_summary").contains(mod)) {
+                    } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_debt", "report_sales", "report_summary").contains(mod)) {
+                        result.add(perm);
+                    } else if ("warranty".equals(mod)) {
+                        result.add(perm);
+                    } else if (Arrays.asList("product", "product_category", "unit", "brand").contains(mod)
+                            && Arrays.asList(mod + ":view", mod + ":add", mod + ":edit").contains(code)) {
                         result.add(perm);
                     } else if ("assembly_config".equals(mod) && "assembly_config:view".equals(code)) {
                         result.add(perm);
@@ -157,7 +167,7 @@ public class RoleService {
                         result.add(perm);
                     } else if ("payment".equals(mod)) {
                         result.add(perm);
-                    } else if (Arrays.asList("export", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    } else if (Arrays.asList("export", "transfer", "stocktake", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
                         result.add(perm);
                     }
                 }

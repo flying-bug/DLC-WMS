@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import Modal from '../../components/ui/Modal/Modal';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import axiosClient from '../../api/axiosClient';
@@ -41,6 +42,8 @@ function AssemblyBomFormPage() {
     const [form, setForm] = useState(createDefaultForm());
     const [nextVersion, setNextVersion] = useState(null);
     const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
 
     const isApproved = editing && form.status === 'APPROVED';
     const canEdit = (!editing || ['DRAFT', 'REJECTED'].includes(form.status))
@@ -324,14 +327,33 @@ function AssemblyBomFormPage() {
     };
 
     const reviewBom = async (approved) => {
-        const reason = approved ? null : window.prompt('Nhập lý do từ chối cấu hình:');
-        if (!approved && !reason?.trim()) return;
+        if (!approved) {
+            setRejectReason('');
+            setShowRejectModal(true);
+            return;
+        }
         setSaving(true);
         try {
-            await (approved
-                ? assemblyApi.approveAssemblyBom(form.id)
-                : assemblyApi.rejectAssemblyBom(form.id, reason.trim()));
-            showToast('success', approved ? 'Đã duyệt cấu hình.' : 'Đã từ chối cấu hình.');
+            await assemblyApi.approveAssemblyBom(form.id);
+            showToast('success', 'Đã duyệt cấu hình.');
+            await loadBom();
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không cập nhật được cấu hình.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const confirmReject = async () => {
+        if (!rejectReason?.trim()) {
+            showToast('warning', 'Vui lòng nhập lý do từ chối.');
+            return;
+        }
+        setShowRejectModal(false);
+        setSaving(true);
+        try {
+            await assemblyApi.rejectAssemblyBom(form.id, rejectReason.trim());
+            showToast('success', 'Đã từ chối cấu hình.');
             await loadBom();
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không cập nhật được cấu hình.');
@@ -766,7 +788,25 @@ function AssemblyBomFormPage() {
                     </div>
                 )}
 
-
+                {showRejectModal && (
+                    <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="Từ chối cấu hình">
+                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '14px' }}>Vui lòng nhập lý do từ chối để người lập cấu hình có thể điều chỉnh.</p>
+                            <textarea 
+                                className="misa-input" 
+                                rows={4} 
+                                value={rejectReason} 
+                                onChange={(e) => setRejectReason(e.target.value)} 
+                                placeholder="Nhập lý do từ chối..."
+                                autoFocus
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                                <button className="btn-misa-cancel" onClick={() => setShowRejectModal(false)}>Hủy</button>
+                                <button className="btn-misa-post" onClick={confirmReject} style={{ backgroundColor: 'var(--color-danger)' }}>Từ chối</button>
+                            </div>
+                        </div>
+                    </Modal>
+                )}
 
                 <QuickAddProductModal
                     isOpen={showQuickAddModal}

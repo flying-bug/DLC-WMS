@@ -21,13 +21,16 @@ class AssemblyWorkflowMigrationTest {
 
     @Test
     void technicianRoleMigrationContainsAllCreateScreenDependencies() throws IOException {
-        try (var stream = getClass().getResourceAsStream("/db/migration/V52__fix_role_asembly_permission.sql")) {
-            assertTrue(stream != null, "V52 role migration must be available on the classpath");
-            String sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        try (var workflowPermissions = getClass().getResourceAsStream("/db/migration/V52__fix_role_asembly_permission.sql");
+             var quickProductPermissions = getClass().getResourceAsStream("/db/migration/V54__allow_technician_quick_finished_product.sql")) {
+            assertTrue(workflowPermissions != null, "V52 role migration must be available on the classpath");
+            assertTrue(quickProductPermissions != null, "V54 role migration must be available on the classpath");
+            String sql = new String(workflowPermissions.readAllBytes(), StandardCharsets.UTF_8)
+                    + new String(quickProductPermissions.readAllBytes(), StandardCharsets.UTF_8);
             for (String permission : new String[] {
                     "assembly_config:view", "assembly_config:add", "assembly_config:edit",
                     "assembly:view", "assembly:add", "assembly:edit", "assembly:submit",
-                    "warehouse_master:view", "product:view", "report_balance:view" }) {
+                    "warehouse_master:view", "product:view", "product_category:view", "unit:view", "report_balance:view" }) {
                 assertTrue(sql.contains("'" + permission + "'"), "Missing permission: " + permission);
             }
         }

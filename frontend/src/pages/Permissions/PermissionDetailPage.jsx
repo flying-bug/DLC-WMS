@@ -192,10 +192,14 @@ function PermissionDetailPage() {
             }
             
             const tickedCodes = extractCodesFromPermissions(permissions);
-            await axiosClient.put(`/users/${id}/permissions`, tickedCodes);
-            
-            showToast('success', 'Cập nhật phân quyền thành công.');
+            const permissionRes = await axiosClient.put(`/users/${id}/permissions`, tickedCodes);
+            const savedCodes = permissionRes.data?.data?.permissions || [];
+            setInitialCodes(savedCodes);
+            setPermissions(buildPermissionsFromCodes(savedCodes));
+            setHasCustomPermissions(savedCodes.length > 0);
+
             await loadData();
+            showToast('success', 'Cập nhật phân quyền thành công.');
         } catch (error) {
             console.error('Lỗi lưu phân quyền:', error);
             showToast('error', 'Thao tác thất bại. Vui lòng kiểm tra lại thông tin.');
@@ -231,36 +235,7 @@ function PermissionDetailPage() {
         }
     };
 
-    const visibleModules = useMemo(() => {
-        const currentRoles = user?.roles || [];
-        const isManager = currentRoles.some(r => normalizeRoleCode(r) === 'ROLE_MANAGER');
-        if (isManager) {
-            return new Set(PERMISSION_CATEGORIES.flatMap(c => c.modules.map(m => m.key)));
-        }
-
-        const codes = new Set();
-        currentRoles.forEach(r => {
-            getDefaultCodesForRole(normalizeRoleCode(r)).forEach(c => codes.add(c));
-        });
-        
-        if (initialCodes) {
-            initialCodes.forEach(c => codes.add(c));
-        }
-
-        const modules = new Set();
-        codes.forEach(code => {
-            const mod = code.split(':')[0];
-            if (mod) modules.add(mod);
-        });
-        return modules;
-    }, [user, allSystemRoles, initialCodes]);
-
-    const filteredCategories = useMemo(() => {
-        return PERMISSION_CATEGORIES.map(cat => ({
-            ...cat,
-            modules: cat.modules.filter(mod => visibleModules.has(mod.key))
-        })).filter(cat => cat.modules.length > 0);
-    }, [visibleModules]);
+    const filteredCategories = PERMISSION_CATEGORIES;
 
     const renderCheckbox = (moduleKey, actionKey, featureName) => {
         if (permissions[moduleKey]?.[actionKey] === undefined) {

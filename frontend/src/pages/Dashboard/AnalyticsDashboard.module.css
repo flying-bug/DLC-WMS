@@ -557,14 +557,6 @@
     animation: pulseWarning 2s infinite ease-out;
 }
 
-/* Table Row Hover Upgrade */
-.txTable tbody tr {
-    transition: transform 0.2s ease, background-color 0.2s ease;
-}
-.txTable tbody tr:hover {
-    transform: scale(1.005) translateX(4px);
-}
-
 /* Top Product Progress Bar Animation */
 .productProgressFill {
     height: 100%;

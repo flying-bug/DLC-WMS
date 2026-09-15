@@ -19,6 +19,7 @@ import ProductVariantConfigurator from './components/ProductVariantConfigurator'
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const defaultFormData = {
     id: null,
@@ -259,6 +260,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 const ProductPage = () => {
     const navigate = useNavigate();
     const showPricing = canViewPricing();
+    const guard = usePermissionGuard();
     const [products, setProducts] = useState([]);
     const [columns, setColumns] = useState(() => {
         const saved = localStorage.getItem('dlc_product_columns');
@@ -1235,14 +1237,16 @@ const ProductPage = () => {
     };
 
     const handleDelete = (id) => {
-        setConfirmModal({
-            isOpen: true,
-            type: 'PRODUCT',
-            id,
-            title: 'Xác nhận xóa',
-            message: 'Bạn có chắc chắn muốn xóa sản phẩm này không?'
+        guard('product:delete', () => {
+            setConfirmModal({
+                isOpen: true,
+                type: 'PRODUCT',
+                id,
+                title: 'Xác nhận xóa',
+                message: 'Bạn có chắc chắn muốn xóa sản phẩm này không?'
+            });
+            setOpenDropdownId(null);
         });
-        setOpenDropdownId(null);
     };
 
     const fetchVariants = async (productId) => {
@@ -1548,7 +1552,7 @@ const ProductPage = () => {
                                 </>
                             )}
                         </button>
-                        <button className={styles.btnPrimary} onClick={handleOpenAdd}>
+                        <button className={styles.btnPrimary} onClick={() => guard('product:add', handleOpenAdd)}>
                             <i className="bi bi-plus"></i> Thêm mới
                         </button>
                     </div>
@@ -1748,7 +1752,7 @@ const ProductPage = () => {
                                                 className="bi bi-pencil"
                                                 style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
                                                 title="Sửa sản phẩm"
-                                                onClick={() => handleOpenEdit(item)}
+                                                onClick={() => guard('product:edit', () => handleOpenEdit(item))}
                                             ></i>
                                             <i
                                                 className="bi bi-upc-scan"
@@ -2150,7 +2154,7 @@ const ProductPage = () => {
                                             {formData.productType === 'Thành phẩm' && (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Thời hạn bảo hành (tháng)</label>
-                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                    <div className={styles.warrantyInputRow}>
                                                         <input
                                                             type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
                                                             value={warrantyQty} onChange={(e) => {
@@ -2159,17 +2163,20 @@ const ProductPage = () => {
                                                             }}
                                                             placeholder="0"
                                                         />
+                                                        {isEdit && (
+                                                            <label
+                                                                className={styles.warrantySyncOption}
+                                                                title="Khi lưu, thời hạn bảo hành mới sẽ được áp dụng cho tất cả SKU"
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={Boolean(formData.applyWarrantyToVariants)}
+                                                                    onChange={(e) => setFormData(fd => ({ ...fd, applyWarrantyToVariants: e.target.checked }))}
+                                                                />
+                                                                <span>Áp dụng mọi SKU</span>
+                                                            </label>
+                                                        )}
                                                     </div>
-                                                    {isEdit && (
-                                                        <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={Boolean(formData.applyWarrantyToVariants)}
-                                                                onChange={(e) => setFormData(fd => ({ ...fd, applyWarrantyToVariants: e.target.checked }))}
-                                                            />
-                                                            <span>Áp dụng bảo hành mới cho tất cả SKU</span>
-                                                        </label>
-                                                    )}
                                                 </div>
                                             )}
 
@@ -2365,7 +2372,7 @@ const ProductPage = () => {
 
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Thời hạn bảo hành (tháng)</label>
-                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                    <div className={styles.warrantyInputRow}>
                                                         <input
                                                             type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
                                                             value={warrantyQty} onChange={(e) => {
@@ -2373,17 +2380,20 @@ const ProductPage = () => {
                                                                 setWarrantyQty(val ? Number(val) : '');
                                                             }}
                                                         />
+                                                        {isEdit && (
+                                                            <label
+                                                                className={styles.warrantySyncOption}
+                                                                title="Khi lưu, thời hạn bảo hành mới sẽ được áp dụng cho tất cả SKU"
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={Boolean(formData.applyWarrantyToVariants)}
+                                                                    onChange={(e) => setFormData(fd => ({ ...fd, applyWarrantyToVariants: e.target.checked }))}
+                                                                />
+                                                                <span>Áp dụng mọi SKU</span>
+                                                            </label>
+                                                        )}
                                                     </div>
-                                                    {isEdit && (
-                                                        <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={Boolean(formData.applyWarrantyToVariants)}
-                                                                onChange={(e) => setFormData(fd => ({ ...fd, applyWarrantyToVariants: e.target.checked }))}
-                                                            />
-                                                            <span>Áp dụng bảo hành mới cho tất cả SKU</span>
-                                                        </label>
-                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -2440,6 +2450,7 @@ const ProductPage = () => {
                                                 <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.productType === 'Thành phẩm' ? 'not-allowed' : 'pointer' }}>
                                                     <input
                                                         type="checkbox"
+                                                        style={{ width: '13px', height: '13px' }}
                                                         checked={formData.productType === 'Thành phẩm' ? true : formData.trackSerial}
                                                         disabled={formData.productType === 'Thành phẩm'}
                                                         onChange={(e) => setFormData(fd => ({ ...fd, trackSerial: e.target.checked }))}

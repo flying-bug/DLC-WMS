@@ -238,7 +238,7 @@ public class AssemblyOrder {
         this.status = DocumentStatus.SUBMITTED.name();
     }
     
-    public void markAsPosted() {
+    public void markAsCompleted() {
         if (!DocumentStatus.SUBMITTED.name().equals(this.status)) {
             throw new IllegalStateException("Lệnh phải đang thực hiện mới có thể hoàn thành");
         }

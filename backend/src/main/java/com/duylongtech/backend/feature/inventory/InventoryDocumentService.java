@@ -232,6 +232,16 @@ public class InventoryDocumentService {
     public List<InventoryDocumentResponse> getExportHistory(String keyword, LocalDate fromDate, LocalDate toDate,
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
+        
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean hasFullView = auth != null && auth.getAuthorities().stream().anyMatch(a -> 
+            a.getAuthority().equals("export:view") || a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
+        
+        if (!hasFullView) {
+            issuePurpose = "ASSEMBLY";
+            referenceType = "ASSEMBLY_ORDER";
+        }
+
         String normalizedKeyword = trimToNull(keyword);
         String normalizedStatus = normalizeOptionalStatus(status);
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
@@ -263,6 +273,16 @@ public class InventoryDocumentService {
     public List<InventoryDocumentResponse> getImportHistory(String keyword, LocalDate fromDate, LocalDate toDate,
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
+        
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean hasFullView = auth != null && auth.getAuthorities().stream().anyMatch(a -> 
+            a.getAuthority().equals("import:view") || a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
+        
+        if (!hasFullView) {
+            issuePurpose = "ASSEMBLY";
+            referenceType = "ASSEMBLY_ORDER";
+        }
+
         String normalizedKeyword = trimToNull(keyword);
         String normalizedStatus = normalizeOptionalStatus(status);
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
@@ -370,12 +390,16 @@ public class InventoryDocumentService {
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
-        return inventoryPostingService.postExport(id);
+        InventoryDocumentResponse response = inventoryPostingService.postExport(id);
+        inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
+        return response;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postImport(Long id) {
-        return inventoryPostingService.postImport(id);
+        InventoryDocumentResponse response = inventoryPostingService.postImport(id);
+        inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
+        return response;
     }
 
     private InventoryDocument buildBaseDocument(InventoryDocumentRequest req, String docType, String docCode) {
@@ -1356,12 +1380,16 @@ public class InventoryDocumentService {
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
-        return inventoryPostingService.unpostImport(id, reason, currentUserId);
+        InventoryDocumentResponse response = inventoryPostingService.unpostImport(id, reason, currentUserId);
+        inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
+        return response;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
-        return inventoryPostingService.unpostExport(id, reason, currentUserId);
+        InventoryDocumentResponse response = inventoryPostingService.unpostExport(id, reason, currentUserId);
+        inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
+        return response;
     }
 
     public List<InventoryDocumentResponse> getAssemblyDocuments(Long orderId) {
@@ -1403,14 +1431,50 @@ public class InventoryDocumentService {
         }
         List<InventoryDocument> pair = inventoryDocumentRepository
                 .findByReferenceWithLines("ASSEMBLY_ORDER", order.getId());
-        boolean exportPosted = pair.stream()
-                .anyMatch(d -> EXPORT_DOC_TYPE.equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
-        boolean importPosted = pair.stream()
-                .anyMatch(d -> IMPORT_DOC_TYPE.equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
+        InventoryDocument exportDoc = pair.stream().filter(d -> EXPORT_DOC_TYPE.equals(d.getDocType())).findFirst().orElse(null);
+        InventoryDocument importDoc = pair.stream().filter(d -> IMPORT_DOC_TYPE.equals(d.getDocType())).findFirst().orElse(null);
+        
+        boolean exportPosted = exportDoc != null && DocumentStatus.POSTED.name().equals(exportDoc.getStatus());
+        boolean importPosted = importDoc != null && DocumentStatus.POSTED.name().equals(importDoc.getStatus());
+        
+        if (exportPosted && importDoc != null && !importPosted && EXPORT_DOC_TYPE.equals(document.getDocType())) {
+            // Tự động tính toán và cập nhật giá nhập kho dựa trên tổng giá trị đã xuất kho
+            BigDecimal totalExportCost = BigDecimal.ZERO;
+            for (InventoryDocumentLine expLine : exportDoc.getLines()) {
+                BigDecimal qty = expLine.getQuantityOut() != null ? expLine.getQuantityOut() : BigDecimal.ZERO;
+                BigDecimal cost = expLine.getUnitCost() != null ? expLine.getUnitCost() : BigDecimal.ZERO;
+                totalExportCost = totalExportCost.add(qty.multiply(cost));
+            }
+            if ("ASSEMBLY".equals(order.getOrderType()) && importDoc.getLines().size() == 1) {
+                InventoryDocumentLine impLine = importDoc.getLines().get(0);
+                BigDecimal impQty = impLine.getBaseQuantity() != null && impLine.getBaseQuantity().compareTo(BigDecimal.ZERO) > 0 ? impLine.getBaseQuantity() : (impLine.getQuantityIn() != null ? impLine.getQuantityIn() : BigDecimal.ONE);
+                if (impQty.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal unitCost = totalExportCost.divide(impQty, 4, RoundingMode.HALF_UP);
+                    impLine.setUnitCost(unitCost);
+                    impLine.setUnitPrice(unitCost);
+                }
+            } else if ("DISASSEMBLY".equals(order.getOrderType()) && !importDoc.getLines().isEmpty()) {
+                // Tháo dỡ: Chia đều giá trị hoặc lấy theo tỷ trọng (ở đây tạm chia theo số lượng linh kiện để đơn giản)
+                BigDecimal totalImportQty = importDoc.getLines().stream()
+                        .map(l -> l.getBaseQuantity() != null && l.getBaseQuantity().compareTo(BigDecimal.ZERO) > 0 ? l.getBaseQuantity() : (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ONE))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                if (totalImportQty.compareTo(BigDecimal.ZERO) > 0) {
+                    for (InventoryDocumentLine impLine : importDoc.getLines()) {
+                        BigDecimal qty = impLine.getBaseQuantity() != null && impLine.getBaseQuantity().compareTo(BigDecimal.ZERO) > 0 ? impLine.getBaseQuantity() : (impLine.getQuantityIn() != null ? impLine.getQuantityIn() : BigDecimal.ONE);
+                        BigDecimal allocatedCost = totalExportCost.multiply(qty).divide(totalImportQty, 4, RoundingMode.HALF_UP);
+                        BigDecimal unitCost = allocatedCost.divide(qty, 4, RoundingMode.HALF_UP);
+                        impLine.setUnitCost(unitCost);
+                        impLine.setUnitPrice(unitCost);
+                    }
+                }
+            }
+            inventoryDocumentRepository.save(importDoc);
+        }
+
         if (DocumentStatus.CANCELLED.name().equals(order.getStatus()) && DocumentStatus.UNPOSTED.name().equals(document.getStatus())) {
             // order.setCancellationSettlementStatus("SETTLED"); // Handled in domain if needed
         } else if (exportPosted && importPosted) {
-            order.markAsPosted();
+            order.markAsCompleted();
             order.updateProducedQuantity(order.getQuantity());
         } else if (exportPosted) {
             order.markAsInProgress();

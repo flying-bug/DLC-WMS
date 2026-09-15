@@ -62,6 +62,8 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
      */
     Optional<Brand> findByCode(String code);
 
+    Optional<Brand> findByNameIgnoreCase(String name);
+
     /**
      * BR-11: Kiểm tra thương hiệu có đang được liên kết với sản phẩm nào không.
      * Nếu có, không được phép xóa vật lý → chỉ đổi status INACTIVE.
