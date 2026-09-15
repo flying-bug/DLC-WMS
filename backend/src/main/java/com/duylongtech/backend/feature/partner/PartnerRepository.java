@@ -49,8 +49,8 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
      * Tìm kiếm nhà cung cấp theo tên hoặc mã (case-insensitive) và status (nếu có).
      */
     @Query("SELECT p FROM Partner p WHERE p.isSupplier = true " +
-           "AND (:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "     OR LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%')))" +
+           "AND (:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+           "     OR LOWER(p.code) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))" +
            "AND (:status IS NULL OR :status = '' OR p.status = :status) " +
            "ORDER BY p.createdAt DESC")
     List<Partner> searchSuppliers(@Param("keyword") String keyword, @Param("status") String status);
@@ -79,8 +79,8 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     boolean existsByPhoneAndIsCustomerTrueAndIdNot(String phone, Long id);
 
     @Query("SELECT p FROM Partner p WHERE p.isCustomer = true " +
-           "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', :keyword, '%') " +
-           "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', TRIM(:keyword), '%') " +
+           "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))) " +
            "AND (:status IS NULL OR p.status = :status) " +
            "AND (:groupType IS NULL OR p.groupType = :groupType)")
     Page<Partner> searchCustomers(
@@ -93,8 +93,8 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     List<Partner> findCustomersByIds(@Param("ids") List<Long> ids);
 
     @Query("SELECT p FROM Partner p WHERE p.isCustomer = true " +
-           "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', :keyword, '%') " +
-           "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', TRIM(:keyword), '%') " +
+           "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))) " +
            "AND (:status IS NULL OR p.status = :status) " +
            "AND (:groupType IS NULL OR p.groupType = :groupType)")
     List<Partner> findAllCustomersForExport(
@@ -113,10 +113,10 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     @Query("""
            SELECT p FROM Partner p
            WHERE (:keyword IS NULL OR :keyword = ''
-              OR LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              OR LOWER(p.email) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              OR LOWER(p.code) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+              OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+              OR LOWER(p.phone) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+              OR LOWER(p.email) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))
              AND (:customerOnly = false OR p.isCustomer = true)
              AND (:supplierOnly = false OR p.isSupplier = true)
            ORDER BY p.createdAt DESC

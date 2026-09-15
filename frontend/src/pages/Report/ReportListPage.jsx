@@ -427,8 +427,8 @@ const ReportListPage = () => {
 
         const matchedReports = reportsList.filter(
             (r) =>
-                r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                r.desc.toLowerCase().includes(searchTerm.toLowerCase())
+                r.name.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+                r.desc.toLowerCase().includes(searchTerm.trim().toLowerCase())
         );
 
         return { ...cat, reports: matchedReports };

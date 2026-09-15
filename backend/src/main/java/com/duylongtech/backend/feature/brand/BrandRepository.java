@@ -24,8 +24,8 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
      * @param keyword từ khóa tìm kiếm
      * @return danh sách thương hiệu phù hợp
      */
-    @Query("SELECT b FROM Brand b WHERE LOWER(b.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(b.code) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+    @Query("SELECT b FROM Brand b WHERE LOWER(b.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+           "OR LOWER(b.code) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
            "ORDER BY b.createdAt DESC")
     List<Brand> searchBrands(@Param("keyword") String keyword);
 

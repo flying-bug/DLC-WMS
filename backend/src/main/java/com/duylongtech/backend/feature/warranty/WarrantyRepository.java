@@ -48,14 +48,14 @@ public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
               AND (:toDate IS NULL OR w.endDate <= :toDate)
               AND (
                 :keyword IS NULL
-                OR LOWER(w.warrantyCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(sn.serialNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(pv.sku) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(pv.variantName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(wpv.sku) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(wpv.variantName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(w.warrantyCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+                OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+                OR LOWER(p.phone) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+                OR LOWER(sn.serialNumber) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+                OR LOWER(pv.sku) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+                OR LOWER(pv.variantName) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+                OR LOWER(wpv.sku) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+                OR LOWER(wpv.variantName) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
               )
             ORDER BY w.id DESC
             """)

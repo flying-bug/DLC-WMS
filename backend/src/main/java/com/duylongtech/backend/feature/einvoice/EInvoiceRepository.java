@@ -42,14 +42,14 @@ public interface EInvoiceRepository extends JpaRepository<EInvoice, Long> {
                 "LEFT JOIN FETCH e.inventoryDocument inv " +
                 "LEFT JOIN FETCH e.createdByUser u " +
                 "WHERE (:keyword IS NULL OR :keyword = '' OR " +
-                "   LOWER(COALESCE(e.invoiceNumber, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "   LOWER(COALESCE(e.invoiceSeries, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "   LOWER(COALESCE(e.buyerName, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "   LOWER(COALESCE(e.buyerLegalName, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "   LOWER(COALESCE(e.buyerTaxCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "   LOWER(COALESCE(so.soCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "   LOWER(COALESCE(inv.docCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "   LOWER(COALESCE(e.transactionUuid, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+                "   LOWER(COALESCE(e.invoiceNumber, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                "   LOWER(COALESCE(e.invoiceSeries, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                "   LOWER(COALESCE(e.buyerName, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                "   LOWER(COALESCE(e.buyerLegalName, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                "   LOWER(COALESCE(e.buyerTaxCode, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                "   LOWER(COALESCE(so.soCode, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                "   LOWER(COALESCE(inv.docCode, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                "   LOWER(COALESCE(e.transactionUuid, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))) AND " +
                 "(:status IS NULL OR :status = '' OR e.status = :status) AND " +
                 "(:fromDate IS NULL OR e.invoiceDate >= :fromDate) AND " +
                 "(:toDate IS NULL OR e.invoiceDate <= :toDate) AND " +
@@ -58,14 +58,14 @@ public interface EInvoiceRepository extends JpaRepository<EInvoice, Long> {
                      "LEFT JOIN e.salesOrder so " +
                      "LEFT JOIN e.inventoryDocument inv " +
                      "WHERE (:keyword IS NULL OR :keyword = '' OR " +
-                     "   LOWER(COALESCE(e.invoiceNumber, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "   LOWER(COALESCE(e.invoiceSeries, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "   LOWER(COALESCE(e.buyerName, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "   LOWER(COALESCE(e.buyerLegalName, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "   LOWER(COALESCE(e.buyerTaxCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "   LOWER(COALESCE(so.soCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "   LOWER(COALESCE(inv.docCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                     "   LOWER(COALESCE(e.transactionUuid, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+                     "   LOWER(COALESCE(e.invoiceNumber, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                     "   LOWER(COALESCE(e.invoiceSeries, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                     "   LOWER(COALESCE(e.buyerName, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                     "   LOWER(COALESCE(e.buyerLegalName, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                     "   LOWER(COALESCE(e.buyerTaxCode, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                     "   LOWER(COALESCE(so.soCode, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                     "   LOWER(COALESCE(inv.docCode, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR " +
+                     "   LOWER(COALESCE(e.transactionUuid, '')) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))) AND " +
                      "(:status IS NULL OR :status = '' OR e.status = :status) AND " +
                      "(:fromDate IS NULL OR e.invoiceDate >= :fromDate) AND " +
                      "(:toDate IS NULL OR e.invoiceDate <= :toDate) AND " +

@@ -35,7 +35,7 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
             WHERE (:status IS NULL OR r.repairStatus = :status)
               AND (
                 :keyword IS NULL
-                OR LOWER(r.repairCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(r.repairCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
               )
               AND (CAST(:fromDate AS date) IS NULL OR r.receivedDate >= :fromDate)
               AND (CAST(:toDate AS date) IS NULL OR r.receivedDate <= :toDate)

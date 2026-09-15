@@ -15,12 +15,12 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     @Query("SELECT a FROM AuditLog a LEFT JOIN a.user u WHERE " +
            "(:searchTerm IS NULL OR :searchTerm = '' OR " +
-           "LOWER(a.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(a.action) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(a.entityName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(a.ipAddress) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(u.username) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) AND " +
+           "LOWER(a.description) LIKE LOWER(CONCAT('%', TRIM(:searchTerm), '%')) OR " +
+           "LOWER(a.action) LIKE LOWER(CONCAT('%', TRIM(:searchTerm), '%')) OR " +
+           "LOWER(a.entityName) LIKE LOWER(CONCAT('%', TRIM(:searchTerm), '%')) OR " +
+           "LOWER(a.ipAddress) LIKE LOWER(CONCAT('%', TRIM(:searchTerm), '%')) OR " +
+           "LOWER(u.username) LIKE LOWER(CONCAT('%', TRIM(:searchTerm), '%')) OR " +
+           "LOWER(u.email) LIKE LOWER(CONCAT('%', TRIM(:searchTerm), '%'))) AND " +
            "(:module IS NULL OR :module = '' OR a.entityName = :module) AND " +
            "(:fromDate IS NULL OR a.createdAt >= :fromDate) AND " +
            "(:toDate IS NULL OR a.createdAt <= :toDate)")

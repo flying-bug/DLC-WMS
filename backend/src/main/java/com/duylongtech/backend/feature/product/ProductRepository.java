@@ -15,15 +15,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByProductCode(String productCode);
 
     @Query(value = "SELECT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.unit " +
-           "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', TRIM(:search), '%'))) " +
            "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
            "AND (:productType IS NULL OR p.productType = :productType) " +
            "AND (:brandId IS NULL OR p.brand.id = :brandId) " +
            "AND (:unitId IS NULL OR p.unit.id = :unitId)",
            countQuery = "SELECT count(p) FROM Product p " +
-           "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', TRIM(:search), '%'))) " +
            "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
            "AND (:productType IS NULL OR p.productType = :productType) " +
            "AND (:brandId IS NULL OR p.brand.id = :brandId) " +

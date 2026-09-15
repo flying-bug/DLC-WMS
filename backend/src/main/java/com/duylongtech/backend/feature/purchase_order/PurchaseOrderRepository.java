@@ -17,8 +17,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
         SELECT po FROM PurchaseOrder po
         LEFT JOIN FETCH po.partner p
         LEFT JOIN FETCH po.createdByUser u
-        WHERE (:keyword IS NULL OR LOWER(po.poCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-            OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        WHERE (:keyword IS NULL OR LOWER(po.poCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+            OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))
         AND (:status IS NULL OR po.status = :status)
         AND (:partnerId IS NULL OR po.partnerId = :partnerId)
         AND (:fromDate IS NULL OR po.poDate >= :fromDate)

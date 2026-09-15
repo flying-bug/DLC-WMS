@@ -160,9 +160,9 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
     };
 
     const filteredCategories = categories.filter(cat =>
-        (cat.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (cat.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (cat.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (cat.name || '').toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+        (cat.code || '').toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+        (cat.description || '').toLowerCase().includes(searchTerm.trim().toLowerCase())
     );
 
     return (
