@@ -4,14 +4,15 @@
     {
       "name": "backend",
       "runtimeExecutable": "D:\\SEP490_G94\\DLC-WMS\\backend\\mvnw.cmd",
-      "runtimeArgs": ["-f", "D:\\SEP490_G94\\DLC-WMS\\backend\\pom.xml", "spring-boot:run", "-Dspring-boot.run.arguments=--server.port=8081"],
-      "port": 8081
+      "runtimeArgs": ["-f", "D:\\SEP490_G94\\DLC-WMS\\backend\\pom.xml", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Djava.net.preferIPv4Stack=true"],
+      "port": 8080
     },
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "D:\\SEP490_G94\\DLC-WMS\\frontend"],
-      "port": 5173
+      "port": 5173,
+      "autoPort": true
     }
   ]
 }

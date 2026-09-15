@@ -26,6 +26,12 @@ export const USERS = {
     role: 'WAREHOUSE_STAFF',
     fullName: 'Thủ Kho Vận',
   },
+  CASHIER: {
+    username: 'cashier@duylong.vn',
+    password: '123456',
+    role: 'CASHIER_CONTROLLER',
+    fullName: 'Thủ Quỹ Thu Ngân',
+  },
 };
 
 export const ROUTES = {

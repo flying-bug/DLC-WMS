@@ -109,7 +109,7 @@ public class RoleService {
                     String code = perm.getCode();
                     if (Arrays.asList("transfer", "stocktake").contains(mod)) {
                         result.add(perm);
-                    } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print").contains(code)) {
+                    } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print", "import:post").contains(code)) {
                         result.add(perm);
                     } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
                         result.add(perm);

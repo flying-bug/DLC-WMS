@@ -21,7 +21,7 @@ import { printImportSlip } from '../../utils/printImportSlip';
 import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
-import { canViewPricing } from '../../auth/session';
+import { canViewPricing, hasPermission } from '../../auth/session';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -1248,9 +1248,11 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
             <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>
               <i className="bi bi-save"></i> Lưu tạm
             </button>
-            <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}>
-              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
-            </button>
+            {hasPermission('import:post') && (
+              <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}>
+                <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+              </button>
+            )}
           </div>
         </div>
       </div>

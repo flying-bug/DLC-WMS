@@ -192,7 +192,7 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     private void seedPermissions() {
         Map<String, String[]> moduleActions = new LinkedHashMap<>();
-        moduleActions.put("import", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("import", new String[]{"view", "add", "edit", "delete", "export", "print", "post"});
         moduleActions.put("export", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("purchase_order", new String[]{"view", "add", "edit"});
         moduleActions.put("sales_order", new String[]{"view", "add", "edit", "export", "print"});
