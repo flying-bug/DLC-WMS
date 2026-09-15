@@ -54,9 +54,25 @@ public class EmailService {
     @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:1//04r_huLp3CGjLCgYIARAAGAQSNgF-L9IruxTRi1RfR3nF2bXEio5AOmicfwAEFudp6c5keNISsei6Tz_LAtAiTXP6b6NGaKRwDA}}")
     private String gmailRefreshToken;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    // Khởi tạo lazy để lỗi NIO Selector cục bộ (nếu có) không chặn cả Spring context
+    // khởi động — xem GmailOAuthService cho chi tiết.
+    private volatile HttpClient httpClient;
+
+    private HttpClient httpClient() {
+        HttpClient client = httpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = httpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(10))
+                            .build();
+                    httpClient = client;
+                }
+            }
+        }
+        return client;
+    }
 
     private volatile String cachedAccessToken = null;
     private volatile Instant tokenExpiry = Instant.MIN;
@@ -125,7 +141,7 @@ public class EmailService {
                 .POST(HttpRequest.BodyPublishers.ofString(formBody))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient().send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Failed to refresh Google OAuth token (HTTP " + response.statusCode() + "): " + response.body());
         }
@@ -173,7 +189,7 @@ public class EmailService {
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient().send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Gmail API send failed (HTTP " + response.statusCode() + "): " + response.body());
         }
