@@ -65,14 +65,18 @@ export default function WarehouseWorkspacePage() {
     loadWh();
   }, []);
 
-  // Fetch Master list
-  const fetchMasterData = useCallback(async () => {
+  // Fetch Master list. `silent` skips the loading spinner and keeps the
+  // current selection/page untouched, so the periodic background refresh
+  // below doesn't yank the warehouse worker out of the row they're viewing.
+  const fetchMasterData = useCallback(async (silent = false) => {
     try {
-      setLoadingMaster(true);
-      setSelectedItem(null);
-      setDetailLines([]);
-      setOpenDropdownId(null);
-      setPage(1);
+      if (!silent) {
+        setLoadingMaster(true);
+        setSelectedItem(null);
+        setDetailLines([]);
+        setOpenDropdownId(null);
+        setPage(1);
+      }
 
       const params = { keyword: searchTerm };
       if (selectedWarehouseId) {
@@ -88,17 +92,17 @@ export default function WarehouseWorkspacePage() {
         const res = await importApi.getImportHistory(params);
         const data = res.data?.data || res.data || [];
         setMasterList(data);
-        if (data.length > 0) setSelectedItem(data[0]);
+        if (!silent && data.length > 0) setSelectedItem(data[0]);
       } else if (activeTab === 'exports') {
         const res = await exportApi.getExportHistory(params);
         const data = res.data?.data || res.data || [];
         setMasterList(data);
-        if (data.length > 0) setSelectedItem(data[0]);
+        if (!silent && data.length > 0) setSelectedItem(data[0]);
       } else if (activeTab === 'transfers') {
         const res = await stockTransferApi.getTransferHistory(params);
         const data = res.data?.data || res.data || [];
         setMasterList(data);
-        if (data.length > 0) setSelectedItem(data[0]);
+        if (!silent && data.length > 0) setSelectedItem(data[0]);
       } else if (activeTab === 'stocktakes') {
         const stParams = {
           stocktakeCode: searchTerm || undefined,
@@ -110,18 +114,26 @@ export default function WarehouseWorkspacePage() {
         const data = res.data?.data?.content || res.data?.content || res.data?.data || res.data || [];
         const arr = Array.isArray(data) ? data : [];
         setMasterList(arr);
-        if (arr.length > 0) setSelectedItem(arr[0]);
+        if (!silent && arr.length > 0) setSelectedItem(arr[0]);
       }
     } catch (err) {
       console.error('Error loading warehouse master list:', err);
-      showToast('error', 'Không thể tải danh sách chứng từ kho');
+      if (!silent) showToast('error', 'Không thể tải danh sách chứng từ kho');
     } finally {
-      setLoadingMaster(false);
+      if (!silent) setLoadingMaster(false);
     }
   }, [activeTab, searchTerm, periodPreset, selectedWarehouseId]);
 
   useEffect(() => {
     fetchMasterData();
+  }, [fetchMasterData]);
+
+  // Auto-refresh the list in the background so newly-created/posted documents
+  // from other roles (e.g. Ke toan tao phieu nhap) show up here without the
+  // warehouse worker having to click "Nap lai" themselves.
+  useEffect(() => {
+    const interval = setInterval(() => fetchMasterData(true), 15000);
+    return () => clearInterval(interval);
   }, [fetchMasterData]);
 
   // Fetch Detail when selected item changes
