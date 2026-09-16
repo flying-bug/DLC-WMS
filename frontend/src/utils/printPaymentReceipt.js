@@ -1,9 +1,10 @@
-import { formatDateOnly, formatDateTime } from './dateFormat';
+import { formatDateTime } from './dateFormat';
+import { numberToVietnameseWords } from './numberToVietnameseWords';
 
 export function printPaymentReceipt(paymentOrPayments, options = {}) {
   const {
-    partnerName = 'Chưa rõ',
-    salespersonName = 'Chưa rõ',
+    partnerName = '..........................................................',
+    salespersonName = '',
   } = options;
 
   const payments = Array.isArray(paymentOrPayments) ? paymentOrPayments : [paymentOrPayments];
@@ -30,68 +31,110 @@ export function printPaymentReceipt(paymentOrPayments, options = {}) {
 
   const pagesHtml = payments.map((payment) => {
     const isReceipt = payment.type === 'RECEIPT';
-    const typeTitle = isReceipt ? 'THU TIỀN' : 'CHI TIỀN';
+    const typeTitle = isReceipt ? 'THU' : 'CHI';
     const docCode = payment.code || '';
-    const docDate = formatDateTime(payment.createdAt || new Date(), { withSeconds: false });
+    
+    // Determine the date to display
+    const d = payment.createdAt ? new Date(payment.createdAt) : new Date();
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
     
     const amount = Number(payment.amount || 0);
-    const paymentMethodText = payment.paymentMethod === 'CASH' ? 'Tiền mặt' 
-      : payment.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Khác';
+    let wordsAmount = '';
+    try {
+        wordsAmount = numberToVietnameseWords(amount);
+        wordsAmount = wordsAmount.charAt(0).toUpperCase() + wordsAmount.slice(1);
+        if (!wordsAmount.endsWith('đồng')) {
+            wordsAmount += ' đồng';
+        }
+    } catch (e) {
+        console.warn('Cannot convert amount to words', e);
+    }
 
     return `
-      <div style="position: relative;">
-        <table class="header-table">
+      <div style="position: relative; padding: 20px;">
+        <table style="width: 100%; margin-bottom: 20px;">
           <tr>
-            <td style="width: 50%;">
-              <strong style="font-size: 16px;">DLC COMPUTER</strong><br/>
-              <span style="font-size: 12px; color: #666;">Hệ thống quản lý kho WMS</span>
+            <td style="width: 35%; vertical-align: top; font-weight: bold; font-size: 14px;">
+              Đơn vị: DLC COMPUTER<br/>
+              Địa chỉ: .................................<br/>
+              ................................................
             </td>
-            <td style="width: 50%; text-align: right; font-size: 13px;">
-              Số phiếu: <strong>${escapeHtml(docCode)}</strong><br/>
-              Ngày lập: ${escapeHtml(docDate)}
+            <td style="width: 65%; vertical-align: top; text-align: center;">
+              <strong style="font-size: 16px;">Mẫu số ${isReceipt ? '01' : '02'} - TT</strong><br/>
+              <span style="font-size: 13px; font-style: italic;">
+                (Kèm theo Thông tư số 99/2025/TT-BTC<br/>
+                ngày 27 tháng 10 năm 2025 của Bộ trưởng Bộ Tài chính)
+              </span>
             </td>
           </tr>
         </table>
 
-        <div class="title">PHIẾU ${escapeHtml(typeTitle)}</div>
-        <div class="subtitle">Liên 1: Lưu trữ - Liên 2: Bàn giao</div>
+        <div style="text-align: center; margin-bottom: 25px;">
+          <div style="font-size: 22px; font-weight: bold; margin-bottom: 5px;">PHIẾU ${typeTitle}</div>
+          <div style="font-style: italic; font-size: 14px;">
+            Ngày ${day} tháng ${month} năm ${year}
+          </div>
+        </div>
 
-        <table class="info-table">
+        <div style="position: absolute; top: 120px; right: 20px; font-size: 14px; text-align: right; line-height: 1.6;">
+          Quyển số: ....................<br/>
+          Số: <strong>${escapeHtml(docCode)}</strong><br/>
+          Nợ: ..........................<br/>
+          Có: ..........................
+        </div>
+
+        <table style="width: 100%; margin-bottom: 20px; line-height: 1.8; font-size: 15px;">
           <tr>
-            <td style="width: 25%;"><strong>Họ tên người ${isReceipt ? 'nộp' : 'nhận'} tiền:</strong></td>
-            <td style="width: 75%;">${escapeHtml(partnerName)}</td>
+            <td>Họ và tên người ${isReceipt ? 'nộp' : 'nhận'} tiền: <span style="font-weight: bold;">${escapeHtml(partnerName)}</span></td>
           </tr>
           <tr>
-            <td><strong>Số tiền:</strong></td>
-            <td style="font-weight: bold; font-size: 16px;">${amount.toLocaleString('vi-VN')} đ</td>
+            <td>Địa chỉ: ${escapeHtml(payment.partnerAddress || '.........................................................................................................................................')}</td>
           </tr>
           <tr>
-            <td><strong>Lý do ${isReceipt ? 'thu' : 'chi'}:</strong></td>
-            <td>${escapeHtml(payment.note || 'Không có')}</td>
+            <td>Lý do ${isReceipt ? 'nộp' : 'chi'}: ${escapeHtml(payment.note || '.........................................................................................................................................')}</td>
           </tr>
           <tr>
-            <td><strong>Hình thức:</strong></td>
-            <td>${escapeHtml(paymentMethodText)}</td>
+            <td>Số tiền: <strong>${amount.toLocaleString('vi-VN')}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Viết bằng chữ): <em>${escapeHtml(wordsAmount)}</em></td>
+          </tr>
+          <tr>
+            <td>Kèm theo: ................................................................ Chứng từ gốc: ${escapeHtml(payment.referenceCode || '................................................')}</td>
           </tr>
         </table>
 
-        <table class="signatures">
+        <table style="width: 100%; margin-top: 30px; text-align: center; font-size: 14px;">
           <tr>
-            <td><strong>Người ${isReceipt ? 'nộp' : 'nhận'} tiền</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
-            <td><strong>Thủ quỹ</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
-            <td><strong>Người lập phiếu</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
-          </tr>
-          <tr class="sign-space">
-            <td></td>
-            <td></td>
-            <td></td>
+            <td colspan="5" style="text-align: right; padding-bottom: 10px; font-style: italic; padding-right: 20px;">
+              Ngày ${day} tháng ${month} năm ${year}
+            </td>
           </tr>
           <tr>
+            <td style="width: 20%;"><strong>Giám đốc</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, họ tên, đóng dấu)</span></td>
+            <td style="width: 20%;"><strong>Kế toán trưởng</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, họ tên)</span></td>
+            <td style="width: 20%;"><strong>Người ${isReceipt ? 'nộp' : 'nhận'} tiền</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, họ tên)</span></td>
+            <td style="width: 20%;"><strong>Người lập phiếu</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, họ tên)</span></td>
+            <td style="width: 20%;"><strong>Thủ quỹ</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, họ tên)</span></td>
+          </tr>
+          <tr style="height: 100px;">
+            <td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
             <td></td>
             <td></td>
+            <td>${partnerName !== '..........................................................' ? escapeHtml(partnerName) : ''}</td>
             <td>${escapeHtml(salespersonName)}</td>
+            <td></td>
           </tr>
         </table>
+
+        <div style="margin-top: 40px; font-size: 14px; line-height: 1.8;">
+          Đã nhận đủ số tiền (viết bằng chữ): ........................................................................................................................<br/>
+          + Tỷ giá ngoại tệ (vàng bạc, đá quý): ....................................................................................................................<br/>
+          + Số tiền quy đổi: .................................................................................................................................................<br/>
+          <span style="font-style: italic;">(Liên gửi ra ngoài phải đóng dấu)</span><br/>
+          <strong>Ghi chú:</strong> Tùy theo đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của đơn vị mình, doanh nghiệp được xây dựng, thiết kế biểu mẫu chứng từ kế toán.
+        </div>
       </div>
     `;
   }).join('<div style="page-break-after: always;"></div>');
@@ -103,17 +146,13 @@ export function printPaymentReceipt(paymentOrPayments, options = {}) {
         <meta charset="UTF-8">
         <title>In Phiếu Thu / Chi</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; font-size: 15px; line-height: 1.6; }
-          .header-table { width: 100%; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 30px; }
-          .title { text-align: center; font-size: 26px; font-weight: bold; margin-bottom: 5px; }
-          .subtitle { text-align: center; font-size: 13px; font-style: italic; margin-bottom: 40px; }
-          .info-table { width: 100%; margin-bottom: 30px; border-collapse: separate; border-spacing: 0 12px; }
-          .info-table td { font-size: 15px; vertical-align: top; }
-          .signatures { width: 100%; margin-top: 50px; }
-          .signatures td { text-align: center; width: 33.33%; font-size: 14px; padding-top: 10px; }
-          .sign-space { height: 100px; }
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+          body { font-family: 'Times New Roman', Times, serif; padding: 0; margin: 0; font-size: 15px; color: #000; }
           @media print {
-            body { padding: 20px; }
+            body { padding: 0; margin: 0; }
           }
         </style>
       </head>

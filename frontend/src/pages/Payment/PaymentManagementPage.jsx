@@ -410,15 +410,6 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
           <div className={styles.headerActions}>
             <button
               type="button"
-              className={styles.btnCashierLink}
-              onClick={() => navigate('/cashier-workspace')}
-              title="Mở Bàn làm việc Thủ quỹ"
-            >
-              <i className="bi bi-cash-stack" /> Bàn làm việc Thủ quỹ
-            </button>
-
-            <button
-              type="button"
               className={styles.btnPrimary}
               onClick={() => guard('payment:add', handleOpenCreate)}
             >
