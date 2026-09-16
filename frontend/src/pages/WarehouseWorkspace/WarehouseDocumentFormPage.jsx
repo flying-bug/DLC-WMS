@@ -498,8 +498,6 @@ export default function WarehouseDocumentFormPage() {
                     </th>
                     <th style={{ width: '150px' }}>Serial / IMEI</th>
                     <th>Ghi chú</th>
-                    <th style={{ width: '110px' }}>Đơn vị chính</th>
-                    <th style={{ width: '100px', textAlign: 'right' }}>Tỷ lệ CĐ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -543,6 +541,9 @@ export default function WarehouseDocumentFormPage() {
                       </td>
                       <td>
                         {(() => {
+                          if (!l.trackSerial) {
+                            return '-';
+                          }
                           const actNum = Number(l.actualQty) || 0;
                           const snCount = (l.serialList || []).length;
                           const isMatch = snCount > 0 && snCount === actNum;
@@ -589,8 +590,6 @@ export default function WarehouseDocumentFormPage() {
                         })()}
                       </td>
                       <td>{l.note || '-'}</td>
-                      <td>{l.baseUnitName}</td>
-                      <td style={{ textAlign: 'right' }}>{Number(l.conversionRatio || 1.0).toLocaleString('vi-VN')}</td>
                     </tr>
                   ))}
 

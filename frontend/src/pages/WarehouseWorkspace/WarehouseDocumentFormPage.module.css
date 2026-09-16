@@ -273,6 +273,8 @@
   align-items: center;
   font-size: 0.8125rem;
   gap: 10px;
+  width: fit-content;
+  max-width: 100%;
 }
 
 /* Cột phải chỉ chứa ngày/mã chứng từ ngắn, không nên bị bẻ theo từng ký tự
