@@ -4,6 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import MasterDetailLayout from '../../components/ui/MasterDetailLayout/MasterDetailLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import * as paymentApi from '../../api/paymentApi';
@@ -359,59 +360,53 @@ export default function CashierWorkspacePage() {
         render: (_, row) => {
           const isOpen = openDropdownId === row.id;
           return (
-            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+            <RowActionMenu
+              open={isOpen}
+              onToggle={() => setOpenDropdownId(isOpen ? null : row.id)}
+              buttonClassName={styles.misaActionLink}
+              menuClassName={styles.actionDropdownMenu}
+            >
+              {row.status === 'DRAFT' && (
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => {
+                    setOpenDropdownId(null);
+                    setConfirmPostItem(row);
+                  }}
+                >
+                  <i className="bi bi-check"></i> Ghi sổ quỹ
+                </button>
+              )}
+              {row.status === 'POSTED' && (
+                <button
+                  type="button"
+                  className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                  onClick={() => {
+                    setOpenDropdownId(null);
+                    setUnpostItem(row);
+                    setUnpostReason('');
+                  }}
+                >
+                  <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
+                </button>
+              )}
               <button
                 type="button"
-                className={styles.misaActionLink}
-                onClick={() => setOpenDropdownId(isOpen ? null : row.id)}
+                className={styles.dropdownItem}
+                onClick={() => {
+                  setOpenDropdownId(null);
+                  handlePrint(row);
+                }}
               >
-                Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                <i className="bi bi-printer"></i> In phiếu
               </button>
-              {isOpen && (
-                <div className={styles.actionDropdownMenu}>
-                  {row.status === 'DRAFT' && (
-                    <button
-                      type="button"
-                      className={styles.dropdownItem}
-                      onClick={() => {
-                        setOpenDropdownId(null);
-                        setConfirmPostItem(row);
-                      }}
-                    >
-                      <i className="bi bi-check"></i> Ghi sổ quỹ
-                    </button>
-                  )}
-                  {row.status === 'POSTED' && (
-                    <button
-                      type="button"
-                      className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
-                      onClick={() => {
-                        setOpenDropdownId(null);
-                        setUnpostItem(row);
-                        setUnpostReason('');
-                      }}
-                    >
-                      <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={() => {
-                      setOpenDropdownId(null);
-                      handlePrint(row);
-                    }}
-                  >
-                    <i className="bi bi-printer"></i> In phiếu
-    </button>
-                </div>
-              )}
-            </div>
+            </RowActionMenu>
           );
         },
       },
     ],
-    []
+    [openDropdownId, handlePrint, renderStatus]
   );
 
   // Detail Columns (Sổ công nợ / Hạch toán chi tiết đối tác)

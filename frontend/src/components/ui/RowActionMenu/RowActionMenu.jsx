@@ -9,6 +9,7 @@ export default function RowActionMenu({
   onToggle,
   buttonClassName,
   menuClassName,
+  label = 'Xem',
   children,
 }) {
   const triggerRef = useRef(null);
@@ -66,7 +67,7 @@ export default function RowActionMenu({
         aria-expanded={open}
         onClick={onToggle}
       >
-        Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+        {label} <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
       </button>
       {open && typeof document !== 'undefined' && createPortal(
         <div

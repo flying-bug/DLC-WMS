@@ -516,14 +516,15 @@
 }
 
 .actionDropdownMenu {
-  position: absolute;
-  top: 100%;
-  right: 0;
+  position: fixed;
+  top: 0;
+  right: auto;
+  bottom: auto;
   background: var(--color-surface, var(--color-white));
   border: 1px solid var(--color-border-subtle, var(--wms-border-base));
   border-radius: var(--border-radius-base, 6px);
   box-shadow: var(--shadow-modal, 0 10px 25px -5px rgba(0, 0, 0, 0.15));
-  z-index: 100;
+  z-index: 10000;
   min-width: 150px;
   padding: 4px;
   display: flex;

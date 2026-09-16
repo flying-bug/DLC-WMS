@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import MasterDetailLayout from '../../components/ui/MasterDetailLayout/MasterDetailLayout';
 import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
+import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import Toast from '../../components/ui/Toast/Toast';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { printExportSlip } from '../../utils/printExportSlip';
@@ -321,29 +322,23 @@ export default function WarehouseWorkspacePage() {
           render: (_, r) => {
             const isOpen = openDropdownId === r.id;
             return (
-              <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+              <RowActionMenu
+                open={isOpen}
+                onToggle={() => setOpenDropdownId(isOpen ? null : r.id)}
+                buttonClassName={styles.misaActionLink}
+                menuClassName={styles.actionDropdownMenu}
+              >
                 <button
                   type="button"
-                  className={styles.misaActionLink}
-                  onClick={() => setOpenDropdownId(isOpen ? null : r.id)}
+                  className={styles.dropdownItem}
+                  onClick={() => {
+                    setOpenDropdownId(null);
+                    handleOpenForm(r);
+                  }}
                 >
-                  Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                  <i className="bi bi-eye"></i> Xem chi tiết
                 </button>
-                {isOpen && (
-                  <div className={styles.actionDropdownMenu}>
-                    <button
-                      type="button"
-                      className={styles.dropdownItem}
-                      onClick={() => {
-                        setOpenDropdownId(null);
-                        handleOpenForm(r);
-                      }}
-                    >
-                      <i className="bi bi-eye"></i> Xem chi tiết
-                    </button>
-                  </div>
-                )}
-              </div>
+              </RowActionMenu>
             );
           }
         }
@@ -438,53 +433,47 @@ export default function WarehouseWorkspacePage() {
           const isOpen = openDropdownId === r.id;
 
           return (
-            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+            <RowActionMenu
+              open={isOpen}
+              onToggle={() => setOpenDropdownId(isOpen ? null : r.id)}
+              buttonClassName={styles.misaActionLink}
+              menuClassName={styles.actionDropdownMenu}
+              label={isPosted ? 'Xem' : 'Thực hiện'}
+            >
               <button
                 type="button"
-                className={styles.misaActionLink}
-                onClick={() => setOpenDropdownId(isOpen ? null : r.id)}
+                className={styles.dropdownItem}
+                onClick={() => {
+                  setOpenDropdownId(null);
+                  handleOpenForm(r);
+                }}
               >
-                {isPosted ? 'Xem' : 'Thực hiện'} <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                <i className="bi bi-pencil"></i> {isPosted ? 'Xem chi tiết' : 'Ghi sổ / Quét Serial'}
               </button>
-
-              {isOpen && (
-                <div className={styles.actionDropdownMenu}>
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={() => {
-                      setOpenDropdownId(null);
-                      handleOpenForm(r);
-                    }}
-                  >
-                    <i className="bi bi-pencil"></i> {isPosted ? 'Xem chi tiết' : 'Ghi sổ / Quét Serial'}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={() => {
-                      setOpenDropdownId(null);
-                      handlePrint(r);
-                    }}
-                  >
-                    <i className="bi bi-printer"></i> In phiếu
-                  </button>
-                  {isPosted && (
-                    <button
-                      type="button"
-                      className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
-                      onClick={() => {
-                        setOpenDropdownId(null);
-                        setTargetSlip(r);
-                        setUnpostModalOpen(true);
-                      }}
-                    >
-                      <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
-                    </button>
-                  )}
-                </div>
+              <button
+                type="button"
+                className={styles.dropdownItem}
+                onClick={() => {
+                  setOpenDropdownId(null);
+                  handlePrint(r);
+                }}
+              >
+                <i className="bi bi-printer"></i> In phiếu
+              </button>
+              {isPosted && (
+                <button
+                  type="button"
+                  className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                  onClick={() => {
+                    setOpenDropdownId(null);
+                    setTargetSlip(r);
+                    setUnpostModalOpen(true);
+                  }}
+                >
+                  <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
+                </button>
               )}
-            </div>
+            </RowActionMenu>
           );
         }
       }
