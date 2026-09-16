@@ -553,8 +553,17 @@
         display: none;
     }
 
+    /* Sub-tabs (Nhập kho / Xuất kho / Chuyển kho / Kiểm kê...) stay visible and
+       become a horizontally-scrollable strip instead of disappearing - the sidebar
+       drawer only lists top-level modules, not these in-module tabs, so hiding them
+       left mobile users with no way to switch between them. */
     .topTabs {
-        display: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab {
+        padding: 0 10px;
+        font-size: 0.8rem;
     }
 
     .content {

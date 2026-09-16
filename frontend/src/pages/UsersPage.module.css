@@ -687,6 +687,142 @@
     }
 }
 
+/* Filter Section */
+.filterSection {
+  background: var(--color-white);
+  padding: 14px 20px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.searchAndPopover {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+}
+
+.searchBox > i:first-child {
+  position: absolute;
+  left: 12px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 48px 8px 36px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  color: var(--color-text-strong);
+  height: 38px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary);
+}
+
+.clearSearchBtn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  z-index: 2;
+  font-size: 14px;
+}
+
+.clearSearchBtn:hover {
+  background-color: var(--color-bg-hover, var(--wms-bg-hover));
+  color: var(--color-danger);
+}
+
+.filterSelectGroup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--color-text-strong);
+  height: 38px;
+  min-width: 160px;
+  box-sizing: border-box;
+  outline: none;
+  background-color: var(--color-white);
+}
+
+
+
+.filterSelect:focus {
+  border-color: var(--color-primary);
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iconBtn {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  width: 38px;
+  height: 38px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Mobile overrides below must stay AFTER the base rules above - a previous
+   version had this media query BEFORE the unguarded base rules, so the base
+   rules (later in source order, same specificity) silently won at every
+   width including mobile and the "mobile" design here never actually applied. */
 @media (max-width: 700px) {
     .pageHeader {
         flex-direction: column;
@@ -820,138 +956,6 @@
         margin-top: 16px;
         overflow: hidden;
     }
-}
-
-/* Filter Section */
-.filterSection {
-  background: var(--color-white);
-  padding: 14px 20px;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  border: 1px solid var(--color-border);
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.searchAndPopover {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-}
-
-.searchBox {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 320px;
-  max-width: 100%;
-}
-
-.searchBox > i:first-child {
-  position: absolute;
-  left: 12px;
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.searchInput {
-  width: 100%;
-  padding: 8px 48px 8px 36px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 6px;
-  font-size: 14px;
-  outline: none;
-  color: var(--color-text-strong);
-  height: 38px;
-  box-sizing: border-box;
-  transition: border-color 0.2s ease;
-}
-
-.searchInput:focus {
-  border-color: var(--color-primary);
-}
-
-.clearSearchBtn {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  z-index: 2;
-  font-size: 14px;
-}
-
-.clearSearchBtn:hover {
-  background-color: var(--color-bg-hover, var(--wms-bg-hover));
-  color: var(--color-danger);
-}
-
-.filterSelectGroup {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.filterSelect {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--color-text-strong);
-  height: 38px;
-  min-width: 160px;
-  box-sizing: border-box;
-  outline: none;
-  background-color: var(--color-white);
-}
-
-
-
-.filterSelect:focus {
-  border-color: var(--color-primary);
-}
-
-.filterActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.iconBtn {
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-white);
-  width: 38px;
-  height: 38px;
-  box-sizing: border-box;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: var(--color-text-secondary);
-  transition: all 0.2s ease;
-}
-
-.iconBtn:hover {
-  background-color: var(--color-bg);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
 }
 
 @media (max-width: 700px) {

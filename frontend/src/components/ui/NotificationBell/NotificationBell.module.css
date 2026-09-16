@@ -26,6 +26,13 @@
   border-color: var(--color-primary, var(--color-info-hover));
 }
 
+@media (max-width: 767px) {
+  .bellButton {
+    width: var(--touch-target-min, 44px);
+    height: var(--touch-target-min, 44px);
+  }
+}
+
 .badge {
   position: absolute;
   top: -4px;

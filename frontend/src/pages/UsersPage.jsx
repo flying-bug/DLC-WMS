@@ -8,6 +8,7 @@ import styles from './UsersPage.module.css';
 import SuperAdminLayout from '../components/layout/SuperAdminLayout';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
 import Pagination from '../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../components/ui/Table/ResponsiveTable';
 import { USER_EVENT } from '../auth/session';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
@@ -323,6 +324,83 @@ function UsersPage() {
         return pages;
     };
 
+    const getTableColumns = () => [
+        {
+            title: 'AVATAR',
+            align: 'center',
+            width: '80px',
+            render: (_, user) => (
+                user.imageUrl ? (
+                    <img src={user.imageUrl} className={styles.avatarImage} alt={user.name} />
+                ) : (
+                    <div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div>
+                )
+            )
+        },
+        {
+            title: 'HỌ VÀ TÊN',
+            render: (_, user) => (
+                <>
+                    <strong>{user.name}</strong><br />
+                    <span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span>
+                </>
+            )
+        },
+        { title: 'TÀI KHOẢN NHÂN VIÊN', dataIndex: 'code' },
+        { title: 'BỘ PHẬN', dataIndex: 'departmentShort' },
+        {
+            title: 'VAI TRÒ',
+            render: (_, user) => (
+                <span className={`${styles.roleBadge} ${user.position?.toUpperCase().includes('QUẢN LÝ') || user.position?.toUpperCase().includes('SUPER') || user.position?.toUpperCase().includes('TRƯỞNG') ? styles.rolePrimary : styles.roleSecondary}`}>
+                    {user.position?.toUpperCase() || 'NHÂN VIÊN'}
+                </span>
+            )
+        },
+        {
+            title: 'TRẠNG THÁI',
+            render: (_, user) => (
+                <span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span>
+            )
+        }
+    ];
+
+    const renderActions = (user) => {
+        const idx = paginatedUsers.findIndex(u => u.id === user.id);
+        const isUp = idx >= Math.max(paginatedUsers.length - 2, 2);
+        
+        return (
+            <div style={{ position: 'relative' }}>
+                <button
+                    type="button"
+                    className={styles.btnAction}
+                    onClick={(e) => toggleActionMenu(e, user.id)}
+                    aria-label={`Mở thao tác cho ${user.name}`}
+                    aria-expanded={activeMenuId === user.id}
+                    aria-haspopup="menu"
+                >
+                    <i className="bi bi-three-dots-vertical"></i>
+                </button>
+
+                {activeMenuId === user.id && (
+                    <div role="menu" className={`${styles.actionMenu} ${isUp ? styles.actionMenuUp : ''}`} onClick={(e) => e.stopPropagation()}>
+                        <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
+                            <i className="bi bi-eye"></i> Xem thông tin chi tiết
+                        </button>
+                        {!user.isSuperAdmin && (
+                            <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
+                                <i className="bi bi-shield-lock"></i> Phân quyền chức năng
+                            </button>
+                        )}
+                        <button type="button" role="menuitem" className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => openConfirmModal(e, user)}>
+                            <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i>
+                            {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const totalStaff = usersData.length;
     const activeStaff = usersData.filter(u => u.status === 'APPROVED').length;
     const inactiveStaff = usersData.filter(u => u.status !== 'APPROVED').length;
@@ -415,96 +493,14 @@ function UsersPage() {
                     </div>
 
                     <div className="table-responsive">
-                        <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>AVATAR</th>
-                                <th>HỌ VÀ TÊN</th>
-                                <th>TÀI KHOẢN NHÂN VIÊN</th>
-                                <th>BỘ PHẬN</th>
-                                <th>VAI TRÒ</th>
-                                <th>TRẠNG THÁI</th>
-                                <th>THAO TÁC</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px 0', color: 'var(--wms-text-muted)' }}>
-                                        <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '8px' }}></i>
-                                        Đang tải dữ liệu...
-                                    </td>
-                                </tr>
-                            ) : paginatedUsers.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: '50px 0' }}>
-                                        <div style={{ color: 'var(--color-text-muted)' }}>
-                                            Không tìm thấy nhân viên nào
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedUsers.map((user, index) => (
-                                    <tr
-                                        key={user.id}
-                                        className={`${styles.tableRow} ${activeMenuId === user.id ? styles.tableRowActive : ''}`}
-                                        onClick={() => handleRowClick(user)}
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Enter') handleRowClick(user);
-                                        }}
-                                        tabIndex={0}
-                                        aria-label={`Xem chi tiết ${user.name}`}
-                                    >
-                                        <td data-label="AVATAR">
-                                            {user.imageUrl ? (
-                                                <img src={user.imageUrl} className={styles.avatarImage} alt={user.name} />
-                                            ) : (
-                                                <div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div>
-                                            )}
-                                        </td>
-                                        <td data-label="HỌ VÀ TÊN"><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
-                                        <td data-label="TÀI KHOẢN NHÂN VIÊN">{user.code}</td>
-                                        <td data-label="BỘ PHẬN">{user.departmentShort}</td>
-                                        <td data-label="VAI TRÒ">
-                                            <span className={`${styles.roleBadge} ${user.position?.toUpperCase().includes('QUẢN LÝ') || user.position?.toUpperCase().includes('SUPER') || user.position?.toUpperCase().includes('TRƯỞNG') ? styles.rolePrimary : styles.roleSecondary}`}>
-                                                {user.position?.toUpperCase() || 'NHÂN VIÊN'}
-                                            </span>
-                                        </td>
-                                        <td data-label="TRẠNG THÁI"><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
-                                        <td data-label="THAO TÁC" className={styles.actionCell}>
-                                            <button
-                                                type="button"
-                                                className={styles.btnAction}
-                                                onClick={(e) => toggleActionMenu(e, user.id)}
-                                                aria-label={`Mở thao tác cho ${user.name}`}
-                                                aria-expanded={activeMenuId === user.id}
-                                                aria-haspopup="menu"
-                                            >
-                                                <i className="bi bi-three-dots-vertical"></i>
-                                            </button>
-
-                                            {activeMenuId === user.id && (
-                                                <div role="menu" className={`${styles.actionMenu} ${index >= Math.max(paginatedUsers.length - 2, 2) ? styles.actionMenuUp : ''}`}>
-                                                    <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
-                                                        <i className="bi bi-eye"></i> Xem thông tin chi tiết
-                                                    </button>
-                                                    {!user.isSuperAdmin && (
-                                                        <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
-                                                            <i className="bi bi-shield-lock"></i> Phân quyền chức năng
-                                                        </button>
-                                                    )}
-                                                    <button type="button" role="menuitem" className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => openConfirmModal(e, user)}>
-                                                        <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i>
-                                                        {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                        <ResponsiveTable
+                            columns={getTableColumns()}
+                            data={paginatedUsers}
+                            loading={loading}
+                            emptyMessage="Không tìm thấy nhân viên nào"
+                            onRowClick={handleRowClick}
+                            actions={renderActions}
+                        />
                     </div>
 
                     <Pagination
