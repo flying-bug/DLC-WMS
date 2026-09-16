@@ -404,7 +404,17 @@ const AdminLayout = ({ children }) => {
                                         isActive = currentQueryTab === tab.tabId;
                                     }
                                 } else {
-                                    isActive = (tab.tabId === 'imports' || tab.tabId === 'requests' || tab.tabId === 'receipts');
+                                    // Không có ?tab= — có thể là gốc workspace (mặc định về tab
+                                    // đầu tiên) hoặc trang chi tiết chứng từ như
+                                    // /warehouse-workspace/exports/:id (xác định theo segment URL).
+                                    const workspaceBasePath = activeModule === 'warehouse_workspace'
+                                        ? '/warehouse-workspace'
+                                        : activeModule === 'cashier_workspace' ? '/cashier-workspace' : null;
+                                    if (workspaceBasePath && currentPath === workspaceBasePath) {
+                                        isActive = tab === activeTabs[0];
+                                    } else {
+                                        isActive = currentPath.includes(`/${tab.tabId}/`) || currentPath.endsWith(`/${tab.tabId}`);
+                                    }
                                 }
                             } else if (tab.exact) {
                                 isActive = currentPath === tab.path;
