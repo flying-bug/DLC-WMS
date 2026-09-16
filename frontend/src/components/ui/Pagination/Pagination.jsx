@@ -82,7 +82,13 @@ const Pagination = ({
                         }
                         return page === p ? (
                             <input
-                                key={`input-${index}`}
+                                // Keyed by the page number (not array index) so React remounts this
+                                // uncontrolled input whenever the active page changes. It previously
+                                // kept the same DOM node across navigation (index stayed ~3 in the
+                                // visible-pages array), and defaultValue only applies on mount - so
+                                // clicking "Sau"/another page number left this box showing the old
+                                // page number even though the correct page's data had loaded.
+                                key={`input-page-${p}`}
                                 className={`${styles.pageBtn} ${styles.active}`}
                                 style={{ width: '32px', textAlign: 'center', padding: '0', border: 'none', outline: 'none' }}
                                 defaultValue={p + 1}

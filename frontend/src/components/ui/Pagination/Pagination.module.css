@@ -85,14 +85,14 @@
         flex-wrap: wrap;
         justify-content: center;
     }
-    
+
     .pageControls {
         justify-content: center;
         flex-wrap: wrap;
         width: 100%;
         gap: 8px;
     }
-    
+
     .pageNavBtn, .pageBtn {
         min-width: 44px;
         min-height: 44px;
@@ -107,7 +107,7 @@
         width: 100%;
         margin-left: 0;
     }
-    
+
     .pageSizeSelect select {
         width: 100%;
         min-height: 44px;
