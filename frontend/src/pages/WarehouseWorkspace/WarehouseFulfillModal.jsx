@@ -218,6 +218,7 @@ export default function WarehouseFulfillModal({
               Đang tải danh sách vật tư hàng hóa...
             </div>
           ) : (
+            <div className={styles.tableScroll}>
             <table className={styles.itemTable}>
               <thead>
                 <tr>
@@ -291,6 +292,7 @@ export default function WarehouseFulfillModal({
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

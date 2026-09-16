@@ -115,8 +115,14 @@
 }
 
 /* Table */
+.tableScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .itemTable {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
   font-size: 0.8125rem;
   border: 1px solid var(--color-border-subtle, var(--wms-border-base));
@@ -260,4 +266,33 @@
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .modalOverlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modalCard {
+    max-width: 100%;
+    max-height: 94vh;
+    border-radius: var(--border-radius-lg, 12px) var(--border-radius-lg, 12px) 0 0;
+  }
+
+  .modalFooter {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .footerActions {
+    justify-content: stretch;
+  }
+
+  .btnCancel,
+  .btnSubmit {
+    flex: 1;
+    justify-content: center;
+  }
 }

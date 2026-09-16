@@ -320,6 +320,13 @@
   color: var(--color-primary);
 }
 
+@media (max-width: 767px) {
+  .iconBtn {
+    width: var(--touch-target-min, 44px);
+    height: var(--touch-target-min, 44px);
+  }
+}
+
 /* Pagination */
 .pagination {
   display: flex;

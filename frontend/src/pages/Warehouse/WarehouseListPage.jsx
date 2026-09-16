@@ -9,7 +9,7 @@ import styles from './WarehouseListPage.module.css';
 import { getVietnamTimestamp } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
-import usePermissionGuard from '../../hooks/usePermissionGuard';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 
 
 const WarehouseListPage = () => {
@@ -214,6 +214,58 @@ const WarehouseListPage = () => {
         }
     };
 
+    const columns = [
+        {
+            title: 'MÃ KHO',
+            dataIndex: 'code',
+            width: '15%',
+            render: (val) => <span className={styles.codeCell}>{val}</span>
+        },
+        {
+            title: 'TÊN KHO',
+            dataIndex: 'name',
+            width: '25%',
+            render: (val) => <span className={styles.nameCell}>{val}</span>
+        },
+        {
+            title: 'ĐỊA CHỈ',
+            dataIndex: 'address',
+            width: '30%'
+        },
+        {
+            title: 'TRẠNG THÁI',
+            dataIndex: 'status',
+            width: '15%',
+            render: (val) => getStatusBadge(val)
+        }
+    ];
+
+    const renderActions = (item) => (
+        <div className={styles.rowActions} style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <i 
+                className="bi bi-eye"
+                title="Xem chi tiết"
+                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleRowClick(item.id);
+                }}
+            ></i>
+            <i 
+                className="bi bi-pencil" 
+                title="Chỉnh sửa"
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }}
+                onClick={(e) => handleEdit(e, item)}
+            ></i>
+            <i 
+                className="bi bi-trash"
+                title="Xóa"
+                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }}
+                onClick={(e) => handleDelete(e, item)}
+            ></i>
+        </div>
+    );
+
     return (
         <AdminLayout activeTab="warehouses">
             <div className={styles.container}>
@@ -271,71 +323,14 @@ const WarehouseListPage = () => {
 
                 {/* Table */}
                 <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '15%' }}>MÃ KHO</th>
-                                <th style={{ width: '25%' }}>TÊN KHO</th>
-                                <th style={{ width: '30%' }}>ĐỊA CHỈ</th>
-                                <th style={{ width: '15%' }}>TRẠNG THÁI</th>
-                                <th style={{ width: '15%', textAlign: 'center' }}>THAO TÁC</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>Đang tải dữ liệu...</td>
-                                </tr>
-                            ) : warehouses.length === 0 ? (
-                                <tr>
-                                    <td colSpan="5">
-                                        <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không có dữ liệu kho.</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                warehouses.map((item) => (
-                                    <tr 
-                                        key={item.id} 
-                                        onClick={() => handleRowClick(item.id)}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        <td className={styles.codeCell}>{item.code}</td>
-                                        <td className={styles.nameCell}>{item.name}</td>
-                                        <td>{item.address}</td>
-                                        <td>{getStatusBadge(item.status)}</td>
-                                        <td className={styles.textCenter}>
-                                            <div className={styles.rowActions}>
-                                                <i 
-                                                    className="bi bi-eye"
-                                                    title="Xem chi tiết"
-                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRowClick(item.id);
-                                                    }}
-                                                ></i>
-                                                <i 
-                                                    className="bi bi-pencil" 
-                                                    title="Chỉnh sửa"
-                                                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }}
-                                                    onClick={(e) => handleEdit(e, item)}
-                                                ></i>
-                                                <i 
-                                                    className="bi bi-trash"
-                                                    title="Xóa"
-                                                    style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: '16px' }}
-                                                    onClick={(e) => handleDelete(e, item)}
-                                                ></i>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <ResponsiveTable
+                        columns={columns}
+                        data={warehouses}
+                        loading={loading}
+                        emptyMessage="Không có dữ liệu kho."
+                        onRowClick={(item) => handleRowClick(item.id)}
+                        actions={renderActions}
+                    />
                 </div>
 
                 {/* Pagination */}

@@ -726,3 +726,62 @@
     background: var(--color-border-muted);
     cursor: not-allowed;
 }
+
+/* ====== RESPONSIVE (< 700px) ======
+   The 280px-fixed-sidebar + content grid only works when the dialog itself is
+   wide; Modal shrinks the dialog to ~96vw on phones, which left ~80px for the
+   whole work area. Stack the set list above the work area and let it scroll
+   horizontally instead. */
+@media (max-width: 700px) {
+    .modalWrapper {
+        max-height: 100dvh;
+    }
+
+    .modalHeader {
+        padding: 14px 16px;
+    }
+
+    .modalBody {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        overflow-y: auto;
+    }
+
+    .setPanel {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+        max-height: 180px;
+    }
+
+    .setList {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .setCard {
+        flex: 0 0 auto;
+        min-width: 170px;
+    }
+
+    .scanRow {
+        flex-wrap: wrap;
+    }
+
+    .modalFooter {
+        flex-wrap: wrap;
+        padding: 12px 16px;
+    }
+
+    .footerInfo {
+        flex-basis: 100%;
+        order: -1;
+    }
+
+    .btnCancel,
+    .btnSubmit {
+        flex: 1;
+        justify-content: center;
+    }
+}

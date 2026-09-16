@@ -229,6 +229,13 @@
   border-color: var(--color-primary, var(--wms-primary));
 }
 
+@media (max-width: 767px) {
+  .iconBtn {
+    width: var(--touch-target-min, 44px);
+    height: var(--touch-target-min, 44px);
+  }
+}
+
 /* Table Container (The exact table frame) */
 .tableContainer {
   background: var(--color-white);
