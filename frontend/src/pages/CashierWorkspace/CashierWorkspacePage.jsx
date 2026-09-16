@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import MasterDetailLayout from '../../components/ui/MasterDetailLayout/MasterDetailLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -12,7 +12,6 @@ import styles from './CashierWorkspacePage.module.css';
 
 
 export default function CashierWorkspacePage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'requests';
   const [requestFilterType, setRequestFilterType] = useState('ALL'); // 'ALL' | 'RECEIPT' | 'VOUCHER'
@@ -502,24 +501,6 @@ export default function CashierWorkspacePage() {
           </div>
 
           <div className={styles.headerRightActions}>
-            <button
-              type="button"
-              className={styles.btnReceipt}
-              onClick={() => navigate('/payments/receipt')}
-              title="Lập phiếu thu tiền mới"
-            >
-              <i className="bi bi-plus"></i> Lập phiếu thu
-            </button>
-
-            <button
-              type="button"
-              className={styles.btnVoucher}
-              onClick={() => navigate('/payments/expense')}
-              title="Lập phiếu chi tiền mới"
-            >
-              <i className="bi bi-plus"></i> Lập phiếu chi
-            </button>
-
             <button
               type="button"
               className={styles.btnPrint}
