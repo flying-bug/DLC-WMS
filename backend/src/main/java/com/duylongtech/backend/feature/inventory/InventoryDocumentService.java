@@ -315,6 +315,7 @@ public class InventoryDocumentService {
         }
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
         syncStocktakeReference(saved);
+        notifyWarehouseOfNewDocument(saved, EXPORT_DOC_TYPE);
         return toResponse(saved);
     }
 
@@ -328,7 +329,32 @@ public class InventoryDocumentService {
         }
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
         syncStocktakeReference(saved);
+        notifyWarehouseOfNewDocument(saved, IMPORT_DOC_TYPE);
         return toResponse(saved);
+    }
+
+    /**
+     * Báo cho Thủ kho khi Kế toán tạo đề nghị nhập/xuất kho mới, để họ biết
+     * chứng từ đang chờ xử lý mà không cần chủ động vào kiểm tra danh sách.
+     */
+    private void notifyWarehouseOfNewDocument(InventoryDocument doc, String docType) {
+        try {
+            boolean isImport = IMPORT_DOC_TYPE.equals(docType);
+            String partnerName = "";
+            if (doc.getPartnerId() != null) {
+                partnerName = partnerRepository.findById(doc.getPartnerId()).map(Partner::getName).orElse("");
+            }
+            String docLabel = isImport ? "nhập kho" : "xuất kho";
+            String title = (isImport ? "📥 Đề nghị nhập kho mới: " : "📤 Đề nghị xuất kho mới: ") + doc.getDocCode();
+            String message = String.format("Kế toán vừa tạo đề nghị %s %s%s. Vui lòng kiểm tra và xử lý.",
+                    docLabel, doc.getDocCode(), partnerName.isBlank() ? "" : " (Đối tác: " + partnerName + ")");
+            String refType = isImport ? "IMPORT_DOCUMENT" : "EXPORT_DOCUMENT";
+            String link = (isImport ? "/import-slips/" : "/export-slips/") + doc.getId() + "/edit";
+            appNotificationService.createNotification("ROLE_WAREHOUSE_CONTROLLER", null, title, message,
+                    "NEW_DOCUMENT", refType, doc.getId(), link);
+        } catch (Exception e) {
+            // Log warning but do not fail document creation
+        }
     }
 
     private void syncStocktakeReference(InventoryDocument doc) {
@@ -1076,7 +1102,9 @@ public class InventoryDocumentService {
             throw new BusinessException(SystemMessage.INV_ERR_001.getMessage());
         }
 
-        return toResponse(inventoryDocumentRepository.save(doc));
+        InventoryDocument saved = inventoryDocumentRepository.save(doc);
+        notifyWarehouseOfNewDocument(saved, EXPORT_DOC_TYPE);
+        return toResponse(saved);
     }
 
     /**
