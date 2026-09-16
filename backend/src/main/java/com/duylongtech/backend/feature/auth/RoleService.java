@@ -154,6 +154,8 @@ public class RoleService {
                         result.add(perm);
                     } else if ("import".equals(mod) && Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code)) {
                         result.add(perm);
+                    } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
+                        result.add(perm);
                     } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_debt", "report_sales", "report_summary").contains(mod)) {
                         result.add(perm);
                     } else if ("warranty".equals(mod)) {
@@ -167,7 +169,7 @@ public class RoleService {
                         result.add(perm);
                     } else if ("payment".equals(mod)) {
                         result.add(perm);
-                    } else if (Arrays.asList("export", "transfer", "stocktake", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    } else if (Arrays.asList("transfer", "stocktake", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
                         result.add(perm);
                     }
                 }

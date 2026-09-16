@@ -1289,9 +1289,11 @@ function UpdateExportSlipPage() {
           <i className="bi bi-x-circle"></i> Hủy bỏ
         </button>
         <div className={styles.actionButtons}>
-          <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
-            <i className="bi bi-save"></i> Lưu tạm
-          </button>
+          {hasPermission('export:edit') && (
+            <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
+              <i className="bi bi-save"></i> Lưu tạm
+            </button>
+          )}
           {hasPermission('export:post') && (
             <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
               <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
