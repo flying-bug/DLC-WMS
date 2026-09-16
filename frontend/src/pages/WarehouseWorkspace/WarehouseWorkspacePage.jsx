@@ -7,7 +7,8 @@ import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import Toast from '../../components/ui/Toast/Toast';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { printExportSlip } from '../../utils/printExportSlip';
-import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
+import { getDateRangePreset } from '../../utils/datePresets';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as stockTransferApi from '../../api/stockTransferApi';
@@ -27,6 +28,8 @@ export default function WarehouseWorkspacePage() {
   const [loadingMaster, setLoadingMaster] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [periodPreset, setPeriodPreset] = useState('ALL');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [warehouses, setWarehouses] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
 
@@ -84,7 +87,10 @@ export default function WarehouseWorkspacePage() {
       if (selectedWarehouseId) {
         params.warehouseId = selectedWarehouseId;
       }
-      if (periodPreset !== 'ALL') {
+      if (periodPreset === 'CUSTOM') {
+        if (fromDate) params.fromDate = fromDate;
+        if (toDate) params.toDate = toDate;
+      } else if (periodPreset !== 'ALL') {
         const range = getDateRangePreset(periodPreset);
         if (range?.fromDate) params.fromDate = range.fromDate;
         if (range?.toDate) params.toDate = range.toDate;
@@ -124,7 +130,7 @@ export default function WarehouseWorkspacePage() {
     } finally {
       if (!silent) setLoadingMaster(false);
     }
-  }, [activeTab, searchTerm, periodPreset, selectedWarehouseId]);
+  }, [activeTab, searchTerm, periodPreset, fromDate, toDate, selectedWarehouseId]);
 
   useEffect(() => {
     fetchMasterData();
@@ -697,31 +703,22 @@ export default function WarehouseWorkspacePage() {
               )}
             </div>
 
-            <select
-              className={styles.periodSelect}
-              value={periodPreset}
-              onChange={(e) => setPeriodPreset(e.target.value)}
-            >
-              <option value="ALL">Kỳ: Toàn bộ thời gian</option>
-              {DATE_PRESET_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  Kỳ: {opt.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className={styles.periodSelect}
-              value={selectedWarehouseId}
-              onChange={(e) => setSelectedWarehouseId(e.target.value)}
-            >
-              <option value="">{warehouses.length > 1 ? 'Tất cả kho được giao' : 'Tất cả kho'}</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
+            <FilterPopover
+              filters={{ preset: periodPreset, fromDate, toDate, warehouseId: selectedWarehouseId }}
+              onApply={(newFilters) => {
+                setPeriodPreset(newFilters.preset || 'CUSTOM');
+                setFromDate(newFilters.fromDate || '');
+                setToDate(newFilters.toDate || '');
+                setSelectedWarehouseId(newFilters.warehouseId || '');
+              }}
+              onReset={() => {
+                setPeriodPreset('ALL');
+                setFromDate('');
+                setToDate('');
+                setSelectedWarehouseId(warehouses.length === 1 ? String(warehouses[0].id) : '');
+              }}
+              warehouses={warehouses}
+            />
           </div>
         </div>
 

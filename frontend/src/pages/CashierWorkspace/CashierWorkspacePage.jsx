@@ -5,7 +5,8 @@ import MasterDetailLayout from '../../components/ui/MasterDetailLayout/MasterDet
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
-import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import { getDateRangePreset } from '../../utils/datePresets';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import * as paymentApi from '../../api/paymentApi';
 import { NOTIFICATION_EVENT } from '../../auth/session';
@@ -658,46 +659,19 @@ export default function CashierWorkspacePage() {
               </div>
             )}
 
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Kỳ:</span>
-              <select
-                className={styles.periodSelect}
-                value={periodPreset}
-                onChange={(e) => handlePeriodPresetChange(e.target.value)}
-              >
-                {DATE_PRESET_OPTIONS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Từ:</span>
-              <input
-                type="date"
-                className={styles.dateInput}
-                value={fromDate}
-                onChange={(e) => {
-                  setPeriodPreset('CUSTOM');
-                  setFromDate(e.target.value);
-                }}
-              />
-            </div>
-
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Đến:</span>
-              <input
-                type="date"
-                className={styles.dateInput}
-                value={toDate}
-                onChange={(e) => {
-                  setPeriodPreset('CUSTOM');
-                  setToDate(e.target.value);
-                }}
-              />
-            </div>
+            <FilterPopover
+              filters={{ preset: periodPreset, fromDate, toDate }}
+              onApply={(newFilters) => {
+                setPeriodPreset(newFilters.preset || 'CUSTOM');
+                setFromDate(newFilters.fromDate || '');
+                setToDate(newFilters.toDate || '');
+                setPage(1);
+              }}
+              onReset={() => {
+                handlePeriodPresetChange('THIS_MONTH');
+                setPage(1);
+              }}
+            />
 
             <div className={styles.searchBox}>
               <i className={`bi bi-search ${styles.searchIcon}`}></i>
