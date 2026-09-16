@@ -740,7 +740,7 @@ function UpdateExportSlipPage() {
         return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
       }
       const product = productById.get(String(item.variantId));
-      if (product?.trackSerial) {
+      if (product?.trackSerial && shouldPost) {
         const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
         if (serialCount !== qty) {
           setSerialModalItemId(item.localId);
@@ -947,23 +947,21 @@ function UpdateExportSlipPage() {
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">Nhân viên xuất hàng</label>
-                      <input
-                        type="text"
-                        className="misa-input"
+                      <Select
+                        inputId="export-salespersonId"
+                        options={users.map(u => ({ value: u.id, label: u.fullName || u.username }))}
                         value={(() => {
-                          // Toàn trang đã qua khỏi màn hình "Đang tải dữ liệu..." nên mọi lần
-                          // fetch ban đầu - kể cả getUsers() - đã hoàn tất, không còn ca "đang
-                          // tải" hợp lệ nào ở đây nữa. Tách rõ 2 trường hợp: chưa từng gán ai
-                          // (salespersonId trống) vs. có gán nhưng không tra được tên - ví dụ
-                          // getUsers() bị 403 với vai trò không có account:view như Kế toán -
-                          // để không báo nhầm "Chưa phân công" khi thực ra đã có người phụ
-                          // trách, chỉ là không đủ quyền xem tên.
-                          if (!form.salespersonId) return 'Chưa phân công';
+                          if (!form.salespersonId) return null;
                           const assignedUser = users.find(u => String(u.id) === String(form.salespersonId));
-                          return assignedUser ? (assignedUser.fullName || assignedUser.username) : 'Đã phân công (không đủ quyền xem tên)';
+                          if (assignedUser) {
+                            return { value: form.salespersonId, label: assignedUser.fullName || assignedUser.username };
+                          }
+                          return { value: form.salespersonId, label: 'Đã phân công (không đủ quyền xem tên)' };
                         })()}
-                        readOnly
-                        style={{ backgroundColor: 'var(--color-bg)' }}
+                        onChange={(selected) => handleFormChange('salespersonId', selected ? selected.value : '')}
+                        placeholder="Chọn nhân viên..."
+                        isClearable
+                        styles={customSelectStyles}
                       />
                     </div>
                   </div>

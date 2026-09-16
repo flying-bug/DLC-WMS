@@ -806,7 +806,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
       }
       const product = productById.get(String(item.variantId));
-      if (product?.trackSerial) {
+      if (product?.trackSerial && shouldPost) {
         const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
         if (serialCount !== qty) {
           setSerialModalItemId(item.localId);
@@ -1087,12 +1087,21 @@ function CreateExportSlipPage({ mode: propMode }) {
                 </div>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                   <label className="misa-label">Nhân viên xuất hàng</label>
-                  <input
-                    type="text"
-                    className="misa-input"
-                    value={currentUser ? (currentUser.fullName || currentUser.username) : 'Đang tải...'}
-                    readOnly
-                    style={{ backgroundColor: 'var(--color-bg)' }}
+                  <Select
+                    inputId="export-salespersonId"
+                    options={users.map(u => ({ value: u.id, label: u.fullName || u.username }))}
+                    value={(() => {
+                      if (!form.salespersonId) return null;
+                      const assignedUser = users.find(u => String(u.id) === String(form.salespersonId));
+                      if (assignedUser) {
+                        return { value: form.salespersonId, label: assignedUser.fullName || assignedUser.username };
+                      }
+                      return { value: form.salespersonId, label: 'Đã phân công (không đủ quyền xem tên)' };
+                    })()}
+                    onChange={(selected) => handleFormChange('salespersonId', selected ? selected.value : '')}
+                    placeholder="Chọn nhân viên..."
+                    isClearable
+                    styles={customSelectStyles}
                   />
                 </div>
               </div>
@@ -1229,7 +1238,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   <th style={{ minWidth: '50px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                   {showPricing && <th style={{ minWidth: '90px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
                   {showPricing && <th style={{ minWidth: '90px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>}
-                  {showPricing && <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>}
+                  {showPricing && <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>% VAT</th>}
                   <th style={{ minWidth: '32px', width: '3%', textAlign: 'center' }}></th>
                 </tr>
               </thead>

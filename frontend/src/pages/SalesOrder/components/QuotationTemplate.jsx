@@ -50,7 +50,7 @@ const QuotationTemplate = forwardRef(({ order }, ref) => {
                         <th style={{ width: '8%' }}>Số lượng</th>
                         <th style={{ width: '7%' }}>BH (T)</th>
                         <th style={{ width: '12%' }}>Đơn giá</th>
-                        <th style={{ width: '10%' }}>Thuế GTGT</th>
+                        <th style={{ width: '10%' }}>% VAT</th>
                         <th style={{ width: '15%' }}>Thành tiền</th>
                     </tr>
                 </thead>

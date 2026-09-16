@@ -1142,12 +1142,21 @@ function CreateImportSlipPage() {
                     {importType === 'RETURN' && 'Nhân viên nhận hàng'}
                     {importType === 'OTHER' && 'Nhân viên nhận hàng'}
                   </label>
-                  <input
-                    type="text"
-                    className="misa-input"
-                    value={currentUser ? (currentUser.fullName || currentUser.username) : 'Đang tải...'}
-                    readOnly
-                    style={{ backgroundColor: 'var(--color-bg)' }}
+                  <Select
+                    inputId="import-purchaser"
+                    options={users.map(u => ({ value: u.id, label: u.fullName || u.username }))}
+                    value={(() => {
+                      if (!form.purchaser) return null;
+                      const assignedUser = users.find(u => String(u.id) === String(form.purchaser));
+                      if (assignedUser) {
+                        return { value: form.purchaser, label: assignedUser.fullName || assignedUser.username };
+                      }
+                      return { value: form.purchaser, label: 'Đã phân công (không đủ quyền xem tên)' };
+                    })()}
+                    onChange={(selected) => handleFormChange('purchaser', selected ? selected.value : '')}
+                    placeholder="Chọn nhân viên..."
+                    isClearable
+                    styles={customSelectStyles}
                   />
                 </div>
               </div>

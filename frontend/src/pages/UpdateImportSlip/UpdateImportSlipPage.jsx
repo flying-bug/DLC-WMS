@@ -916,23 +916,21 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                         {importType === 'RETURN' && 'Nhân viên nhận hàng'}
                         {importType === 'OTHER' && 'Nhân viên nhận hàng'}
                       </label>
-                      <input
-                        type="text"
-                        className="misa-input"
+                      <Select
+                        inputId="import-purchaser"
+                        options={users.map(u => ({ value: u.id, label: u.fullName || u.username }))}
                         value={(() => {
-                          // Toàn trang đã qua khỏi màn hình "Đang tải dữ liệu..." (xem điều kiện
-                          // `loading` bọc ngoài form) nên mọi lần fetch ban đầu - kể cả getUsers()
-                          // - đã hoàn tất, không còn ca "đang tải" hợp lệ nào ở đây nữa. Tách rõ 2
-                          // trường hợp: chưa từng gán ai (purchaser trống) vs. có gán nhưng không
-                          // tra được tên - ví dụ getUsers() bị 403 với vai trò không có
-                          // account:view như Kế toán - để không báo nhầm "Chưa phân công" khi
-                          // thực ra đã có người phụ trách, chỉ là không đủ quyền xem tên.
-                          if (!form.purchaser) return 'Chưa phân công';
+                          if (!form.purchaser) return null;
                           const assignedUser = users.find(u => String(u.id) === String(form.purchaser));
-                          return assignedUser ? (assignedUser.fullName || assignedUser.username) : 'Đã phân công (không đủ quyền xem tên)';
+                          if (assignedUser) {
+                            return { value: form.purchaser, label: assignedUser.fullName || assignedUser.username };
+                          }
+                          return { value: form.purchaser, label: 'Đã phân công (không đủ quyền xem tên)' };
                         })()}
-                        readOnly
-                        style={{ backgroundColor: 'var(--color-bg)' }}
+                        onChange={(selected) => handleFormChange('purchaser', selected ? selected.value : '')}
+                        placeholder="Chọn nhân viên..."
+                        isClearable
+                        styles={customSelectStyles}
                       />
                     </div>
                   </div>
