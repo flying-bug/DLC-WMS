@@ -163,66 +163,117 @@ function AppRouter() {
                             <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
                         </Route>
                     </Route>
-                    <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
-                    <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
-                    <Route path="/warehouse-workspace/exports/:id" element={<WarehouseDocumentFormPage />} />
-                    <Route path="/cashier-workspace" element={<CashierWorkspacePage />} />
+                    {/* Chi Thu kho (import:post/export:post) va Quan ly moi duoc vao ban lam viec Thu kho */}
+                    <Route element={<ProtectedRoute requiredPermission={['import:post', 'export:post']} />}>
+                        <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
+                        <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
+                        <Route path="/warehouse-workspace/exports/:id" element={<WarehouseDocumentFormPage />} />
+                    </Route>
+                    {/* Ban lam viec Thu quy: chi Thu quy va Quan ly - giong Thu kho, day la workspace
+                        rieng theo ROLE chu khong phai theo permission (Ke toan cung co du quyen
+                        "payment" nhung khong duoc vao workspace nay). */}
+                    <Route element={<ProtectedRoute allowedRoles={['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER', 'MANAGER', 'ROLE_MANAGER']} />}>
+                        <Route path="/cashier-workspace" element={<CashierWorkspacePage />} />
+                    </Route>
 
-                    <Route path="/export-slips" element={<ExportSlipPage />} />
-
-                    <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
-                    <Route path="/export-slips/usage" element={<CreateExportSlipPage mode="USAGE" />} />
-                    <Route path="/export-slips/assembly" element={<CreateExportSlipPage mode="ASSEMBLY" />} />
-                    <Route path="/export-slips/:id/edit" element={<UpdateExportSlipPage />} />
-                    <Route path="/import-history" element={<ImportHistoryPage />} />
-                    <Route path="/import-history/create" element={<CreateImportSlipPage />} />
-                    <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
-                    <Route path="/transfer-history" element={<TransferHistoryPage />} />
-                    <Route path="/transfer-history/create" element={<CreateTransferSlipPage />} />
-                    <Route path="/transfer-history/:id/edit" element={<UpdateTransferSlipPage />} />
-                    <Route path="/units" element={<UnitPage />} />
-                    <Route path="/products" element={<ProductPage />} />
-                    <Route path="/product-categories" element={<ProductCategoryPage />} />
-                    <Route path="/suppliers" element={<SupplierListPage />} />
-                    <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
-                    <Route path="/warehouses" element={<WarehouseListPage />} />
-                    <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
-                    <Route path="/customers" element={<CustomerListPage />} />
-                    <Route path="/customers/:id" element={<CustomerDetailPage />} />
-                    <Route path="/warranties" element={<WarrantyListPage />} />
-                    <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
-                    <Route path="/repairs" element={<RepairListPage />} />
-                    <Route path="/repairs/create" element={<RepairFormPage />} />
-                    <Route path="/repairs/:id" element={<RepairFormPage />} />
-                    <Route path="/repairs/:id/edit" element={<RepairFormPage />} />
-                    <Route path="/assembly-boms" element={<AssemblyBomPage />} />
-                    <Route path="/assembly-boms/create" element={<AssemblyBomFormPage />} />
-                    <Route path="/assembly-boms/:id" element={<AssemblyBomFormPage />} />
-                    <Route path="/assembly-orders" element={<AssemblyOrderListPage />} />
-                    <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
-                    <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
-                    <Route path="/brands" element={<BrandListPage />} />
-                    <Route path="/brands/:id" element={<BrandDetailPage />} />
-                    <Route path="/stocktakes" element={<StocktakeListPage />} />
-                    <Route path="/stocktakes/create" element={<CreateStocktakePage />} />
-                    <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />
-                    <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
-                    <Route path="/reports" element={<ReportListPage />} />
-                    <Route path="/payments" element={<Navigate to="/payments/receipt" replace />} />
-                    <Route path="/payments/overview" element={<Navigate to="/payments/receipt" replace />} />
-                    <Route path="/payments/expense" element={<PaymentManagementPage initialMode="VOUCHER" />} />
-                    <Route path="/payments/receipt" element={<PaymentManagementPage initialMode="RECEIPT" />} />
-                    <Route path="/payments/history/:partnerId" element={<PaymentHistoryPage />} />
-                    <Route path="/sales-orders" element={<SalesOrderListPage />} />
-                    <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />
-                    <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />
-                    <Route path="/sales-orders/:id/edit" element={<CreateSalesOrderPage />} />
-                    <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
-                    <Route path="/purchase-orders/create" element={<CreatePurchaseOrderPage />} />
-                    <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
-                    <Route path="/purchase-orders/:id/edit" element={<CreatePurchaseOrderPage />} />
-                    <Route path="/einvoices" element={<EInvoiceListPage />} />
-                    <Route path="/business-settings" element={<BusinessSettingsPage />} />
+                    <Route element={<ProtectedRoute requiredPermission="export:view" />}>
+                        <Route path="/export-slips" element={<ExportSlipPage />} />
+                        <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
+                        <Route path="/export-slips/usage" element={<CreateExportSlipPage mode="USAGE" />} />
+                        <Route path="/export-slips/assembly" element={<CreateExportSlipPage mode="ASSEMBLY" />} />
+                        <Route path="/export-slips/:id/edit" element={<UpdateExportSlipPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="import:view" />}>
+                        <Route path="/import-history" element={<ImportHistoryPage />} />
+                        <Route path="/import-history/create" element={<CreateImportSlipPage />} />
+                        <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="transfer:view" />}>
+                        <Route path="/transfer-history" element={<TransferHistoryPage />} />
+                        <Route path="/transfer-history/create" element={<CreateTransferSlipPage />} />
+                        <Route path="/transfer-history/:id/edit" element={<UpdateTransferSlipPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="unit:view" />}>
+                        <Route path="/units" element={<UnitPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="product:view" />}>
+                        <Route path="/products" element={<ProductPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="product_category:view" />}>
+                        <Route path="/product-categories" element={<ProductCategoryPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="supplier:view" />}>
+                        <Route path="/suppliers" element={<SupplierListPage />} />
+                        <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="warehouse_master:view" />}>
+                        <Route path="/warehouses" element={<WarehouseListPage />} />
+                        <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="customer:view" />}>
+                        <Route path="/customers" element={<CustomerListPage />} />
+                        <Route path="/customers/:id" element={<CustomerDetailPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="warranty:view" />}>
+                        <Route path="/warranties" element={<WarrantyListPage />} />
+                        <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="repair:view" />}>
+                        <Route path="/repairs" element={<RepairListPage />} />
+                        <Route path="/repairs/create" element={<RepairFormPage />} />
+                        <Route path="/repairs/:id" element={<RepairFormPage />} />
+                        <Route path="/repairs/:id/edit" element={<RepairFormPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="assembly_config:view" />}>
+                        <Route path="/assembly-boms" element={<AssemblyBomPage />} />
+                        <Route path="/assembly-boms/create" element={<AssemblyBomFormPage />} />
+                        <Route path="/assembly-boms/:id" element={<AssemblyBomFormPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="assembly:view" />}>
+                        <Route path="/assembly-orders" element={<AssemblyOrderListPage />} />
+                        <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
+                        <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="brand:view" />}>
+                        <Route path="/brands" element={<BrandListPage />} />
+                        <Route path="/brands/:id" element={<BrandDetailPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="stocktake:view" />}>
+                        <Route path="/stocktakes" element={<StocktakeListPage />} />
+                        <Route path="/stocktakes/create" element={<CreateStocktakePage />} />
+                        <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />
+                        <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission={['report_balance:view', 'report_ledger:view', 'report_transfer:view', 'report_debt:view', 'report_summary:view', 'report_sales:view']} />}>
+                        <Route path="/reports" element={<ReportListPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="payment:view" />}>
+                        <Route path="/payments" element={<Navigate to="/payments/receipt" replace />} />
+                        <Route path="/payments/overview" element={<Navigate to="/payments/receipt" replace />} />
+                        <Route path="/payments/expense" element={<PaymentManagementPage initialMode="VOUCHER" />} />
+                        <Route path="/payments/receipt" element={<PaymentManagementPage initialMode="RECEIPT" />} />
+                        <Route path="/payments/history/:partnerId" element={<PaymentHistoryPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="sales_order:view" />}>
+                        <Route path="/sales-orders" element={<SalesOrderListPage />} />
+                        <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />
+                        <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />
+                        <Route path="/sales-orders/:id/edit" element={<CreateSalesOrderPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="purchase_order:view" />}>
+                        <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
+                        <Route path="/purchase-orders/create" element={<CreatePurchaseOrderPage />} />
+                        <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
+                        <Route path="/purchase-orders/:id/edit" element={<CreatePurchaseOrderPage />} />
+                    </Route>
+                    <Route element={<ProtectedRoute requiredPermission="einvoice:view" />}>
+                        <Route path="/einvoices" element={<EInvoiceListPage />} />
+                    </Route>
+                    {/* Backend BusinessSettingsController da khoa ghi cho MANAGER/SUPER_ADMIN,
+                        khoa luon o FE de cac role khac khong thay man hinh chi de bi 403 khi luu. */}
+                    <Route element={<ProtectedRoute allowedRoles={['MANAGER', 'ROLE_MANAGER']} />}>
+                        <Route path="/business-settings" element={<BusinessSettingsPage />} />
+                    </Route>
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
