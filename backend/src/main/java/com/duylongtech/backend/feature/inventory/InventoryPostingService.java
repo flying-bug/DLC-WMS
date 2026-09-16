@@ -214,9 +214,21 @@ public class InventoryPostingService {
             Long targetSerialId = line.getSerialNumberId();
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
                 List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
+                List<String> notFoundSerials = new java.util.ArrayList<>();
                 for (String sn : serials) {
-                    serialNumberRepository.findByVariantIdAndSerialNumberForUpdate(line.getVariantId(), sn)
-                            .ifPresent(serialsToExport::add);
+                    Optional<SerialNumber> found = serialNumberRepository
+                            .findByVariantIdAndSerialNumberForUpdate(line.getVariantId(), sn);
+                    if (found.isPresent()) {
+                        serialsToExport.add(found.get());
+                    } else {
+                        notFoundSerials.add(sn);
+                    }
+                }
+                if (!notFoundSerials.isEmpty()) {
+                    String skuLabel = variant != null ? variant.getSku() : String.valueOf(line.getVariantId());
+                    throw new BusinessException(String.format(
+                            "Serial %s không tồn tại hoặc không thuộc sản phẩm SKU: %s. Vui lòng kiểm tra lại.",
+                            String.join(", ", notFoundSerials), skuLabel));
                 }
                 if (!serialsToExport.isEmpty() && targetSerialId == null) {
                     line.setSerialNumberId(serialsToExport.get(0).getId());
@@ -418,6 +430,9 @@ public class InventoryPostingService {
 
         InventoryDocument saved = inventoryDocumentRepository.save(doc);
 
+        // Kiểm tra chênh lệch giữa số lượng dự kiến và thực xuất
+        detectAndRecordDiscrepancy(saved, false);
+
         try {
             auditLogService.logEvent(null, "POST_EXPORT", "InventoryDocument", saved.getId(), "SUCCESS",
                     "Ghi sổ phiếu xuất kho " + saved.getDocCode() + " ("
@@ -427,6 +442,71 @@ public class InventoryPostingService {
         }
 
         return toResponse(saved);
+    }
+
+    /**
+     * Kiểm tra chênh lệch giữa số lượng dự kiến và số lượng thực tế (nhập hoặc
+     * xuất) trên chứng từ đã ghi sổ, ghi nhận vào chứng từ và thông báo cho
+     * Kế toán + Quản lý nếu có chênh lệch.
+     */
+    private boolean detectAndRecordDiscrepancy(InventoryDocument savedDoc, boolean isImport) {
+        boolean hasDiscrepancy = false;
+        StringBuilder discrepancyDetails = new StringBuilder();
+        for (InventoryDocumentLine line : savedDoc.getLines()) {
+            BigDecimal act = isImport
+                    ? (line.getQuantityIn() != null ? line.getQuantityIn() : BigDecimal.ZERO)
+                    : (line.getQuantityOut() != null ? line.getQuantityOut() : BigDecimal.ZERO);
+            BigDecimal exp = line.getExpectedQuantity() != null
+                    && line.getExpectedQuantity().compareTo(BigDecimal.ZERO) > 0
+                            ? line.getExpectedQuantity()
+                            : act;
+            BigDecimal rej = line.getRejectedQuantity() != null ? line.getRejectedQuantity() : BigDecimal.ZERO;
+
+            if (act.compareTo(exp) < 0 || rej.compareTo(BigDecimal.ZERO) > 0
+                    || (line.getDiscrepancyReason() != null && !line.getDiscrepancyReason().isBlank())) {
+                hasDiscrepancy = true;
+                ProductVariant pv = productVariantRepository.findById(line.getVariantId()).orElse(null);
+                String sku = pv != null ? pv.getSku() : String.valueOf(line.getVariantId());
+                BigDecimal diff = exp.subtract(act);
+                discrepancyDetails.append(
+                        String.format("• %s: Dự kiến %s, Thực tế %s (Thiếu: %s, Lỗi: %s). Chi tiết lệch: %s\n",
+                                sku, exp.stripTrailingZeros().toPlainString(), act.stripTrailingZeros().toPlainString(),
+                                diff.stripTrailingZeros().toPlainString(), rej.stripTrailingZeros().toPlainString(),
+                                line.getDiscrepancyReason() != null ? line.getDiscrepancyReason() : "Chưa nhập lý do"));
+            }
+        }
+
+        if (hasDiscrepancy) {
+            savedDoc.setHasDiscrepancy(true);
+            savedDoc.setDiscrepancyNote(discrepancyDetails.toString().trim());
+            inventoryDocumentRepository.save(savedDoc);
+
+            try {
+                String partnerName = "";
+                if (savedDoc.getPartnerId() != null) {
+                    partnerName = partnerRepository.findById(savedDoc.getPartnerId()).map(Partner::getName)
+                            .orElse("");
+                }
+                String docTypeLabel = isImport ? "nhập kho" : "xuất kho";
+                String notifTitle = (isImport ? "⚠️ Cảnh báo nhập kho thiếu: " : "⚠️ Cảnh báo xuất kho thiếu/thừa: ")
+                        + savedDoc.getDocCode();
+                String notifMsg = String.format(
+                        "Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện chênh lệch %s:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với đối tác.",
+                        savedDoc.getDocCode(), partnerName.isBlank() ? "" : "(Đối tác: " + partnerName + ")",
+                        docTypeLabel, discrepancyDetails.toString().trim());
+
+                String refType = isImport ? "IMPORT_DOCUMENT" : "EXPORT_DOCUMENT";
+                String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId() + "/edit";
+
+                appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+                appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+            } catch (Exception e) {
+                // Log warning but do not fail the transaction
+            }
+        }
+        return hasDiscrepancy;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -554,58 +634,7 @@ public class InventoryPostingService {
                 .forEach(variantId -> salesOrderService.reEvaluateBackorders(savedImport.getWarehouseId(), variantId));
 
         // Kiểm tra chênh lệch giữa số lượng dự kiến và thực nhận
-        boolean hasDiscrepancy = false;
-        StringBuilder discrepancyDetails = new StringBuilder();
-        for (InventoryDocumentLine line : savedImport.getLines()) {
-            BigDecimal exp = line.getExpectedQuantity() != null
-                    && line.getExpectedQuantity().compareTo(BigDecimal.ZERO) > 0
-                            ? line.getExpectedQuantity()
-                            : (line.getQuantityIn() != null ? line.getQuantityIn() : BigDecimal.ZERO);
-            BigDecimal act = line.getQuantityIn() != null ? line.getQuantityIn() : BigDecimal.ZERO;
-            BigDecimal rej = line.getRejectedQuantity() != null ? line.getRejectedQuantity() : BigDecimal.ZERO;
-
-            if (act.compareTo(exp) < 0 || rej.compareTo(BigDecimal.ZERO) > 0
-                    || (line.getDiscrepancyReason() != null && !line.getDiscrepancyReason().isBlank())) {
-                hasDiscrepancy = true;
-                ProductVariant pv = productVariantRepository.findById(line.getVariantId()).orElse(null);
-                String sku = pv != null ? pv.getSku() : String.valueOf(line.getVariantId());
-                BigDecimal diff = exp.subtract(act);
-                discrepancyDetails.append(
-                        String.format("• %s: Dự kiến %s, Thực nhận %s (Thiếu: %s, Lỗi: %s). Chi tiết lệch: %s\n",
-                                sku, exp.stripTrailingZeros().toPlainString(), act.stripTrailingZeros().toPlainString(),
-                                diff.stripTrailingZeros().toPlainString(), rej.stripTrailingZeros().toPlainString(),
-                                line.getDiscrepancyReason() != null ? line.getDiscrepancyReason() : "Chưa nhập lý do"));
-            }
-
-        }
-
-        if (hasDiscrepancy) {
-            savedImport.setHasDiscrepancy(true);
-            savedImport.setDiscrepancyNote(discrepancyDetails.toString().trim());
-            inventoryDocumentRepository.save(savedImport);
-
-            try {
-                String partnerName = "";
-                if (savedImport.getPartnerId() != null) {
-                    partnerName = partnerRepository.findById(savedImport.getPartnerId()).map(Partner::getName)
-                            .orElse("");
-                }
-                String notifTitle = "⚠️ Cảnh báo nhập kho thiếu: " + savedImport.getDocCode();
-                String notifMsg = String.format(
-                        "Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện thiếu/hàng lỗi:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với NCC.",
-                        savedImport.getDocCode(), partnerName.isBlank() ? "" : "(NCC: " + partnerName + ")",
-                        discrepancyDetails.toString().trim());
-
-                appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
-                        "DISCREPANCY", "IMPORT_DOCUMENT", savedImport.getId(),
-                        "/import-slips/" + savedImport.getId() + "/edit");
-                appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
-                        "DISCREPANCY", "IMPORT_DOCUMENT", savedImport.getId(),
-                        "/import-slips/" + savedImport.getId() + "/edit");
-            } catch (Exception e) {
-                // Log warning but do not fail the transaction
-            }
-        }
+        detectAndRecordDiscrepancy(savedImport, true);
 
         try {
             String postDesc = "Ghi sổ phiếu nhập kho " + savedImport.getDocCode();
