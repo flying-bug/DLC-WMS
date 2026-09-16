@@ -10,6 +10,7 @@ import { formatDateOnly } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 
 
 const STATUS_LABELS = {
@@ -27,6 +28,8 @@ const DEFAULT_FILTERS = {
   fromDate: '',
   toDate: ''
 };
+
+const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, meta]) => ({ value, label: meta.label }));
 
 const COLUMN_OPTIONS = [
   { id: 'repairCode', label: 'Mã phiếu' },
@@ -204,46 +207,14 @@ function RepairListPage() {
                 onKeyDown={(e) => { if (e.key === 'Enter') { setCurrentPage(1); loadRepairs(); } }}
               />
             </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.fromDate}
-                onChange={(e) => { setFilters(prev => ({ ...prev, fromDate: e.target.value })); setCurrentPage(1); }}
-              />
-            </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>ĐẾN NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.toDate}
-                onChange={(e) => { setFilters(prev => ({ ...prev, toDate: e.target.value })); setCurrentPage(1); }}
-              />
-            </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-              <SearchableSelect
-                className={styles.filterSelect}
-                value={filters.status}
-                onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
-              >
-                <option value="">Tất cả</option>
-                {Object.entries(STATUS_LABELS).map(([value, meta]) => (
-                  <option key={value} value={value}>{meta.label}</option>
-                ))}
-              </SearchableSelect>
-            </div>
           </div>
           <div className={styles.filterActions}>
-            <button
-              className={styles.iconBtn}
-              onClick={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); setTimeout(loadRepairs, 0); }}
-              title="Đặt lại bộ lọc"
-            >
-              <i className="bi bi-arrow-clockwise"></i>
-            </button>
+            <FilterPopover
+              filters={filters}
+              onApply={(newFilters) => { setFilters(newFilters); setCurrentPage(1); }}
+              onReset={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); }}
+              statusOptions={STATUS_OPTIONS}
+            />
             <button
               className={styles.iconBtn}
               onClick={() => setShowSettingsModal(true)}
