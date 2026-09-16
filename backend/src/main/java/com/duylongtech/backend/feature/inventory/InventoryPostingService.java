@@ -1,71 +1,10 @@
 package com.duylongtech.backend.feature.inventory;
 
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.enums.SerialNumberStatus;
 import com.duylongtech.backend.enums.WarrantyStatus;
-
-import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRequest;
-import com.duylongtech.backend.constant.SystemMessage;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
-import com.duylongtech.backend.feature.inventory.ScanResolveRequest;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentLineResponse;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentResponse;
-import com.duylongtech.backend.feature.inventory.ScanResolveResponse;
-import com.duylongtech.backend.feature.inventory.InventoryBalance;
-import com.duylongtech.backend.feature.inventory.InventoryCostLayer;
-import com.duylongtech.backend.feature.assembly.AssemblyBom;
-import com.duylongtech.backend.feature.assembly.AssemblyOrder;
-import com.duylongtech.backend.feature.assembly.AssemblyOrderSerial;
-import com.duylongtech.backend.feature.inventory.InventoryDocument;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
-import com.duylongtech.backend.feature.inventory.InventoryLedger;
-import com.duylongtech.backend.feature.product.Product;
-import com.duylongtech.backend.feature.product.ProductVariant;
-import com.duylongtech.backend.feature.product.SerialNumber;
-import com.duylongtech.backend.feature.partner.Partner;
-import com.duylongtech.backend.feature.auth.User;
-import com.duylongtech.backend.feature.warranty.Warranty;
 import com.duylongtech.backend.exception.BusinessException;
-import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
-import com.duylongtech.backend.feature.inventory.InventoryCostLayerRepository;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRepository;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
-import com.duylongtech.backend.feature.inventory.InventoryLedgerRepository;
-import com.duylongtech.backend.feature.product.ProductVariantRepository;
-import com.duylongtech.backend.feature.product.SerialNumberRepository;
-import com.duylongtech.backend.feature.warranty.WarrantyRepository;
-import com.duylongtech.backend.feature.partner.PartnerRepository;
-import com.duylongtech.backend.feature.auth.UserRepository;
-import com.duylongtech.backend.feature.product.ProductRepository;
-import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
-import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
-import com.duylongtech.backend.feature.sales_order.SalesOrder;
-import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
-import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
-import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
-import java.util.Map;
-import com.duylongtech.backend.feature.product.UnitRepository;
-import com.duylongtech.backend.feature.assembly.AssemblyBomRepository;
-import com.duylongtech.backend.feature.assembly.DeviceComponentSerialRepository;
-import com.duylongtech.backend.feature.stocktake.StocktakeRepository;
-import com.duylongtech.backend.feature.repair.RepairRepository;
-import com.duylongtech.backend.feature.purchase_order.PurchaseOrderRepository;
-import com.duylongtech.backend.feature.assembly.AssemblyOrderSerialRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import com.duylongtech.backend.feature.inventory.InventoryDocumentMapper;
 import com.duylongtech.backend.feature.assembly.AssemblyBom;
 import com.duylongtech.backend.feature.assembly.AssemblyBomRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyOrder;
@@ -93,7 +32,6 @@ import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentResponse;
 import com.duylongtech.backend.feature.inventory.InventoryLedger;
 import com.duylongtech.backend.feature.inventory.InventoryLedgerRepository;
-import com.duylongtech.backend.feature.inventory.InventoryPostingService;
 import com.duylongtech.backend.feature.inventory.ScanResolveRequest;
 import com.duylongtech.backend.feature.inventory.ScanResolveResponse;
 import com.duylongtech.backend.feature.inventory.StockReservationRepository;
@@ -126,6 +64,20 @@ import com.duylongtech.backend.feature.warranty.WarrantyLifecycleService;
 import com.duylongtech.backend.feature.warranty.WarrantyLine;
 import com.duylongtech.backend.feature.warranty.WarrantyLineRequest;
 import com.duylongtech.backend.feature.warranty.WarrantyRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -190,7 +142,7 @@ public class InventoryPostingService {
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
 
-    @Transactional(readOnly = true)
+    @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
         InventoryDocument doc = findExportOrThrow(id);
         if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
