@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../../contexts/WorkspaceModeContext';
+import { hasPermission } from '../../../auth/session';
 import * as notificationApi from '../../../api/notificationApi';
 import styles from './NotificationBell.module.css';
 
@@ -72,13 +73,30 @@ export default function NotificationBell() {
         }
         setIsOpen(false);
 
+        // Bàn làm việc Thủ kho giờ chỉ mở được cho ai có import:post/export:post
+        // (xem AppRouter.jsx) - vai trò khác (Kế toán, Kỹ thuật viên...) bấm vào
+        // thông báo phiếu nhập/xuất phải được đưa tới màn hình họ THỰC SỰ có
+        // quyền vào (trang sửa phiếu nếu có import:edit/export:edit, hoặc lịch
+        // sử phiếu nếu chỉ có quyền xem), thay vì luôn trỏ cứng vào workspace.
         let targetLink = notif.link;
         if (notif.referenceType === 'IMPORT_DOCUMENT' || targetLink?.includes('/import-slips/') || targetLink?.includes('/imports/')) {
             const docId = notif.referenceId || (targetLink ? targetLink.match(/\d+/)?.[0] : '');
-            targetLink = `/warehouse-workspace/imports/${docId}`;
+            if (hasPermission(['import:post', 'export:post'])) {
+                targetLink = `/warehouse-workspace/imports/${docId}`;
+            } else if (hasPermission('import:edit') && docId) {
+                targetLink = `/import-slips/${docId}/edit`;
+            } else {
+                targetLink = '/import-history';
+            }
         } else if (notif.referenceType === 'EXPORT_DOCUMENT' || targetLink?.includes('/export-slips/') || targetLink?.includes('/exports/')) {
             const docId = notif.referenceId || (targetLink ? targetLink.match(/\d+/)?.[0] : '');
-            targetLink = `/warehouse-workspace/exports/${docId}`;
+            if (hasPermission(['import:post', 'export:post'])) {
+                targetLink = `/warehouse-workspace/exports/${docId}`;
+            } else if (hasPermission('export:edit') && docId) {
+                targetLink = `/export-slips/${docId}/edit`;
+            } else {
+                targetLink = '/export-slips';
+            }
         } else if ((notif.referenceType === 'PO_DELIVERY_OVERDUE' || notif.referenceType === 'PO_PAYMENT_OVERDUE' || notif.referenceType === 'PURCHASE_ORDER') && notif.referenceId) {
             targetLink = `/purchase-orders/${notif.referenceId}`;
         }
