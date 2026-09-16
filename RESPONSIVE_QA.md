@@ -1,5 +1,26 @@
 # Responsive QA Report — Super Admin
 
+## 0. Cập nhật [2026-09-17]
+
+Báo cáo gốc dưới đây (09/08/2026) đã cũ so với code hiện tại — nhiều file đã được sửa qua các đợt refactor sau đó (bao gồm một đợt lớn chuyển 25+ trang sang dùng chung `ResponsiveTable`/`MasterDetailLayout`). Xác minh lại từng mục:
+
+| Mục gốc | Trạng thái hiện tại | Ghi chú |
+|---|---|---|
+| P1 — Menu Super Admin vỡ mobile | **Đã fix** | `SuperAdminLayout.module.css` hiện có `@media (max-width: 767.98px)` với `.headerLeft`/`.navLinksMobileOpen` full-width đúng chuẩn. Không cần sửa lại. |
+| P1 — Ma trận phân quyền bị cắt | **Đã fix** | `PermissionDetailPage` chuyển sang `ResponsiveTable`; `RolePermissionsPage` (dùng chung CSS module) cũng đã chuyển sang `ResponsiveTable` + thêm stacking cho `.layout`/`.sidebar` ở ≤900px. |
+| P1 — Filter trang Users bị ép ngang do cascade | **Đã fix (2026-09-17)** | Nguyên nhân đúng như báo cáo: `UsersPage.module.css` có các rule "base" (không nằm trong media query) cho `.filterSection`, `.searchAndPopover`, `.iconBtn`... nằm **sau** `@media (max-width: 700px)` trong file, nên luôn thắng cascade và vô hiệu hoá toàn bộ style mobile. Đã di chuyển block base rules lên trước cả hai media query liên quan. |
+| P2 — System Monitor sub-tabs bị nén chữ | **Đã fix** | `SystemMonitorTab.module.css` hiện dùng `.subTabs { overflow-x: auto }` + `.subTab { flex: 0 0 auto; white-space: nowrap }` — cuộn ngang, không còn nén chữ. |
+| P2 — Chuông thông báo touch target hẹp | **Đã fix (2026-09-17)** | `NotificationBell.module.css` thêm `@media (max-width: 767px)` nâng nút lên 44×44px (trước đó cố định 36×36px, và tại các mobile width hẹp còn bị bóp nhỏ hơn nữa do layout header). |
+| P2 — Nhiều control mobile chưa đạt touch target 44px | **Một phần đã fix** | Đã nâng: icon hành động trong `ResponsiveTable` (`.mobileCardActions i`), `.iconBtn` của `WarehouseListPage`/`PaymentManagementPage`, chuông thông báo. **Còn lại `/users/create` (radio 18×18px), `/audit-log`, checkbox ma trận quyền (20×20px)** — chưa rà lại, cần đợt sau. |
+| P3 — Trailing whitespace `Pagination.module.css:82` | **Đã fix (2026-09-17)** | Dọn hết (khi rà lại thấy đã lan ra 3 dòng, không chỉ dòng 82 như báo cáo gốc). |
+
+Các phát hiện mới từ đợt rà soát responsive lần này (đợt refactor `ResponsiveTable`/`MasterDetailLayout`, chưa nằm trong báo cáo gốc bên dưới):
+
+- Tiêu đề card mobile mặc định lấy cột đầu tiên (thường là checkbox/STT) — đã fix trong `ResponsiveTable.jsx` bằng heuristic bỏ qua cột meta.
+- `AdminLayout` (khác `SuperAdminLayout`) từng ẩn hẳn thanh tab con trên mobile — đã fix, chuyển thành thanh cuộn ngang.
+- `AssemblyExecutionModal`, `WarehouseFulfillModal`: modal chưa có xử lý mobile — đã thêm breakpoint riêng cho từng modal.
+- `ImportHistoryPage`, `TransferHistoryPage`, `PaymentManagementPage`, `WarehouseListPage`: dù không có media query riêng, các class `tableContainer`/`filterSection`/`pageHeader`/`pageTitleContainer` của chúng đã khớp sẵn với luật fail-safe wildcard `[class*="..."]` trong `global.css`, nên không "vỡ" hoàn toàn như đánh giá ban đầu — chỉ kém tối ưu (bảng rất rộng vẫn cần cuộn ngang).
+
 ## 1. Thông tin kiểm tra
 
 - Ngày kiểm tra: **09/08/2026** (`Asia/Saigon`)
