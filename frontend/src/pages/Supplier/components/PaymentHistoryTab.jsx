@@ -65,7 +65,7 @@ const PaymentHistoryTab = ({ data, debtBalance, loading, error, formatDateTime, 
                             </td>
                             <td>{paymentMethodText(item.paymentMethod)}</td>
                             <td>
-                                <span className={item.status === 'POSTED' ? styles.badgeSuccess : styles.badgeWarning}>
+                                <span className={`${styles.badge} ${item.status === 'POSTED' ? styles.badgeSuccess : styles.badgeWarning}`}>
                                     {statusText(item.status)}
                                 </span>
                             </td>

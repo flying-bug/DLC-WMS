@@ -60,7 +60,8 @@ const SupplierDetailPage = () => {
                 ]);
 
                 if (balanceRes.status === 'fulfilled') {
-                    setDebtBalance(Number(unwrap(balanceRes.value) || supplierData.currentDebt || 0));
+                    const balanceValue = Number(unwrap(balanceRes.value));
+                    setDebtBalance(Number.isFinite(balanceValue) ? balanceValue : Number(supplierData.currentDebt || 0));
                 } else {
                     console.error('Lỗi tải dư nợ NCC:', balanceRes.reason);
                     setPaymentError('Không tải được dư nợ hiện tại');

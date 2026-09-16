@@ -48,7 +48,7 @@ const PurchaseHistoryTab = ({ data, loading, error, formatDate, formatCurrency, 
                     <td style={{ textAlign: 'right' }}>{formatCurrency(item.unitPrice)} đ</td>
                     <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.lineAmount)} đ</td>
                     <td>
-                        <span className={item.status === 'POSTED' ? styles.badgeInfo : styles.badgeSuccess}>
+                        <span className={`${styles.badge} ${item.status === 'POSTED' ? styles.badgeInfo : styles.badgeSuccess}`}>
                             {statusText(item.status)}
                         </span>
                     </td>
