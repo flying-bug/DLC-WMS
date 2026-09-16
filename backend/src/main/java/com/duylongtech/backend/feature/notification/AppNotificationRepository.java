@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.notification;
 
 import com.duylongtech.backend.feature.notification.AppNotification;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +14,7 @@ import java.util.List;
 public interface AppNotificationRepository extends JpaRepository<AppNotification, Long> {
 
     @Query("SELECT n FROM AppNotification n WHERE :isAdmin = true OR n.userId = :userId OR n.recipientRole IN :roles ORDER BY n.createdAt DESC")
-    List<AppNotification> findForUserAndRoles(@Param("userId") Long userId, @Param("roles") List<String> roles, @Param("isAdmin") boolean isAdmin);
+    List<AppNotification> findForUserAndRoles(@Param("userId") Long userId, @Param("roles") List<String> roles, @Param("isAdmin") boolean isAdmin, Pageable pageable);
 
     @Query("SELECT COUNT(n) FROM AppNotification n WHERE (:isAdmin = true OR n.userId = :userId OR n.recipientRole IN :roles) AND (n.isRead = false OR n.isRead IS NULL)")
     long countUnreadForUserAndRoles(@Param("userId") Long userId, @Param("roles") List<String> roles, @Param("isAdmin") boolean isAdmin);

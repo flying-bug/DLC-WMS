@@ -5,6 +5,7 @@ import com.duylongtech.backend.feature.notification.AppNotification;
 import com.duylongtech.backend.feature.notification.AppNotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,11 @@ import com.duylongtech.backend.feature.notification.AppNotificationService;
 @Slf4j
 public class AppNotificationService {
 
+    // Notification lists have no natural upper bound (they only ever grow), and
+    // admins see every recipient's notifications - cap to the most recent ones
+    // instead of returning the entire table on every poll.
+    private static final int MAX_NOTIFICATIONS_RETURNED = 100;
+
     private final AppNotificationRepository notificationRepository;
     private final RealtimeSessionService realtimeSessionService;
 
@@ -28,7 +34,7 @@ public class AppNotificationService {
         if (roles == null || roles.isEmpty()) {
             roles = Collections.emptyList();
         }
-        return notificationRepository.findForUserAndRoles(userId, roles, isAdmin);
+        return notificationRepository.findForUserAndRoles(userId, roles, isAdmin, PageRequest.of(0, MAX_NOTIFICATIONS_RETURNED));
     }
 
     @Transactional(readOnly = true)
