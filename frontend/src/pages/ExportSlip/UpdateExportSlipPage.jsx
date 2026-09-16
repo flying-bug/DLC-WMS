@@ -1064,21 +1064,21 @@ function UpdateExportSlipPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                      <th style={{ minWidth: '220px', width: '24%' }}>Sản phẩm</th>
-                      <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                      <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
-                      <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                      <th style={{ minWidth: '32px', width: '3%', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
+                      <th style={{ minWidth: '210px', width: '29%' }}>Sản phẩm</th>
+                      <th style={{ minWidth: '95px', width: '10%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '75px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
+                      <th style={{ minWidth: '60px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
                       {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>}
                       {hasAnyConversion && <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>}
                       {hasAnyConversion && <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>}
                       {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>}
-                      <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                      {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
-                      {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>}
-                      {showPricing && <th style={{ minWidth: '60px', width: '5%', whiteSpace: 'nowrap' }} className={styles.textRight}>% VAT</th>}
-                      <th style={{ width: '40px', textAlign: 'center' }}></th>
+                      <th style={{ minWidth: '70px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '50px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      {showPricing && <th style={{ minWidth: '90px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
+                      {showPricing && <th style={{ minWidth: '90px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>}
+                      {showPricing && <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>% VAT</th>}
+                      <th style={{ minWidth: '32px', width: '3%', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1114,7 +1114,7 @@ function UpdateExportSlipPage() {
                               disabled={!product}
                             >
                               {product?.unitId && (
-                                <option value={product.unitId}>{product.unitName} (Chính)</option>
+                                <option value={product.unitId}>{product.unitName}</option>
                               )}
                               {product?.unitConversions?.map(conv => (
                                 <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>

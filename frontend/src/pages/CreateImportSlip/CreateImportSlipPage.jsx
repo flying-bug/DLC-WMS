@@ -1258,17 +1258,17 @@ function CreateImportSlipPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '230px', width: '30%' }}>Sản phẩm</th>
-                  <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
+                  <th style={{ minWidth: '36px', width: '3%', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
+                  <th style={{ minWidth: '220px', width: '32%' }}>Sản phẩm</th>
+                  <th style={{ minWidth: '95px', width: '10%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ minWidth: '65px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
                   {hasAnyConversion && <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>}
-                  <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                  <th style={{ minWidth: '55px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                  {showPricing && <th style={{ minWidth: '95px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
-                  {showPricing && <th style={{ minWidth: '95px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>}
-                  {showPricing && <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>}
-                  <th style={{ width: '40px', textAlign: 'center' }}></th>
+                  <th style={{ minWidth: '85px', width: '10%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                  <th style={{ minWidth: '55px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                  {showPricing && <th style={{ minWidth: '95px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
+                  {showPricing && <th style={{ minWidth: '95px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>}
+                  {showPricing && <th style={{ minWidth: '65px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>}
+                  <th style={{ minWidth: '36px', width: '3%', textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -1306,7 +1306,7 @@ function CreateImportSlipPage() {
                           disabled={!product}
                         >
                           {product?.unitId && (
-                            <option value={product.unitId}>{product.unitName} (Chính)</option>
+                            <option value={product.unitId}>{product.unitName}</option>
                           )}
                           {product?.unitConversions?.map(conv => (
                             <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
