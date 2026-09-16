@@ -94,6 +94,23 @@
 }
 .btnSuccess:hover { background: var(--color-success-dark); }
 
+.btnWarning {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--color-warning, #f59e0b);
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-white);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-weight: 500;
+}
+
+.btnWarning:hover { background: var(--color-warning-dark, #d97706); }
+
 .btnPrimary {
   display: flex;
   align-items: center;
