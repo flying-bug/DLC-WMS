@@ -8,6 +8,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseListPage.module.css';
 import { getVietnamTimestamp } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -339,104 +340,15 @@ const WarehouseListPage = () => {
 
                 {/* Pagination */}
                 {!loading && totalElements > 0 && (
-                    <div className={styles.pagination}>
-                        <div className={styles.pageInfo}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>Hiển thị</span>
-                                <SearchableSelect 
-                                    className="misa-select"
-                                    style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d4d4d7', borderRadius: '4px', outline: 'none' }}
-                                    value={size} 
-                                    onChange={(e) => {
-                                        setSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                </SearchableSelect>
-                                <span>trên tổng số {totalElements} bản ghi</span>
-                            </div>
-                        </div>
-                        <div className={styles.pageControls}>
-                            <button 
-                                disabled={page === 1} 
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                className={styles.pageBtn}
-                            >
-                                <i className="bi bi-chevron-left"></i>
-                                <span>Trước</span>
-                            </button>
-                            
-                            <div className={styles.paginationNumbers}>
-                                {(() => {
-                                    const pages = [];
-                                    if (totalPages <= 7) {
-                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                    } else {
-                                        if (page <= 4) {
-                                            for (let i = 1; i <= 5; i++) pages.push(i);
-                                            pages.push('...');
-                                            pages.push(totalPages);
-                                        } else if (page >= totalPages - 3) {
-                                            pages.push(1);
-                                            pages.push('...');
-                                            for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
-                                        } else {
-                                            pages.push(1);
-                                            pages.push('...');
-                                            for (let i = page - 1; i <= page + 1; i++) pages.push(i);
-                                            pages.push('...');
-                                            pages.push(totalPages);
-                                        }
-                                    }
-                                    
-                                    return pages.map((num, idx) => (
-                                        num === page ? (
-                                            <input
-                                                key={idx}
-                                                className={`${styles.pageNumber} ${styles.active}`}
-                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
-                                                defaultValue={num}
-                                                title="Nhập số trang và nhấn Enter"
-                                                onBlur={(e) => e.target.value = page}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        let p = parseInt(e.target.value, 10);
-                                                        if (!isNaN(p)) {
-                                                            p = Math.max(1, Math.min(totalPages, p));
-                                                            setPage(p);
-                                                            e.target.blur();
-                                                        } else {
-                                                            e.target.value = page;
-                                                        }
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <span 
-                                                key={idx} 
-                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
-                                                onClick={() => num !== '...' && setPage(num)}
-                                            >
-                                                {num}
-                                            </span>
-                                        )
-                                    ));
-                                })()}
-                            </div>
-                            
-                            <button 
-                                disabled={page === totalPages} 
-                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                className={styles.pageBtn}
-                            >
-                                <span>Sau</span>
-                                <i className="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <Pagination
+                        page={page - 1}
+                        totalPages={Math.max(1, totalPages)}
+                        totalElements={totalElements}
+                        size={size}
+                        onPageChange={(p) => setPage(p + 1)}
+                        onSizeChange={(nextSize) => { setSize(nextSize); setPage(1); }}
+                        sizeOptions={[10, 20, 50]}
+                    />
                 )}
             </div>
 
