@@ -14,6 +14,7 @@ import { printExportSlip } from '../../utils/printExportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
+import SearchableSelect from '../../components/ui/SearchableSelect/SearchableSelect';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './UpdateExportSlipPage.module.css';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
@@ -382,6 +383,13 @@ function UpdateExportSlipPage() {
   // dòng thực sự quy đổi (tỷ lệ khác 1) - còn lại thì 4 cột này luôn lặp lại y hệt
   // ĐVT/SL, chỉ tổ chiếm chỗ trong bảng vốn đã rất nhiều cột.
   const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
+  const [itemPage, setItemPage] = useState(1);
+  const [itemPageSize, setItemPageSize] = useState(5);
+  const itemTotalPages = Math.max(1, Math.ceil(items.length / itemPageSize));
+  const visibleItems = items.slice((itemPage - 1) * itemPageSize, itemPage * itemPageSize);
+  useEffect(() => {
+    if (itemPage > itemTotalPages) setItemPage(itemTotalPages);
+  }, [itemPage, itemTotalPages]);
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -540,6 +548,7 @@ function UpdateExportSlipPage() {
 
   const addItem = () => {
     setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''))]);
+    setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
   const ensureScannedProduct = (scanResult) => {
@@ -1082,7 +1091,8 @@ function UpdateExportSlipPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item, index) => {
+                    {visibleItems.map((item, visibleIndex) => {
+                      const index = (itemPage - 1) * itemPageSize + visibleIndex;
                       const product = productById.get(String(item.variantId));
                       const baseUnitName = product?.unitName || '-';
                       const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
@@ -1189,6 +1199,58 @@ function UpdateExportSlipPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              <div className={styles.itemPaginationBar}>
+                <SearchableSelect
+                  value={itemPageSize}
+                  onChange={(event) => { setItemPageSize(Number(event.target.value)); setItemPage(1); }}
+                  style={{ width: '152px', flex: '0 0 152px', height: '32px', padding: '4px 8px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px' }}
+                >
+                  <option value={5}>5 bản ghi / trang</option>
+                  <option value={10}>10 bản ghi / trang</option>
+                  <option value={20}>20 bản ghi / trang</option>
+                  <option value={50}>50 bản ghi / trang</option>
+                </SearchableSelect>
+                <div className={styles.itemPagination}>
+                  <button
+                    type="button"
+                    className={styles.itemPageNav}
+                    disabled={itemPage === 1}
+                    onClick={() => setItemPage(page => Math.max(1, page - 1))}
+                  >
+                    Trước
+                  </button>
+                  <input
+                    key={itemPage}
+                    className={styles.itemPageInput}
+                    defaultValue={itemPage}
+                    inputMode="numeric"
+                    title="Nhập số trang và nhấn Enter"
+                    aria-label={`Trang hiện tại, từ 1 đến ${itemTotalPages}`}
+                    onFocus={(event) => event.target.select()}
+                    onBlur={(event) => { event.target.value = String(itemPage); }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return;
+                      const requestedPage = Number.parseInt(event.currentTarget.value, 10);
+                      const nextPage = Number.isNaN(requestedPage)
+                        ? itemPage
+                        : Math.min(itemTotalPages, Math.max(1, requestedPage));
+                      setItemPage(nextPage);
+                      event.currentTarget.value = String(nextPage);
+                      event.currentTarget.blur();
+                    }}
+                  />
+                  <span className={styles.itemPageTotal}>/ {itemTotalPages}</span>
+                  <button
+                    type="button"
+                    className={styles.itemPageNav}
+                    disabled={itemPage >= itemTotalPages}
+                    onClick={() => setItemPage(page => Math.min(itemTotalPages, page + 1))}
+                  >
+                    Sau
+                  </button>
+                </div>
               </div>
 
               <div className={styles.tableFooter}>

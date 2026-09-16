@@ -358,6 +358,13 @@ function UpdateImportSlipPage() {
     const expected = Number(item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? item.expectedQuantity : (item.quantity || 0));
     return expected > Number(item.quantity || 0) || Number(item.rejectedQuantity || 0) > 0;
   });
+  const [itemPage, setItemPage] = useState(1);
+  const [itemPageSize, setItemPageSize] = useState(5);
+  const itemTotalPages = Math.max(1, Math.ceil(items.length / itemPageSize));
+  const visibleItems = items.slice((itemPage - 1) * itemPageSize, itemPage * itemPageSize);
+  useEffect(() => {
+    if (itemPage > itemTotalPages) setItemPage(itemTotalPages);
+  }, [itemPage, itemTotalPages]);
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);
@@ -468,6 +475,7 @@ function UpdateImportSlipPage() {
 
   const addItem = () => {
     setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : '')), variantId: filteredProducts[0]?.id || '' }]);
+    setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
   const removeItem = (localId) => {
@@ -1038,7 +1046,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item, index) => {
+                    {visibleItems.map((item, visibleIndex) => {
+                      const index = (itemPage - 1) * itemPageSize + visibleIndex;
                       const product = productById.get(String(item.variantId));
                       const baseUnitName = product?.unitName || '-';
                       const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
@@ -1217,14 +1226,55 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                    <SearchableSelect style={{ padding: '4px 8px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px' }}>
-                      <option>20 bản ghi trên 1 trang</option>
+                  <div className={styles.itemPaginationBar}>
+                    <SearchableSelect
+                      value={itemPageSize}
+                      onChange={(event) => { setItemPageSize(Number(event.target.value)); setItemPage(1); }}
+                      style={{ width: '152px', flex: '0 0 152px', height: '32px', padding: '4px 8px', border: '1px solid var(--color-border-muted)', borderRadius: '4px', fontSize: '13px' }}
+                    >
+                      <option value={5}>5 bản ghi / trang</option>
+                      <option value={10}>10 bản ghi / trang</option>
+                      <option value={20}>20 bản ghi / trang</option>
+                      <option value={50}>50 bản ghi / trang</option>
                     </SearchableSelect>
-                    <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
-                      <span style={{ cursor: 'pointer' }}>Trước</span>
-                      <span style={{ fontWeight: 'bold', color: 'var(--color-text)' }}>1</span>
-                      <span style={{ cursor: 'pointer' }}>Sau</span>
+                    <div className={styles.itemPagination}>
+                      <button
+                        type="button"
+                        className={styles.itemPageNav}
+                        disabled={itemPage === 1}
+                        onClick={() => setItemPage(page => Math.max(1, page - 1))}
+                      >
+                        Trước
+                      </button>
+                      <input
+                        key={itemPage}
+                        className={styles.itemPageInput}
+                        defaultValue={itemPage}
+                        inputMode="numeric"
+                        title="Nhập số trang và nhấn Enter"
+                        aria-label={`Trang hiện tại, từ 1 đến ${itemTotalPages}`}
+                        onFocus={(event) => event.target.select()}
+                        onBlur={(event) => { event.target.value = String(itemPage); }}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter') return;
+                          const requestedPage = Number.parseInt(event.currentTarget.value, 10);
+                          const nextPage = Number.isNaN(requestedPage)
+                            ? itemPage
+                            : Math.min(itemTotalPages, Math.max(1, requestedPage));
+                          setItemPage(nextPage);
+                          event.currentTarget.value = String(nextPage);
+                          event.currentTarget.blur();
+                        }}
+                      />
+                      <span className={styles.itemPageTotal}>/ {itemTotalPages}</span>
+                      <button
+                        type="button"
+                        className={styles.itemPageNav}
+                        disabled={itemPage >= itemTotalPages}
+                        onClick={() => setItemPage(page => Math.min(itemTotalPages, page + 1))}
+                      >
+                        Sau
+                      </button>
                     </div>
                   </div>
                   {showPricing ? (
