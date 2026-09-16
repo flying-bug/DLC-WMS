@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Modal from '../../components/ui/Modal/Modal';
@@ -19,6 +19,7 @@ import {
     ComposedChart
 } from 'recharts';
 import { getDashboardMetrics } from '../../api/reportApi';
+import { NOTIFICATION_EVENT } from '../../auth/session';
 import { formatDateOnly, formatDateTime as utilsFormatDateTime } from '../../utils/dateFormat';
 import styles from './AnalyticsDashboard.module.css';
 
@@ -180,37 +181,47 @@ function AnalyticsDashboard() {
         }
     };
 
-    useEffect(() => {
-        let isMounted = true;
-
-        const loadDashboard = async () => {
+    const loadDashboard = useCallback(async (silent = false) => {
+        if (!silent) {
             setLoading(true);
             setError('');
-            try {
-                const response = await getDashboardMetrics({
-                    inventoryFlowRange,
-                    categoryScope,
-                    financeRange
-                });
-                if (isMounted) {
-                    setDashboard(unwrap(response));
-                }
-            } catch (err) {
-                if (isMounted) {
-                    setError(err?.response?.data?.userMessage || 'Không thể tải dữ liệu dashboard.');
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
+        }
+        try {
+            const response = await getDashboardMetrics({
+                inventoryFlowRange,
+                categoryScope,
+                financeRange
+            });
+            setDashboard(unwrap(response));
+        } catch (err) {
+            if (!silent) {
+                setError(err?.response?.data?.userMessage || 'Không thể tải dữ liệu dashboard.');
             }
-        };
-
-        loadDashboard();
-        return () => {
-            isMounted = false;
-        };
+        } finally {
+            if (!silent) {
+                setLoading(false);
+            }
+        }
     }, [inventoryFlowRange, categoryScope, financeRange]);
+
+    useEffect(() => {
+        loadDashboard();
+    }, [loadDashboard]);
+
+    // Số liệu chờ nhập/xuất... tự nhảy khi có chứng từ/thông báo mới, thay vì
+    // phải F5. Debounce để không dội API khi nhiều sự kiện dồn về liên tiếp.
+    const refreshDebounceRef = useRef(null);
+    useEffect(() => {
+        const handleRealtimeNotification = () => {
+            clearTimeout(refreshDebounceRef.current);
+            refreshDebounceRef.current = setTimeout(() => loadDashboard(true), 3000);
+        };
+        window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+        return () => {
+            window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+            clearTimeout(refreshDebounceRef.current);
+        };
+    }, [loadDashboard]);
 
     const finishedGoodInventoryItems = dashboard?.finishedGoodInventoryItems || [];
     const approvedPurchaseOrders = dashboard?.approvedPurchaseOrders || [];
@@ -461,11 +472,11 @@ function AnalyticsDashboard() {
                         <p className={styles.pageSubtitle}>Các chỉ số chính đang được lấy trực tiếp từ dữ liệu hệ thống.</p>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className="btn-misa-outline" onClick={() => navigate('/import-history')}>
-                            <i className="bi bi-plus"></i> Phiếu Nhập
+                        <button className="btn-misa-outline" onClick={() => navigate('/purchase-orders')}>
+                            <i className="bi bi-cart"></i> Mua Hàng
                         </button>
-                        <button className="btn-misa-primary" onClick={() => navigate('/export-slips')}>
-                            <i className="bi bi-send"></i> Xuất Kho Mới
+                        <button className="btn-misa-primary" onClick={() => navigate('/import-history')}>
+                            <i className="bi bi-box-arrow-in-down"></i> Nhập Hàng
                         </button>
                     </div>
                 </div>

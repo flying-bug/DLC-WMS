@@ -3,9 +3,12 @@ package com.duylongtech.backend.feature.notification;
 import com.duylongtech.backend.feature.auth.UserDto;
 import com.duylongtech.backend.feature.notification.RealtimeForceLogoutEvent;
 import com.duylongtech.backend.feature.notification.RealtimeUserEvent;
+import com.duylongtech.backend.feature.system.SystemHealthDto;
+import com.duylongtech.backend.feature.system.SystemHealthService;
 import com.duylongtech.backend.security.UserDetailsImpl;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -28,6 +31,7 @@ import com.duylongtech.backend.feature.notification.RealtimeUserEvent;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RealtimeSessionService {
 
     private static final long SSE_TIMEOUT_MILLIS = 0L;
@@ -35,6 +39,10 @@ public class RealtimeSessionService {
     private static final String EVENT_PING = "ping";
     private static final String EVENT_USER_UPDATED = "user-updated";
     private static final String EVENT_FORCE_LOGOUT = "force-logout";
+    private static final String EVENT_NOTIFICATION = "notification";
+    private static final String EVENT_SYSTEM_HEALTH = "system-health";
+
+    private final SystemHealthService systemHealthService;
 
     private final ConcurrentMap<String, ClientConnection> connections = new ConcurrentHashMap<>();
     private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -42,6 +50,7 @@ public class RealtimeSessionService {
     @PostConstruct
     void startHeartbeat() {
         heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeat, 20, 20, TimeUnit.SECONDS);
+        heartbeatExecutor.scheduleAtFixedRate(this::broadcastSystemHealth, 10, 10, TimeUnit.SECONDS);
     }
 
     @PreDestroy
@@ -90,9 +99,34 @@ public class RealtimeSessionService {
         sendToMatching(connection -> connection.userId.equals(userId), EVENT_FORCE_LOGOUT, payload);
     }
 
+    public void publishNotification(AppNotification notification) {
+        if (notification.getUserId() != null) {
+            sendToMatching(connection -> notification.getUserId().equals(connection.userId), EVENT_NOTIFICATION, notification);
+        } else if (notification.getRecipientRole() != null) {
+            sendToMatching(connection -> connection.authorities.contains(notification.getRecipientRole()), EVENT_NOTIFICATION, notification);
+        }
+    }
+
     private boolean isAdminConnection(ClientConnection connection) {
         return connection.authorities.contains("ROLE_SUPER_ADMIN")
                 || connection.authorities.contains("ROLE_MANAGER");
+    }
+
+    private boolean isSuperAdminConnection(ClientConnection connection) {
+        return connection.authorities.contains("ROLE_SUPER_ADMIN");
+    }
+
+    private void broadcastSystemHealth() {
+        boolean hasSuperAdminViewer = connections.values().stream().anyMatch(this::isSuperAdminConnection);
+        if (!hasSuperAdminViewer) {
+            return;
+        }
+        try {
+            SystemHealthDto health = systemHealthService.getHealth();
+            sendToMatching(this::isSuperAdminConnection, EVENT_SYSTEM_HEALTH, health);
+        } catch (Exception ex) {
+            log.warn("Failed to broadcast system health: {}", ex.getMessage());
+        }
     }
 
     private void sendHeartbeat() {

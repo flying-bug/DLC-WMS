@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSystemHealth, getSystemLogs, clearSystemLogs } from '../../../api/backupApi';
+import { SYSTEM_HEALTH_EVENT } from '../../../auth/session';
 import styles from './SystemMonitorTab.module.css';
 
 // Simple gauge bar component
@@ -31,6 +32,8 @@ function SystemMonitorTab() {
     const [isLive, setIsLive] = useState(true);
     const logRef = useRef(null);
 
+    // Initial load over REST, then live updates pushed via the realtime SSE
+    // channel (see RealtimeSessionBridge) instead of polling.
     useEffect(() => {
         const fetchH = async () => {
             try {
@@ -41,8 +44,14 @@ function SystemMonitorTab() {
             }
         };
         fetchH();
-        const t = setInterval(fetchH, 15_000);
-        return () => clearInterval(t);
+    }, []);
+
+    useEffect(() => {
+        const handleRealtimeHealth = (event) => {
+            if (event.detail) setHealth(event.detail);
+        };
+        window.addEventListener(SYSTEM_HEALTH_EVENT, handleRealtimeHealth);
+        return () => window.removeEventListener(SYSTEM_HEALTH_EVENT, handleRealtimeHealth);
     }, []);
 
     const fetchLogs = useCallback(async (isSilent = false) => {

@@ -13,6 +13,7 @@ import * as exportApi from '../../api/inventoryExportApi';
 import * as stockTransferApi from '../../api/stockTransferApi';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import { getMyWarehouses } from '../../api/warehouseApi';
+import { NOTIFICATION_EVENT } from '../../auth/session';
 import styles from './WarehouseWorkspacePage.module.css';
 
 export default function WarehouseWorkspacePage() {
@@ -129,12 +130,19 @@ export default function WarehouseWorkspacePage() {
     fetchMasterData();
   }, [fetchMasterData]);
 
-  // Auto-refresh the list in the background so newly-created/posted documents
+  // Refresh the list in the background so newly-created import/export documents
   // from other roles (e.g. Ke toan tao phieu nhap) show up here without the
-  // warehouse worker having to click "Nap lai" themselves.
+  // warehouse worker having to click "Nap lai" themselves. Driven by the
+  // realtime notification push (see RealtimeSessionBridge) instead of polling.
   useEffect(() => {
-    const interval = setInterval(() => fetchMasterData(true), 15000);
-    return () => clearInterval(interval);
+    const handleRealtimeNotification = (event) => {
+      const refType = event.detail?.referenceType;
+      if (refType === 'IMPORT_DOCUMENT' || refType === 'EXPORT_DOCUMENT') {
+        fetchMasterData(true);
+      }
+    };
+    window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+    return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
   }, [fetchMasterData]);
 
   // Fetch Detail when selected item changes

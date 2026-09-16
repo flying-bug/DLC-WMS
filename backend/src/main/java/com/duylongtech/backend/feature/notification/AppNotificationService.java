@@ -20,6 +20,7 @@ import com.duylongtech.backend.feature.notification.AppNotificationService;
 public class AppNotificationService {
 
     private final AppNotificationRepository notificationRepository;
+    private final RealtimeSessionService realtimeSessionService;
 
     @Transactional(readOnly = true)
     public List<AppNotification> getNotifications(Long userId, List<String> roles) {
@@ -63,6 +64,8 @@ public class AppNotificationService {
                                               String type, String referenceType, Long referenceId, String link) {
         AppNotification notif = new AppNotification();
         notif.initNotification(recipientRole, userId, title, message, type, referenceType, referenceId, link);
-        return notificationRepository.save(notif);
+        AppNotification saved = notificationRepository.save(notif);
+        realtimeSessionService.publishNotification(saved);
+        return saved;
     }
 }

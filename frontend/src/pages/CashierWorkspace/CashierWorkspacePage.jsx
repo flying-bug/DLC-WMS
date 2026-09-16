@@ -8,6 +8,7 @@ import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import * as paymentApi from '../../api/paymentApi';
+import { NOTIFICATION_EVENT } from '../../auth/session';
 import styles from './CashierWorkspacePage.module.css';
 
 
@@ -73,27 +74,46 @@ export default function CashierWorkspacePage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast((prev) => ({ ...prev, isVisible: false }));
 
-  // Fetch Master Data
-  const fetchMasterData = useCallback(async () => {
+  // Fetch Master Data. `silent` skips the loading spinner and keeps the
+  // current selection/page untouched, so a realtime background refresh
+  // doesn't yank the treasurer out of the row they're viewing.
+  const fetchMasterData = useCallback(async (silent = false) => {
     try {
-      setLoadingMaster(true);
-      setSelectedItem(null);
-      setDetailData([]);
-      setPage(1);
+      if (!silent) {
+        setLoadingMaster(true);
+        setSelectedItem(null);
+        setDetailData([]);
+        setPage(1);
+      }
 
       const res = await paymentApi.getAllPayments();
       const data = res.data?.data || res.data || [];
       setRawList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading payments list:', err);
-      showToast('error', 'Không thể tải danh sách phiếu thu/chi');
+      if (!silent) showToast('error', 'Không thể tải danh sách phiếu thu/chi');
     } finally {
-      setLoadingMaster(false);
+      if (!silent) setLoadingMaster(false);
     }
   }, []);
 
   useEffect(() => {
     fetchMasterData();
+  }, [fetchMasterData]);
+
+  // Refresh the list in the background so newly-created payment receipts/
+  // vouchers from the accountant show up here without the treasurer having
+  // to reload manually. Driven by the realtime notification push (see
+  // RealtimeSessionBridge) instead of polling.
+  useEffect(() => {
+    const handleRealtimeNotification = (event) => {
+      const refType = event.detail?.referenceType;
+      if (refType === 'PAYMENT_RECEIPT' || refType === 'PAYMENT_VOUCHER') {
+        fetchMasterData(true);
+      }
+    };
+    window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+    return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
   }, [fetchMasterData]);
 
   // Reset page when activeTab changes

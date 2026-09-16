@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../../contexts/WorkspaceModeContext';
-import { hasPermission } from '../../../auth/session';
+import { hasPermission, NOTIFICATION_EVENT } from '../../../auth/session';
 import * as notificationApi from '../../../api/notificationApi';
 import styles from './NotificationBell.module.css';
 
@@ -39,8 +39,20 @@ export default function NotificationBell() {
 
     useEffect(() => {
         fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 30000); // 30s poll
-        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const handleRealtimeNotification = (event) => {
+            const notif = event.detail;
+            if (!notif) return;
+            setUnreadCount(prev => prev + 1);
+            setNotifications(prev => {
+                if (prev.some(n => n.id === notif.id)) return prev;
+                return [notif, ...prev];
+            });
+        };
+        window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+        return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
     }, []);
 
     useEffect(() => {

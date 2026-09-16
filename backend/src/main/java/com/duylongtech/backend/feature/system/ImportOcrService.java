@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.imageio.ImageIO;
 import java.awt.Color;
@@ -34,6 +35,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.LocalDate;
@@ -144,6 +146,7 @@ public class ImportOcrService {
             """;
 
     private final Map<String, OcrSessionData> ocrSessions = new ConcurrentHashMap<>();
+    private final Map<String, SseEmitter> ocrSessionEmitters = new ConcurrentHashMap<>();
 
     /**
      * Tự động dọn dẹp các session quét QR đã hết hạn (> 15 phút) mỗi 5 phút một lần.
@@ -153,7 +156,19 @@ public class ImportOcrService {
         long now = System.currentTimeMillis();
         long maxAgeMillis = 15 * 60 * 1000L; // 15 phút
         int initialSize = ocrSessions.size();
-        ocrSessions.entrySet().removeIf(entry -> (now - entry.getValue().getCreatedAt()) > maxAgeMillis);
+        Set<String> expiredIds = new HashSet<>();
+        ocrSessions.forEach((id, data) -> {
+            if ((now - data.getCreatedAt()) > maxAgeMillis) {
+                expiredIds.add(id);
+            }
+        });
+        expiredIds.forEach(id -> {
+            ocrSessions.remove(id);
+            SseEmitter emitter = ocrSessionEmitters.remove(id);
+            if (emitter != null) {
+                emitter.complete();
+            }
+        });
         int removedCount = initialSize - ocrSessions.size();
         if (removedCount > 0) {
             log.info("Cleaned up {} expired OCR sessions. Active sessions remaining: {}", removedCount, ocrSessions.size());
@@ -172,10 +187,51 @@ public class ImportOcrService {
     }
 
     /**
-     * Lấy trạng thái session (dùng cho Polling)
+     * Lấy trạng thái session (dùng cho Polling - giữ lại cho client cũ / fallback)
      */
     public OcrSessionData getSessionState(String sessionId) {
         return ocrSessions.get(sessionId);
+    }
+
+    /**
+     * Mở kết nối SSE để Desktop nhận trạng thái phiên quét OCR theo thời gian
+     * thực (thay vì polling mỗi 2s). Không yêu cầu đăng nhập vì Mobile quét QR
+     * là một trình duyệt ẩn danh - sessionId ngẫu nhiên đóng vai trò capability token.
+     */
+    public SseEmitter streamSession(String sessionId) {
+        OcrSessionData existing = ocrSessions.get(sessionId);
+        if (existing == null) {
+            throw new RuntimeException(SystemMessage.OCR_ERR_003.getMessage());
+        }
+
+        SseEmitter emitter = new SseEmitter(180_000L);
+        ocrSessionEmitters.put(sessionId, emitter);
+        emitter.onCompletion(() -> ocrSessionEmitters.remove(sessionId, emitter));
+        emitter.onTimeout(() -> ocrSessionEmitters.remove(sessionId, emitter));
+        emitter.onError(ex -> ocrSessionEmitters.remove(sessionId, emitter));
+
+        // Nếu phiên đã có kết quả trước khi Desktop kịp subscribe, đẩy ngay.
+        if (!"PENDING".equals(existing.getStatus())) {
+            pushSessionUpdate(sessionId, existing);
+        }
+        return emitter;
+    }
+
+    private void pushSessionUpdate(String sessionId, OcrSessionData data) {
+        SseEmitter emitter = ocrSessionEmitters.get(sessionId);
+        if (emitter == null) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event().name("ocr-status").data(data));
+            if ("SUCCESS".equals(data.getStatus()) || "ERROR".equals(data.getStatus())) {
+                emitter.complete();
+                ocrSessionEmitters.remove(sessionId, emitter);
+            }
+        } catch (IOException e) {
+            emitter.completeWithError(e);
+            ocrSessionEmitters.remove(sessionId, emitter);
+        }
     }
 
     /**
@@ -196,10 +252,12 @@ public class ImportOcrService {
             log.error("Failed to read uploaded file for OCR session", e);
             session.setStatus("ERROR");
             session.setErrorMessage("Không thể đọc file ảnh: " + e.getMessage());
+            pushSessionUpdate(sessionId, session);
             return;
         }
 
         session.setStatus("PROCESSING");
+        pushSessionUpdate(sessionId, session);
 
         // Gọi bất đồng bộ (chạy nền) để trả response nhanh cho Mobile
         new Thread(() -> {
@@ -211,6 +269,8 @@ public class ImportOcrService {
                 log.error("OCR scan for session failed", e);
                 session.setStatus("ERROR");
                 session.setErrorMessage(e.getMessage());
+            } finally {
+                pushSessionUpdate(sessionId, session);
             }
         }).start();
     }

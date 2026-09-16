@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSystemHealth, createBackup } from '../../../api/backupApi';
+import { SYSTEM_HEALTH_EVENT } from '../../../auth/session';
 import styles from './DashboardTab.module.css';
 
 function StatCard({ icon, iconColor, label, value, sub, percent, trend }) {
@@ -48,11 +49,19 @@ function DashboardTab() {
         }
     }, []);
 
+    // Initial load over REST, then live updates pushed via the realtime SSE
+    // channel (see RealtimeSessionBridge) instead of polling.
     useEffect(() => {
         fetchHealth();
-        const interval = setInterval(fetchHealth, 30_000);
-        return () => clearInterval(interval);
     }, [fetchHealth]);
+
+    useEffect(() => {
+        const handleRealtimeHealth = (event) => {
+            if (event.detail) setHealth(event.detail);
+        };
+        window.addEventListener(SYSTEM_HEALTH_EVENT, handleRealtimeHealth);
+        return () => window.removeEventListener(SYSTEM_HEALTH_EVENT, handleRealtimeHealth);
+    }, []);
 
     const handleQuickBackup = async () => {
         setBackingUp(true);

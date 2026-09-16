@@ -41,6 +41,7 @@ public class PaymentService {
     private final PartnerLedgerRepository partnerLedgerRepository;
     private final PartnerLedgerService partnerLedgerService;
     private final CodeGeneratorService codeGeneratorService;
+    private final com.duylongtech.backend.feature.notification.AppNotificationService appNotificationService;
     @Transactional
     public PaymentResponse createPaymentReceipt(PaymentRequest request) {
         return processPayment(request, "RECEIPT", "PT");
@@ -69,7 +70,27 @@ public class PaymentService {
                 type, partner.getId(), amount, DocumentStatus.DRAFT.name(), paymentMethod, trimToNull(request.getNote()));
 
         PaymentTransaction saved = paymentTransactionRepository.save(transaction);
+        notifyCashierOfNewPayment(saved, partner);
         return toResponse(saved, partner);
+    }
+
+    /**
+     * Báo cho Thủ quỹ khi Kế toán tạo phiếu thu/chi mới, để họ biết chứng từ
+     * đang chờ ghi sổ mà không cần chủ động vào kiểm tra danh sách.
+     */
+    private void notifyCashierOfNewPayment(PaymentTransaction payment, Partner partner) {
+        try {
+            boolean isReceipt = "RECEIPT".equals(payment.getType());
+            String docLabel = isReceipt ? "thu" : "chi";
+            String title = (isReceipt ? "🧾 Phiếu thu mới chờ ghi sổ: " : "💵 Phiếu chi mới chờ ghi sổ: ") + payment.getTransactionCode();
+            String message = String.format("Kế toán vừa tạo phiếu %s %s (Đối tác: %s). Vui lòng kiểm tra và ghi sổ.",
+                    docLabel, payment.getTransactionCode(), partner.getName());
+            String refType = isReceipt ? "PAYMENT_RECEIPT" : "PAYMENT_VOUCHER";
+            appNotificationService.createNotification("ROLE_CASHIER_CONTROLLER", null, title, message,
+                    "NEW_DOCUMENT", refType, payment.getId(), "/cashier-workspace?tab=requests");
+        } catch (RuntimeException ignored) {
+            // Notification failure must not roll back the payment creation.
+        }
     }
     @Transactional
     public PaymentResponse updatePayment(Long id, PaymentRequest request) {

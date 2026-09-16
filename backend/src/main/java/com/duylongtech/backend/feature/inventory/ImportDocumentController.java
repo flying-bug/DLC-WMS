@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -122,6 +123,12 @@ public class ImportDocumentController {
     @Operation(summary = "Lấy trạng thái của phiên quét OCR")
     public ApiResponse<ImportOcrService.OcrSessionData> getOcrSessionState(@PathVariable String sessionId) {
         return ApiResponse.success(importOcrService.getSessionState(sessionId));
+    }
+
+    @GetMapping(path = "/ocr-session/{sessionId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "SSE stream trạng thái phiên quét OCR theo thời gian thực (thay cho polling)")
+    public SseEmitter streamOcrSession(@PathVariable String sessionId) {
+        return importOcrService.streamSession(sessionId);
     }
 
     @PostMapping(value = "/ocr-session/{sessionId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

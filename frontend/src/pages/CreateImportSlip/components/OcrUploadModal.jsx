@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { initOcrSession, getOcrSessionState } from '../../../api/inventoryImportApi';
+import { initOcrSession, getOcrSessionStreamUrl } from '../../../api/inventoryImportApi';
 import { compressImageForOcr } from '../../../utils/imageCompressor';
 import styles from './OcrUploadModal.module.css';
 
@@ -75,34 +75,38 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
     return () => window.removeEventListener('paste', handlePaste);
   }, [open]);
 
-  // Polling logic cho Mobile QR Sync
+  // Nhận trạng thái phiên quét Mobile QR qua SSE thay vì polling mỗi 2s.
   useEffect(() => {
     if (!open || !sessionId) return;
-    
-    const interval = setInterval(async () => {
+
+    const eventSource = new EventSource(getOcrSessionStreamUrl(sessionId));
+
+    eventSource.addEventListener('ocr-status', (event) => {
       try {
-        const res = await getOcrSessionState(sessionId);
-        const state = res?.data?.data || res?.data;
-        if (state) {
-          if (state.status === 'PROCESSING') {
-            setMobileStatus('PROCESSING');
-          } else if (state.status === 'SUCCESS' && state.result) {
-            clearInterval(interval);
-            setMobileStatus('');
-            // Đẩy dữ liệu ra ngoài thông qua prop mới `onOcrSuccess`
-            onOcrSuccess(state.result);
-          } else if (state.status === 'ERROR') {
-            setMobileStatus('ERROR');
-            alert('Lỗi xử lý ảnh từ điện thoại: ' + (state.errorMessage || 'Lỗi không xác định'));
-            clearInterval(interval);
-          }
+        const state = JSON.parse(event.data);
+        if (!state) return;
+        if (state.status === 'PROCESSING') {
+          setMobileStatus('PROCESSING');
+        } else if (state.status === 'SUCCESS' && state.result) {
+          setMobileStatus('');
+          eventSource.close();
+          // Đẩy dữ liệu ra ngoài thông qua prop mới `onOcrSuccess`
+          onOcrSuccess(state.result);
+        } else if (state.status === 'ERROR') {
+          setMobileStatus('ERROR');
+          eventSource.close();
+          alert('Lỗi xử lý ảnh từ điện thoại: ' + (state.errorMessage || 'Lỗi không xác định'));
         }
       } catch (err) {
-        console.error('Polling error', err);
+        console.error('Khong the doc trang thai phien OCR:', err);
       }
-    }, 2000); // 2 giây gọi 1 lần
+    });
 
-    return () => clearInterval(interval);
+    eventSource.onerror = () => {
+      console.error('OCR session stream error');
+    };
+
+    return () => eventSource.close();
   }, [open, sessionId, onOcrSuccess]);
 
   const handleOpenQR = async () => {

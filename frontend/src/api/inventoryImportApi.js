@@ -1,6 +1,12 @@
-import axiosClient from './axiosClient';
+import axiosClient, { getBaseURL } from './axiosClient';
 
 const IMPORT_BASE = '/imports';
+
+// Absolute URL for the OCR session SSE stream - EventSource needs a plain
+// URL (no axios interceptors), so this is built from the same base as axiosClient.
+export const getOcrSessionStreamUrl = (sessionId) => {
+  return `${getBaseURL()}${IMPORT_BASE}/ocr-session/${sessionId}/stream`;
+};
 
 export const getImportHistory = (params = {}) => {
   return axiosClient.get(`${IMPORT_BASE}/history`, { params });

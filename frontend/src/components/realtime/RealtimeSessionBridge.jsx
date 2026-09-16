@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { getBaseURL } from '../../api/axiosClient';
-import { AUTH_EVENT, emitUserUpdated, forceLogout, getAuthToken } from '../../auth/session';
+import { AUTH_EVENT, emitNotificationReceived, emitSystemHealthReceived, emitUserUpdated, forceLogout, getAuthToken } from '../../auth/session';
 
 function RealtimeSessionBridge() {
     const eventSourceRef = useRef(null);
@@ -29,6 +29,22 @@ function RealtimeSessionBridge() {
                 emitUserUpdated(JSON.parse(event.data));
             } catch (error) {
                 console.error('Khong the doc realtime user event:', error);
+            }
+        });
+
+        eventSource.addEventListener('notification', (event) => {
+            try {
+                emitNotificationReceived(JSON.parse(event.data));
+            } catch (error) {
+                console.error('Khong the doc realtime notification event:', error);
+            }
+        });
+
+        eventSource.addEventListener('system-health', (event) => {
+            try {
+                emitSystemHealthReceived(JSON.parse(event.data));
+            } catch (error) {
+                console.error('Khong the doc realtime system-health event:', error);
             }
         });
 

@@ -1,5 +1,7 @@
 export const AUTH_EVENT = 'app:auth-changed';
 export const USER_EVENT = 'app:user-updated';
+export const NOTIFICATION_EVENT = 'app:notification-received';
+export const SYSTEM_HEALTH_EVENT = 'app:system-health-received';
 
 export function getAuthToken() {
     return sessionStorage.getItem('token') || localStorage.getItem('token');
@@ -168,4 +170,12 @@ export function forceLogout(message) {
 
 export function emitUserUpdated(detail) {
     window.dispatchEvent(new CustomEvent(USER_EVENT, { detail }));
+}
+
+export function emitNotificationReceived(detail) {
+    window.dispatchEvent(new CustomEvent(NOTIFICATION_EVENT, { detail }));
+}
+
+export function emitSystemHealthReceived(detail) {
+    window.dispatchEvent(new CustomEvent(SYSTEM_HEALTH_EVENT, { detail }));
 }
