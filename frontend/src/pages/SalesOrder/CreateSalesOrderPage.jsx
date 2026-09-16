@@ -564,15 +564,6 @@ function CreateSalesOrderPage() {
         focusField(`so-line-vat-${i}`);
         return false;
       }
-      const v = variants.find(item => String(item.id) === String(lines[i].variantId));
-      if (v?.trackSerial) {
-        const serialCount = Array.isArray(lines[i].serialNumbers) ? lines[i].serialNumbers.length : 0;
-        if (serialCount !== qty) {
-          showToast('error', `Dòng ${i + 1}: Vui lòng quét đủ ${qty} mã serial cho sản phẩm "${v.productName || v.variantName || ''}" (hiện có ${serialCount})`);
-          setSerialModalLineIndex(i);
-          return false;
-        }
-      }
     }
     return true;
   };
@@ -1127,7 +1118,7 @@ function CreateSalesOrderPage() {
                                   {mode === 'direct' && isSerialProduct && (
                                     <div className={styles.serialBox}>
                                       <span className={styles.serialLabel}>
-                                        <i className="bi bi-upc-scan" /> Serial ({(line.serialNumbers?.length || 0)}/{Number(line.quantity || 0)}):
+                                        <i className="bi bi-upc-scan" /> Serial ({(line.serialNumbers?.length || 0)}/{Number(line.quantity || 0)}) - Tùy chọn, Thủ kho sẽ quét khi xuất hàng:
                                       </span>
                                       {line.serialNumbers?.length > 0 ? (
                                         <div className={styles.serialChips}>
