@@ -400,8 +400,6 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
         <div className={styles.pageTitleContainer}>
           <div className={styles.titleWrapper}>
             <div className={styles.breadcrumb}>
-              <span>Thu chi</span>
-              <i className="bi bi-chevron-right" style={{ fontSize: 10, margin: '0 6px', color: 'var(--wms-text-subtle)' }} />
               <span style={{ color: 'var(--wms-text-title)', fontWeight: 600 }}>{mode === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}</span>
             </div>
             <h1 className={styles.pageTitle}>
@@ -410,23 +408,6 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
           </div>
 
           <div className={styles.headerActions}>
-            <div className={styles.modeTabs}>
-              <button
-                type="button"
-                className={`${styles.modeTab} ${mode === 'RECEIPT' ? styles.modeTabActive : ''}`}
-                onClick={() => navigate('/payments/receipt')}
-              >
-                <i className="bi bi-arrow-down-circle-fill" style={{ color: 'var(--wms-success)' }} /> Phiếu thu
-              </button>
-              <button
-                type="button"
-                className={`${styles.modeTab} ${mode === 'VOUCHER' ? styles.modeTabActive : ''}`}
-                onClick={() => navigate('/payments/expense')}
-              >
-                <i className="bi bi-arrow-up-circle-fill" style={{ color: 'var(--wms-danger)' }} /> Phiếu chi
-              </button>
-            </div>
-
             <button
               type="button"
               className={styles.btnCashierLink}
