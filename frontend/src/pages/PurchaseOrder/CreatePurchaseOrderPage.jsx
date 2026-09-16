@@ -12,8 +12,9 @@ import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../uti
 import OcrUploadModal from '../CreateImportSlip/components/OcrUploadModal';
 import OcrResultPreviewModal from '../CreateImportSlip/components/OcrResultPreviewModal';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
-import { scanImportSlipOcr, confirmOcrMapping } from '../../api/inventoryImportApi';
+import { confirmOcrMapping, scanImportSlipOcr } from '../../api/inventoryImportApi';
 import * as poApi from '../../api/purchaseOrderApi';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { findBestMatch } from '../../utils/fuzzyMatch';
@@ -529,6 +530,115 @@ function CreatePurchaseOrderPage() {
     vatRate: v.vatPercent || v.vatRate || 0,
   }));
 
+  const linesColumns = [
+    { title: '#', width: 36, align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)', fontSize: 13 }}>{idx + 1}</span> },
+    { title: 'Sản phẩm', minWidth: 260, render: (_, line, idx) => (
+        <ProductGridSelect
+          id={`po-line-product-${idx}`}
+          products={productOptions}
+          value={line.variantId}
+          onChange={selected => handleProductSelect(idx, selected)}
+          onAddNew={() => {
+            setQuickAddLineIndex(idx);
+            setShowQuickAddProduct(true);
+          }}
+          displayMode="code-name"
+          placeholder="Chọn mã hoặc tên hàng"
+          hideStock
+        />
+      )
+    },
+    { title: 'Kho nhận', minWidth: 100, width: 120, render: (_, line, idx) => (
+        <WarehouseGridSelect
+          id={`po-line-wh-${idx}`}
+          warehouses={warehouses}
+          value={line.warehouseId}
+          onChange={selectedId => updateLine(idx, 'warehouseId', selectedId)}
+          displayMode="code"
+          placeholder="Chọn kho"
+        />
+      )
+    },
+    { title: 'ĐVT', width: 80, align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 13 }}>{line.unitName || '—'}</span> },
+    { title: 'Số lượng', width: 100, align: 'right', render: (_, line, idx) => (
+        <input
+          id={`po-line-qty-${idx}`}
+          type="number"
+          className={styles.cellInput}
+          style={{ textAlign: 'right' }}
+          min="1"
+          step="1"
+          value={line.quantity}
+          onChange={e => updateLine(idx, 'quantity', e.target.value)}
+        />
+      )
+    },
+    { title: 'Đơn giá (đ)', width: 130, align: 'right', render: (_, line, idx) => (
+        <input
+          id={`po-line-price-${idx}`}
+          type="text"
+          className={styles.cellInput}
+          style={{ textAlign: 'right' }}
+          value={line.unitPrice ? Number(line.unitPrice).toLocaleString('vi-VN') : ''}
+          onChange={e => {
+            const raw = e.target.value.replace(/\D/g, '');
+            updateLine(idx, 'unitPrice', raw);
+          }}
+          placeholder="0"
+        />
+      )
+    },
+    { title: 'VAT (%)', width: 80, align: 'center', render: (_, line, idx) => (
+        <select
+          id={`po-line-vat-${idx}`}
+          className={styles.cellInput}
+          style={{ textAlign: 'center', cursor: 'pointer', padding: '0 4px', height: '28px', background: '#fff' }}
+          value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
+          onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
+        >
+          <option value={0}>0%</option>
+          <option value={5}>5%</option>
+          <option value={8}>8%</option>
+          <option value={10}>10%</option>
+        </select>
+      )
+    },
+    { title: 'Thành tiền', width: 130, align: 'right', render: (_, line) => {
+        const lineTotal = Number(line.quantity || 0) * Number(line.unitPrice || 0);
+        const vatAmt    = lineTotal * Number(line.vatRate || 0) / 100;
+        return (
+          <span style={{ fontWeight: 600, color: 'var(--color-primary-link)', fontSize: 13, whiteSpace: 'nowrap' }}>
+            {money(lineTotal + vatAmt)} đ
+          </span>
+        );
+      }
+    },
+    { title: 'Ghi chú', width: 150, render: (_, line, idx) => (
+        <input
+          type="text"
+          className={styles.cellInput}
+          value={line.note}
+          onChange={e => updateLine(idx, 'note', e.target.value)}
+          placeholder="Ghi chú..."
+        />
+      )
+    }
+  ];
+
+  if (lines.length > 1) {
+    linesColumns.push({
+      title: '', width: 36, align: 'center', render: (_, __, idx) => (
+        <button
+          className={styles.btnRemoveLine}
+          onClick={() => removeLine(idx)}
+          title="Xóa dòng"
+        >
+          <i className="bi bi-trash" />
+        </button>
+      )
+    });
+  }
+
   return (
     <AdminLayout>
       <div className={styles.page}>
@@ -712,124 +822,10 @@ function CreatePurchaseOrderPage() {
               </div>
 
               <div className={styles.linesTableWrap}>
-                <table className={styles.linesTable}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 36, textAlign: 'center' }}>#</th>
-                      <th style={{ minWidth: 260, width: 280 }}>Sản phẩm</th>
-                      <th style={{ width: 120, minWidth: 100 }}>Kho nhận</th>
-                      <th style={{ width: 80, textAlign: 'center' }}>ĐVT</th>
-                      <th style={{ width: 100, textAlign: 'right' }}>Số lượng</th>
-                      <th style={{ width: 130, textAlign: 'right' }}>Đơn giá (đ)</th>
-                      <th style={{ width: 80,  textAlign: 'center' }}>VAT (%)</th>
-                      <th style={{ width: 130, textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ width: 150 }}>Ghi chú</th>
-                      <th style={{ width: 36, textAlign: 'center' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line, idx) => {
-                      const lineTotal = Number(line.quantity || 0) * Number(line.unitPrice || 0);
-                      const vatAmt    = lineTotal * Number(line.vatRate || 0) / 100;
-                      return (
-                        <tr key={idx}>
-                          <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)', fontSize: 13 }}>{idx + 1}</td>
-                          <td>
-                            <ProductGridSelect
-                              id={`po-line-product-${idx}`}
-                              products={productOptions}
-                              value={line.variantId}
-                              onChange={selected => handleProductSelect(idx, selected)}
-                              onAddNew={() => {
-                                setQuickAddLineIndex(idx);
-                                setShowQuickAddProduct(true);
-                              }}
-                              displayMode="code-name"
-                              placeholder="Chọn mã hoặc tên hàng"
-                              hideStock
-                            />
-                          </td>
-                          <td style={{ minWidth: 100, width: 120 }}>
-                            <WarehouseGridSelect
-                              id={`po-line-wh-${idx}`}
-                              warehouses={warehouses}
-                              value={line.warehouseId}
-                              onChange={selectedId => updateLine(idx, 'warehouseId', selectedId)}
-                              displayMode="code"
-                              placeholder="Chọn kho"
-                            />
-                          </td>
-                          <td style={{ textAlign: 'center', color: 'var(--wms-text-muted)', fontSize: 13 }}>
-                            {line.unitName || '—'}
-                          </td>
-                          <td>
-                            <input
-                              id={`po-line-qty-${idx}`}
-                              type="number"
-                              className={styles.cellInput}
-                              style={{ textAlign: 'right' }}
-                              min="1"
-                              step="1"
-                              value={line.quantity}
-                              onChange={e => updateLine(idx, 'quantity', e.target.value)}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              id={`po-line-price-${idx}`}
-                              type="text"
-                              className={styles.cellInput}
-                              style={{ textAlign: 'right' }}
-                              value={line.unitPrice ? Number(line.unitPrice).toLocaleString('vi-VN') : ''}
-                              onChange={e => {
-                                const raw = e.target.value.replace(/\D/g, '');
-                                updateLine(idx, 'unitPrice', raw);
-                              }}
-                              placeholder="0"
-                            />
-                          </td>
-                          <td>
-                            <select
-                              id={`po-line-vat-${idx}`}
-                              className={styles.cellInput}
-                              style={{ textAlign: 'center', cursor: 'pointer', padding: '0 4px', height: '28px', background: '#fff' }}
-                              value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
-                              onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
-                            >
-                              <option value={0}>0%</option>
-                              <option value={5}>5%</option>
-                              <option value={8}>8%</option>
-                              <option value={10}>10%</option>
-                            </select>
-                          </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary-link)', fontSize: 13, whiteSpace: 'nowrap' }}>
-                            {money(lineTotal + vatAmt)} đ
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              className={styles.cellInput}
-                              value={line.note}
-                              onChange={e => updateLine(idx, 'note', e.target.value)}
-                              placeholder="Ghi chú..."
-                            />
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            {lines.length > 1 && (
-                              <button
-                                className={styles.btnRemoveLine}
-                                onClick={() => removeLine(idx)}
-                                title="Xóa dòng"
-                              >
-                                <i className="bi bi-trash" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <ResponsiveTable
+                  columns={linesColumns}
+                  data={lines}
+                />
               </div>
 
               {/* Table Bottom Bar */}

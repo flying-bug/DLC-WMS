@@ -11,6 +11,7 @@ import styles from './StocktakeListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -147,6 +148,66 @@ function StocktakeListPage() {
     setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
   };
 
+  const columns = [
+    {
+      title: <input
+        type="checkbox"
+        className={styles.checkbox}
+        checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length}
+        onChange={handleSelectAll}
+      />,
+      width: '40px',
+      align: 'center',
+      render: (_, st) => (
+        <div style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            className={styles.checkbox}
+            checked={selectedIds.includes(st.id)}
+            onChange={(e) => handleSelectRow(e, st.id)}
+          />
+        </div>
+      )
+    },
+    { title: 'NGÀY', dataIndex: 'date' },
+    {
+      title: 'SỐ',
+      render: (_, st) => (
+        <a
+          href="#"
+          className={styles.link}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate(`/stocktakes/${st.id}`);
+          }}
+        >
+          {st.stocktakeCode}
+        </a>
+      )
+    },
+    { title: 'KIỂM KÊ KHO', dataIndex: 'warehouse' },
+    { title: 'MỤC ĐÍCH', render: (_, st) => st.purpose || st.note || '' },
+    { title: 'KẾT LUẬN', render: (_, st) => st.conclusion || '' },
+    {
+      title: 'TRẠNG THÁI',
+      render: (_, st) => (
+        <span className={`${styles.badge} ${
+          st.statusCode === 'success' ? styles.badgeSuccess :
+          st.statusCode === 'info' ? styles.badgeInfo :
+          st.statusCode === 'warning' ? styles.badgeWarning :
+          styles.badgeDanger
+        }`}>
+          {st.statusLabel}
+        </span>
+      )
+    }
+  ];
+
+  const renderActions = (st) => (
+    <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>
+  );
+
   return (
     <AdminLayout>
       <div className={styles.pageBody}>
@@ -259,82 +320,14 @@ function StocktakeListPage() {
         )}
 
         <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th>NGÀY</th>
-                <th>SỐ</th>
-                <th>KIỂM KÊ KHO</th>
-                <th>MỤC ĐÍCH</th>
-                <th>KẾT LUẬN</th>
-                <th>TRẠNG THÁI</th>
-                <th className={styles.textCenter}>CHỨC NĂNG</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedRows.length > 0 ? paginatedRows.map(st => (
-                <tr key={st.id} onClick={() => navigate(`/stocktakes/${st.id}`)}>
-                  <td style={{ textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      className={styles.checkbox}
-                      checked={selectedIds.includes(st.id)}
-                      onChange={(e) => handleSelectRow(e, st.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td>{st.date}</td>
-                  <td>
-                    <a
-                      href="#"
-                      className={styles.link}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        navigate(`/stocktakes/${st.id}`);
-                      }}
-                    >
-                      {st.stocktakeCode}
-                    </a>
-                  </td>
-                  <td>{st.warehouse}</td>
-                  <td>{st.purpose || st.note || ''}</td>
-                  <td>{st.conclusion || ''}</td>
-                  <td>
-                      <span className={`${styles.badge} ${
-                        st.statusCode === 'success' ? styles.badgeSuccess :
-                        st.statusCode === 'info' ? styles.badgeInfo :
-                        st.statusCode === 'warning' ? styles.badgeWarning :
-                        styles.badgeDanger
-                      }`}>
-                        {st.statusLabel}
-                      </span>
-                  </td>
-                  <td className={styles.textCenter}>
-                     <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="8">
-                    <div className={styles.emptyState}>
-                      <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                      <div className={styles.emptyText}>{loading ? 'Đang tải dữ liệu...' : 'Không có dữ liệu'}</div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
+          <ResponsiveTable
+            columns={columns}
+            data={paginatedRows}
+            loading={loading}
+            emptyMessage="Không có dữ liệu"
+            onRowClick={(st) => navigate(`/stocktakes/${st.id}`)}
+            actions={renderActions}
+          />
           <div className={styles.pagination}>
             <span>Hiển thị {rows.length} bản ghi</span>
           </div>

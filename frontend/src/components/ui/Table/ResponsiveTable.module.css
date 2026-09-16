@@ -108,6 +108,9 @@
 }
 
 .mobileCardTitleRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--color-border-soft);
     margin-bottom: 4px;
@@ -117,6 +120,16 @@
     font-weight: 700;
     font-size: 1rem;
     color: var(--color-primary);
+    flex: 1 1 auto;
+}
+
+.mobileCardMeta {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    font-size: 0.85rem;
 }
 
 .mobileCardRow {
@@ -138,6 +151,20 @@
     text-align: right;
 }
 
+/* Create/Update forms put real form controls (product picker, unit <select>,
+   quantity <input>) in a card row, not just short read-only text. Squeezing
+   those next to the label on one line leaves barely any room to use them, so
+   stack label-over-control and let the control take the full row width. */
+.mobileCardRow:has(input, select, textarea) {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.mobileCardRow:has(input, select, textarea) .mobileCardValue {
+    width: 100%;
+    text-align: left;
+}
+
 .mobileCardActions {
     display: flex;
     align-items: center;
@@ -146,6 +173,23 @@
     padding-top: 10px;
     border-top: 1px dashed var(--color-border);
     min-height: var(--touch-target-min);
+}
+
+/* Pages pass bare <i class="bi ..."> icons (no button wrapper) as row actions,
+   so the container having a min-height wasn't enough - each icon's own tap
+   target was still just its ~16px glyph. Give every icon here real hit area. */
+.mobileCardActions i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch-target-min, 44px);
+    min-height: var(--touch-target-min, 44px);
+    box-sizing: border-box;
+    border-radius: var(--radius-control, 6px);
+}
+
+.mobileCardActions i:active {
+    background-color: var(--color-bg-soft);
 }
 
 /* Responsive Media Queries */
@@ -163,4 +207,45 @@
     .cardListView {
         display: flex;
     }
+}
+
+/* Expandable Rows Styles */
+.expandBtn {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 0.9rem;
+    transition: color var(--transition-fast);
+}
+
+.expandBtn:hover {
+    color: var(--color-primary);
+}
+
+.expandedRow > td {
+    background-color: var(--color-bg-soft);
+    padding: 16px !important;
+    border-bottom: 1px solid var(--table-border);
+}
+
+.mobileExpandedArea {
+    padding: 12px;
+    background-color: var(--color-bg-soft);
+    border-radius: var(--radius-control);
+    margin-top: 8px;
+    border: 1px dashed var(--color-border);
+}
+
+.mobileExpandBtn {
+    background: transparent;
+    border: none;
+    color: var(--color-primary);
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }

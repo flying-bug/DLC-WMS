@@ -9,6 +9,7 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
@@ -393,6 +394,189 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
     });
   };
 
+  const columns = [
+    {
+      key: 'checkbox',
+      dataIndex: 'id',
+      title: (
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          checked={isAllSelected}
+          onChange={handleSelectAll}
+        />
+      ),
+      width: '40px',
+      align: 'center',
+      render: (_, item) => (
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          checked={selectedIds.includes(item.id)}
+          onChange={() => handleSelectRow(item.id)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      )
+    },
+    {
+      title: 'Ngày lập',
+      dataIndex: 'createdAt',
+      width: '130px',
+      render: (val) => formatPaymentDateTime(val)
+    },
+    {
+      title: 'Số phiếu',
+      dataIndex: 'code',
+      width: '150px',
+      render: (val, item) => (
+        <span
+          className={styles.codeLink}
+          onClick={(e) => { e.stopPropagation(); setDetailItem(item); }}
+          title="Bấm để xem chi tiết phiếu"
+        >
+          {val}
+        </span>
+      )
+    },
+    {
+      title: 'Loại phiếu',
+      dataIndex: 'type',
+      width: '110px',
+      render: (val, item) => (
+        <span style={{ fontWeight: 600, color: item.type === 'RECEIPT' ? 'var(--wms-success)' : 'var(--wms-danger)' }}>
+          {item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}
+        </span>
+      )
+    },
+    {
+      title: mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp',
+      key: 'partner',
+      render: (_, item) => (
+        <div style={{ fontWeight: 600, color: 'var(--wms-text-title)' }}>
+          {item.partnerName || item.partnerCode || (item.partnerId ? `#${item.partnerId}` : '-')}
+        </div>
+      )
+    },
+    {
+      title: 'Phương thức',
+      dataIndex: 'paymentMethod',
+      width: '130px',
+      render: (val, item) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13 }}>
+          <i className={item.paymentMethod === 'BANK_TRANSFER' ? 'bi bi-bank' : 'bi bi-cash'} />
+          {item.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt'}
+        </span>
+      )
+    },
+    {
+      title: 'Số tiền',
+      dataIndex: 'amount',
+      width: '150px',
+      align: 'right',
+      render: (val, item) => (
+        <span className={item.type === 'RECEIPT' ? styles.amountReceipt : styles.amountVoucher}>
+          {item.type === 'RECEIPT' ? '+' : '-'}{money(item.amount)} đ
+        </span>
+      )
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      width: '120px',
+      align: 'center',
+      render: (val, item) => item.status === 'POSTED' ? (
+        <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+          <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+        </span>
+      ) : (
+        <span className={`${styles.badge} ${styles.badgeDraft}`}>
+          <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+        </span>
+      )
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'note',
+      render: (val, item) => (
+        <div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--wms-text-muted)' }} title={item.note || ''}>
+          {item.note || '-'}
+        </div>
+      )
+    }
+  ];
+
+  const renderActions = (item) => (
+    <div style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className={styles.misaActionLink}
+        onClick={(e) => {
+          if (openDropdownId === item.id) {
+            setOpenDropdownId(null);
+            return;
+          }
+          const rect = e.currentTarget.getBoundingClientRect();
+          setDropdownPos({ top: rect.bottom + 4, left: rect.right });
+          setOpenDropdownId(item.id);
+        }}
+      >
+        Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+      </button>
+      {openDropdownId === item.id && createPortal(
+        <div
+          className={styles.actionDropdownMenu}
+          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, transform: 'translateX(-100%)' }}
+        >
+          <button
+            type="button"
+            className={styles.dropdownItem}
+            onClick={() => {
+              setOpenDropdownId(null);
+              setDetailItem(item);
+            }}
+          >
+            <i className="bi bi-eye"></i> Xem chi tiết
+          </button>
+          <button
+            type="button"
+            className={styles.dropdownItem}
+            onClick={() => {
+              setOpenDropdownId(null);
+              printPaymentReceipt(item, { partnerName: item.partnerName, salespersonName: '' });
+            }}
+          >
+            <i className="bi bi-printer"></i> In phiếu
+          </button>
+          {item.status === 'DRAFT' && (
+            <>
+              <button
+                type="button"
+                className={styles.dropdownItem}
+                onClick={() => {
+                  setOpenDropdownId(null);
+                  guard('payment:edit', () => handleStartEdit(item));
+                }}
+              >
+                <i className="bi bi-pencil"></i> Sửa phiếu nháp
+              </button>
+              <button
+                type="button"
+                className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                onClick={() => {
+                  setOpenDropdownId(null);
+                  guard('payment:delete', () => setDeletingItem(item));
+                }}
+              >
+                <i className="bi bi-trash"></i> Xóa phiếu nháp
+              </button>
+            </>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+
   return (
     <AdminLayout>
       <div className={styles.pageBody} onClick={() => setOpenDropdownId(null)}>
@@ -507,178 +691,13 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
         {/* TABLE CONTAINER: KHUNG BẢNG TOÀN TRANG CHUẨN ERP */}
         <div className={styles.tableContainer}>
           <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: '40px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      className={styles.checkbox}
-                      checked={isAllSelected}
-                      onChange={handleSelectAll}
-                    />
-                  </th>
-                  <th style={{ width: '130px' }}>Ngày lập</th>
-                  <th style={{ width: '150px' }}>Số phiếu</th>
-                  <th style={{ width: '110px' }}>Loại phiếu</th>
-                  <th>{mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'}</th>
-                  <th style={{ width: '130px' }}>Phương thức</th>
-                  <th style={{ width: '150px' }} className={styles.textRight}>Số tiền</th>
-                  <th style={{ width: '120px' }} className={styles.textCenter}>Trạng thái</th>
-                  <th>Ghi chú</th>
-                  <th style={{ width: '110px' }} className={styles.textCenter}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={10} className={styles.emptyTable}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                        <i className="bi bi-arrow-repeat" style={{ fontSize: 24, animation: 'spin 1s linear infinite' }} />
-                        <span>Đang tải dữ liệu chứng từ thu/chi...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : paginatedRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className={styles.emptyTable}>
-                      Không tìm thấy phiếu thu/chi nào phù hợp với bộ lọc
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedRows.map(item => (
-                    <tr key={item.id}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={selectedIds.includes(item.id)}
-                          onChange={() => handleSelectRow(item.id)}
-                        />
-                      </td>
-                      <td>{formatPaymentDateTime(item.createdAt)}</td>
-                      <td>
-                        <span
-                          className={styles.codeLink}
-                          onClick={() => setDetailItem(item)}
-                          title="Bấm để xem chi tiết phiếu"
-                        >
-                          {item.code}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: 600, color: item.type === 'RECEIPT' ? 'var(--wms-success)' : 'var(--wms-danger)' }}>
-                          {item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600, color: 'var(--wms-text-title)' }}>
-                          {item.partnerName || item.partnerCode || (item.partnerId ? `#${item.partnerId}` : '-')}
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13 }}>
-                          <i className={item.paymentMethod === 'BANK_TRANSFER' ? 'bi bi-bank' : 'bi bi-cash'} />
-                          {item.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt'}
-                        </span>
-                      </td>
-                      <td className={styles.textRight}>
-                        <span className={item.type === 'RECEIPT' ? styles.amountReceipt : styles.amountVoucher}>
-                          {item.type === 'RECEIPT' ? '+' : '-'}{money(item.amount)} đ
-                        </span>
-                      </td>
-                      <td className={styles.textCenter}>
-                        {item.status === 'POSTED' ? (
-                          <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                            <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
-                          </span>
-                        ) : (
-                          <span className={`${styles.badge} ${styles.badgeDraft}`}>
-                            <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--wms-text-muted)' }} title={item.note || ''}>
-                          {item.note || '-'}
-                        </div>
-                      </td>
-                      <td className={styles.textCenter}>
-                        <div style={{ position: 'relative', display: 'inline-block' }} onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            className={styles.misaActionLink}
-                            onClick={(e) => {
-                              if (openDropdownId === item.id) {
-                                setOpenDropdownId(null);
-                                return;
-                              }
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setDropdownPos({ top: rect.bottom + 4, left: rect.right });
-                              setOpenDropdownId(item.id);
-                            }}
-                          >
-                            Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
-                          </button>
-                          {openDropdownId === item.id && createPortal(
-                            <div
-                              className={styles.actionDropdownMenu}
-                              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, transform: 'translateX(-100%)' }}
-                            >
-                              <button
-                                type="button"
-                                className={styles.dropdownItem}
-                                onClick={() => {
-                                  setOpenDropdownId(null);
-                                  setDetailItem(item);
-                                }}
-                              >
-                                <i className="bi bi-eye"></i> Xem chi tiết
-                              </button>
-                              <button
-                                type="button"
-                                className={styles.dropdownItem}
-                                onClick={() => {
-                                  setOpenDropdownId(null);
-                                  printPaymentReceipt(item, { partnerName: item.partnerName, salespersonName: '' });
-                                }}
-                              >
-                                <i className="bi bi-printer"></i> In phiếu
-                              </button>
-                              {item.status === 'DRAFT' && (
-                                <>
-                                  <button
-                                    type="button"
-                                    className={styles.dropdownItem}
-                                    onClick={() => {
-                                      setOpenDropdownId(null);
-                                      guard('payment:edit', () => handleStartEdit(item));
-                                    }}
-                                  >
-                                    <i className="bi bi-pencil"></i> Sửa phiếu nháp
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
-                                    onClick={() => {
-                                      setOpenDropdownId(null);
-                                      guard('payment:delete', () => setDeletingItem(item));
-                                    }}
-                                  >
-                                    <i className="bi bi-trash"></i> Xóa phiếu nháp
-                                  </button>
-                                </>
-                              )}
-                            </div>,
-                            document.body
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <ResponsiveTable
+              columns={columns}
+              data={paginatedRows}
+              loading={loading}
+              emptyMessage="Không tìm thấy phiếu thu/chi nào phù hợp với bộ lọc"
+              actions={renderActions}
+            />
           </div>
 
           {/* ACTION BAR NỔI KHI CHỌN NHIỀU BẢN GHI */}

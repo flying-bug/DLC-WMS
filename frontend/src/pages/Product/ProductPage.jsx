@@ -18,6 +18,7 @@ import ProductDetailModal from './components/ProductDetailModal';
 import ProductVariantConfigurator from './components/ProductVariantConfigurator';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { canViewPricing } from '../../auth/session';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
@@ -1487,6 +1488,116 @@ const ProductPage = () => {
 
     const filteredProducts = getFilteredProducts();
 
+    const getTableColumns = () => {
+        const tableCols = [];
+        
+        tableCols.push({
+            title: <input type="checkbox" className={styles.checkbox} />,
+            align: 'center',
+            width: '40px',
+            render: (_, item) => (
+                <div onClick={(event) => event.stopPropagation()}>
+                    <input type="checkbox" className={styles.checkbox} />
+                </div>
+            )
+        });
+
+        if (columns.image) {
+            tableCols.push({
+                title: 'Hình ảnh',
+                align: 'center',
+                width: '100px',
+                render: (_, item) => (
+                    <div style={{ width: '64px', height: '64px', margin: '0 auto', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            <i className="bi bi-image" style={{ color: 'var(--color-text-placeholder)', fontSize: '24px' }}></i>
+                        )}
+                    </div>
+                )
+            });
+        }
+
+        if (columns.productCode) {
+            tableCols.push({
+                title: 'Mã sản phẩm',
+                width: '140px',
+                render: (_, item) => <span className={styles.link}>{item.productCode}</span>
+            });
+        }
+
+        if (columns.productName) {
+            tableCols.push({
+                title: 'Tên sản phẩm',
+                width: '220px',
+                render: (_, item) => <span style={{ fontWeight: 600, wordBreak: 'break-word', whiteSpace: 'normal', minWidth: '220px' }} title={item.productName}>{item.productName}</span>
+            });
+        }
+
+        if (columns.productType) {
+            tableCols.push({ title: 'Loại', dataIndex: 'productType', width: '90px', render: (_, item) => item.productType || '-' });
+        }
+
+        if (columns.category) {
+            tableCols.push({ title: 'Danh mục', dataIndex: 'categoryName', width: '110px', render: (_, item) => item.categoryName || '-' });
+        }
+
+        if (columns.brand) {
+            tableCols.push({ title: 'Thương hiệu', dataIndex: 'brandName', width: '110px', render: (_, item) => item.brandName || '-' });
+        }
+
+        if (columns.unit) {
+            tableCols.push({ title: 'Đơn vị tính', dataIndex: 'unitName', width: '90px', render: (_, item) => item.unitName || '-' });
+        }
+
+        if (showPricing && columns.salePrice) {
+            tableCols.push({
+                title: 'Giá bán',
+                align: 'right',
+                width: '110px',
+                render: (_, item) => <span className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</span>
+            });
+        }
+
+        return tableCols;
+    };
+
+    const renderActions = (item) => (
+        <div style={{ whiteSpace: 'nowrap' }} onClick={(event) => event.stopPropagation()}>
+            <i
+                className="bi bi-pencil"
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
+                title="Sửa sản phẩm"
+                onClick={() => guard('product:edit', () => handleOpenEdit(item))}
+            ></i>
+            <i
+                className="bi bi-upc-scan"
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
+                title="In mã vạch"
+                onClick={() => setPrintBarcodeProduct(item)}
+            ></i>
+            <i
+                className="bi bi-gear"
+                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
+                title="Quản lý SKU"
+                onClick={() => openVariantModal(item)}
+            ></i>
+            <i
+                className={item.active ? "bi bi-slash-circle" : "bi bi-check2-circle"}
+                style={{ cursor: 'pointer', color: item.active ? 'var(--color-text-muted-2)' : 'var(--color-success)', fontSize: '16px', marginRight: '12px' }}
+                title={item.active ? "Ngừng sử dụng" : "Kích hoạt"}
+                onClick={() => handleToggleStatus(item)}
+            ></i>
+            <i
+                className="bi bi-trash"
+                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }}
+                title="Xóa"
+                onClick={() => handleDelete(item.id)}
+            ></i>
+        </div>
+    );
+
     return (
         <AdminLayout>
             <div className={styles.pageBody}>
@@ -1683,107 +1794,15 @@ const ProductPage = () => {
                 </div>
 
                 <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '40px', textAlign: 'center' }}>
-                                    <input type="checkbox" className={styles.checkbox} />
-                                </th>
-                                {columns.image && <th style={{ width: '100px', textAlign: 'center' }}>Hình ảnh</th>}
-                                {columns.productCode && <th style={{ width: '140px', whiteSpace: 'nowrap' }}>Mã sản phẩm</th>}
-                                {columns.productName && <th style={{ minWidth: '220px' }}>Tên sản phẩm</th>}
-                                {columns.productType && <th style={{ width: '90px' }}>Loại</th>}
-                                {columns.category && <th style={{ width: '110px' }}>Danh mục</th>}
-                                {columns.brand && <th style={{ width: '110px' }}>Thương hiệu</th>}
-                                {columns.unit && <th style={{ width: '90px' }}>Đơn vị tính</th>}
-                                {showPricing && columns.salePrice && <th className={styles.textRight} style={{ width: '110px' }}>Giá bán</th>}
-                                <th className={styles.textCenter} style={{ width: '130px' }}>Thao Tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="11">
-                                        <div className={styles.emptyState}>
-                                            <div className={styles.emptyText}>Đang tải dữ liệu...</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filteredProducts.length === 0 ? (
-                                <tr>
-                                    <td colSpan="11">
-                                        <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy sản phẩm nào</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredProducts.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        className={!item.active ? styles.inactiveRow : ''}
-                                        onClick={() => setDetailProduct(item)}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        <td style={{ textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
-                                            <input type="checkbox" className={styles.checkbox} />
-                                        </td>
-                                        {columns.image && (
-                                            <td style={{ textAlign: 'center' }}>
-                                                <div style={{ width: '64px', height: '64px', margin: '0 auto', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    {item.imageUrl ? (
-                                                        <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    ) : (
-                                                        <i className="bi bi-image" style={{ color: 'var(--color-text-placeholder)', fontSize: '24px' }}></i>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        )}
-                                        {columns.productCode && <td style={{ whiteSpace: 'nowrap' }}><span className={styles.link}>{item.productCode}</span></td>}
-                                        {columns.productName && <td style={{ fontWeight: 600, wordBreak: 'break-word', whiteSpace: 'normal', minWidth: '220px' }} title={item.productName}>{item.productName}</td>}
-                                        {columns.productType && <td>{item.productType || '-'}</td>}
-                                        {columns.category && <td>{item.categoryName || '-'}</td>}
-                                        {columns.brand && <td>{item.brandName || '-'}</td>}
-                                        {columns.unit && <td>{item.unitName || '-'}</td>}
-                                        {showPricing && columns.salePrice && <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>}
-                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }} onClick={(event) => event.stopPropagation()}>
-                                            <i
-                                                className="bi bi-pencil"
-                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
-                                                title="Sửa sản phẩm"
-                                                onClick={() => guard('product:edit', () => handleOpenEdit(item))}
-                                            ></i>
-                                            <i
-                                                className="bi bi-upc-scan"
-                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
-                                                title="In mã vạch"
-                                                onClick={() => setPrintBarcodeProduct(item)}
-                                            ></i>
-                                            <i
-                                                className="bi bi-gear"
-                                                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
-                                                title="Quản lý SKU"
-                                                onClick={() => openVariantModal(item)}
-                                            ></i>
-                                            <i
-                                                className={item.active ? "bi bi-slash-circle" : "bi bi-check2-circle"}
-                                                style={{ cursor: 'pointer', color: item.active ? 'var(--color-text-muted-2)' : 'var(--color-success)', fontSize: '16px', marginRight: '12px' }}
-                                                title={item.active ? "Ngừng sử dụng" : "Kích hoạt"}
-                                                onClick={() => handleToggleStatus(item)}
-                                            ></i>
-                                            <i
-                                                className="bi bi-trash"
-                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }}
-                                                title="Xóa"
-                                                onClick={() => handleDelete(item.id)}
-                                            ></i>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <ResponsiveTable
+                        columns={getTableColumns()}
+                        data={filteredProducts}
+                        loading={loading}
+                        emptyMessage="Không tìm thấy sản phẩm nào"
+                        onRowClick={(item) => setDetailProduct(item)}
+                        actions={renderActions}
+                        rowClassName={(row) => !row.active ? styles.inactiveRow : ''}
+                    />
                 </div>
 
                 <div className={styles.pagination}>

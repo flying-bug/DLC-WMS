@@ -29,6 +29,7 @@ import styles from './CreateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import { canViewPricing, hasPermission } from '../../auth/session';
 
@@ -874,6 +875,188 @@ function CreateImportSlipPage() {
     });
   };
 
+  const linesColumns = [
+    { title: 'STT', width: '3%', align: 'center', render: (_, __, idx) => ((itemPage - 1) * itemPageSize + idx) + 1 },
+    { title: 'Sản phẩm', width: '32%', render: (_, item, idx) => {
+      const realIndex = (itemPage - 1) * itemPageSize + idx;
+      return (
+        <ProductGridSelect
+          id={`import-line-product-${realIndex}`}
+          products={filteredProducts}
+          inventoryMap={inventoryMap}
+          value={item.variantId}
+          onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+          onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
+          displayMode="code-name"
+          placeholder="Chọn mã hoặc tên hàng"
+        />
+      );
+    }},
+    { title: 'ĐVT', width: '10%', render: (_, item) => {
+      const product = productById.get(String(item.variantId));
+      return (
+        <select
+          className="misa-input"
+          style={{ height: '32px', padding: '0 6px', fontSize: '13px', minWidth: '85px', width: '100%' }}
+          value={item.unitId || (product?.unitId ? String(product.unitId) : '')}
+          onChange={(e) => handleItemChange(item.localId, 'unitId', e.target.value)}
+          disabled={!product}
+        >
+          {product?.unitId && <option value={product.unitId}>{product.unitName}</option>}
+          {product?.unitConversions?.map(conv => (
+            <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
+          ))}
+          {!product?.unitId && <option value="">-</option>}
+        </select>
+      );
+    }},
+    { title: 'SL', width: '7%', align: 'right', render: (_, item, idx) => {
+      const realIndex = (itemPage - 1) * itemPageSize + idx;
+      return (
+        <input
+          id={`import-line-qty-${realIndex}`}
+          type="number"
+          min="0"
+          className="misa-input"
+          style={{ height: '32px', padding: '0 8px', width: '100%', textAlign: 'right', fontSize: '13px' }}
+          value={item.quantity}
+          onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)}
+        />
+      );
+    }}
+  ];
+
+  if (hasAnyConversion) {
+    linesColumns.push({
+      title: 'Quy đổi ĐVC', width: '9%', align: 'center', render: (_, item) => {
+        const product = productById.get(String(item.variantId));
+        const baseUnitName = product?.unitName || '-';
+        const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+        const op = item.conversionOperator || 'MULTIPLY';
+        const qty = Number(item.quantity || 0);
+        const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+        
+        return ratio === 1 ? (
+          <span style={{ color: 'var(--color-text-placeholder, #9ca3af)', fontSize: '12px' }}>—</span>
+        ) : (
+          <span style={{ fontSize: '12px' }} title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}>
+            <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
+            {' = '}
+            <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
+            <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
+          </span>
+        );
+      }
+    });
+  }
+
+  linesColumns.push(
+    { title: 'Serial', width: '10%', align: 'center', render: (_, item) => {
+      const product = productById.get(String(item.variantId));
+      return (
+        <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
+          {product?.trackSerial && (
+            <button
+              type="button"
+              className={(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? styles.serialBadgeSuccess : styles.serialBadgeWarning}
+              onClick={() => setSerialModalItemId(item.localId)}
+            >
+              <i className="bi bi-upc-scan"></i>
+              {(item.serialNumbers?.length || 0)} / {Number(item.quantity || 0)}
+            </button>
+          )}
+        </div>
+      );
+    }},
+    { title: 'BH (T)', width: '6%', align: 'center', render: (_, item, idx) => {
+      const realIndex = (itemPage - 1) * itemPageSize + idx;
+      return (
+        <input
+          id={`import-line-warranty-${realIndex}`}
+          type="number"
+          min="0"
+          className="misa-input text-center"
+          style={{ height: '32px', padding: '0 8px', width: '100%', textAlign: 'center', fontSize: '13px' }}
+          value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''}
+          onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)}
+        />
+      );
+    }}
+  );
+
+  if (showPricing) {
+    linesColumns.push(
+      { title: 'Đơn giá', width: '11%', align: 'right', render: (_, item, idx) => {
+        const realIndex = (itemPage - 1) * itemPageSize + idx;
+        return (
+          <input
+            id={`import-line-price-${realIndex}`}
+            type="text"
+            className="misa-input"
+            style={{ height: '32px', padding: '0 8px', width: '100%', textAlign: 'right', fontSize: '13px' }}
+            value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''}
+            onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))}
+          />
+        );
+      }},
+      { title: 'Thành tiền', width: '11%', align: 'right', render: (_, item) => {
+        const qty = Number(item.quantity || 0);
+        const lineAmount = qty * Number(item.price || 0);
+        return <span className={`${styles.textBold} ${styles.textBlue}`}>{money(lineAmount)} đ</span>;
+      }},
+      { title: '% VAT', width: '7%', align: 'right', render: (_, item) => (
+        <select
+          className="misa-input"
+          style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }}
+          value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0}
+          onChange={(e) => handleItemChange(item.localId, 'vatPercent', Number(e.target.value))}
+        >
+          <option value={0}>0%</option>
+          <option value={5}>5%</option>
+          <option value={8}>8%</option>
+          <option value={10}>10%</option>
+        </select>
+      )}
+    );
+  }
+
+  linesColumns.push({
+    title: '', width: '3%', align: 'center', render: (_, item) => (
+      <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}>
+        <i className="bi bi-trash"></i>
+      </button>
+    )
+  });
+
+  const linesSummaryRow = (
+    <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
+      <td colSpan={3} style={{ borderRight: 'none' }}></td>
+      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
+      {hasAnyConversion && (
+        <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
+          {Number(items.reduce((sum, it) => {
+            const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
+            const op = it.conversionOperator || 'MULTIPLY';
+            const qty = Number(it.quantity || 0);
+            return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
+          }, 0).toFixed(4))}
+        </td>
+      )}
+      <td colSpan={2} style={{ borderRight: 'none' }}></td>
+      {showPricing && <td></td>}
+      {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}
+      {showPricing && <td style={{ borderRight: 'none' }}></td>}
+      <td></td>
+    </tr>
+  );
+
+  const linesSummaryMobile = (
+    <div style={{ padding: '12px', background: 'var(--color-bg)', fontWeight: 'bold' }}>
+      <div>Tổng số lượng nhập: <span style={{ color: 'var(--color-primary)' }}>{money(totalQuantity)}</span></div>
+      {showPricing && <div>Tổng tiền hàng: {money(totalPrice)} đ</div>}
+    </div>
+  );
+
   return (
     <AdminLayout>
       <div className={styles.pageHeader}>
@@ -1255,7 +1438,6 @@ function CreateImportSlipPage() {
           </div>
         </div>
 
-        {/* Card 3: Chi tiết hàng hóa */}
         <div className={styles.card}>
           <div className={styles.tableHeaderRow}>
             <div className={styles.tableTitle}>
@@ -1264,152 +1446,13 @@ function CreateImportSlipPage() {
           </div>
 
           <div className={styles.tableContainer}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ minWidth: '36px', width: '3%', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '220px', width: '32%' }}>Sản phẩm</th>
-                  <th style={{ minWidth: '95px', width: '10%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '65px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                  {hasAnyConversion && <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>}
-                  <th style={{ minWidth: '85px', width: '10%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                  <th style={{ minWidth: '55px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                  {showPricing && <th style={{ minWidth: '95px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
-                  {showPricing && <th style={{ minWidth: '95px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>}
-                  {showPricing && <th style={{ minWidth: '65px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>}
-                  <th style={{ minWidth: '36px', width: '3%', textAlign: 'center' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleItems.map((item, visibleIndex) => {
-                  const index = (itemPage - 1) * itemPageSize + visibleIndex;
-                  const product = productById.get(String(item.variantId));
-                  const baseUnitName = product?.unitName || '-';
-                  const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
-                  const op = item.conversionOperator || 'MULTIPLY';
-                  const qty = Number(item.quantity || 0);
-                  const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
-                  const lineAmount = qty * Number(item.price || 0);
-
-                  return (
-                    <tr key={item.localId}>
-                      <td style={{ textAlign: 'center' }}>{index + 1}</td>
-                      <td>
-                        <ProductGridSelect
-                          id={`import-line-product-${index}`}
-                          products={filteredProducts}
-                          inventoryMap={inventoryMap}
-                          value={item.variantId}
-                          onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                          onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                          displayMode="code-name"
-                          placeholder="Chọn mã hoặc tên hàng"
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className="misa-input"
-                          style={{ height: '32px', padding: '0 6px', fontSize: '13px', minWidth: '85px' }}
-                          value={item.unitId || (product?.unitId ? String(product.unitId) : '')}
-                          onChange={(e) => handleItemChange(item.localId, 'unitId', e.target.value)}
-                          disabled={!product}
-                        >
-                          {product?.unitId && (
-                            <option value={product.unitId}>{product.unitName}</option>
-                          )}
-                          {product?.unitConversions?.map(conv => (
-                            <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
-                          ))}
-                          {!product?.unitId && <option value="">-</option>}
-                        </select>
-                      </td>
-                      <td align="right">
-                        <input id={`import-line-qty-${index}`} type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
-                      </td>
-                      {hasAnyConversion && (
-                        <td style={{ textAlign: 'center', fontSize: '12px' }}>
-                          {ratio === 1 ? (
-                            <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
-                          ) : (
-                            <span
-                              title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
-                            >
-                              <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
-                              {' = '}
-                              <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
-                              <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
-                            </span>
-                          )}
-                        </td>
-                      )}
-                      <td align="center">
-                        <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
-                          {product?.trackSerial && (
-                            <button
-                              type="button"
-                              className={(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? styles.serialBadgeSuccess : styles.serialBadgeWarning}
-                              onClick={() => setSerialModalItemId(item.localId)}
-                            >
-                              <i className="bi bi-upc-scan"></i>
-                              {(item.serialNumbers?.length || 0)} / {Number(item.quantity || 0)}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td align="center">
-                        <input id={`import-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '55px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
-                      </td>
-                      {showPricing && (
-                        <td align="right">
-                          <input id={`import-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '120px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
-                        </td>
-                      )}
-                      {showPricing && (
-                        <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
-                          {money(lineAmount)} đ
-                        </td>
-                      )}
-                      {showPricing && (
-                        <td align="right">
-                          <select className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0} onChange={(e) => handleItemChange(item.localId, 'vatPercent', Number(e.target.value))}>
-                            <option value={0}>0%</option>
-                            <option value={5}>5%</option>
-                            <option value={8}>8%</option>
-                            <option value={10}>10%</option>
-                          </select>
-                        </td>
-                      )}
-                      <td>
-                        <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}>
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
-                  <td colSpan={3} style={{ borderRight: 'none' }}></td>
-                  <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
-                  {hasAnyConversion && (
-                    <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
-                      {Number(items.reduce((sum, it) => {
-                        const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
-                        const op = it.conversionOperator || 'MULTIPLY';
-                        const qty = Number(it.quantity || 0);
-                        return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
-                      }, 0).toFixed(4))}
-                    </td>
-                  )}
-                  <td colSpan={2} style={{ borderRight: 'none' }}></td>
-                  {showPricing && <td></td>}
-                  {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}
-                  {showPricing && <td style={{ borderRight: 'none' }}></td>}
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
+            <ResponsiveTable
+              columns={linesColumns}
+              data={visibleItems}
+              emptyMessage="Chưa có dữ liệu hàng hóa"
+              summaryRow={linesSummaryRow}
+              summaryMobile={linesSummaryMobile}
+            />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 24px', backgroundColor: '#fff', borderTop: '1px solid var(--color-border)' }}>

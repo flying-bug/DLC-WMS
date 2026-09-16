@@ -8,6 +8,7 @@ import styles from './UnitPage.module.css';
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -173,6 +174,64 @@ const UnitPage = () => {
         return pages;
     };
 
+    const tableColumns = [
+        {
+            title: 'Tên Đơn Vị Tính',
+            width: '220px',
+            render: (_, item) => <span style={{ fontWeight: 600 }}>{item.name}</span>
+        },
+        {
+            title: 'Mô Tả',
+            width: '180px',
+            render: (_, item) => (
+                <span className={styles.noteText}>
+                    {item.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có ghi chú</span>}
+                </span>
+            )
+        },
+        {
+            title: 'Trạng Thái',
+            width: '140px',
+            render: (_, item) => (
+                <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                    {item.statusLabel}
+                </span>
+            )
+        }
+    ];
+
+    const renderActions = (item) => (
+        <div style={{ whiteSpace: 'nowrap' }}>
+            <i 
+                className="bi bi-pencil" 
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
+                title="Chỉnh sửa" 
+                onClick={(e) => handleEditClick(e, item)}
+            ></i>
+            {item.status === 'ACTIVE' ? (
+                <i 
+                    className="bi bi-slash-circle" 
+                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                    title="Vô hiệu hoá" 
+                    onClick={() => handleToggleStatus(item)}
+                ></i>
+            ) : (
+                <i 
+                    className="bi bi-check2-circle" 
+                    style={{ cursor: 'pointer', color: 'var(--color-success)', fontSize: '16px', marginRight: '12px' }} 
+                    title="Kích hoạt" 
+                    onClick={() => handleToggleStatus(item)}
+                ></i>
+            )}
+            <i 
+                className="bi bi-trash" 
+                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
+                title="Xóa ĐVT" 
+                onClick={(e) => handleDeleteClick(e, item)}
+            ></i>
+        </div>
+    );
+
     return (
         <AdminLayout>
             <div className={styles.pageBody}>
@@ -231,152 +290,13 @@ const UnitPage = () => {
                 </div>
 
                 <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '220px' }}>Tên Đơn Vị Tính</th>
-                                <th style={{ width: '180px' }}>Mô Tả</th>
-                                <th style={{ width: '140px' }}>Trạng Thái</th>
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && rows.length === 0 ? (
-                                <tr>
-                                    <td colSpan="4" className={styles.textCenter} style={{ padding: '40px' }}>
-                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
-                                    </td>
-                                </tr>
-                            ) : rows.length === 0 ? (
-                                <tr>
-                                    <td colSpan="4">
-                                        <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy đơn vị tính nào</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                rows.map(item => (
-                                    <tr key={item.id}>
-                                        <td style={{ fontWeight: 600 }}>{item.name}</td>
-                                        <td>
-                                            <span className={styles.noteText}>{item.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
-                                        </td>
-                                        <td>
-                                            <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                                                {item.statusLabel}
-                                            </span>
-                                        </td>
-                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                                            <i 
-                                                className="bi bi-pencil" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Chỉnh sửa" 
-                                                onClick={(e) => handleEditClick(e, item)}
-                                            ></i>
-                                            {item.status === 'ACTIVE' ? (
-                                                <i 
-                                                    className="bi bi-slash-circle" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Vô hiệu hoá" 
-                                                    onClick={() => handleToggleStatus(item)}
-                                                ></i>
-                                            ) : (
-                                                <i 
-                                                    className="bi bi-check2-circle" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-success)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Kích hoạt" 
-                                                    onClick={() => handleToggleStatus(item)}
-                                                ></i>
-                                            )}
-                                            <i 
-                                                className="bi bi-trash" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                title="Xóa ĐVT" 
-                                                onClick={(e) => handleDeleteClick(e, item)}
-                                            ></i>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-
-                    <div className={styles.pagination}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>Hiển thị</span>
-                            <SearchableSelect
-                                className="misa-select"
-                                style={{ width: '70px', height: '32px', padding: '0 8px' }}
-                                value={pageSize}
-                                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                                <option value={100}>100</option>
-                            </SearchableSelect>
-                            <span>trên tổng số {totalElements} bản ghi</span>
-                        </div>
-
-                        {totalPages > 1 && (
-                            <div className={styles.pageControls}>
-                                <button
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    className={styles.pageBtn}
-                                >
-                                    <i className="bi bi-chevron-left"></i>
-                                    <span>Trước</span>
-                                </button>
-
-                                <div className={styles.paginationNumbers}>
-                                    {getPageNumbers().map((num, idx) => (
-                                        num === currentPage ? (
-                                            <input
-                                                key={idx}
-                                                className={`${styles.pageNumber} ${styles.active}`}
-                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
-                                                defaultValue={num}
-                                                title="Nhập số trang và nhấn Enter"
-                                                onBlur={(e) => e.target.value = currentPage}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        let p = parseInt(e.target.value, 10);
-                                                        if (!isNaN(p)) {
-                                                            p = Math.max(1, Math.min(totalPages, p));
-                                                            setCurrentPage(p);
-                                                            e.target.blur();
-                                                        } else {
-                                                            e.target.value = currentPage;
-                                                        }
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <span
-                                                key={idx}
-                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
-                                                onClick={() => num !== '...' && setCurrentPage(num)}
-                                            >
-                                                {num}
-                                            </span>
-                                        )
-                                    ))}
-                                </div>
-
-                                <button
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    className={styles.pageBtn}
-                                >
-                                    <span>Sau</span>
-                                    <i className="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <ResponsiveTable
+                        columns={tableColumns}
+                        data={rows}
+                        loading={loading}
+                        emptyMessage="Không tìm thấy đơn vị tính nào"
+                        actions={renderActions}
+                    />
                 </div>
             </div>
 

@@ -5,6 +5,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Toast from '../../components/ui/Toast/Toast';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { hasPermission } from '../../auth/session';
@@ -112,6 +113,36 @@ function WarrantyDetailPage() {
 
   if (!warranty) return null;
 
+  const linesColumns = [
+    { title: 'STT', width: '50px', align: 'center', render: (_, __, idx) => idx + 1 },
+    { title: 'Mã SKU', render: (_, line) => line.sku || 'Chưa có' },
+    { title: 'Sản phẩm', render: (_, line) => line.variantName || 'Chưa rõ' },
+    { title: 'Serial', render: (_, line) => <span style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{line.serialNumber || ''}</span> },
+    { title: 'Số lượng', align: 'right', render: (_, line) => line.quantity || 1 },
+    { title: 'Hạn bảo hành', render: (_, line) => formatDate(line.endDate) }
+  ];
+
+  const repairsColumns = [
+    { title: 'Mã phiếu', minWidth: '100px', render: (_, repair) => <span style={{ color: 'var(--color-primary)', fontWeight: '500' }}>{repair.repairCode}</span> },
+    { title: 'Ngày tiếp nhận', minWidth: '120px', render: (_, repair) => formatDate(repair.receivedDate) },
+    { title: 'Trạng thái', minWidth: '120px', render: (_, repair) => {
+        const rStatus = REPAIR_STATUS_LABELS[repair.repairStatus] || { label: repair.repairStatus || 'Không rõ' };
+        return (
+          <span style={{
+            padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
+            backgroundColor: rStatus.code === 'success' ? 'var(--color-success-bg)' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : 'var(--color-primary-pale)',
+            color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : 'var(--color-primary-link)'
+          }}>
+            {rStatus.label}
+          </span>
+        );
+      }
+    },
+    { title: 'Mô tả lỗi', minWidth: '200px', render: (_, repair) => <div style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={repair.issueDescription || ''}>{repair.issueDescription || 'Chưa ghi nhận'}</div> },
+    { title: 'KTV Phụ trách', minWidth: '150px', render: (_, repair) => repair.responsiblePerson || 'Chưa phân công' },
+    { title: 'Chi phí (VNĐ)', minWidth: '120px', align: 'right', render: (_, repair) => <span style={{ fontWeight: '500' }}>{money(repair.totalAmount)}</span> }
+  ];
+
   return (
     <AdminLayout>
       <div className={styles.container} style={{ padding: '24px' }}>
@@ -191,30 +222,10 @@ function WarrantyDetailPage() {
                   <div style={{ marginTop: '24px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--color-text)' }}>Danh sách mặt hàng bảo hành</h4>
                     <div className="table-responsive">
-                      <table className="misa-table" style={{ width: '100%' }}>
-                        <thead>
-                          <tr>
-                            <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                            <th>Mã SKU</th>
-                            <th>Sản phẩm</th>
-                            <th>Serial</th>
-                            <th style={{ textAlign: 'right' }}>Số lượng</th>
-                            <th>Hạn bảo hành</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lines.map((line, index) => (
-                            <tr key={line.id || index}>
-                              <td style={{ textAlign: 'center' }}>{index + 1}</td>
-                              <td>{line.sku || 'Chưa có'}</td>
-                              <td>{line.variantName || 'Chưa rõ'}</td>
-                              <td style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{line.serialNumber || ''}</td>
-                              <td style={{ textAlign: 'right' }}>{line.quantity || 1}</td>
-                              <td>{formatDate(line.endDate)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <ResponsiveTable
+                        columns={linesColumns}
+                        data={lines}
+                      />
                     </div>
                   </div>
                 )}
@@ -228,53 +239,13 @@ function WarrantyDetailPage() {
               </div>
               <div className={styles.cardBody} style={{ padding: '0' }}>
                 <div className="table-responsive">
-                  <table className="misa-table" style={{ width: '100%' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ minWidth: '100px' }}>Mã phiếu</th>
-                        <th style={{ minWidth: '120px' }}>Ngày tiếp nhận</th>
-                        <th style={{ minWidth: '120px' }}>Trạng thái</th>
-                        <th style={{ minWidth: '200px' }}>Mô tả lỗi</th>
-                        <th style={{ minWidth: '150px' }}>KTV Phụ trách</th>
-                        <th style={{ minWidth: '120px', textAlign: 'right' }}>Chi phí (VNĐ)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {repairs.length > 0 ? (
-                        repairs.map(repair => {
-                          const rStatus = REPAIR_STATUS_LABELS[repair.repairStatus] || { label: repair.repairStatus || 'Không rõ' };
-                          return (
-                            <tr key={repair.id} className="cursor-pointer hover-highlight" onClick={() => navigate(`/repairs/${repair.id}`)}>
-                              <td>
-                                <span style={{ color: 'var(--color-primary)', fontWeight: '500' }}>
-                                  {repair.repairCode}
-                                </span>
-                              </td>
-                              <td>{formatDate(repair.receivedDate)}</td>
-                              <td>
-                                <span style={{
-                                  padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
-                                  backgroundColor: rStatus.code === 'success' ? 'var(--color-success-bg)' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : 'var(--color-primary-pale)',
-                                  color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : 'var(--color-primary-link)'
-                                }}>
-                                  {rStatus.label}
-                                </span>
-                              </td>
-                              <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={repair.issueDescription || ''}>{repair.issueDescription || 'Chưa ghi nhận'}</td>
-                              <td>{repair.responsiblePerson || 'Chưa phân công'}</td>
-                              <td style={{ textAlign: 'right', fontWeight: '500' }}>{money(repair.totalAmount)}</td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>
-                            Sản phẩm chưa từng được sửa chữa
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                  <ResponsiveTable
+                    columns={repairsColumns}
+                    data={repairs}
+                    emptyMessage="Sản phẩm chưa từng được sửa chữa"
+                    rowClassName="cursor-pointer hover-highlight"
+                    onRowClick={(repair) => navigate(`/repairs/${repair.id}`)}
+                  />
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import CancelInvoiceModal from './components/CancelInvoiceModal';
 import EInvoicePreviewModal from './components/EInvoicePreviewModal';
 import * as einvoiceApi from '../../api/einvoiceApi';
@@ -75,6 +76,162 @@ export default function EInvoiceListPage() {
       revenue: totalRevenue,
     };
   }, [invoices, totalElements]);
+
+  const columns = [
+    {
+      title: '#',
+      width: '45px',
+      align: 'center',
+      render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)', fontSize: '12px' }}>{page * size + idx + 1}</span>
+    },
+    {
+      title: 'Số HĐ',
+      width: '110px',
+      render: (_, inv) => (
+        <span
+          className={styles.invoiceNum}
+          onClick={() => setSelectedInvoiceForPreview(inv)}
+          title="Nhấn để xem bản thể hiện HĐĐT"
+        >
+          {inv.invoiceNumber || 'Chưa cấp số'}
+        </span>
+      )
+    },
+    {
+      title: 'Ký hiệu',
+      width: '90px',
+      render: (_, inv) => <span className={styles.monoText} style={{ fontWeight: 600, color: 'var(--wms-text-muted)' }}>{inv.invoiceSeries}</span>
+    },
+    {
+      title: 'Ngày lập',
+      width: '105px',
+      render: (_, inv) => <span className={styles.monoText}>{inv.invoiceDate}</span>
+    },
+    {
+      title: 'Người mua / Đơn vị',
+      render: (_, inv) => (
+        <div style={{ minWidth: '220px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--wms-text-title)' }}>
+            {inv.buyerLegalName || inv.buyerName || 'Khách lẻ'}
+          </div>
+          {inv.buyerPhone && (
+            <div style={{ fontSize: '11px', color: 'var(--wms-text-muted)', marginTop: '2px' }}>
+              <i className="bi bi-telephone" style={{ marginRight: '4px' }} />{inv.buyerPhone}
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'Mã số thuế',
+      width: '130px',
+      render: (_, inv) => (
+        inv.buyerTaxCode ? (
+          <span className={styles.taxBadge} title="Mã số thuế doanh nghiệp">
+            {inv.buyerTaxCode}
+          </span>
+        ) : (
+          <span style={{ color: 'var(--wms-border-strong)' }}>—</span>
+        )
+      )
+    },
+    {
+      title: 'Đơn bán hàng',
+      width: '130px',
+      render: (_, inv) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {inv.soCode && (
+            <span
+              style={{ color: 'var(--color-info-hover)', cursor: 'pointer', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}
+              onClick={() => navigate(`/sales-orders/${inv.salesOrderId}`)}
+              title="Xem chi tiết đơn bán hàng"
+            >
+              <i className="bi bi-cart3" style={{ marginRight: '4px' }} />{inv.soCode}
+            </span>
+          )}
+          {inv.exportDocCode && (
+            <span
+              style={{ color: 'var(--wms-success)', cursor: 'pointer', fontSize: '11px', fontWeight: 500, whiteSpace: 'nowrap' }}
+              onClick={() => navigate(`/exports/edit/${inv.inventoryDocumentId}`)}
+              title="Xem phiếu xuất kho"
+            >
+              PXK: {inv.exportDocCode}
+            </span>
+          )}
+          {!inv.soCode && !inv.exportDocCode && (
+            <span style={{ color: 'var(--wms-border-strong)' }}>—</span>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'Tổng thanh toán',
+      width: '140px',
+      align: 'right',
+      render: (_, inv) => <span className={styles.moneyText}>{Number(inv.totalAmount || 0).toLocaleString('vi-VN')} đ</span>
+    },
+    {
+      title: 'Cơ quan thuế',
+      width: '150px',
+      render: (_, inv) => (
+        <>
+          <div className={styles.cqtPill}>
+            <i className="bi bi-shield-check" /> {inv.cqtCode ? 'Đã cấp mã' : 'Hợp lệ'}
+          </div>
+          {inv.cqtCode && (
+            <div
+              style={{ fontSize: '10px', color: 'var(--wms-text-muted)', fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums', marginTop: '2px', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              title={inv.cqtCode}
+            >
+              {inv.cqtCode}
+            </div>
+          )}
+        </>
+      )
+    },
+    {
+      title: 'Trạng thái',
+      width: '140px',
+      render: (_, inv) => {
+        const st = STATUS_MAP[inv.status] || { label: inv.status, className: styles.statusIssued, icon: 'bi-check' };
+        return (
+          <>
+            <span className={`${styles.statusPill} ${st.className}`}>
+              <span className={styles.statusDot} />
+              {st.label}
+            </span>
+            {inv.status === 'CANCELED' && (
+              <div className={styles.cancelInfoBox} title={`Hủy bởi: ${inv.canceledByName || 'Quản trị viên'}`}>
+                <div><strong>Lý do:</strong> {inv.cancelReason || '—'}</div>
+                {inv.canceledByName && <div style={{ color: 'var(--wms-text-muted)', fontSize: '10px' }}>Bởi: {inv.canceledByName}</div>}
+              </div>
+            )}
+          </>
+        )
+      }
+    }
+  ];
+
+  const renderActions = (inv) => (
+    <div className={styles.actionBtnGroup}>
+      <button
+        className={styles.actionBtn}
+        title="Xem bản thể hiện HĐĐT"
+        onClick={() => setSelectedInvoiceForPreview(inv)}
+      >
+        <i className="bi bi-eye" /> Xem
+      </button>
+      {inv.status === 'ISSUED' && (
+        <button
+          className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+          title="Hủy hóa đơn"
+          onClick={() => setSelectedInvoiceForCancel(inv)}
+        >
+          <i className="bi bi-x-circle" /> Hủy
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <AdminLayout>
@@ -183,159 +340,13 @@ export default function EInvoiceListPage() {
         {/* ─── Table Section ─── */}
         <div className={styles.tableCard}>
           <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: '45px', minWidth: '45px', textAlign: 'center' }}>#</th>
-                  <th style={{ width: '110px', minWidth: '110px' }}>Số HĐ</th>
-                  <th style={{ width: '90px', minWidth: '90px' }}>Ký hiệu</th>
-                  <th style={{ width: '105px', minWidth: '105px' }}>Ngày lập</th>
-                  <th style={{ minWidth: '220px' }}>Người mua / Đơn vị</th>
-                  <th style={{ width: '130px', minWidth: '130px' }}>Mã số thuế</th>
-                  <th style={{ width: '130px', minWidth: '130px' }}>Đơn bán hàng</th>
-                  <th style={{ width: '140px', minWidth: '140px', textAlign: 'right' }}>Tổng thanh toán</th>
-                  <th style={{ width: '150px', minWidth: '150px' }}>Cơ quan thuế</th>
-                  <th style={{ width: '140px', minWidth: '140px' }}>Trạng thái</th>
-                  <th style={{ width: '130px', minWidth: '130px', textAlign: 'center' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: 'var(--wms-text-muted)' }}>
-                      <i className="bi bi-arrow-repeat spin" style={{ marginRight: 8, fontSize: '18px' }} /> Đang tải danh sách hóa đơn điện tử...
-                    </td>
-                  </tr>
-                ) : invoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: 'var(--wms-text-subtle)' }}>
-                      <i className="bi bi-inbox" style={{ fontSize: '28px', display: 'block', marginBottom: '8px' }} />
-                      Không tìm thấy hóa đơn điện tử nào
-                    </td>
-                  </tr>
-                ) : (
-                  invoices.map((inv, idx) => {
-                    const st = STATUS_MAP[inv.status] || { label: inv.status, className: styles.statusIssued, icon: 'bi-check' };
-                    return (
-                      <tr key={inv.id}>
-                        <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)', fontSize: '12px' }}>
-                          {page * size + idx + 1}
-                        </td>
-                        <td>
-                          <span
-                            className={styles.invoiceNum}
-                            onClick={() => setSelectedInvoiceForPreview(inv)}
-                            title="Nhấn để xem bản thể hiện HĐĐT"
-                          >
-                            {inv.invoiceNumber || 'Chưa cấp số'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={styles.monoText} style={{ fontWeight: 600, color: 'var(--wms-text-muted)' }}>
-                            {inv.invoiceSeries}
-                          </span>
-                        </td>
-                        <td className={styles.monoText}>
-                          {inv.invoiceDate}
-                        </td>
-                        <td style={{ minWidth: '220px' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--wms-text-title)' }}>
-                            {inv.buyerLegalName || inv.buyerName || 'Khách lẻ'}
-                          </div>
-                          {inv.buyerPhone && (
-                            <div style={{ fontSize: '11px', color: 'var(--wms-text-muted)', marginTop: '2px' }}>
-                              <i className="bi bi-telephone" style={{ marginRight: '4px' }} />{inv.buyerPhone}
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          {inv.buyerTaxCode ? (
-                            <span className={styles.taxBadge} title="Mã số thuế doanh nghiệp">
-                              {inv.buyerTaxCode}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--wms-border-strong)' }}>—</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {inv.soCode && (
-                              <span
-                                style={{ color: 'var(--color-info-hover)', cursor: 'pointer', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}
-                                onClick={() => navigate(`/sales-orders/${inv.salesOrderId}`)}
-                                title="Xem chi tiết đơn bán hàng"
-                              >
-                                <i className="bi bi-cart3" style={{ marginRight: '4px' }} />{inv.soCode}
-                              </span>
-                            )}
-                            {inv.exportDocCode && (
-                              <span
-                                style={{ color: 'var(--wms-success)', cursor: 'pointer', fontSize: '11px', fontWeight: 500, whiteSpace: 'nowrap' }}
-                                onClick={() => navigate(`/exports/edit/${inv.inventoryDocumentId}`)}
-                                title="Xem phiếu xuất kho"
-                              >
-                                PXK: {inv.exportDocCode}
-                              </span>
-                            )}
-                            {!inv.soCode && !inv.exportDocCode && (
-                              <span style={{ color: 'var(--wms-border-strong)' }}>—</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className={styles.moneyText}>
-                          {Number(inv.totalAmount || 0).toLocaleString('vi-VN')} đ
-                        </td>
-                        <td>
-                          <div className={styles.cqtPill}>
-                            <i className="bi bi-shield-check" /> {inv.cqtCode ? 'Đã cấp mã' : 'Hợp lệ'}
-                          </div>
-                          {inv.cqtCode && (
-                            <div
-                              style={{ fontSize: '10px', color: 'var(--wms-text-muted)', fontFamily: 'inherit', fontVariantNumeric: 'tabular-nums', marginTop: '2px', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                              title={inv.cqtCode}
-                            >
-                              {inv.cqtCode}
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`${styles.statusPill} ${st.className}`}>
-                            <span className={styles.statusDot} />
-                            {st.label}
-                          </span>
-                          {inv.status === 'CANCELED' && (
-                            <div className={styles.cancelInfoBox} title={`Hủy bởi: ${inv.canceledByName || 'Quản trị viên'}`}>
-                              <div><strong>Lý do:</strong> {inv.cancelReason || '—'}</div>
-                              {inv.canceledByName && <div style={{ color: 'var(--wms-text-muted)', fontSize: '10px' }}>Bởi: {inv.canceledByName}</div>}
-                            </div>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <div className={styles.actionBtnGroup}>
-                            <button
-                              className={styles.actionBtn}
-                              title="Xem bản thể hiện HĐĐT"
-                              onClick={() => setSelectedInvoiceForPreview(inv)}
-                            >
-                              <i className="bi bi-eye" /> Xem
-                            </button>
-                            {inv.status === 'ISSUED' && (
-                              <button
-                                className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                                title="Hủy hóa đơn"
-                                onClick={() => setSelectedInvoiceForCancel(inv)}
-                              >
-                                <i className="bi bi-x-circle" /> Hủy
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+            <ResponsiveTable
+              columns={columns}
+              data={invoices}
+              loading={loading}
+              emptyMessage="Không tìm thấy hóa đơn điện tử nào"
+              actions={renderActions}
+            />
           </div>
 
           <Pagination

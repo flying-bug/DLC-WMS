@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { useToast } from '../../contexts/ToastContext';
 import { ROLE_OPTIONS, normalizeRoleCode } from '../../utils/roleOptions';
 import {
@@ -296,35 +297,28 @@ function RolePermissionsPage() {
                         {/* Matrix Content */}
                         <div className={styles.matrixPanel}>
                             <div className={styles.matrixContent}>
-                                <table className={styles.table}>
-                                    <thead>
-                                        <tr>
-                                            <th>CHỨC NĂNG ({currentCategoryObj.name})</th>
-                                            {PERMISSION_ACTIONS.map(action => (
-                                                <th key={action.key}>{action.label.toUpperCase()}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {currentCategoryObj.modules.map(mod => (
-                                            <tr key={mod.key} className={styles.tableRow}>
-                                                <td>
-                                                    <div className={styles.featureName}>
-                                                        <div className={styles.featureIcon}>
-                                                            <i className={`bi ${mod.icon}`} />
-                                                        </div>
-                                                        {mod.name}
+                                <ResponsiveTable
+                                    columns={[
+                                        {
+                                            title: `CHỨC NĂNG (${currentCategoryObj.name})`,
+                                            render: (_, mod) => (
+                                                <div className={styles.featureName}>
+                                                    <div className={styles.featureIcon}>
+                                                        <i className={`bi ${mod.icon}`} />
                                                     </div>
-                                                </td>
-                                                {PERMISSION_ACTIONS.map(action => (
-                                                    <td key={action.key}>
-                                                        {renderCheckbox(mod.key, action.key, mod.name)}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                    <span>{mod.name}</span>
+                                                </div>
+                                            )
+                                        },
+                                        ...PERMISSION_ACTIONS.map(action => ({
+                                            title: action.label.toUpperCase(),
+                                            align: 'center',
+                                            render: (_, mod) => renderCheckbox(mod.key, action.key, mod.name)
+                                        }))
+                                    ]}
+                                    data={currentCategoryObj.modules}
+                                    keyField="key"
+                                />
                             </div>
                         </div>
                     </div>

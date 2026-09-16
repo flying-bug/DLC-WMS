@@ -14,7 +14,7 @@ import { printExportSlip } from '../../utils/printExportSlip';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue, formatDateOnly } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 
 function StocktakeDetailPage() {
   const navigate = useNavigate();
@@ -491,6 +491,113 @@ function StocktakeDetailPage() {
   const totalBad = lines.reduce((acc, l) => acc + (Number(l.bad) || 0), 0);
   const totalLost = lines.reduce((acc, l) => acc + (Number(l.lost) || 0), 0);
 
+  const participantsColumns = [
+    { title: 'STT', width: '50px', align: 'center', render: (_, __, idx) => idx + 1 },
+    { title: 'HỌ VÀ TÊN', render: (_, p, idx) => (
+        <input type="text" value={p.name} disabled={isSaved} onChange={(e) => {
+          const newP = [...participants]; newP[idx].name = e.target.value; setParticipants(newP);
+        }} />
+      )
+    },
+    { title: 'CHỨC DANH', render: (_, p, idx) => (
+        <input type="text" value={p.title} disabled={isSaved} onChange={(e) => {
+          const newP = [...participants]; newP[idx].title = e.target.value; setParticipants(newP);
+        }} />
+      )
+    },
+    { title: 'ĐẠI DIỆN', render: (_, p, idx) => (
+        <input type="text" value={p.represent} disabled={isSaved} onChange={(e) => {
+          const newP = [...participants]; newP[idx].represent = e.target.value; setParticipants(newP);
+        }} />
+      )
+    }
+  ];
+  if (!isSaved) {
+    participantsColumns.push({
+      title: 'XÓA', width: '50px', align: 'center', render: (_, __, idx) => (
+        <button type="button" style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }} onClick={() => setParticipants(participants.filter((___, i) => i !== idx))}>
+          <i className="bi bi-trash"></i>
+        </button>
+      )
+    });
+  }
+
+  const linesColumns = [
+    { title: 'MÃ HÀNG', width: '8%', render: (_, line) => line.itemCode },
+    { title: 'SKU', width: '10%', render: (_, line) => <span style={{ fontWeight: 600, color: 'var(--color-info-hover)' }}>{line.sku}</span> },
+    { title: 'TÊN HÀNG HÓA', width: '20%', render: (_, line) => line.itemName },
+    { title: 'ĐVT', width: '6%', render: (_, line) => line.unit },
+    { title: 'SỔ SÁCH', align: 'center', render: (_, line) => <span className={styles.numberCol}>{line.bookQty}</span> },
+    { title: 'THỰC TẾ', align: 'center', render: (_, line, idx) => (
+        isSaved ? <span className={styles.numberCol}>{line.countQty}</span> : (
+          <input type="number" style={{ fontWeight: 600, color: 'var(--wms-text-strong)', background: 'var(--wms-bg-soft)', border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '4px 6px', width: '100%', textAlign: 'center' }} value={line.countQty} onChange={(e) => handleCountQtyChange(idx, e.target.value)} />
+        )
+      )
+    },
+    { title: 'CHÊNH LỆCH', align: 'center', render: (_, line) => (
+        <span className={styles.numberCol} style={{ fontWeight: 700, color: Number(line.diffQty) > 0 ? '#16a34a' : Number(line.diffQty) < 0 ? 'var(--wms-danger)' : 'var(--wms-text-muted)' }}>
+          {Number(line.diffQty) > 0 ? `+${line.diffQty}` : line.diffQty}
+        </span>
+      )
+    },
+    { title: 'TỐT 100%', align: 'center', render: (_, line, idx) => (
+        isSaved ? <span className={styles.numberCol}>{line.good100}</span> : <input type="number" style={{ width: '100%', textAlign: 'center' }} value={line.good100} onChange={(e) => handleQualityChange(idx, 'good100', e.target.value)} />
+      )
+    },
+    { title: 'KÉM CẤP', align: 'center', render: (_, line, idx) => (
+        isSaved ? <span className={styles.numberCol}>{line.bad}</span> : <input type="number" style={{ width: '100%', textAlign: 'center' }} value={line.bad} onChange={(e) => handleQualityChange(idx, 'bad', e.target.value)} />
+      )
+    },
+    { title: 'HỎNG/MẤT', align: 'center', render: (_, line, idx) => (
+        isSaved ? <span className={styles.numberCol}>{line.lost}</span> : <input type="number" style={{ width: '100%', textAlign: 'center' }} value={line.lost} onChange={(e) => handleQualityChange(idx, 'lost', e.target.value)} />
+      )
+    },
+    { title: 'XỬ LÝ', width: '12%', render: (_, line, idx) => (
+        isSaved ? line.action : (
+          <SearchableSelect value={line.action} onChange={(e) => handleActionChange(idx, e.target.value)} style={{ border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '2px 4px', width: '100%' }}>
+            <option value="Không xử lý">Không xử lý</option>
+            <option value="Xử lý chênh lệch">Xử lý chênh lệch</option>
+          </SearchableSelect>
+        )
+      )
+    }
+  ];
+  if (!isSaved) {
+    linesColumns.push({
+      title: 'XÓA', width: '4%', align: 'center', render: (_, __, idx) => (
+        <button type="button" style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }} onClick={() => handleRemoveLine(idx)} title="Xóa dòng">
+          <i className="bi bi-trash"></i>
+        </button>
+      )
+    });
+  }
+
+  const renderLinesSummaryDesktop = () => (
+    <tr style={{ fontWeight: 700, backgroundColor: 'var(--wms-bg-hover)', borderTop: '2px solid var(--wms-border-strong)' }}>
+      <td colSpan={4} style={{ textAlign: 'right' }}>TỔNG CỘNG:</td>
+      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalBookQty}</td>
+      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalCountQty}</td>
+      <td className={styles.numberCol} style={{ textAlign: 'center', color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
+        {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
+      </td>
+      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalGood100}</td>
+      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalBad}</td>
+      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalLost}</td>
+      <td colSpan={isSaved ? 1 : 2}></td>
+    </tr>
+  );
+
+  const renderLinesSummaryMobile = () => (
+    <div style={{ marginTop: 12, padding: 12, borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>TỔNG CHÊNH LỆCH:</span>
+        <span style={{ fontWeight: 700, fontSize: 16, color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
+          {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <AdminLayout>
       <div className={styles.pageBody}>
@@ -555,75 +662,12 @@ function StocktakeDetailPage() {
         </div>
 
         {isParticipantsExpanded && (
-          <div className={styles.participantsSection}>
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '5%', textAlign: 'center' }}>STT</th>
-                    <th style={{ width: '30%' }}>HỌ VÀ TÊN</th>
-                    <th style={{ width: '30%' }}>CHỨC DANH</th>
-                    <th style={{ width: '30%' }}>ĐẠI DIỆN</th>
-                    {!isSaved && <th style={{ width: '5%', textAlign: 'center' }}>XÓA</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {participants.map((p, idx) => (
-                    <tr key={idx}>
-                      <td style={{ textAlign: 'center' }}>{idx + 1}</td>
-                      <td>
-                        <input
-                          type="text"
-                          value={p.name}
-                          disabled={isSaved}
-                          onChange={(e) => {
-                            const newP = [...participants];
-                            newP[idx].name = e.target.value;
-                            setParticipants(newP);
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={p.title}
-                          disabled={isSaved}
-                          onChange={(e) => {
-                            const newP = [...participants];
-                            newP[idx].title = e.target.value;
-                            setParticipants(newP);
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={p.represent}
-                          disabled={isSaved}
-                          onChange={(e) => {
-                            const newP = [...participants];
-                            newP[idx].represent = e.target.value;
-                            setParticipants(newP);
-                          }}
-                        />
-                      </td>
-                      {!isSaved && (
-                        <td style={{ textAlign: 'center' }}>
-                          <button
-                            type="button"
-                            style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
-                            onClick={() => setParticipants(participants.filter((_, i) => i !== idx))}
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ overflowX: 'auto', padding: '0 12px 12px' }}>
+              <ResponsiveTable
+                columns={participantsColumns}
+                data={participants}
+              />
             </div>
-          </div>
         )}
 
         {/* Details Section */}
@@ -654,129 +698,14 @@ function StocktakeDetailPage() {
             </div>
           )}
 
-          <div className={styles.tableContainer}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th rowSpan={2} style={{ width: '8%' }}>MÃ HÀNG</th>
-                  <th rowSpan={2} style={{ width: '10%' }}>SKU</th>
-                  <th rowSpan={2} style={{ width: '20%' }}>TÊN HÀNG HÓA</th>
-                  <th rowSpan={2} style={{ width: '6%' }}>ĐVT</th>
-                  <th colSpan={3}>SỐ LƯỢNG KHO</th>
-                  <th colSpan={3}>PHẨM CHẤT THỰC TẾ</th>
-                  <th rowSpan={2} style={{ width: '12%' }}>XỬ LÝ</th>
-                  {!isSaved && <th rowSpan={2} style={{ width: '4%', textAlign: 'center' }}>XÓA</th>}
-                </tr>
-                <tr>
-                  <th>SỔ SÁCH</th>
-                  <th>KIỂM KÊ THỰC TẾ</th>
-                  <th>CHÊNH LỆCH</th>
-                  <th>TỐT 100%</th>
-                  <th>KÉM CẤP</th>
-                  <th>HỎNG/MẤT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line, idx) => (
-                  <tr key={line.id || idx}>
-                    <td>{line.itemCode}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--color-info-hover)' }}>{line.sku}</td>
-                    <td>{line.itemName}</td>
-                    <td>{line.unit}</td>
-                    <td className={styles.numberCol}>{line.bookQty}</td>
-                    <td className={styles.numberCol}>
-                      {isSaved ? (
-                        line.countQty
-                      ) : (
-                        <input
-                          type="number"
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--wms-text-strong)',
-                            background: 'var(--wms-bg-soft)',
-                            border: '1px solid var(--wms-border-strong)',
-                            borderRadius: '3px',
-                            padding: '4px 6px'
-                          }}
-                          value={line.countQty}
-                          onChange={(e) => handleCountQtyChange(idx, e.target.value)}
-                        />
-                      )}
-                    </td>
-                    <td className={styles.numberCol} style={{
-                      fontWeight: 700,
-                      color: Number(line.diffQty) > 0 ? '#16a34a' : Number(line.diffQty) < 0 ? 'var(--wms-danger)' : 'var(--wms-text-muted)'
-                    }}>
-                      {Number(line.diffQty) > 0 ? `+${line.diffQty}` : line.diffQty}
-                    </td>
-                    <td className={styles.numberCol}>
-                      {isSaved ? line.good100 : (
-                        <input
-                          type="number"
-                          value={line.good100}
-                          onChange={(e) => handleQualityChange(idx, 'good100', e.target.value)}
-                        />
-                      )}
-                    </td>
-                    <td className={styles.numberCol}>
-                      {isSaved ? line.bad : (
-                        <input
-                          type="number"
-                          value={line.bad}
-                          onChange={(e) => handleQualityChange(idx, 'bad', e.target.value)}
-                        />
-                      )}
-                    </td>
-                    <td className={styles.numberCol}>
-                      {isSaved ? line.lost : (
-                        <input
-                          type="number"
-                          value={line.lost}
-                          onChange={(e) => handleQualityChange(idx, 'lost', e.target.value)}
-                        />
-                      )}
-                    </td>
-                    <td>
-                      {isSaved ? line.action : (
-                        <SearchableSelect
-                          value={line.action}
-                          onChange={(e) => handleActionChange(idx, e.target.value)}
-                          style={{ border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '2px 4px' }}
-                        >
-                          <option value="Không xử lý">Không xử lý</option>
-                          <option value="Xử lý chênh lệch">Xử lý chênh lệch</option>
-                        </SearchableSelect>
-                      )}
-                    </td>
-                    {!isSaved && (
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
-                          onClick={() => handleRemoveLine(idx)}
-                          title="Xóa dòng"
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-                {/* Summary Row */}
-                <tr style={{ fontWeight: 700, backgroundColor: 'var(--wms-bg-hover)', borderTop: '2px solid var(--wms-border-strong)' }}>
-                  <td colSpan={4} style={{ textAlign: 'right' }}>TỔNG CỘNG:</td>
-                  <td className={styles.numberCol}>{totalBookQty}</td>
-                  <td className={styles.numberCol}>{totalCountQty}</td>
-                  <td className={styles.numberCol} style={{ color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
-                    {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
-                  </td>
-                  <td className={styles.numberCol}>{totalGood100}</td>
-                  <td className={styles.numberCol}>{totalBad}</td>
-                  <td className={styles.numberCol}>{totalLost}</td>
-                  <td colSpan={isSaved ? 1 : 2}></td>
-                </tr>
-              </tbody>
-            </table>
+          <div style={{ overflowX: 'auto', padding: '0 12px 12px' }}>
+            <ResponsiveTable
+              columns={linesColumns}
+              data={lines}
+              emptyMessage="Không có dòng kiểm kê nào"
+              summaryRow={renderLinesSummaryDesktop()}
+              summaryMobile={renderLinesSummaryMobile()}
+            />
           </div>
         </div>
 

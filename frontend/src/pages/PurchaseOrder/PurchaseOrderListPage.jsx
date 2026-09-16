@@ -13,6 +13,7 @@ import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets
 import { exportToExcel } from '../../utils/excelExport';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -225,7 +226,119 @@ function PurchaseOrderListPage() {
   const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const showPaymentDueDate = orders.some(order => Boolean(order.paymentDueDate));
   const showExpectedDeliveryDate = orders.some(order => Boolean(order.expectedDeliveryDate));
-  const visibleColumnCount = 7 + Number(showPaymentDueDate) + Number(showExpectedDeliveryDate);
+
+  const columns = [
+    {
+      title: '#',
+      width: 45,
+      render: (_, __, idx) => (currentPage - 1) * pageSize + idx + 1
+    },
+    {
+      title: 'Mã đơn',
+      dataIndex: 'poCode',
+      width: 110,
+      render: (val, po) => (
+        <a className={styles.link} onClick={e => { e.stopPropagation(); navigate(`/purchase-orders/${po.id}`); }}>
+          {val}
+        </a>
+      )
+    },
+    {
+      title: 'Ngày lập',
+      dataIndex: 'poDate',
+      width: 115,
+      render: (val) => <span className={styles.dateOnlyCell}>{fmtDate(val)}</span>
+    },
+    {
+      title: 'Nhà cung cấp',
+      render: (_, po) => po.partnerName || `#${po.partnerId}`
+    }
+  ];
+
+  if (showPaymentDueDate) {
+    columns.push({
+      title: 'Hạn công nợ',
+      width: 125,
+      render: (_, po) => renderPaymentDueDateBadge(po)
+    });
+  }
+
+  if (showExpectedDeliveryDate) {
+    columns.push({
+      title: 'Ngày giao DK',
+      width: 130,
+      render: (_, po) => renderDeliveryDateBadge(po)
+    });
+  }
+
+  columns.push(
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'totalAmount',
+      width: 125,
+      align: 'right',
+      render: (val) => <span className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{money(val)}</span>
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      width: 100,
+      render: (val) => {
+        const st  = STATUS_LABELS[val] || { label: val, code: 'info' };
+        return (
+          <span className={`${styles.badge} ${
+            st.code === 'success' ? styles.badgeSuccess :
+            st.code === 'purple'  ? styles.badgeWarning :
+            st.code === 'danger'  ? styles.badgeDanger  :
+            styles.badgeInfo
+          }`}>
+            {st.label}
+          </span>
+        );
+      }
+    }
+  );
+
+  const renderActions = (po) => (
+    <>
+      <i
+        className="bi bi-eye"
+        title="Xem chi tiết"
+        style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-text-muted-2)', fontSize: 15 }}
+        onClick={() => navigate(`/purchase-orders/${po.id}`)}
+      />
+      <i
+        className="bi bi-printer"
+        title="In đơn mua hàng"
+        style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-info-hover)', fontSize: 15 }}
+        onClick={() => handlePrintPo(po)}
+      />
+      {po.status === 'DRAFT' && (
+        <i
+          className="bi bi-pencil"
+          title="Sửa"
+          style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-primary)', fontSize: 15 }}
+          onClick={() => guard('purchase_order:edit', () => navigate(`/purchase-orders/${po.id}/edit`))}
+        />
+      )}
+      {po.status === 'DRAFT' && (
+        <i
+          className="bi bi-check2-circle"
+          title="Duyệt đơn"
+          style={{ cursor: 'pointer', marginRight: 8, color: '#22c55e', fontSize: 15 }}
+          onClick={() => guard('purchase_order:edit', () => setConfirmApprove(po))}
+        />
+      )}
+      {po.status === 'DRAFT' && (
+        <i
+          className="bi bi-x-circle"
+          title="Hủy đơn"
+          style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
+          onClick={() => guard('purchase_order:edit', () => setConfirmCancel(po))}
+        />
+      )}
+    </>
+  );
 
   return (
     <AdminLayout>
@@ -309,143 +422,14 @@ function PurchaseOrderListPage() {
 
         {/* ── Table ── */}
         <div className={styles.tableContainer}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: 45 }}>#</th>
-                  <th style={{ width: 110 }}>Mã đơn</th>
-                  <th style={{ width: 115 }}>Ngày lập</th>
-                  <th>Nhà cung cấp</th>
-                  {showPaymentDueDate && <th style={{ width: 125 }}>Hạn công nợ</th>}
-                  {showExpectedDeliveryDate && <th style={{ width: 130 }}>Ngày giao DK</th>}
-                  <th style={{ width: 125, textAlign: 'right' }}>Tổng tiền</th>
-                  <th style={{ width: 100 }}>Trạng thái</th>
-                  <th style={{ width: 120, textAlign: 'center' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedOrders.length > 0 ? paginatedOrders.map((po, idx) => {
-                  const st  = STATUS_LABELS[po.status] || { label: po.status, code: 'info' };
-                  return (
-                    <tr
-                      key={po.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/purchase-orders/${po.id}`)}
-                    >
-                      <td>{(currentPage - 1) * pageSize + idx + 1}</td>
-                      <td>
-                        <a
-                          className={styles.link}
-                          onClick={e => { e.stopPropagation(); navigate(`/purchase-orders/${po.id}`); }}
-                        >
-                          {po.poCode}
-                        </a>
-                      </td>
-                      <td className={styles.dateOnlyCell}>{fmtDate(po.poDate)}</td>
-                      <td>{po.partnerName || `#${po.partnerId}`}</td>
-                      {showPaymentDueDate && <td>{renderPaymentDueDateBadge(po)}</td>}
-                      {showExpectedDeliveryDate && <td>{renderDeliveryDateBadge(po)}</td>}
-                      <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>
-                        {money(po.totalAmount)}
-                      </td>
-                      <td>
-                        <span className={`${styles.badge} ${
-                          st.code === 'success' ? styles.badgeSuccess :
-                          st.code === 'purple'  ? styles.badgeWarning :
-                          st.code === 'danger'  ? styles.badgeDanger  :
-                          styles.badgeInfo
-                        }`}>
-                          {st.label}
-                        </span>
-                      </td>
-                      <td className={styles.textCenter} onClick={e => e.stopPropagation()}>
-                        <i
-                          className="bi bi-eye"
-                          title="Xem chi tiết"
-                          style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-text-muted-2)', fontSize: 15 }}
-                          onClick={() => navigate(`/purchase-orders/${po.id}`)}
-                        />
-                        <i
-                          className="bi bi-printer"
-                          title="In đơn mua hàng"
-                          style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-info-hover)', fontSize: 15 }}
-                          onClick={() => handlePrintPo(po)}
-                        />
-                        {po.status === 'DRAFT' && (
-                          <i
-                            className="bi bi-pencil"
-                            title="Sửa"
-                            style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-primary)', fontSize: 15 }}
-                            onClick={() => guard('purchase_order:edit', () => navigate(`/purchase-orders/${po.id}/edit`))}
-                          />
-                        )}
-                        {po.status === 'DRAFT' && (
-                          <i
-                            className="bi bi-check2-circle"
-                            title="Duyệt đơn"
-                            style={{ cursor: 'pointer', marginRight: 8, color: '#22c55e', fontSize: 15 }}
-                            onClick={() => guard('purchase_order:edit', () => setConfirmApprove(po))}
-                          />
-                        )}
-                        {po.status === 'DRAFT' && (
-                          <i
-                            className="bi bi-x-circle"
-                            title="Hủy đơn"
-                            style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
-                            onClick={() => guard('purchase_order:edit', () => setConfirmCancel(po))}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                }) : (
-                  <tr>
-                    <td colSpan={visibleColumnCount} className={styles.textCenter} style={{ padding: 40 }}>
-                      {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy đơn mua hàng nào'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className={styles.pagination}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>Hiển thị</span>
-              <SearchableSelect
-                className="misa-select"
-                style={{ width: 70, height: 32, padding: '0 8px' }}
-                value={pageSize}
-                onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </SearchableSelect>
-              <span>trên tổng số {totalItems} bản ghi</span>
-            </div>
-            {totalPages > 1 && (
-              <div className={styles.pageControls}>
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className={styles.pageBtn}>
-                  <i className="bi bi-chevron-left" /> Trước
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <span
-                    key={p}
-                    className={`${styles.pageNumber} ${p === currentPage ? styles.active : ''}`}
-                    onClick={() => setCurrentPage(p)}
-                  >
-                    {p}
-                  </span>
-                ))}
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className={styles.pageBtn}>
-                  Sau <i className="bi bi-chevron-right" />
-                </button>
-              </div>
-            )}
-          </div>
+          <ResponsiveTable
+            columns={columns}
+            data={paginatedOrders}
+            loading={loading}
+            emptyMessage="Không tìm thấy đơn mua hàng nào"
+            onRowClick={(po) => navigate(`/purchase-orders/${po.id}`)}
+            actions={renderActions}
+          />
         </div>
 
         <div className={styles.sharedPagination}>

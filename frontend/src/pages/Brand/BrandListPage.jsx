@@ -10,6 +10,7 @@ import styles from './BrandListPage.module.css';
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -173,6 +174,130 @@ const BrandListPage = () => {
         }
     };
 
+    const tableColumns = [
+        {
+            key: 'checkbox',
+            dataIndex: 'id',
+            title: (
+                <input 
+                    type="checkbox" 
+                    className={styles.checkbox} 
+                    checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length} 
+                    onChange={handleSelectAll} 
+                />
+            ),
+            width: '40px',
+            align: 'center',
+            render: (_, item) => (
+                <input 
+                    type="checkbox" 
+                    className={styles.checkbox} 
+                    checked={selectedIds.includes(item.id)} 
+                    onChange={(e) => handleSelectRow(e, item.id)} 
+                    onClick={(e) => e.stopPropagation()} 
+                />
+            )
+        }
+    ];
+
+    if (columns.code) {
+        tableColumns.push({
+            title: 'Mã Thương Hiệu',
+            dataIndex: 'code',
+            width: '160px',
+            render: (val, item) => (
+                <a
+                    href="#"
+                    className={styles.link}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/brands/${item.id}`);
+                    }}
+                >
+                    {val}
+                </a>
+            )
+        });
+    }
+
+    if (columns.name) {
+        tableColumns.push({
+            title: 'Tên Thương Hiệu',
+            dataIndex: 'name',
+            width: '220px',
+            render: (val) => <span style={{ fontWeight: 600 }}>{val}</span>
+        });
+    }
+
+    if (columns.hotline) {
+        tableColumns.push({
+            title: 'Điện Thoại',
+            dataIndex: 'hotline',
+            width: '150px',
+            render: (val) => val || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>
+        });
+    }
+
+    if (columns.contactEmail) {
+        tableColumns.push({
+            title: 'Email',
+            dataIndex: 'contactEmail',
+            width: '200px',
+            render: (val) => val || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>
+        });
+    }
+
+    if (columns.description) {
+        tableColumns.push({
+            title: 'Mô Tả',
+            dataIndex: 'description',
+            width: '180px',
+            render: (val) => (
+                <div className={styles.tooltipContainer} style={{ maxWidth: '180px', display: 'inline-block' }}>
+                    <span className={styles.noteText}>{val || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
+                    {val && <span className={styles.tooltipText}>{val}</span>}
+                </div>
+            )
+        });
+    }
+
+    if (columns.status) {
+        tableColumns.push({
+            title: 'Trạng Thái',
+            dataIndex: 'statusLabel',
+            width: '140px',
+            render: (val, item) => (
+                <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                    {val}
+                </span>
+            )
+        });
+    }
+
+    const renderActions = (item) => (
+        <>
+            <i 
+                className="bi bi-eye" 
+                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                title="Xem chi tiết" 
+                onClick={(e) => { e.stopPropagation(); navigate(`/brands/${item.id}`); }}
+            ></i>
+            <i 
+                className="bi bi-pencil" 
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
+                title="Chỉnh sửa" 
+                onClick={(e) => handleEditClick(e, item)}
+            ></i>
+            <i 
+                className="bi bi-trash" 
+                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
+                title="Xóa thương hiệu" 
+                onClick={(e) => handleDeleteClick(e, item)}
+            ></i>
+        </>
+    );
+
     return (
         <AdminLayout>
             <div className={styles.pageBody}>
@@ -238,112 +363,14 @@ const BrandListPage = () => {
                 </div>
 
                 <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '40px', textAlign: 'center' }}>
-                                    <input 
-                                        type="checkbox" 
-                                        className={styles.checkbox} 
-                                        checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length} 
-                                        onChange={handleSelectAll} 
-                                    />
-                                </th>
-                                {columns.code && <th style={{ width: '160px' }}>Mã Thương Hiệu</th>}
-                                {columns.name && <th style={{ width: '220px' }}>Tên Thương Hiệu</th>}
-                                {columns.hotline && <th style={{ width: '150px' }}>Điện Thoại</th>}
-                                {columns.contactEmail && <th style={{ width: '200px' }}>Email</th>}
-                                {columns.description && <th style={{ width: '180px' }}>Mô Tả</th>}
-                                {columns.status && <th style={{ width: '140px' }}>Trạng Thái</th>}
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && paginatedRows.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
-                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
-                                    </td>
-                                </tr>
-                            ) : paginatedRows.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8">
-                                        <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy thương hiệu nào</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedRows.map(item => (
-                                    <tr key={item.id} onClick={() => navigate(`/brands/${item.id}`)} style={{ cursor: 'pointer' }}>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input 
-                                                type="checkbox" 
-                                                className={styles.checkbox} 
-                                                checked={selectedIds.includes(item.id)} 
-                                                onChange={(e) => handleSelectRow(e, item.id)} 
-                                                onClick={(e) => e.stopPropagation()} 
-                                            />
-                                        </td>
-                                        {columns.code && (
-                                            <td style={{ whiteSpace: 'nowrap' }}>
-                                                <a
-                                                    href="#"
-                                                    className={styles.link}
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        navigate(`/brands/${item.id}`);
-                                                    }}
-                                                >
-                                                    {item.code}
-                                                </a>
-                                            </td>
-                                        )}
-                                        {columns.name && <td style={{ fontWeight: 600 }}>{item.name}</td>}
-                                        {columns.hotline && <td>{item.hotline || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
-                                        {columns.contactEmail && <td>{item.contactEmail || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
-                                        {columns.description && (
-                                            <td style={{ maxWidth: '180px' }}>
-                                                <div className={styles.tooltipContainer}>
-                                                    <span className={styles.noteText}>{item.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
-                                                    {item.description && <span className={styles.tooltipText}>{item.description}</span>}
-                                                </div>
-                                            </td>
-                                        )}
-                                        {columns.status && (
-                                            <td>
-                                                <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                                                    {item.statusLabel}
-                                                </span>
-                                            </td>
-                                        )}
-                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                                            <i 
-                                                className="bi bi-eye" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Xem chi tiết" 
-                                                onClick={(e) => { e.stopPropagation(); navigate(`/brands/${item.id}`); }}
-                                            ></i>
-                                            <i 
-                                                className="bi bi-pencil" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Chỉnh sửa" 
-                                                onClick={(e) => handleEditClick(e, item)}
-                                            ></i>
-                                            <i 
-                                                className="bi bi-trash" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                title="Xóa thương hiệu" 
-                                                onClick={(e) => handleDeleteClick(e, item)}
-                                            ></i>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <ResponsiveTable
+                        columns={tableColumns}
+                        data={paginatedRows}
+                        loading={loading}
+                        emptyMessage="Không tìm thấy thương hiệu nào"
+                        onRowClick={(item) => navigate(`/brands/${item.id}`)}
+                        actions={renderActions}
+                    />
 
                     <Pagination
                         page={currentPage - 1}

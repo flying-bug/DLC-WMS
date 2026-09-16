@@ -8,6 +8,7 @@ import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
 import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import styles from './PurchaseOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
@@ -158,6 +159,45 @@ function PurchaseOrderDetailPage() {
   }
 
   const stCfg = STATUS_CONFIG[po.status] || STATUS_CONFIG.DRAFT;
+
+  const linesColumns = [
+    { title: '#', width: '40px', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
+    { title: 'Sản phẩm', render: (_, line) => <span style={{ fontWeight: 500 }}>{line.variantName || line.productName || `#${line.variantId}`}</span> },
+    { title: 'SKU', width: '80px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.sku || '—'}</span> },
+    { title: 'Kho nhận dự kiến', width: '160px', render: (_, line) => <span style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? warehouseById.get(line.warehouseId)?.name : null) || '—'}</span> },
+    { title: 'ĐVT', width: '80px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || '—'}</span> },
+    { title: 'Số lượng', align: 'right', width: '100px', render: (_, line) => <span style={{ fontWeight: 600 }}>{Number(line.quantity).toLocaleString('vi-VN')}</span> },
+    { title: 'Đơn giá', align: 'right', width: '130px', render: (_, line) => money(line.unitPrice) },
+    { title: 'VAT %', align: 'center', width: '70px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.vatRate || 0}%</span> },
+    { title: 'Tiền thuế', align: 'right', width: '80px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{money(line.vatAmount)}</span> },
+    { title: 'Thành tiền', align: 'right', width: '140px', render: (_, line) => <span style={{ fontWeight: 700, color: 'var(--color-primary-link)' }}>{money(Number(line.lineAmount) + Number(line.vatAmount || 0))}</span> },
+    { title: 'Ghi chú', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.note || ''}</span> }
+  ];
+
+  const renderLinesSummaryDesktop = () => (
+    <tr>
+      <td colSpan={9} className={styles.totalLabel}>TỔNG CỘNG:</td>
+      <td className={styles.totalAmount}>{money(po.totalAmount)}</td>
+      <td className={styles.totalNoteCell} />
+    </tr>
+  );
+
+  const renderLinesSummaryMobile = () => (
+    <div style={{ marginTop: 12, padding: 12, borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-subtle)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>TỔNG CỘNG:</span>
+        <span style={{ fontWeight: 700, color: 'var(--color-primary-link)', fontSize: 16 }}>{money(po.totalAmount)}</span>
+      </div>
+    </div>
+  );
+
+  const importSlipsColumns = [
+    { title: 'Mã phiếu nhập', render: (_, slip) => <span style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }} onClick={() => navigate(`/import-history`)}>{slip.docCode}</span> },
+    { title: 'Ngày nhập', render: (_, slip) => fmtDateTime(slip.createdAt) },
+    { title: 'Kho', render: (_, slip) => slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '—' },
+    { title: 'Người tạo', render: (_, slip) => slip.createdByName || userById.get(slip.createdBy)?.fullName || userById.get(slip.createdBy)?.username || `#${slip.createdBy}` },
+    { title: 'Ghi chú', render: (_, slip) => <span style={{ color: 'var(--wms-text-muted)' }}>{slip.note || '—'}</span> }
+  ];
 
   return (
     <AdminLayout>
@@ -328,72 +368,14 @@ function PurchaseOrderDetailPage() {
           <div className={styles.cardTitle}>
             <i className="bi bi-list-ul" /> Danh sách hàng hóa
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className={styles.linesTable}>
-              <thead>
-                <tr>
-                  <th style={{ width: 40 }}>#</th>
-                  <th>Sản phẩm</th>
-                  <th style={{ width: 80 }}>SKU</th>
-                  <th style={{ width: 160 }}>Kho nhận dự kiến</th>
-                  <th style={{ width: 80 }}>ĐVT</th>
-                  <th style={{ width: 100, textAlign: 'right' }}>Số lượng</th>
-                  <th style={{ width: 130, textAlign: 'right' }}>Đơn giá</th>
-                  <th style={{ width: 70, textAlign: 'center' }}>VAT %</th>
-                  <th style={{ width: 80, textAlign: 'right' }}>Tiền thuế</th>
-                  <th style={{ width: 140, textAlign: 'right' }}>Thành tiền</th>
-                  <th>Ghi chú</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(po.lines || []).length === 0 ? (
-                  <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: 24, color: 'var(--wms-text-subtle)' }}>
-                      Không có dòng sản phẩm
-                    </td>
-                  </tr>
-                ) : (
-                  (po.lines || []).map((line, idx) => (
-                    <tr key={line.id || idx}>
-                      <td style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</td>
-                      <td style={{ fontWeight: 500 }}>{line.variantName || line.productName || `#${line.variantId}`}</td>
-                      <td style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.sku || '—'}</td>
-                      <td style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>
-                        {line.warehouseName || (line.warehouseId ? warehouseById.get(line.warehouseId)?.name : null) || '—'}
-                      </td>
-                      <td style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || '—'}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                        {Number(line.quantity).toLocaleString('vi-VN')}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        {money(line.unitPrice)}
-                      </td>
-                      <td style={{ textAlign: 'center', color: 'var(--wms-text-muted)' }}>
-                        {line.vatRate || 0}%
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--wms-text-muted)' }}>
-                        {money(line.vatAmount)}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-link)' }}>
-                        {money(Number(line.lineAmount) + Number(line.vatAmount || 0))}
-                      </td>
-                      <td style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.note || ''}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={9} className={styles.totalLabel}>
-                    TỔNG CỘNG:
-                  </td>
-                  <td className={styles.totalAmount}>
-                    {money(po.totalAmount)}
-                  </td>
-                  <td className={styles.totalNoteCell} />
-                </tr>
-              </tfoot>
-            </table>
+          <div style={{ overflowX: 'auto', padding: '0 12px 12px' }}>
+            <ResponsiveTable
+              columns={linesColumns}
+              data={po.lines || []}
+              emptyMessage="Không có dòng sản phẩm"
+              summaryRow={renderLinesSummaryDesktop()}
+              summaryMobile={renderLinesSummaryMobile()}
+            />
           </div>
         </div>
 
@@ -427,44 +409,12 @@ function PurchaseOrderDetailPage() {
             <div className={styles.cardTitle}>
               <i className="bi bi-box-arrow-in-down" /> Các phiếu nhập kho liên kết
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table className={styles.linesTable}>
-                <thead>
-                  <tr>
-                    <th>Mã phiếu nhập</th>
-                    <th>Ngày nhập</th>
-                    <th>Kho</th>
-                    <th>Người tạo</th>
-                    <th>Ghi chú</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {importSlips.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--wms-text-subtle)' }}>
-                        Chưa có phiếu nhập kho nào được tạo cho đơn hàng này
-                      </td>
-                    </tr>
-                  ) : (
-                    importSlips.map((slip) => (
-                      <tr key={slip.id}>
-                        <td>
-                          <span 
-                            style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }}
-                            onClick={() => navigate(`/import-history`)} // ideally go to detail page if available
-                          >
-                            {slip.docCode}
-                          </span>
-                        </td>
-                        <td>{fmtDateTime(slip.createdAt)}</td>
-                        <td>{slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '—'}</td>
-                        <td>{slip.createdByName || userById.get(slip.createdBy)?.fullName || userById.get(slip.createdBy)?.username || `#${slip.createdBy}`}</td>
-                        <td style={{ color: 'var(--wms-text-muted)' }}>{slip.note || '—'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+            <div style={{ overflowX: 'auto', padding: '0 12px 12px' }}>
+              <ResponsiveTable
+                columns={importSlipsColumns}
+                data={importSlips}
+                emptyMessage="Chưa có phiếu nhập kho nào được tạo cho đơn hàng này"
+              />
             </div>
           </div>
         )}

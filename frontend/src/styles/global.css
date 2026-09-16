@@ -446,7 +446,15 @@ html, body, #root {
   [class*="tableContainer"], [class*="tableView"] {
     width: 100% !important;
     max-width: 100% !important;
-    overflow: hidden !important;
+    overflow-x: auto !important;
+  }
+
+  /* Make standard tables horizontally scrollable safely */
+  .misa-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   [class*="pagination"] {

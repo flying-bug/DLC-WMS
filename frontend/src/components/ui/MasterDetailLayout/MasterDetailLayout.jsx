@@ -1,6 +1,7 @@
 import React, { useId, useState, useMemo } from 'react';
 import styles from './MasterDetailLayout.module.css';
 import Pagination from '../Pagination/Pagination';
+import ResponsiveTable from '../Table/ResponsiveTable';
 
 /**
  * MasterDetailLayout - Bố cục 2 tầng chuẩn ERP đồng bộ với DLC Design System
@@ -107,68 +108,41 @@ export default function MasterDetailLayout({
       {/* TẦNG TRÊN: MASTER */}
       <section className={styles.masterSection} style={!detailVisible ? { flex: '1 1 100%' } : {}}>
         <div className={styles.tableWrapper}>
-          <table className={styles.dataTable}>
-            <thead>
-              <tr>
-                {/* Không có khái niệm "chọn tất cả" vì bảng chỉ cho phép chọn 1 dòng để xem chi tiết */}
-                <th style={{ width: '40px', textAlign: 'center' }} aria-hidden="true" />
-
-                {masterColumns.map((col, idx) => (
-                  <th key={col.key || idx} style={col.style || { width: col.width }}>
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {masterLoading ? (
-                <tr>
-                  <td colSpan={masterColumns.length + 1} className={styles.loadingCell}>
-                    <i className="bi bi-arrow-repeat" style={{ marginRight: '8px', color: 'var(--color-primary)', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
-                    Đang tải dữ liệu chứng từ...
-                  </td>
-                </tr>
-              ) : paginatedMasterData.length === 0 ? (
-                <tr>
-                  <td colSpan={masterColumns.length + 1} className={styles.emptyCell}>
-                    Không tìm thấy bản ghi nào.
-                  </td>
-                </tr>
-              ) : (
-                paginatedMasterData.map((row, rowIdx) => {
-                  const isSelected =
-                    selectedItem && (selectedItem.id === row.id || selectedItem.docCode === row.docCode);
+          <ResponsiveTable
+            columns={[
+              {
+                key: 'radioSelect',
+                dataIndex: 'radioSelect',
+                title: <span aria-hidden="true" />,
+                width: '40px',
+                align: 'center',
+                render: (_, row) => {
+                  const isSelected = selectedItem && (selectedItem.id === row.id || selectedItem.docCode === row.docCode);
                   return (
-                    <tr
-                      key={row.id || row.docCode || rowIdx}
-                      className={`${styles.dataRow} ${isSelected ? styles.selectedRow : ''}`}
-                      onClick={() => onSelectItem && onSelectItem(row)}
-                      onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
-                    >
-                      <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="radio"
-                          name={rowSelectName}
-                          checked={isSelected}
-                          onChange={() => onSelectItem && onSelectItem(row)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      </td>
-                      {masterColumns.map((col, colIdx) => (
-                        <td key={col.key || colIdx} style={col.style}>
-                          {col.render
-                            ? col.render(row[col.key], row, (safeCurrentPage - 1) * currentPageSize + rowIdx)
-                            : row[col.key] != null
-                              ? String(row[col.key])
-                              : '-'}
-                        </td>
-                      ))}
-                    </tr>
+                    <input
+                      type="radio"
+                      name={rowSelectName}
+                      checked={isSelected}
+                      onChange={() => onSelectItem && onSelectItem(row)}
+                      style={{ cursor: 'pointer' }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                }
+              },
+              ...masterColumns.map(col => ({
+                ...col,
+                title: col.label,
+                dataIndex: col.key,
+                render: col.render ? (val, row) => col.render(val, row, paginatedMasterData.indexOf(row)) : undefined
+              }))
+            ]}
+            data={paginatedMasterData}
+            loading={masterLoading}
+            onRowClick={(row) => onSelectItem && onSelectItem(row)}
+            onRowDoubleClick={(row) => onRowDoubleClick && onRowDoubleClick(row)}
+            emptyMessage="Không tìm thấy bản ghi nào."
+          />
         </div>
 
         {/* MASTER FOOTER BAR */}
@@ -283,33 +257,16 @@ export default function MasterDetailLayout({
                 <span>Chứng từ này không có dòng hàng chi tiết nào.</span>
               </div>
             ) : (
-              <table className={styles.dataTable}>
-                <thead>
-                  <tr>
-                    {detailColumns.map((col, idx) => (
-                      <th key={col.key || idx} style={col.style || { width: col.width }}>
-                        {col.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedDetailData.map((line, lineIdx) => (
-                    <tr key={line.id || lineIdx} className={styles.dataRow}>
-                      {detailColumns.map((col, colIdx) => (
-                        <td key={col.key || colIdx} style={col.style}>
-                          {col.render
-                            ? col.render(line[col.key], line, (safeDetailPage - 1) * detailPageSize + lineIdx)
-                            : line[col.key] != null
-                              ? String(line[col.key])
-                              : '-'}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-
-                  {/* DÒNG TỔNG CỘNG */}
-                  {showDetailSummary && detailData.length > 0 && (
+              <ResponsiveTable
+                columns={detailColumns.map(col => ({
+                  ...col,
+                  title: col.label,
+                  dataIndex: col.key,
+                  render: col.render ? (val, row) => col.render(val, row, paginatedDetailData.indexOf(row)) : undefined
+                }))}
+                data={paginatedDetailData}
+                summaryRow={
+                  showDetailSummary && detailData.length > 0 ? (
                     <tr className={styles.detailTotalRow}>
                       <td colSpan={summaryLabelSpan} style={{ textAlign: 'right' }}>
                         <strong>Tổng cộng:</strong>
@@ -327,9 +284,20 @@ export default function MasterDetailLayout({
                       </td>
                       {summaryTrailingSpan > 0 && <td colSpan={summaryTrailingSpan}></td>}
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  ) : null
+                }
+                summaryMobile={
+                  showDetailSummary && detailData.length > 0 ? (
+                    <div style={{ marginTop: 12, padding: 12, background: 'var(--color-bg-soft)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <strong>Tổng cộng:</strong>
+                      <div style={{ textAlign: 'right' }}>
+                        {totalExpected > 0 && <div>Dự kiến: <strong style={{ color: 'var(--color-text-strong)' }}>{totalExpected.toLocaleString('vi-VN')}</strong></div>}
+                        {totalActual > 0 && <div>Thực tế: <strong style={{ color: 'var(--color-primary)' }}>{totalActual.toLocaleString('vi-VN')}</strong></div>}
+                      </div>
+                    </div>
+                  ) : null
+                }
+              />
             )}
           </div>
 

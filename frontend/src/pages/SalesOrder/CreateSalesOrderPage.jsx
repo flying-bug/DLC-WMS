@@ -17,6 +17,7 @@ import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import styles from './CreateSalesOrderPage.module.css';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
@@ -675,6 +676,249 @@ function CreateSalesOrderPage() {
     return map;
   }, [inventoryBalances]);
 
+  const renderSubRow = (line, idx) => {
+    const prod = variants.find(v => String(v.id) === String(line.variantId));
+    const isSerialProduct = Boolean(prod?.trackSerial);
+    const hasSubRow = (mode === 'direct' && isSerialProduct) || line.showNote || Boolean(line.note);
+
+    if (!hasSubRow) return null;
+
+    return (
+      <div className={styles.subRowContent}>
+        {mode === 'direct' && isSerialProduct && (
+          <div className={styles.serialBox}>
+            <span className={styles.serialLabel}>
+              <i className="bi bi-upc-scan" /> Serial ({(line.serialNumbers?.length || 0)}/{Number(line.quantity || 0)}) - Tùy chọn, Thủ kho sẽ quét khi xuất hàng:
+            </span>
+            {line.serialNumbers?.length > 0 ? (
+              <div className={styles.serialChips}>
+                {line.serialNumbers.map((sn, sIdx) => (
+                  <span key={sIdx} className={styles.serialBadge}>{sn}</span>
+                ))}
+              </div>
+            ) : (
+              <span className={styles.serialEmptyText}>Chưa chọn Serial</span>
+            )}
+            <button
+              type="button"
+              className={styles.btnScanSerial}
+              onClick={() => handleOpenSerialModal(idx)}
+            >
+              <i className="bi bi-upc-scan" /> {line.serialNumbers?.length > 0 ? 'Sửa Serial' : 'Chọn/Quét Serial'}
+            </button>
+          </div>
+        )}
+        {(line.showNote || line.note) ? (
+          <div className={styles.lineNoteInputWrap}>
+            <i className="bi bi-card-text" style={{ color: 'var(--wms-text-muted)', fontSize: 13 }} />
+            <input
+              type="text"
+              className={styles.lineSubNoteInput}
+              value={line.note || ''}
+              onChange={e => updateLine(idx, 'note', e.target.value)}
+              placeholder="Nhập ghi chú cho sản phẩm này..."
+              autoFocus={line.showNote && !line.note}
+            />
+            <button
+              type="button"
+              className={styles.btnDeleteSubNote}
+              onClick={() => {
+                updateLine(idx, 'note', '');
+                updateLine(idx, 'showNote', false);
+              }}
+              title="Ẩn ghi chú"
+            >
+              <i className="bi bi-x" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={styles.btnAddLineNote}
+            onClick={() => updateLine(idx, 'showNote', true)}
+          >
+            <i className="bi bi-plus" /> Thêm ghi chú
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const linesColumns = [
+    { title: '#', width: '36px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
+    { title: 'Mã hàng', width: '130px', render: (_, line, idx) => {
+        const effectiveWh = line.warehouseId || null;
+        const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
+        return (
+          <ProductGridSelect
+            id={`so-line-code-${idx}`}
+            products={productOptions}
+            inventoryMap={lineInventoryMap}
+            value={line.variantId}
+            onChange={selected => handleProductSelect(idx, selected)}
+            onAddNew={() => {
+              setQuickAddLineIndex(idx);
+              setShowQuickAddProduct(true);
+            }}
+            displayMode="code"
+            placeholder="Chọn mã"
+          />
+        );
+      } 
+    },
+    { title: 'Tên hàng', minWidth: '180px', render: (_, line, idx) => {
+        const effectiveWh = line.warehouseId || null;
+        const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ flex: 1 }}>
+              <ProductGridSelect
+                id={`so-line-name-${idx}`}
+                products={productOptions}
+                inventoryMap={lineInventoryMap}
+                value={line.variantId}
+                onChange={selected => handleProductSelect(idx, selected)}
+                onAddNew={() => {
+                  setQuickAddLineIndex(idx);
+                  setShowQuickAddProduct(true);
+                }}
+                displayMode="name"
+                placeholder="Chọn hàng hóa"
+              />
+            </div>
+            <button
+              type="button"
+              className={`${styles.btnInlineNote} ${line.showNote || line.note ? styles.btnInlineNoteActive : ''}`}
+              onClick={() => updateLine(idx, 'showNote', !line.showNote)}
+              title={line.showNote || line.note ? "Ẩn ghi chú" : "Thêm ghi chú dòng"}
+            >
+              <i className="bi bi-chat-left-text" />
+            </button>
+          </div>
+        );
+      }
+    },
+    { title: 'Kho xuất', width: '115px', render: (_, line, idx) => (
+        <WarehouseGridSelect
+          id={`so-line-wh-${idx}`}
+          warehouses={warehouses}
+          value={line.warehouseId}
+          onChange={val => handleWarehouseChange(idx, val)}
+          placeholder="Chọn kho"
+          displayMode="code"
+          hasWarning={!line.warehouseId}
+        />
+      )
+    },
+    { title: 'ĐVT', width: '55px', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12.5 }}>{line.unitName || '—'}</span> },
+    { title: 'SL / Tồn', width: '110px', align: 'center', render: (_, line, idx) => {
+        const effectiveWh = line.warehouseId || null;
+        const availableQty = line.variantId
+          ? (effectiveWh
+              ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
+              : (inventoryMap.get(String(line.variantId)) || 0))
+          : 0;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+            <input
+              id={`so-line-qty-${idx}`}
+              type="text"
+              inputMode="numeric"
+              className={styles.lineInput}
+              style={{ width: '46px', textAlign: 'center', padding: '0 2px' }}
+              value={line.quantity}
+              onChange={e => {
+                const val = digitsOnly(e.target.value);
+                updateLine(idx, 'quantity', val);
+              }}
+              onBlur={() => {
+                if (!line.quantity || Number(line.quantity) < 1) {
+                  updateLine(idx, 'quantity', 1);
+                }
+              }}
+            />
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: effectiveWh
+                  ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : 'var(--wms-danger)')
+                  : 'var(--wms-text-subtle)',
+                whiteSpace: 'nowrap',
+              }}
+              title={effectiveWh ? `Tồn kho: ${money(availableQty)}` : 'Chưa chọn kho'}
+            >
+              / {effectiveWh ? money(availableQty) : '—'}
+            </span>
+          </div>
+        );
+      }
+    },
+    { title: 'BH (T)', width: '68px', align: 'center', render: (_, line, idx) => (
+        <input
+          id={`so-line-warranty-${idx}`}
+          type="text"
+          inputMode="numeric"
+          className={styles.lineInput}
+          style={{ width: '100%', textAlign: 'center', padding: '0 2px' }}
+          value={line.warrantyMonths ?? ''}
+          onChange={e => {
+            const val = digitsOnly(e.target.value);
+            updateLine(idx, 'warrantyMonths', val === '' ? '' : Number(val));
+          }}
+          onBlur={() => {
+            if (line.warrantyMonths === '' || line.warrantyMonths == null) {
+              updateLine(idx, 'warrantyMonths', 0);
+            }
+          }}
+        />
+      )
+    },
+    { title: 'Đơn giá', width: '125px', align: 'right', render: (_, line, idx) => (
+        <input
+          id={`so-line-price-${idx}`}
+          inputMode="numeric"
+          type="text"
+          className={styles.lineInput}
+          style={{ width: '100%', textAlign: 'right', padding: '0 6px' }}
+          value={formatMoneyInput(line.unitPrice)}
+          onChange={e => updateLine(idx, 'unitPrice', digitsOnly(e.target.value))}
+        />
+      )
+    },
+    { title: 'Thành tiền', width: '130px', align: 'right', render: (_, line) => (
+        <span style={{ fontWeight: 600, color: '#0075c0', fontSize: 13, whiteSpace: 'nowrap' }}>
+          {money(Number(line.quantity) * Number(line.unitPrice))} đ
+        </span>
+      )
+    },
+    { title: '% VAT', width: '76px', align: 'center', render: (_, line, idx) => (
+        <select
+          id={`so-line-vat-${idx}`}
+          className={styles.lineInput}
+          style={{ width: '100%', textAlign: 'center', padding: '0 4px', cursor: 'pointer', height: '28px', background: '#fff' }}
+          value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
+          onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
+        >
+          <option value={0}>0%</option>
+          <option value={5}>5%</option>
+          <option value={8}>8%</option>
+          <option value={10}>10%</option>
+        </select>
+      )
+    }
+  ];
+
+  if (lines.length > 1) {
+    linesColumns.push({
+      title: '', width: '36px', align: 'center', render: (_, __, idx) => (
+        <button className={styles.btnRemoveLine} onClick={() => removeLine(idx)} title="Xóa dòng">
+          <i className="bi bi-trash" />
+        </button>
+      )
+    });
+  }
+
   return (
     <AdminLayout>
       <div className={styles.page}>
@@ -928,259 +1172,11 @@ function CreateSalesOrderPage() {
               </div>
 
               <div className={styles.linesTableWrap}>
-                <table className={styles.linesTable}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '36px', textAlign: 'center' }}>#</th>
-                      <th style={{ width: '130px', minWidth: '120px' }}>Mã hàng</th>
-                      <th style={{ minWidth: '180px' }}>Tên hàng</th>
-                      <th style={{ width: '115px', minWidth: '110px' }}>Kho xuất</th>
-                      <th style={{ width: '55px', textAlign: 'center' }}>ĐVT</th>
-                      <th style={{ width: '110px', minWidth: '105px', textAlign: 'center' }}>SL / Tồn</th>
-                      <th style={{ width: '68px', minWidth: '65px', textAlign: 'center' }}>BH (T)</th>
-                      <th style={{ width: '125px', minWidth: '120px', textAlign: 'right' }}>Đơn giá</th>
-                      <th style={{ width: '130px', minWidth: '125px', textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ width: '76px', minWidth: '72px', textAlign: 'center' }}>% VAT</th>
-                      <th style={{ width: '36px', textAlign: 'center' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line, idx) => {
-                      const lineTotal = Number(line.quantity) * Number(line.unitPrice);
-                      const effectiveWh = line.warehouseId || null;
-                      const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
-                      const availableQty = line.variantId
-                        ? (effectiveWh
-                            ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
-                            : (inventoryMap.get(String(line.variantId)) || 0))
-                        : 0;
-                      const prod = variants.find(v => String(v.id) === String(line.variantId));
-                      const isSerialProduct = Boolean(prod?.trackSerial);
-                      const hasSubRow = (mode === 'direct' && isSerialProduct) || line.showNote || Boolean(line.note);
-
-                      return (
-                        <React.Fragment key={idx}>
-                          <tr>
-                            <td style={{ textAlign: 'center', color: 'var(--wms-text-subtle)' }}>{idx + 1}</td>
-                            <td>
-                              <ProductGridSelect
-                                id={`so-line-code-${idx}`}
-                                products={productOptions}
-                                inventoryMap={lineInventoryMap}
-                                value={line.variantId}
-                                onChange={selected => handleProductSelect(idx, selected)}
-                                onAddNew={() => {
-                                  setQuickAddLineIndex(idx);
-                                  setShowQuickAddProduct(true);
-                                }}
-                                displayMode="code"
-                                placeholder="Chọn mã"
-                              />
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <div style={{ flex: 1 }}>
-                                  <ProductGridSelect
-                                    id={`so-line-name-${idx}`}
-                                    products={productOptions}
-                                    inventoryMap={lineInventoryMap}
-                                    value={line.variantId}
-                                    onChange={selected => handleProductSelect(idx, selected)}
-                                    onAddNew={() => {
-                                      setQuickAddLineIndex(idx);
-                                      setShowQuickAddProduct(true);
-                                    }}
-                                    displayMode="name"
-                                    placeholder="Chọn hàng hóa"
-                                  />
-                                </div>
-                                <button
-                                  type="button"
-                                  className={`${styles.btnInlineNote} ${line.showNote || line.note ? styles.btnInlineNoteActive : ''}`}
-                                  onClick={() => updateLine(idx, 'showNote', !line.showNote)}
-                                  title={line.showNote || line.note ? "Ẩn ghi chú" : "Thêm ghi chú dòng"}
-                                >
-                                  <i className="bi bi-chat-left-text" />
-                                </button>
-                              </div>
-                            </td>
-                            <td>
-                              <WarehouseGridSelect
-                                id={`so-line-wh-${idx}`}
-                                warehouses={warehouses}
-                                value={line.warehouseId}
-                                onChange={val => handleWarehouseChange(idx, val)}
-                                placeholder="Chọn kho"
-                                displayMode="code"
-                                hasWarning={!line.warehouseId}
-                              />
-                            </td>
-                            <td style={{ textAlign: 'center', color: 'var(--wms-text-muted)', fontSize: 12.5 }}>
-                              {line.unitName || '—'}
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                <input
-                                  id={`so-line-qty-${idx}`}
-                                  type="text"
-                                  inputMode="numeric"
-                                  className={styles.lineInput}
-                                  style={{ width: '46px', textAlign: 'center', padding: '0 2px' }}
-                                  value={line.quantity}
-                                  onChange={e => {
-                                    const val = digitsOnly(e.target.value);
-                                    updateLine(idx, 'quantity', val);
-                                  }}
-                                  onBlur={() => {
-                                    if (!line.quantity || Number(line.quantity) < 1) {
-                                      updateLine(idx, 'quantity', 1);
-                                    }
-                                  }}
-                                />
-                                <span
-                                  style={{
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    color: effectiveWh
-                                      ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : 'var(--wms-danger)')
-                                      : 'var(--wms-text-subtle)',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                  title={effectiveWh ? `Tồn kho: ${money(availableQty)}` : 'Chưa chọn kho'}
-                                >
-                                  / {effectiveWh ? money(availableQty) : '—'}
-                                </span>
-                              </div>
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <input
-                                id={`so-line-warranty-${idx}`}
-                                type="text"
-                                inputMode="numeric"
-                                className={styles.lineInput}
-                                style={{ width: '100%', textAlign: 'center', padding: '0 2px' }}
-                                value={line.warrantyMonths ?? ''}
-                                onChange={e => {
-                                  const val = digitsOnly(e.target.value);
-                                  updateLine(idx, 'warrantyMonths', val === '' ? '' : Number(val));
-                                }}
-                                onBlur={() => {
-                                  if (line.warrantyMonths === '' || line.warrantyMonths == null) {
-                                    updateLine(idx, 'warrantyMonths', 0);
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                id={`so-line-price-${idx}`}
-                                inputMode="numeric"
-                                type="text"
-                                className={styles.lineInput}
-                                style={{ width: '100%', textAlign: 'right', padding: '0 6px' }}
-                                value={formatMoneyInput(line.unitPrice)}
-                                onChange={e => updateLine(idx, 'unitPrice', digitsOnly(e.target.value))}
-                              />
-                            </td>
-                            <td style={{ textAlign: 'right', fontWeight: 600, color: '#0075c0', fontSize: 13, whiteSpace: 'nowrap' }}>
-                              {money(lineTotal)} đ
-                            </td>
-                            <td>
-                              <select
-                                id={`so-line-vat-${idx}`}
-                                className={styles.lineInput}
-                                style={{ width: '100%', textAlign: 'center', padding: '0 4px', cursor: 'pointer', height: '28px', background: '#fff' }}
-                                value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
-                                onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
-                              >
-                                <option value={0}>0%</option>
-                                <option value={5}>5%</option>
-                                <option value={8}>8%</option>
-                                <option value={10}>10%</option>
-                              </select>
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              {lines.length > 1 && (
-                                <button className={styles.btnRemoveLine} onClick={() => removeLine(idx)} title="Xóa dòng">
-                                  <i className="bi bi-trash" />
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-
-                          {/* Dòng mở rộng (Sub-row) cho Serial và Ghi chú */}
-                          {hasSubRow && (
-                            <tr className={styles.subRow}>
-                              <td></td>
-                              <td colSpan={10}>
-                                <div className={styles.subRowContent}>
-                                  {/* Hiển thị & chọn Serial khi bán trực tiếp sản phẩm có quản lý Serial */}
-                                  {mode === 'direct' && isSerialProduct && (
-                                    <div className={styles.serialBox}>
-                                      <span className={styles.serialLabel}>
-                                        <i className="bi bi-upc-scan" /> Serial ({(line.serialNumbers?.length || 0)}/{Number(line.quantity || 0)}) - Tùy chọn, Thủ kho sẽ quét khi xuất hàng:
-                                      </span>
-                                      {line.serialNumbers?.length > 0 ? (
-                                        <div className={styles.serialChips}>
-                                          {line.serialNumbers.map((sn, sIdx) => (
-                                            <span key={sIdx} className={styles.serialBadge}>{sn}</span>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <span className={styles.serialEmptyText}>Chưa chọn Serial</span>
-                                      )}
-                                      <button
-                                        type="button"
-                                        className={styles.btnScanSerial}
-                                        onClick={() => handleOpenSerialModal(idx)}
-                                      >
-                                        <i className="bi bi-upc-scan" /> {line.serialNumbers?.length > 0 ? 'Sửa Serial' : 'Chọn/Quét Serial'}
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  {/* Ô nhập ghi chú dòng */}
-                                  {(line.showNote || line.note) ? (
-                                    <div className={styles.lineNoteInputWrap}>
-                                      <i className="bi bi-card-text" style={{ color: 'var(--wms-text-muted)', fontSize: 13 }} />
-                                      <input
-                                        type="text"
-                                        className={styles.lineSubNoteInput}
-                                        value={line.note || ''}
-                                        onChange={e => updateLine(idx, 'note', e.target.value)}
-                                        placeholder="Nhập ghi chú cho sản phẩm này..."
-                                        autoFocus={line.showNote && !line.note}
-                                      />
-                                      <button
-                                        type="button"
-                                        className={styles.btnDeleteSubNote}
-                                        onClick={() => {
-                                          updateLine(idx, 'note', '');
-                                          updateLine(idx, 'showNote', false);
-                                        }}
-                                        title="Ẩn ghi chú"
-                                      >
-                                        <i className="bi bi-x" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      className={styles.btnAddLineNote}
-                                      onClick={() => updateLine(idx, 'showNote', true)}
-                                    >
-                                      <i className="bi bi-plus" /> Thêm ghi chú
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <ResponsiveTable
+                  columns={linesColumns}
+                  data={lines}
+                  subRowRender={renderSubRow}
+                />
               </div>
 
               {/* MISA-style Table Bottom Bar: Left action buttons + Right Summary Box */}

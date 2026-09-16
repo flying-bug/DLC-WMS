@@ -9,6 +9,7 @@ import { searchCustomers, deactivateCustomer, activateCustomer, exportCustomersT
 import styles from './CustomerListPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -144,6 +145,112 @@ const CustomerListPage = () => {
         }
     };
 
+    const columns = [
+        {
+            key: 'checkbox',
+            dataIndex: 'id',
+            title: (
+                <input 
+                    type="checkbox" 
+                    className={styles.checkbox} 
+                    checked={customers.length > 0 && selectedIds.length === customers.length} 
+                    onChange={handleSelectAll} 
+                />
+            ),
+            width: '40px',
+            align: 'center',
+            render: (_, item) => (
+                <input 
+                    type="checkbox" 
+                    className={styles.checkbox} 
+                    checked={selectedIds.includes(item.id)} 
+                    onChange={(e) => handleSelectRow(e, item.id)} 
+                    onClick={(e) => e.stopPropagation()} 
+                />
+            )
+        },
+        {
+            title: 'Mã Khách Hàng',
+            dataIndex: 'code',
+            width: '150px',
+            render: (val) => <span className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{val}</span>
+        },
+        {
+            title: 'Tên Khách Hàng',
+            dataIndex: 'name',
+            width: '200px',
+            render: (val) => <span style={{ fontWeight: 600 }}>{val}</span>
+        },
+        {
+            title: 'Nhóm',
+            dataIndex: 'groupType',
+            width: '130px',
+            render: (val) => GROUP_LABELS[val] || val
+        },
+        {
+            title: 'Điện Thoại',
+            dataIndex: 'phone',
+            width: '130px',
+            render: (val) => val || '---'
+        },
+        {
+            title: 'Địa Chỉ',
+            dataIndex: 'address',
+            width: '200px',
+            render: (val) => (
+                <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
+                    <span className={styles.noteText}>{val || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có</span>}</span>
+                    {val && <span className={styles.tooltipText}>{val}</span>}
+                </div>
+            )
+        },
+        {
+            title: 'Trạng Thái',
+            dataIndex: 'status',
+            width: '140px',
+            render: (val) => {
+                const status = STATUS_LABELS[val] || { label: val || 'Không rõ', code: 'info' };
+                return (
+                    <span className={`${styles.badge} ${status.code === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                        {status.label}
+                    </span>
+                );
+            }
+        }
+    ];
+
+    const renderActions = (item) => (
+        <>
+            <i 
+                className="bi bi-eye" 
+                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                title="Xem chi tiết" 
+                onClick={(e) => { e.stopPropagation(); navigate(`/customers/${item.id}`); }}
+            ></i>
+            <i 
+                className="bi bi-pencil" 
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
+                title="Chỉnh sửa" 
+                onClick={(e) => { e.stopPropagation(); guard('customer:edit', () => setModalConfig({ isOpen: true, data: item })); }}
+            ></i>
+            {item.status === 'APPROVED' ? (
+                <i 
+                    className="bi bi-slash-circle" 
+                    style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
+                    title="Vô hiệu hóa" 
+                    onClick={(e) => handleToggleStatus(e, item)}
+                ></i>
+            ) : (
+                <i 
+                    className="bi bi-check2-circle" 
+                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
+                    title="Kích hoạt lại" 
+                    onClick={(e) => handleToggleStatus(e, item)}
+                ></i>
+            )}
+        </>
+    );
+
     return (
         <AdminLayout>
             <div className={styles.pageBody}>
@@ -228,106 +335,14 @@ const CustomerListPage = () => {
                 )}
 
                 <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '40px', textAlign: 'center' }}>
-                                    <input 
-                                        type="checkbox" 
-                                        className={styles.checkbox} 
-                                        checked={customers.length > 0 && selectedIds.length === customers.length} 
-                                        onChange={handleSelectAll} 
-                                    />
-                                </th>
-                                <th style={{ width: '150px' }}>Mã Khách Hàng</th>
-                                <th style={{ minWidth: '200px' }}>Tên Khách Hàng</th>
-                                <th style={{ width: '130px' }}>Nhóm</th>
-                                <th style={{ width: '130px' }}>Điện Thoại</th>
-                                <th style={{ minWidth: '200px' }}>Địa Chỉ</th>
-                                <th style={{ width: '140px' }}>Trạng Thái</th>
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && customers.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
-                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
-                                    </td>
-                                </tr>
-                            ) : customers.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8">
-                                        <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy khách hàng nào</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                customers.map(item => {
-                                    const status = STATUS_LABELS[item.status] || { label: item.status || 'Không rõ', code: 'info' };
-                                    return (
-                                        <tr key={item.id} onClick={() => navigate(`/customers/${item.id}`)}>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input 
-                                                    type="checkbox" 
-                                                    className={styles.checkbox} 
-                                                    checked={selectedIds.includes(item.id)} 
-                                                    onChange={(e) => handleSelectRow(e, item.id)} 
-                                                    onClick={(e) => e.stopPropagation()} 
-                                                />
-                                            </td>
-                                            <td className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{item.code}</td>
-                                            <td style={{ fontWeight: 600 }}>{item.name}</td>
-                                            <td>{GROUP_LABELS[item.groupType] || item.groupType}</td>
-                                            <td>{item.phone || '---'}</td>
-                                            <td>
-                                                <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                                                    <span className={styles.noteText}>{item.address || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có</span>}</span>
-                                                    {item.address && <span className={styles.tooltipText}>{item.address}</span>}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={`${styles.badge} ${status.code === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                                                    {status.label}
-                                                </span>
-                                            </td>
-                                            <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                                                <i 
-                                                    className="bi bi-eye" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Xem chi tiết" 
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/customers/${item.id}`); }}
-                                                ></i>
-                                                <i 
-                                                    className="bi bi-pencil" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Chỉnh sửa" 
-                                                    onClick={(e) => { e.stopPropagation(); guard('customer:edit', () => setModalConfig({ isOpen: true, data: item })); }}
-                                                ></i>
-                                                {item.status === 'APPROVED' ? (
-                                                    <i 
-                                                        className="bi bi-slash-circle" 
-                                                        style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                        title="Vô hiệu hóa" 
-                                                        onClick={(e) => handleToggleStatus(e, item)}
-                                                    ></i>
-                                                ) : (
-                                                    <i 
-                                                        className="bi bi-check2-circle" 
-                                                        style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
-                                                        title="Kích hoạt lại" 
-                                                        onClick={(e) => handleToggleStatus(e, item)}
-                                                    ></i>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                    <ResponsiveTable
+                        columns={columns}
+                        data={customers}
+                        loading={loading}
+                        emptyMessage="Không tìm thấy khách hàng nào"
+                        onRowClick={(item) => navigate(`/customers/${item.id}`)}
+                        actions={renderActions}
+                    />
 
                     <Pagination
                         page={page - 1}

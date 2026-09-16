@@ -9,6 +9,7 @@ import styles from './SupplierListPage.module.css';
 import axiosClient from '../../api/axiosClient';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -139,6 +140,106 @@ const SupplierListPage = () => {
         }
     };
 
+    const columns = [
+        {
+            key: 'checkbox',
+            dataIndex: 'id',
+            title: (
+                <input 
+                    type="checkbox" 
+                    className={styles.checkbox} 
+                    checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length} 
+                    onChange={handleSelectAll} 
+                />
+            ),
+            width: '40px',
+            align: 'center',
+            render: (_, item) => (
+                <input 
+                    type="checkbox" 
+                    className={styles.checkbox} 
+                    checked={selectedIds.includes(item.id)} 
+                    onChange={(e) => handleSelectRow(e, item.id)} 
+                    onClick={(e) => e.stopPropagation()} 
+                />
+            )
+        },
+        {
+            title: 'Mã NCC',
+            dataIndex: 'code',
+            width: '160px',
+            render: (val, item) => (
+                <a
+                    href="#"
+                    className={styles.link}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/suppliers/${item.id}`);
+                    }}
+                >
+                    {val}
+                </a>
+            )
+        },
+        {
+            title: 'Tên Nhà Cung Cấp',
+            dataIndex: 'name',
+            width: '220px',
+            render: (val) => <span style={{ fontWeight: 600 }}>{val}</span>
+        },
+        {
+            title: 'Mã Số Thuế',
+            dataIndex: 'taxCode',
+            width: '140px',
+            render: (val) => val || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>
+        },
+        {
+            title: 'Địa Chỉ',
+            dataIndex: 'address',
+            width: '250px',
+            render: (val) => (
+                <div className={styles.tooltipContainer} style={{ maxWidth: '250px', display: 'inline-block' }}>
+                    <span className={styles.noteText}>{val || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có địa chỉ</span>}</span>
+                    {val && <span className={styles.tooltipText}>{val}</span>}
+                </div>
+            )
+        },
+        {
+            title: 'Trạng Thái',
+            dataIndex: 'statusLabel',
+            width: '140px',
+            render: (val, item) => (
+                <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                    {val}
+                </span>
+            )
+        }
+    ];
+
+    const renderActions = (item) => (
+        <>
+            <i 
+                className="bi bi-eye" 
+                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                title="Xem chi tiết" 
+                onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/${item.id}`); }}
+            ></i>
+            <i 
+                className="bi bi-pencil" 
+                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
+                title="Chỉnh sửa" 
+                onClick={(e) => handleEditClick(e, item)}
+            ></i>
+            <i 
+                className="bi bi-trash" 
+                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
+                title="Xóa nhà cung cấp" 
+                onClick={(e) => handleDeleteClick(e, item)}
+            ></i>
+        </>
+    );
+
     return (
         <AdminLayout>
             <div className={styles.pageBody}>
@@ -197,104 +298,14 @@ const SupplierListPage = () => {
                 </div>
 
                 <div className={styles.tableContainer}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '40px', textAlign: 'center' }}>
-                                    <input 
-                                        type="checkbox" 
-                                        className={styles.checkbox} 
-                                        checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length} 
-                                        onChange={handleSelectAll} 
-                                    />
-                                </th>
-                                <th style={{ width: '160px' }}>Mã NCC</th>
-                                <th style={{ minWidth: '220px' }}>Tên Nhà Cung Cấp</th>
-                                <th style={{ width: '140px' }}>Mã Số Thuế</th>
-                                <th style={{ width: '250px' }}>Địa Chỉ</th>
-                                <th style={{ width: '140px' }}>Trạng Thái</th>
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && paginatedRows.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7" className={styles.textCenter} style={{ padding: '40px' }}>
-                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
-                                    </td>
-                                </tr>
-                            ) : paginatedRows.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7">
-                                        <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy nhà cung cấp nào</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedRows.map(item => (
-                                    <tr key={item.id} onClick={() => navigate(`/suppliers/${item.id}`)} style={{ cursor: 'pointer' }}>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input 
-                                                type="checkbox" 
-                                                className={styles.checkbox} 
-                                                checked={selectedIds.includes(item.id)} 
-                                                onChange={(e) => handleSelectRow(e, item.id)} 
-                                                onClick={(e) => e.stopPropagation()} 
-                                            />
-                                        </td>
-                                        <td style={{ whiteSpace: 'nowrap' }}>
-                                            <a
-                                                href="#"
-                                                className={styles.link}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    navigate(`/suppliers/${item.id}`);
-                                                }}
-                                            >
-                                                {item.code}
-                                            </a>
-                                        </td>
-                                        <td style={{ fontWeight: 600 }}>{item.name}</td>
-                                        <td>{item.taxCode || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
-                                        <td style={{ maxWidth: '250px' }}>
-                                            <div className={styles.tooltipContainer}>
-                                                <span className={styles.noteText}>{item.address || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có địa chỉ</span>}</span>
-                                                {item.address && <span className={styles.tooltipText}>{item.address}</span>}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                                                {item.statusLabel}
-                                            </span>
-                                        </td>
-                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                                            <i 
-                                                className="bi bi-eye" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Xem chi tiết" 
-                                                onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/${item.id}`); }}
-                                            ></i>
-                                            <i 
-                                                className="bi bi-pencil" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Chỉnh sửa" 
-                                                onClick={(e) => handleEditClick(e, item)}
-                                            ></i>
-                                            <i 
-                                                className="bi bi-trash" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                title="Xóa nhà cung cấp" 
-                                                onClick={(e) => handleDeleteClick(e, item)}
-                                            ></i>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <ResponsiveTable
+                        columns={columns}
+                        data={paginatedRows}
+                        loading={loading}
+                        emptyMessage="Không tìm thấy nhà cung cấp nào"
+                        onRowClick={(item) => navigate(`/suppliers/${item.id}`)}
+                        actions={renderActions}
+                    />
 
                     <Pagination
                         page={currentPage - 1}

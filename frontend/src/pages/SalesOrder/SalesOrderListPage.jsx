@@ -13,6 +13,7 @@ import { exportToExcel } from '../../utils/excelExport';
 import { printQuotation } from '../../utils/printQuotation';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
@@ -196,6 +197,128 @@ function SalesOrderListPage() {
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const columns = [
+    {
+      title: '#',
+      width: 50,
+      render: (_, __, idx) => (currentPage - 1) * pageSize + idx + 1
+    },
+    {
+      title: 'Mã đơn',
+      dataIndex: 'soCode',
+      width: 130,
+      render: (val, so) => (
+        <a className={styles.link} onClick={e => { e.stopPropagation(); navigate(`/sales-orders/${so.id}`); }}>
+          {val}
+        </a>
+      )
+    },
+    {
+      title: 'Ngày lập',
+      dataIndex: 'soDate',
+      width: 110,
+      render: (val) => fmtDate(val)
+    },
+    {
+      title: 'Khách hàng',
+      render: (_, so) => so.partnerName || `#${so.partnerId}`
+    },
+    {
+      title: 'Kho',
+      render: (_, so) => so.warehouseName || `Kho #${so.warehouseId}`,
+      width: 140
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'totalAmount',
+      width: 130,
+      align: 'right',
+      render: (val) => <span className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{money(val)}</span>
+    },
+    {
+      title: 'Trạng thái đơn',
+      dataIndex: 'status',
+      width: 110,
+      render: (val) => {
+        const st = STATUS_LABELS[val] || { label: val, code: 'info' };
+        return (
+          <span className={`${styles.badge} ${st.code === 'success' ? styles.badgeSuccess :
+            st.code === 'purple' ? styles.badgeWarning :
+              st.code === 'danger' ? styles.badgeDanger :
+                styles.badgeInfo
+            }`}>
+            {st.label}
+          </span>
+        );
+      }
+    },
+    {
+      title: 'Thanh toán',
+      dataIndex: 'paymentStatus',
+      width: 120,
+      render: (val) => {
+        const pst = PAYMENT_STATUS_LABELS[val || 'UNPAID'];
+        return (
+          <span style={{
+            display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500,
+            backgroundColor: pst.bg, color: pst.color, whiteSpace: 'nowrap'
+          }}>
+            {pst.label}
+          </span>
+        );
+      }
+    }
+  ];
+
+  const renderActions = (so) => (
+    <>
+      <i
+        className="bi bi-eye"
+        title="Xem chi tiết"
+        style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-text-muted-2)', fontSize: 15 }}
+        onClick={() => navigate(`/sales-orders/${so.id}`)}
+      />
+      <i
+        className="bi bi-printer"
+        title="In báo giá"
+        style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-info-hover)', fontSize: 15 }}
+        onClick={(e) => handlePrintQuote(so, e)}
+      />
+      {so.status === 'DRAFT' && (
+        <i
+          className="bi bi-pencil"
+          title="Sửa"
+          style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-primary)', fontSize: 15 }}
+          onClick={() => guard('sales_order:edit', () => navigate(`/sales-orders/${so.id}/edit`))}
+        />
+      )}
+      {so.status === 'DRAFT' && (
+        <i
+          className="bi bi-check2-circle"
+          title="Duyệt đơn"
+          style={{ cursor: 'pointer', marginRight: 10, color: '#22c55e', fontSize: 15 }}
+          onClick={() => guard('sales_order:edit', () => setConfirmApprove(so))}
+        />
+      )}
+      {so.status === 'APPROVED' && (
+        <i
+          className="bi bi-box-arrow-right"
+          title="Tạo phiếu xuất kho"
+          style={{ cursor: 'pointer', marginRight: 10, color: '#8b5cf6', fontSize: 15 }}
+          onClick={() => guard('sales_order:edit', () => handleCreateExport(so))}
+        />
+      )}
+      {so.status === 'DRAFT' && (
+        <i
+          className="bi bi-x-circle"
+          title="Hủy đơn"
+          style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
+          onClick={() => guard('sales_order:edit', () => setConfirmCancel(so))}
+        />
+      )}
+    </>
+  );
+
   return (
     <AdminLayout>
       <div className={styles.pageBody}>
@@ -285,149 +408,14 @@ function SalesOrderListPage() {
 
         {/* ── Table ── */}
         <div className={styles.tableContainer}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: 50 }}>#</th>
-                  <th style={{ width: 130 }}>Mã đơn</th>
-                  <th style={{ width: 110 }}>Ngày lập</th>
-                  <th>Khách hàng</th>
-                  <th style={{ width: 140 }}>Kho</th>
-                  <th style={{ width: 130, textAlign: 'right' }}>Tổng tiền</th>
-                  <th style={{ width: 110 }}>Trạng thái đơn</th>
-                  <th style={{ width: 120 }}>Thanh toán</th>
-                  <th style={{ width: 140, textAlign: 'center' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedOrders.length > 0 ? paginatedOrders.map((so, idx) => {
-                  const st = STATUS_LABELS[so.status] || { label: so.status, code: 'info' };
-                  const pst = PAYMENT_STATUS_LABELS[so.paymentStatus || 'UNPAID'];
-                  return (
-                    <tr
-                      key={so.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/sales-orders/${so.id}`)}
-                    >
-                      <td>{(currentPage - 1) * pageSize + idx + 1}</td>
-                      <td>
-                        <a className={styles.link} onClick={e => { e.stopPropagation(); navigate(`/sales-orders/${so.id}`); }}>
-                          {so.soCode}
-                        </a>
-                      </td>
-                      <td>{fmtDate(so.soDate)}</td>
-                      <td>{so.partnerName || `#${so.partnerId}`}</td>
-                      <td>{so.warehouseName || `Kho #${so.warehouseId}`}</td>
-                      <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>
-                        {money(so.totalAmount)}
-                      </td>
-                      <td>
-                        <span className={`${styles.badge} ${st.code === 'success' ? styles.badgeSuccess :
-                          st.code === 'purple' ? styles.badgeWarning :
-                            st.code === 'danger' ? styles.badgeDanger :
-                              styles.badgeInfo
-                          }`}>
-                          {st.label}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{
-                          display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 500,
-                          backgroundColor: pst.bg, color: pst.color, whiteSpace: 'nowrap'
-                        }}>
-                          {pst.label}
-                        </span>
-                      </td>
-                      <td className={styles.textCenter} onClick={e => e.stopPropagation()}>
-                        <i
-                          className="bi bi-eye"
-                          title="Xem chi tiết"
-                          style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-text-muted-2)', fontSize: 15 }}
-                          onClick={() => navigate(`/sales-orders/${so.id}`)}
-                        />
-                        <i
-                          className="bi bi-printer"
-                          title="In báo giá"
-                          style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-info-hover)', fontSize: 15 }}
-                          onClick={(e) => handlePrintQuote(so, e)}
-                        />
-                        {so.status === 'DRAFT' && (
-                          <i
-                            className="bi bi-pencil"
-                            title="Sửa"
-                            style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-primary)', fontSize: 15 }}
-                            onClick={() => guard('sales_order:edit', () => navigate(`/sales-orders/${so.id}/edit`))}
-                          />
-                        )}
-                        {so.status === 'DRAFT' && (
-                          <i
-                            className="bi bi-check2-circle"
-                            title="Duyệt đơn"
-                            style={{ cursor: 'pointer', marginRight: 10, color: '#22c55e', fontSize: 15 }}
-                            onClick={() => guard('sales_order:edit', () => setConfirmApprove(so))}
-                          />
-                        )}
-                        {so.status === 'APPROVED' && (
-                          <i
-                            className="bi bi-box-arrow-right"
-                            title="Tạo phiếu xuất kho"
-                            style={{ cursor: 'pointer', marginRight: 10, color: '#8b5cf6', fontSize: 15 }}
-                            onClick={() => guard('sales_order:edit', () => handleCreateExport(so))}
-                          />
-                        )}
-                        {so.status === 'DRAFT' && (
-                          <i
-                            className="bi bi-x-circle"
-                            title="Hủy đơn"
-                            style={{ cursor: 'pointer', color: 'var(--wms-danger)', fontSize: 15 }}
-                            onClick={() => guard('sales_order:edit', () => setConfirmCancel(so))}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                }) : (
-                  <tr>
-                    <td colSpan={8} className={styles.textCenter} style={{ padding: 40 }}>
-                      {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy đơn bán hàng nào'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className={styles.pagination}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>Hiển thị</span>
-              <SearchableSelect className="misa-select" style={{ width: 70, height: 32, padding: '0 8px' }}
-                value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </SearchableSelect>
-              <span>trên tổng số {totalItems} bản ghi</span>
-            </div>
-            {totalPages > 1 && (
-              <div className={styles.pageControls}>
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className={styles.pageBtn}>
-                  <i className="bi bi-chevron-left" /> Trước
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <span key={p}
-                    className={`${styles.pageNumber} ${p === currentPage ? styles.active : ''}`}
-                    onClick={() => setCurrentPage(p)}>
-                    {p}
-                  </span>
-                ))}
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className={styles.pageBtn}>
-                  Sau <i className="bi bi-chevron-right" />
-                </button>
-              </div>
-            )}
-          </div>
+          <ResponsiveTable
+            columns={columns}
+            data={paginatedOrders}
+            loading={loading}
+            emptyMessage="Không tìm thấy đơn bán hàng nào"
+            onRowClick={(so) => navigate(`/sales-orders/${so.id}`)}
+            actions={renderActions}
+          />
         </div>
 
         <div className={styles.sharedPagination}>

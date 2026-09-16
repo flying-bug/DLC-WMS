@@ -10,6 +10,7 @@ import {
     buildPermissionsFromCodes,
     extractCodesFromPermissions
 } from '../../utils/permissionMatrixConfig';
+import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './RolePermissionsPage.module.css';
 
 function PermissionDetailPage() {
@@ -343,45 +344,34 @@ function PermissionDetailPage() {
                         <div className={styles.matrixPanel} style={{ width: '100%', marginLeft: 0 }}>
                             <div className={styles.matrixContent}>
                                 {filteredCategories.length > 0 ? (
-                                    <table className={styles.table}>
-                                        <thead>
-                                            <tr>
-                                                <th>CHỨC NĂNG</th>
-                                                {PERMISSION_ACTIONS.map(action => (
-                                                    <th key={action.key}>{action.label.toUpperCase()}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredCategories.map(cat => (
-                                                <React.Fragment key={cat.key}>
-                                                    <tr className={styles.categoryRow}>
-                                                        <td colSpan={PERMISSION_ACTIONS.length + 1} style={{ backgroundColor: '#f8fafc', padding: '12px 16px', fontWeight: 'bold', color: 'var(--wms-primary)' }}>
-                                                            <i className={`bi ${cat.icon} me-2`} />
-                                                            {cat.name}
-                                                        </td>
-                                                    </tr>
-                                                    {cat.modules.map(mod => (
-                                                        <tr key={mod.key} className={styles.tableRow}>
-                                                            <td>
-                                                                <div className={styles.featureName} style={{ paddingLeft: '20px' }}>
-                                                                    <div className={styles.featureIcon}>
-                                                                        <i className={`bi ${mod.icon}`} />
-                                                                    </div>
-                                                                    {mod.name}
+                                    <div style={{ overflowX: 'auto', padding: '0 12px 12px' }}>
+                                        <ResponsiveTable
+                                            columns={[
+                                                {
+                                                    title: 'CHỨC NĂNG',
+                                                    render: (_, mod) => (
+                                                        <div>
+                                                            <div style={{ fontSize: 11, color: 'var(--wms-primary)', fontWeight: 600, marginBottom: 4 }}>
+                                                                <i className={`bi ${mod.categoryIcon} me-1`} /> {mod.categoryName}
+                                                            </div>
+                                                            <div className={styles.featureName}>
+                                                                <div className={styles.featureIcon}>
+                                                                    <i className={`bi ${mod.icon}`} />
                                                                 </div>
-                                                            </td>
-                                                            {PERMISSION_ACTIONS.map(action => (
-                                                                <td key={action.key}>
-                                                                    {renderCheckbox(mod.key, action.key, mod.name)}
-                                                                </td>
-                                                            ))}
-                                                        </tr>
-                                                    ))}
-                                                </React.Fragment>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                                                <span style={{ fontWeight: 500 }}>{mod.name}</span>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                },
+                                                ...PERMISSION_ACTIONS.map(action => ({
+                                                    title: action.label.toUpperCase(),
+                                                    align: 'center',
+                                                    render: (_, mod) => renderCheckbox(mod.key, action.key, mod.name)
+                                                }))
+                                            ]}
+                                            data={filteredCategories.flatMap(cat => cat.modules.map(mod => ({ ...mod, categoryName: cat.name, categoryIcon: cat.icon })))}
+                                        />
+                                    </div>
                                 ) : (
                                     <div style={{ padding: '40px', textAlign: 'center', color: 'var(--wms-text-muted)' }}>
                                         <i className="bi bi-shield-lock" style={{ fontSize: '48px', color: '#e2e8f0', marginBottom: '16px', display: 'block' }}></i>
