@@ -1173,7 +1173,12 @@ function UpdateExportSlipPage() {
                           )}
                           {showPricing && (
                             <td className={styles.textRight}>
-                              <input id={`export-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
+                              <select id={`export-line-vat-${index}`} className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0} onChange={(event) => handleItemChange(item.localId, 'vatPercent', Number(event.target.value))}>
+                                <option value={0}>0%</option>
+                                <option value={5}>5%</option>
+                                <option value={8}>8%</option>
+                                <option value={10}>10%</option>
+                              </select>
                             </td>
                           )}
                           <td className={styles.textCenter}>

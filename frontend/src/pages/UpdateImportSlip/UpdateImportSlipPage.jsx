@@ -1147,7 +1147,12 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                           )}
                           {showPricing && (
                             <td align="right">
-                              <input id={`import-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                              <select id={`import-line-vat-${index}`} className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0} onChange={(e) => handleItemChange(item.localId, 'vatPercent', Number(e.target.value))}>
+                                <option value={0}>0%</option>
+                                <option value={5}>5%</option>
+                                <option value={8}>8%</option>
+                                <option value={10}>10%</option>
+                              </select>
                             </td>
                           )}
                           {hasAnyDiscrepancy && (
