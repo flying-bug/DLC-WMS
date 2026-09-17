@@ -816,19 +816,25 @@ function UpdateExportSlipPage() {
   };
 
   
+  // ResponsiveTable gọi render(row[dataIndex], row, rowIndex) - các cột này không khai
+  // báo dataIndex nên tham số đầu luôn là undefined, và phải nhận "row" ở tham số THỨ HAI,
+  // "rowIndex" ở tham số THỨ BA (không phải tham số đầu như trước). Dùng "title" (không phải
+  // "header" - ResponsiveTable không đọc field đó, cột sẽ mất tiêu đề). Trước khi sửa, mọi
+  // cột đọc item.<field> đều thực chất đọc field đó trên "undefined" -> crash toàn bộ bảng
+  // dòng hàng hóa mỗi khi mở màn sửa phiếu.
   const linesColumns = [
     {
-      header: 'STT',
+      title: 'STT',
       width: '3%',
       minWidth: '32px',
       align: 'center',
       render: (_, __, visibleIndex) => (itemPage - 1) * itemPageSize + visibleIndex + 1
     },
     {
-      header: 'Sản phẩm',
+      title: 'Sản phẩm',
       width: '29%',
       minWidth: '210px',
-      render: (item, index) => (
+      render: (_, item, index) => (
         <ProductGridSelect
           id={`export-line-product-${index}`}
           products={warehouseScopedProducts}
@@ -842,10 +848,10 @@ function UpdateExportSlipPage() {
       )
     },
     {
-      header: 'ĐVT',
+      title: 'ĐVT',
       width: '10%',
       minWidth: '95px',
-      render: (item) => {
+      render: (_, item) => {
         const product = productById.get(String(item.variantId));
         return (
           <select
@@ -867,11 +873,11 @@ function UpdateExportSlipPage() {
       }
     },
     {
-      header: 'Tồn khả dụng',
+      title: 'Tồn khả dụng',
       width: '8%',
       minWidth: '75px',
       align: 'center',
-      render: (item) => {
+      render: (_, item) => {
         const product = productById.get(String(item.variantId));
         return (
           <span style={{ fontWeight: '600', color: '#0052cc' }}>
@@ -881,19 +887,19 @@ function UpdateExportSlipPage() {
       }
     },
     {
-      header: 'SL',
+      title: 'SL',
       width: '7%',
       minWidth: '60px',
       align: 'right',
-      render: (item, index) => (
-        <input 
-          id={`export-line-qty-${index}`} 
-          type="number" 
-          min="0" 
-          className="misa-input text-right" 
-          style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} 
-          value={item.quantity} 
-          onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} 
+      render: (_, item, index) => (
+        <input
+          id={`export-line-qty-${index}`}
+          type="number"
+          min="0"
+          className="misa-input text-right"
+          style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }}
+          value={item.quantity}
+          onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)}
         />
       )
     }
@@ -902,35 +908,35 @@ function UpdateExportSlipPage() {
   if (hasAnyConversion) {
     linesColumns.push(
       {
-        header: 'ĐVC',
+        title: 'ĐVC',
         width: '6%',
         minWidth: '70px',
         align: 'center',
-        render: (item) => {
+        render: (_, item) => {
           const product = productById.get(String(item.variantId));
           return <span style={{ fontSize: '12px', color: '#4b5563' }}>{product?.unitName || '-'}</span>;
         }
       },
       {
-        header: 'Tỷ lệ CĐ',
+        title: 'Tỷ lệ CĐ',
         width: '5%',
         minWidth: '60px',
         align: 'center',
-        render: (item) => <span style={{ fontSize: '12px', color: '#4b5563' }}>{Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1}</span>
+        render: (_, item) => <span style={{ fontSize: '12px', color: '#4b5563' }}>{Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1}</span>
       },
       {
-        header: 'Phép tính',
+        title: 'Phép tính',
         width: '4%',
         minWidth: '50px',
         align: 'center',
-        render: (item) => <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{(item.conversionOperator || 'MULTIPLY') === 'DIVIDE' || (item.conversionOperator || 'MULTIPLY') === '/' ? '/' : '*'}</span>
+        render: (_, item) => <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{(item.conversionOperator || 'MULTIPLY') === 'DIVIDE' || (item.conversionOperator || 'MULTIPLY') === '/' ? '/' : '*'}</span>
       },
       {
-        header: 'SL (ĐVC)',
+        title: 'SL (ĐVC)',
         width: '6%',
         minWidth: '70px',
         align: 'right',
-        render: (item) => {
+        render: (_, item) => {
           const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
           const op = item.conversionOperator || 'MULTIPLY';
           const qty = Number(item.quantity || 0);
@@ -942,11 +948,11 @@ function UpdateExportSlipPage() {
   }
 
   linesColumns.push({
-    header: 'Serial',
+    title: 'Serial',
     width: '9%',
     minWidth: '70px',
     align: 'center',
-    render: (item) => {
+    render: (_, item) => {
       const product = productById.get(String(item.variantId));
       return (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -980,19 +986,19 @@ function UpdateExportSlipPage() {
   });
 
   linesColumns.push({
-    header: 'BH (T)',
+    title: 'BH (T)',
     width: '5%',
     minWidth: '50px',
     align: 'center',
-    render: (item, index) => (
-      <input 
-        id={`export-line-warranty-${index}`} 
-        type="number" 
-        min="0" 
-        className="misa-input text-center" 
-        style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} 
-        value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} 
-        onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} 
+    render: (_, item, index) => (
+      <input
+        id={`export-line-warranty-${index}`}
+        type="number"
+        min="0"
+        className="misa-input text-center"
+        style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }}
+        value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''}
+        onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)}
       />
     )
   });
@@ -1000,43 +1006,43 @@ function UpdateExportSlipPage() {
   if (showPricing) {
     linesColumns.push(
       {
-        header: 'Đơn giá',
+        title: 'Đơn giá',
         width: '10%',
         minWidth: '90px',
         align: 'right',
-        render: (item, index) => (
-          <input 
-            id={`export-line-price-${index}`} 
-            type="text" 
-            className="misa-input text-right" 
-            style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} 
-            value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} 
-            onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} 
+        render: (_, item, index) => (
+          <input
+            id={`export-line-price-${index}`}
+            type="text"
+            className="misa-input text-right"
+            style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }}
+            value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''}
+            onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))}
           />
         )
       },
       {
-        header: 'Thành tiền',
+        title: 'Thành tiền',
         width: '10%',
         minWidth: '90px',
         align: 'right',
-        render: (item) => {
+        render: (_, item) => {
           const qty = Number(item.quantity || 0);
           const lineAmount = qty * Number(item.price || 0);
           return <span className={styles.textBlue}>{money(lineAmount)}</span>;
         }
       },
       {
-        header: '% VAT',
+        title: '% VAT',
         width: '6%',
         minWidth: '60px',
         align: 'right',
-        render: (item, index) => (
-          <select 
-            id={`export-line-vat-${index}`} 
-            className="misa-input" 
-            style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} 
-            value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0} 
+        render: (_, item, index) => (
+          <select
+            id={`export-line-vat-${index}`}
+            className="misa-input"
+            style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }}
+            value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0}
             onChange={(event) => handleItemChange(item.localId, 'vatPercent', Number(event.target.value))}
           >
             <option value={0}>0%</option>
@@ -1050,11 +1056,11 @@ function UpdateExportSlipPage() {
   }
 
   linesColumns.push({
-    header: '',
+    title: '',
     width: '3%',
     minWidth: '32px',
     align: 'center',
-    render: (item) => (
+    render: (_, item) => (
       <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}>
         <i className="bi bi-trash"></i>
       </button>
@@ -1082,14 +1088,21 @@ function UpdateExportSlipPage() {
     </tr>
   );
 
-  const linesSummaryMobile = [
-    { label: 'Tổng số lượng', value: money(totalQuantity) },
-    ...(showPricing ? [
-      { label: 'Tổng tiền hàng', value: money(totalPrice) },
-      { label: 'Thuế GTGT', value: money(totalVat) },
-      { label: 'Tổng thanh toán', value: money(grandTotal), isTotal: true }
-    ] : [])
-  ];
+  // summaryMobile được ResponsiveTable render trực tiếp làm React node (không phải mảng dữ
+  // liệu để tự map) - mảng object {label, value} trước đây khiến React ném "Objects are not
+  // valid as a React child" ngay khi mở màn sửa phiếu xuất kho ở giao diện mobile.
+  const linesSummaryMobile = (
+    <div style={{ padding: '12px', background: 'var(--color-bg)', fontWeight: 'bold' }}>
+      <div>Tổng số lượng: <span style={{ color: 'var(--color-primary)' }}>{totalQuantity}</span></div>
+      {showPricing && (
+        <>
+          <div>Tổng tiền hàng: {money(totalPrice)}</div>
+          <div>Thuế GTGT: {money(totalVat)}</div>
+          <div>Tổng thanh toán: <span style={{ color: 'var(--color-primary)' }}>{money(grandTotal)}</span></div>
+        </>
+      )}
+    </div>
+  );
 
 
   return (

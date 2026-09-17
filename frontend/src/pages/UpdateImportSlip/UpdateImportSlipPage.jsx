@@ -659,15 +659,21 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
     });
   };
 
+  // ResponsiveTable gọi render(row[dataIndex], row, rowIndex) - các cột này không khai
+  // báo dataIndex nên tham số đầu luôn là undefined, và phải nhận "row" ở tham số THỨ HAI,
+  // "rowIndex" ở tham số THỨ BA (không phải tham số đầu như trước). Dùng "title" (không phải
+  // "header" - ResponsiveTable không đọc field đó, cột sẽ mất tiêu đề). Trước khi sửa, mọi
+  // cột đọc item.<field> đều thực chất đọc field đó trên "undefined" -> crash toàn bộ bảng
+  // dòng hàng hóa mỗi khi mở màn sửa phiếu.
   const linesColumns = [
     {
-      header: '#',
-      render: (_, index) => <div className={styles.textCenter}>{(itemPage - 1) * itemPageSize + index + 1}</div>,
+      title: '#',
+      render: (_, __, index) => <div className={styles.textCenter}>{(itemPage - 1) * itemPageSize + index + 1}</div>,
       width: '3%',
     },
     {
-      header: 'Sản phẩm',
-      render: (item, index) => {
+      title: 'Sản phẩm',
+      render: (_, item, index) => {
         const globalIndex = (itemPage - 1) * itemPageSize + index;
         return (
           <ProductGridSelect
@@ -685,8 +691,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       width: '30%',
     },
     {
-      header: 'ĐVT',
-      render: (item) => {
+      title: 'ĐVT',
+      render: (_, item) => {
         const product = productById.get(String(item.variantId));
         return (
           <select
@@ -709,8 +715,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       width: '9%',
     },
     {
-      header: 'SL HĐ',
-      render: (item) => (
+      title: 'SL HĐ',
+      render: (_, item) => (
         <div style={{ textAlign: 'right' }}>
           <input
             type="number"
@@ -726,8 +732,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       width: '6%',
     },
     {
-      header: 'SL Nhận',
-      render: (item, index) => {
+      title: 'SL Nhận',
+      render: (_, item, index) => {
         const globalIndex = (itemPage - 1) * itemPageSize + index;
         const isDiscrepant = (Number(item.expectedQuantity || item.quantity || 0) > Number(item.quantity || 0)) || Number(item.rejectedQuantity || 0) > 0;
         return (
@@ -749,8 +755,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
     },
     ...(hasAnyConversion ? [
       {
-        header: 'ĐVC',
-        render: (item) => {
+        title: 'ĐVC',
+        render: (_, item) => {
           const product = productById.get(String(item.variantId));
           const baseUnitName = product?.unitName || '-';
           return <div style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</div>;
@@ -758,24 +764,24 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         width: '6%',
       },
       {
-        header: 'Tỷ lệ CĐ',
-        render: (item) => {
+        title: 'Tỷ lệ CĐ',
+        render: (_, item) => {
           const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
           return <div style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</div>;
         },
         width: '5%',
       },
       {
-        header: 'Phép tính',
-        render: (item) => {
+        title: 'Phép tính',
+        render: (_, item) => {
           const op = item.conversionOperator || 'MULTIPLY';
           return <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</div>;
         },
         width: '4%',
       },
       {
-        header: 'SL (ĐVC)',
-        render: (item) => {
+        title: 'SL (ĐVC)',
+        render: (_, item) => {
           const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
           const op = item.conversionOperator || 'MULTIPLY';
           const qty = Number(item.quantity || 0);
@@ -786,8 +792,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       }
     ] : []),
     {
-      header: 'SL Lỗi',
-      render: (item) => (
+      title: 'SL Lỗi',
+      render: (_, item) => (
         <div style={{ textAlign: 'right' }}>
           <input
             type="number"
@@ -804,8 +810,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       width: '5%',
     },
     {
-      header: 'Serial',
-      render: (item) => {
+      title: 'Serial',
+      render: (_, item) => {
         const product = productById.get(String(item.variantId));
         return (
           <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
@@ -825,8 +831,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       width: '9%',
     },
     {
-      header: 'BH (T)',
-      render: (item, index) => {
+      title: 'BH (T)',
+      render: (_, item, index) => {
         const globalIndex = (itemPage - 1) * itemPageSize + index;
         return (
           <div style={{ textAlign: 'center' }}>
@@ -838,8 +844,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
     },
     ...(showPricing ? [
       {
-        header: 'Đơn giá',
-        render: (item, index) => {
+        title: 'Đơn giá',
+        render: (_, item, index) => {
           const globalIndex = (itemPage - 1) * itemPageSize + index;
           return (
             <div style={{ textAlign: 'right' }}>
@@ -850,8 +856,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         width: '9%',
       },
       {
-        header: 'Thành tiền',
-        render: (item) => {
+        title: 'Thành tiền',
+        render: (_, item) => {
           const qty = Number(item.quantity || 0);
           const lineAmount = qty * Number(item.price || 0);
           return (
@@ -863,8 +869,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         width: '9%',
       },
       {
-        header: '% VAT',
-        render: (item, index) => {
+        title: '% VAT',
+        render: (_, item, index) => {
           const globalIndex = (itemPage - 1) * itemPageSize + index;
           return (
             <div style={{ textAlign: 'right' }}>
@@ -882,8 +888,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
     ] : []),
     ...(hasAnyDiscrepancy ? [
       {
-        header: 'Lý do chênh lệch',
-        render: (item) => {
+        title: 'Lý do chênh lệch',
+        render: (_, item) => {
           const isDiscrepant = (Number(item.expectedQuantity || item.quantity || 0) > Number(item.quantity || 0)) || Number(item.rejectedQuantity || 0) > 0;
           return (
             <input
@@ -900,8 +906,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       }
     ] : []),
     {
-      header: '',
-      render: (item) => (
+      title: '',
+      render: (_, item) => (
         <button className={styles.deleteBtn} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button>
       ),
       width: '3%',
