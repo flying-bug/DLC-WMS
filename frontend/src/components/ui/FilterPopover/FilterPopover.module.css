@@ -63,7 +63,7 @@
   width: 540px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
-  overflow: hidden;
+  overflow: visible;
   background: var(--color-surface);
   border-radius: 8px;
   box-shadow: var(--shadow-dropdown);
@@ -122,7 +122,7 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   max-height: min(480px, calc(100vh - 200px));
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .fullWidth {

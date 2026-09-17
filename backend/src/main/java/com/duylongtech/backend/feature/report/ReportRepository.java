@@ -138,7 +138,19 @@ public class ReportRepository {
                         "doc.id AS documentId, " +
                         "doc.doc_date AS documentDate, " +
                         "doc.doc_code AS documentNumber, " +
-                        "doc.doc_type AS documentType, " +
+                        "CASE " +
+                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'ASSEMBLY' THEN 'EX_BUILD' " +
+                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'REPAIR' THEN 'EX_REPAIR' " +
+                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'TRANSFER_EXPORT' THEN 'EX_TRF' " +
+                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'INVENTORY_ADJUSTMENT' THEN 'EX_ADJ' " +
+                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'RETURN' THEN 'EX_RET' " +
+                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'ASSEMBLY' THEN 'IN_BUILD' " +
+                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'REPAIR' THEN 'IN_REPAIR' " +
+                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'TRANSFER_IMPORT' THEN 'IN_TRF' " +
+                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'INVENTORY_ADJUSTMENT' THEN 'IN_ADJ' " +
+                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'RETURN' THEN 'IN_RET' " +
+                        "  ELSE doc.doc_type " +
+                        "END AS documentType, " +
                         "u.name AS unitName, " +
                         "l.unit_cost AS unitPrice, " +
                         "l.quantity_in AS quantityIn, " +
