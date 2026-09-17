@@ -243,7 +243,6 @@ function WarrantyDetailPage() {
                     columns={repairsColumns}
                     data={repairs}
                     emptyMessage="Sản phẩm chưa từng được sửa chữa"
-                    rowClassName="cursor-pointer hover-highlight"
                     onRowClick={(repair) => navigate(`/repairs/${repair.id}`)}
                   />
                 </div>
