@@ -236,13 +236,16 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        boolean hasFullView = auth != null && auth.getAuthorities().stream().anyMatch(a -> 
-            a.getAuthority().equals("export:view") || a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
-        
+        boolean hasFullView = hasAnyAuthority("export:view", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+
         if (!hasFullView) {
-            issuePurpose = "ASSEMBLY";
-            referenceType = "ASSEMBLY_ORDER";
+            if (hasAnyAuthority("repair:view") && !hasAnyAuthority("assembly:view")) {
+                issuePurpose = null;
+                referenceType = "REPAIR";
+            } else {
+                issuePurpose = "ASSEMBLY";
+                referenceType = "ASSEMBLY_ORDER";
+            }
         }
 
         // Thủ kho chỉ được thấy chứng từ của kho mình phụ trách (USER_WAREHOUSE_ROLES);
@@ -273,7 +276,37 @@ public class InventoryDocumentService {
 
     @Transactional(readOnly = true)
     public InventoryDocumentResponse getExportDetail(Long id) {
-        return toResponse(findExportOrThrow(id));
+        InventoryDocument doc = findExportOrThrow(id);
+        assertCanViewDocument(doc);
+        return toResponse(doc);
+    }
+
+    /**
+     * export:view/import:view (hoặc Manager/Admin) thấy mọi chứng từ. Người chỉ có
+     * assembly:view hoặc repair:view chỉ được xem chứng từ đúng loại tham chiếu của
+     * họ (ASSEMBLY_ORDER / REPAIR) - tránh lộ toàn bộ lịch sử xuất/nhập kho.
+     */
+    private void assertCanViewDocument(InventoryDocument doc) {
+        if (hasAnyAuthority("export:view", "import:view", "ROLE_SUPER_ADMIN", "ROLE_MANAGER")) {
+            return;
+        }
+        String refType = doc.getReferenceType();
+        if (hasAnyAuthority("assembly:view") && "ASSEMBLY_ORDER".equals(refType)) {
+            return;
+        }
+        if (hasAnyAuthority("repair:view") && "REPAIR".equals(refType)) {
+            return;
+        }
+        throw new BusinessException("Bạn không có quyền xem chứng từ này.");
+    }
+
+    private boolean hasAnyAuthority(String... authorities) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+        Set<String> wanted = Set.of(authorities);
+        return auth.getAuthorities().stream().anyMatch(a -> wanted.contains(a.getAuthority()));
     }
 
     @Transactional(readOnly = true)
@@ -288,13 +321,16 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        boolean hasFullView = auth != null && auth.getAuthorities().stream().anyMatch(a -> 
-            a.getAuthority().equals("import:view") || a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
-        
+        boolean hasFullView = hasAnyAuthority("import:view", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+
         if (!hasFullView) {
-            issuePurpose = "ASSEMBLY";
-            referenceType = "ASSEMBLY_ORDER";
+            if (hasAnyAuthority("repair:view") && !hasAnyAuthority("assembly:view")) {
+                issuePurpose = null;
+                referenceType = "REPAIR";
+            } else {
+                issuePurpose = "ASSEMBLY";
+                referenceType = "ASSEMBLY_ORDER";
+            }
         }
 
         // Thủ kho chỉ được thấy chứng từ của kho mình phụ trách (USER_WAREHOUSE_ROLES);
@@ -325,7 +361,9 @@ public class InventoryDocumentService {
 
     @Transactional(readOnly = true)
     public InventoryDocumentResponse getImportDetail(Long id) {
-        return toResponse(findImportOrThrow(id));
+        InventoryDocument doc = findImportOrThrow(id);
+        assertCanViewDocument(doc);
+        return toResponse(doc);
     }
 
     @Transactional
@@ -1240,7 +1278,7 @@ public class InventoryDocumentService {
     @Transactional
     public Long createExportForRepair(Long repairId, String repairCode, Long warehouseId, Long partnerId,
             Long createdBy, Long salespersonId, String recipientName, List<RepairStockOutLineRequest> lines) {
-        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, "EXPORT")) {
+        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, EXPORT_DOC_TYPE)) {
             return null;
         }
 
@@ -1290,7 +1328,7 @@ public class InventoryDocumentService {
     @Transactional
     public Long createScrapImportForRepair(Long repairId, String repairCode, Long scrapWarehouseId, Long partnerId,
             Long createdBy, Long salespersonId, String recipientName, List<RepairScrapLineRequest> lines) {
-        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, "IMPORT")) {
+        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, IMPORT_DOC_TYPE)) {
             return null;
         }
 

@@ -124,6 +124,7 @@ public enum SystemMessage {
     REP_CANNOT_CANCEL("REP09", "Không thể hủy lệnh đã hoàn tất (DONE)."),
     REP_WARRANTY_PRICE_INVALID("REP10", "Linh kiện/phí dịch vụ bảo hành phải có giá bằng 0."),
     REP_SERIAL_REQUIRED("REP11", "Linh kiện '%s' quản lý theo Serial Number nhưng chưa được quét mã serial. Vui lòng quét serial trước khi hoàn tất."),
+    REP_APPROVAL_FORBIDDEN("REP12", "Chỉ Kế toán hoặc Quản lý mới có quyền duyệt/từ chối lệnh sửa chữa đang chờ duyệt."),
 
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),

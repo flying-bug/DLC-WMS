@@ -639,10 +639,10 @@ function RepairFormPage() {
     }
   };
 
-  const handleChangeStatus = async (status) => {
+  const handleChangeStatus = async (status, note = '') => {
     setSaving(true);
     try {
-      const res = await repairApi.updateRepairStatus(id, { status, note: '' });
+      const res = await repairApi.updateRepairStatus(id, { status, note });
       showToast('success', `Đã chuyển sang ${STAGE_LABELS[status]} thành công`);
       loadData();
     } catch (err) {
@@ -651,6 +651,34 @@ function RepairFormPage() {
       setSaving(false);
     }
   };
+
+  const getMissingSerialLineLabel = () => {
+    for (const line of lines) {
+      const variant = variants.find(v => String(v.id) === String(line.componentVariantId));
+      if (!variant || !variant.trackSerial) continue;
+      const actionType = line.actionType || 'ADD';
+      const missing = actionType === 'ADD'
+        ? !line.serialNumberId
+        : actionType === 'REPLACE'
+          ? (!line.serialNumberId || !line.replacementSerialNumberId)
+          : !line.serialNumberId;
+      if (missing) {
+        return line.componentVariant?.productName || line.componentName || variant.productName || variant.sku || 'linh kiện';
+      }
+    }
+    return null;
+  };
+
+  const handleFinishRepair = () => {
+    const missingLabel = getMissingSerialLineLabel();
+    if (missingLabel) {
+      showToast('error', `Vui lòng quét/nhập serial cho linh kiện "${missingLabel}" trước khi kết thúc sửa chữa.`);
+      return;
+    }
+    handleChangeStatus('DONE');
+  };
+
+  const [rejectModal, setRejectModal] = useState({ isOpen: false, reason: '' });
 
   const handleViewInventoryDocs = async () => {
     try {
@@ -1233,7 +1261,7 @@ function RepairFormPage() {
                 </div>
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Người chịu trách nhiệm <span style={{ color: 'red' }}>*</span></label>
-                  <input type="text" className="misa-input" disabled value={formData.responsiblePerson} readOnly />
+                  <input type="text" className="misa-input" disabled={!isEditable} value={formData.responsiblePerson} onChange={e => handleFormChange('responsiblePerson', e.target.value)} />
                 </div>
               </div>
             </div>
@@ -1619,7 +1647,7 @@ function RepairFormPage() {
                   </button>
                 )}
                 {canAccountantActions && (
-                  <button className="btn-misa-cancel" style={{ marginRight: '8px' }} disabled={saving} onClick={() => handleChangeStatus('QUOTATION')}>
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px' }} disabled={saving} onClick={() => setRejectModal({ isOpen: true, reason: '' })}>
                     Từ chối
                   </button>
                 )}
@@ -1661,7 +1689,7 @@ function RepairFormPage() {
             {!isNew && repair && repair.repairStatus === 'UNDER_REPAIR' && (
               <>
                 {canTechnicianActions && (
-                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('DONE')} style={{ marginRight: '8px' }}>
+                  <button className="btn-misa-post" disabled={saving} onClick={handleFinishRepair} style={{ marginRight: '8px' }}>
                     Kết thúc sửa chữa
                   </button>
                 )}
@@ -1705,6 +1733,61 @@ function RepairFormPage() {
       <div style={{ display: 'none' }}>
         <RepairQuotationTemplate ref={printRef} repair={repair} />
       </div>
+      {rejectModal.isOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '480px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px', borderBottom: '1px solid var(--wms-border-base)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '17px', color: 'var(--wms-danger)', fontWeight: 700 }}>
+                Từ chối lệnh sửa chữa
+              </h3>
+              <button onClick={() => setRejectModal({ isOpen: false, reason: '' })} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--wms-text-subtle)' }}>&times;</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--wms-text-body)', marginBottom: '6px' }}>
+                Lý do từ chối <span style={{ color: 'var(--wms-danger)' }}>*</span>
+              </label>
+              <textarea
+                rows={3}
+                value={rejectModal.reason}
+                onChange={(e) => setRejectModal(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Nhập lý do từ chối để kỹ thuật viên chỉnh sửa lại báo giá..."
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setRejectModal({ isOpen: false, reason: '' })}
+                  disabled={saving}
+                  style={{ padding: '8px 16px', background: '#fff', border: '1px solid var(--wms-border-strong)', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--wms-text-muted)' }}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || !rejectModal.reason.trim()}
+                  onClick={async () => {
+                    await handleChangeStatus('QUOTATION', rejectModal.reason.trim());
+                    setRejectModal({ isOpen: false, reason: '' });
+                  }}
+                  style={{ padding: '8px 18px', background: 'var(--wms-danger)', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#fff' }}
+                >
+                  Xác nhận Từ chối
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

@@ -39,8 +39,6 @@ import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.inventory.RepairScrapLineRequest;
 import com.duylongtech.backend.feature.inventory.RepairStockOutLineRequest;
 import com.duylongtech.backend.feature.product.ProductVariant;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentPostedEvent;
-import org.springframework.context.event.EventListener;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.SerialNumber;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
@@ -148,7 +146,7 @@ public class RepairWorkflowService {
                     repair.startRepair();
                 }
             };
-            case WAITING_FOR_EXPORT -> (repair, note) -> { /* Internal transition */ };
+            case WAITING_FOR_EXPORT -> (repair, note) -> repair.waitForExport();
             case UNDER_REPAIR -> (repair, note) -> repair.startRepair();
             case DONE -> (repair, note) -> { handleDone(repair); repair.complete(); };
             case CANCELLED -> (repair, note) -> { handleCancel(repair); repair.cancel(); };
@@ -182,6 +180,14 @@ public class RepairWorkflowService {
         Set<RepairStatus> allowedNext = VALID_TRANSITIONS.getOrDefault(current, Set.of());
         if (!allowedNext.contains(target)) {
             throw new BusinessException(SystemMessage.REP_INVALID_STATUS_TRANSITION);
+        }
+
+        // Quyết định duyệt/từ chối/hủy một lệnh đang chờ duyệt (WAITING_FOR_APPROVAL)
+        // chỉ dành cho Kế toán/Quản lý/Admin - Kỹ thuật viên có repair:edit để tự quản
+        // lý lệnh của mình nhưng KHÔNG được tự duyệt báo giá của chính mình.
+        if (current == RepairStatus.WAITING_FOR_APPROVAL
+                && !hasAnyAuthority("ROLE_ACCOUNTANT", "ROLE_MANAGER", "ROLE_SUPER_ADMIN")) {
+            throw new BusinessException(SystemMessage.REP_APPROVAL_FORBIDDEN);
         }
 
         String previousStatus = repair.getRepairStatus();
@@ -307,9 +313,9 @@ public class RepairWorkflowService {
         Map<Long, SerialNumber> serialById = loadSerialsForLines(repair, allAddLines, replaceLines, removeLines);
         Map<Long, ProductVariant> variantById = loadVariantsForLines(allAddLines, replaceLines, removeLines);
 
-        // validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD, variantById, serialById);
-        // validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE, variantById, serialById);
-        // validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE, variantById, serialById);
+        validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD, variantById, serialById);
+        validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE, variantById, serialById);
+        validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE, variantById, serialById);
 
         // (Phiếu kho đã được tạo ở bước CONFIRMED và POST bởi Thủ kho, nên không tạo lại ở đây)
 
@@ -448,31 +454,14 @@ public class RepairWorkflowService {
     // =====================================================================
     // Utility helpers
     // =====================================================================
-
-    @EventListener
-    public void onInventoryDocumentPosted(InventoryDocumentPostedEvent event) {
-        if ("REPAIR".equals(event.getReferenceType()) && event.getReferenceId() != null) {
-            repairRepository.findById(event.getReferenceId()).ifPresent(repair -> {
-                if (RepairStatus.WAITING_FOR_EXPORT.name().equals(repair.getRepairStatus())) {
-                    // Update state
-                    repair.startRepair();
-                    repairRepository.save(repair);
-                    
-                    // Audit log
-                    auditLogService.logEvent(null, "AUTO_START_REPAIR", "Repair", repair.getId(), "SUCCESS",
-                            "Thủ kho đã ghi sổ phiếu xuất kho, tự động chuyển sang Đang sửa chữa", null, null);
-                            
-                    // Push notification to technician
-                    notificationService.createNotification(
-                            "ROLE_TECHNICIAN", repair.getCreatedBy(), 
-                            "Bắt đầu sửa chữa",
-                            "Thủ kho đã ghi sổ phiếu xuất cho lệnh sửa chữa " + repair.getRepairCode() + ". Bạn có thể bắt đầu sửa chữa.",
-                            "REPAIR_STARTED", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
-                    );
-                }
-            });
-        }
-    }
+    // NOTE: the WAITING_FOR_EXPORT -> UNDER_REPAIR auto-transition is handled
+    // exclusively by InventoryDocumentPostedEventListener, which waits for ALL
+    // inventory documents linked to the repair to be posted before advancing.
+    // A second, simpler listener used to live here that advanced the repair as
+    // soon as the FIRST linked document was posted - removed because a repair
+    // needing both an export (ADD/REPLACE parts) and a scrap-import (REMOVE
+    // parts) document could jump to UNDER_REPAIR before parts were fully
+    // issued from the warehouse.
 
     /**
      * Giải quyết warehouse ID cho lệnh sửa chữa.
@@ -511,6 +500,15 @@ public class RepairWorkflowService {
         } catch (Exception e) {
             return "system";
         }
+    }
+
+    private boolean hasAnyAuthority(String... authorities) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+        Set<String> wanted = Set.of(authorities);
+        return auth.getAuthorities().stream().anyMatch(a -> wanted.contains(a.getAuthority()));
     }
 
     private void validateSerialPresenceForTrackedLines(List<RepairLine> lines, String actionType,
