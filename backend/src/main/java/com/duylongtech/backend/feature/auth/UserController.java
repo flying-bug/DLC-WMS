@@ -53,9 +53,12 @@ public class UserController {
         return ApiResponse.success(userService.getAllUsers());
     }
 
-    // 5b. Search Users for warehouse staff assignment (accessible to Manager)
+    // 5b. Search Users for staff-assignment dropdowns (e.g. "Nhân viên mua hàng"
+    // on import/export slips). Any authenticated user may call this - it must
+    // NOT be gated behind account:view, which is the admin-only account
+    // management permission, or roles like Accountant/Warehouse staff get an
+    // empty result. See UserService.searchUsers javadoc.
     @GetMapping("/search")
-    @PreAuthorize("hasAuthority('account:view')")
     public ApiResponse<List<UserDto>> searchUsers(@RequestParam(required = false) String keyword) {
         return ApiResponse.success(userService.searchUsers(keyword));
     }
