@@ -39,7 +39,7 @@ public class StockReservationExpiryJob {
     @Scheduled(fixedRate = 3_600_000) // 1 giờ
     @Transactional
     public void releaseExpiredReservations() {
-        List<StockReservation> expired = stockReservationRepository.findExpiredHolding(LocalDateTime.now());
+        List<StockReservation> expired = stockReservationRepository.findExpiredHoldingAndBackordered(LocalDateTime.now());
 
         if (expired.isEmpty()) {
             return;

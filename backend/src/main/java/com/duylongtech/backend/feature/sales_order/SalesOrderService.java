@@ -267,6 +267,10 @@ public class SalesOrderService {
             // Tạo reservation
             StockReservation reservation = new StockReservation();
             reservation.initReservation(so.getId(), line.getVariantId(), lineWh, line.getQuantity(), resStatus, expiresAt);
+            reservation.setVariant(line.getVariant());
+            if (lineWh != null) {
+                reservation.setWarehouse(warehouseRepository.getReferenceById(lineWh));
+            }
             stockReservationRepository.save(reservation);
 
             // Tăng quantity_reserved trong INVENTORY_BALANCES
@@ -384,7 +388,7 @@ public class SalesOrderService {
             Long whId = r.getWarehouseId() != null ? r.getWarehouseId() : warehouseId;
             BigDecimal fulfillThis = remainingToFulfill.min(r.getQuantityReserved());
 
-            if (whId != null && StockReservationStatus.HOLDING.name().equals(r.getStatus())) {
+            if (whId != null && (StockReservationStatus.HOLDING.name().equals(r.getStatus()) || StockReservationStatus.BACKORDERED.name().equals(r.getStatus()))) {
                 inventoryBalanceRepository
                         .findByWarehouseAndVariant(whId, variantId, "GOOD")
                         .ifPresent(balance -> {

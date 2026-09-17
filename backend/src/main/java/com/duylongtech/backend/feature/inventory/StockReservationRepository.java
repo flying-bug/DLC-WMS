@@ -48,12 +48,12 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
     """)
     BigDecimal sumHoldingQuantity(@Param("variantId") Long variantId, @Param("warehouseId") Long warehouseId);
 
-    // Tìm tất cả reservation HOLDING đã hết hạn — dùng cho scheduled job
+    // Tìm tất cả reservation HOLDING hoặc BACKORDERED đã hết hạn — dùng cho scheduled job
     @Query("""
         SELECT r FROM StockReservation r
-        WHERE r.status = 'HOLDING' AND r.expiresAt < :now
+        WHERE r.status IN ('HOLDING', 'BACKORDERED') AND r.expiresAt < :now
     """)
-    List<StockReservation> findExpiredHolding(@Param("now") LocalDateTime now);
+    List<StockReservation> findExpiredHoldingAndBackordered(@Param("now") LocalDateTime now);
 
     // Tìm reservation theo SO line (variant + warehouse + SO)
     Optional<StockReservation> findBySalesOrderIdAndVariantIdAndWarehouseId(
