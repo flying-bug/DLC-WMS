@@ -25,10 +25,7 @@ function StocktakeDetailPage() {
   const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase());
   const isStorekeeper = userRoles.some(r => r.includes('STOREKEEPER'));
   const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('ADMIN') || r.includes('MANAGER'));
-<<<<<<< Updated upstream
-=======
-  const isReadOnlyForStorekeeper = formData?.createdByAccountant && isStorekeeper && !isAccountantOrAdmin;
->>>>>>> Stashed changes
+
 
   const [warehouses, setWarehouses] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
