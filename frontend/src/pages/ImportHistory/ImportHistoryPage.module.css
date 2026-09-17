@@ -495,10 +495,16 @@
   border: 1px solid var(--color-warning-border, #fed7aa);
 }
 
-.badgeDraft, .badgeDanger {
+.badgeDraft {
   background: var(--color-bg-subtle, var(--wms-bg-hover));
   color: var(--color-text-subtle, var(--wms-text-muted));
   border: 1px solid var(--color-border-subtle, var(--wms-border-base));
+}
+
+.badgeDanger {
+  background: var(--status-danger-bg, #fdecec);
+  color: var(--status-danger-text, #b91c1c);
+  border: 1px solid var(--status-danger-border, #f5b5b5);
 }
 
 /* Pagination */

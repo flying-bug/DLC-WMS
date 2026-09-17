@@ -540,6 +540,10 @@ function ImportHistoryPage() {
                           <span className={`${styles.badge} ${styles.badgeInfo}`}>
                             <i className="fas fa-check-double" style={{ marginRight: 4 }}></i>Đã duyệt
                           </span>
+                        ) : slip.status === 'CANCELLED' ? (
+                          <span className={`${styles.badge} ${styles.badgeDanger}`}>
+                            <i className="fas fa-ban" style={{ marginRight: 4 }}></i>Đã hủy
+                          </span>
                         ) : (
                           <span className={`${styles.badge} ${styles.badgeDraft}`}>
                             <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ

@@ -264,6 +264,13 @@ export default function WarehouseWorkspacePage() {
         </span>
       );
     }
+    if (s === 'CANCELLED') {
+      return (
+        <span className={`${styles.badge} ${styles.badgeDanger}`}>
+          <i className="bi bi-x-circle" style={{ marginRight: 4 }}></i>Đã hủy
+        </span>
+      );
+    }
     return (
       <span className={`${styles.badge} ${styles.badgeDraft}`}>
         <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ

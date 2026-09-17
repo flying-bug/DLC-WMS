@@ -319,6 +319,11 @@ export default function WarehouseDocumentFormPage() {
   }
 
   const isPosted = doc.status === 'POSTED' || doc.status === 'COMPLETED';
+  const isUnposted = doc.status === 'UNPOSTED';
+  const isCancelled = doc.status === 'CANCELLED';
+  const statusBadgeClass = isPosted ? styles.statusPosted : isUnposted ? styles.statusUnposted : isCancelled ? styles.statusCancelled : styles.statusDraft;
+  const statusBadgeIcon = isPosted ? 'bi-check' : isUnposted ? 'bi-arrow-counterclockwise' : isCancelled ? 'bi-x-circle' : 'bi-clock';
+  const statusBadgeLabel = isPosted ? 'Đã ghi sổ' : isUnposted ? 'Đã bỏ ghi sổ' : isCancelled ? 'Đã hủy' : 'Chưa ghi sổ';
   const totalExp = lines.reduce((acc, l) => acc + (Number(l.expectedQty) || 0), 0);
   const totalAct = lines.reduce((acc, l) => acc + (Number(l.actualQty) || 0), 0);
 
@@ -339,12 +344,9 @@ export default function WarehouseDocumentFormPage() {
             <span className={styles.divider}>/</span>
             <h1 className={styles.docTitle}>
               {docTypeLabel}: <span className={styles.docCodeText}>{doc.docCode || doc.code}</span>
-              <span
-                className={`${styles.statusBadge} ${isPosted ? styles.statusPosted : doc.status === 'UNPOSTED' ? styles.statusUnposted : styles.statusDraft
-                  }`}
-              >
-                <i className={`bi ${isPosted ? 'bi-check' : doc.status === 'UNPOSTED' ? 'bi-arrow-counterclockwise' : 'bi-clock'}`} style={{ marginRight: 4 }}></i>
-                {isPosted ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : 'Chưa ghi sổ'}
+              <span className={`${styles.statusBadge} ${statusBadgeClass}`}>
+                <i className={`bi ${statusBadgeIcon}`} style={{ marginRight: 4 }}></i>
+                {statusBadgeLabel}
               </span>
             </h1>
           </div>
@@ -748,7 +750,7 @@ export default function WarehouseDocumentFormPage() {
                     {doc.updatedAt ? new Date(doc.updatedAt).toLocaleString('vi-VN') : '-'}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', marginTop: '2px' }}>
-                    Trạng thái hiện tại: {doc.status === 'POSTED' ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : 'Lưu tạm'}
+                    Trạng thái hiện tại: {doc.status === 'POSTED' ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : doc.status === 'CANCELLED' ? 'Đã hủy' : 'Lưu tạm'}
                   </div>
                 </div>
               </div>
