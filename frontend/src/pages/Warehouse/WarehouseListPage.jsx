@@ -10,6 +10,7 @@ import { getVietnamTimestamp } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
+import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 
 const WarehouseListPage = () => {
