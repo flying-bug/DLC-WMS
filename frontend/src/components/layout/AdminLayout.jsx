@@ -17,7 +17,6 @@ const MENU_CONFIG = [
         id: 'main',
         label: 'PHÂN HỆ',
         items: [
-            { path: '/main-dashboard', icon: 'bi bi-pie-chart', label: 'Tổng quan', moduleId: 'overview', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer', 'report_debt', 'report_sales', 'report_summary'] },
             { path: '/dashboard', icon: 'bi bi-building', label: 'Kho', moduleId: 'warehouse', moduleKeys: ['import', 'export', 'transfer', 'stocktake', 'assembly', 'assembly_config', 'warehouse_master', 'report_balance', 'report_ledger', 'report_transfer'] },
             { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase', moduleKey: 'purchase_order' },
             { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales', moduleKeys: ['sales_order', 'einvoice'] },
@@ -67,9 +66,7 @@ const AdminLayout = ({ children }) => {
     
     // Configuration for top header tabs based on active module
     const TABS_CONFIG = {
-        overview: [
-            { path: '/main-dashboard', label: 'Tổng quan', exact: true }
-        ],
+        overview: [],
         warehouse: [
             { path: '/dashboard', label: 'Quy trình', exact: true },
             { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'], moduleKeys: ['import', 'assembly'] },
@@ -150,7 +147,6 @@ const AdminLayout = ({ children }) => {
             }
         }
 
-        if (currentPath === '/main-dashboard') return 'overview';
         if (['/dashboard', '/import-history', '/import-slips', '/export-slips', '/transfer-history', '/stocktakes', '/assembly-orders', '/assembly-boms', '/warehouses', '/reports'].some(p => currentPath.startsWith(p))) return 'warehouse';
         if (currentPath.startsWith('/purchase-orders')) return 'purchase';
         if (currentPath.startsWith('/sales-orders') || currentPath.startsWith('/einvoices')) return 'sales';

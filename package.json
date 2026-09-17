@@ -5,7 +5,8 @@
     "lint": "npm run --prefix frontend lint"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "mysql2": "^3.24.4",
+    "pg": "^8.23.0"
   }
 }
-

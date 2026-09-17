@@ -18,8 +18,11 @@ const STATUS_LABELS = {
 
 const REPAIR_STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
+  QUOTATION: { label: 'Báo giá', code: 'info' },
+  WAITING_FOR_APPROVAL: { label: 'Chờ duyệt', code: 'warning' },
   CONFIRMED: { label: 'Xác nhận', code: 'primary' },
-  UNDER_REPAIR: { label: 'Đang sửa', code: 'warning' },
+  WAITING_FOR_EXPORT: { label: 'Chờ xuất kho', code: 'warning' },
+  UNDER_REPAIR: { label: 'Đang sửa', code: 'purple' },
   DONE: { label: 'Hoàn tất', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
@@ -130,8 +133,8 @@ function WarrantyDetailPage() {
         return (
           <span style={{
             padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
-            backgroundColor: rStatus.code === 'success' ? 'var(--color-success-bg)' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : 'var(--color-primary-pale)',
-            color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : 'var(--color-primary-link)'
+            backgroundColor: rStatus.code === 'success' ? 'var(--color-success-bg)' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : rStatus.code === 'purple' ? '#f3e8ff' : 'var(--color-primary-pale)',
+            color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : rStatus.code === 'purple' ? '#7e22ce' : 'var(--color-primary-link)'
           }}>
             {rStatus.label}
           </span>

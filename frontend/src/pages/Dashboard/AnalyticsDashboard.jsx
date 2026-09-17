@@ -70,12 +70,14 @@ const ORDER_STATUS_LABELS = {
 };
 
 const REPAIR_STATUS_LABELS = {
-    DRAFT: 'Nháp',
-    QUOTATION: 'Báo giá',
-    CONFIRMED: 'Đã xác nhận sửa chữa',
-    UNDER_REPAIR: 'Đang sửa chữa',
-    DONE: 'Hoàn tất',
-    CANCELLED: 'Đã hủy'
+  DRAFT: 'Nháp',
+  QUOTATION: 'Báo giá',
+  WAITING_FOR_APPROVAL: 'Chờ duyệt',
+  CONFIRMED: 'Đã duyệt',
+  WAITING_FOR_EXPORT: 'Chờ xuất kho',
+  UNDER_REPAIR: 'Đang sửa',
+  DONE: 'Hoàn tất',
+  CANCELLED: 'Đã hủy'
 };
 
 const STATUS_LABELS = {

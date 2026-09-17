@@ -8,6 +8,7 @@ import * as customerApi from '../../api/customerApi';
 import * as inventoryImportApi from '../../api/inventoryImportApi';
 import * as warrantyApi from '../../api/warrantyApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import axiosClient from '../../api/axiosClient';
 import CustomerModal from '../Customer/components/CustomerModal';
 import QuickProductModal from './components/QuickProductModal';
@@ -21,6 +22,7 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import styles from './RepairFormPage.module.css';
 import { formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { getAuthFullName, getAuthRoles } from '../../auth/session';
 
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
@@ -43,8 +45,8 @@ const customSelectStyles = {
   menuPortal: (base) => ({ ...base, zIndex: 9999 })
 };
 
-const STAGES = ['DRAFT', 'CONFIRMED', 'UNDER_REPAIR', 'DONE'];
-const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', CONFIRMED: 'Xác nhận', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
+const STAGES = ['DRAFT', 'CONFIRMED', 'WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'];
+const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', WAITING_FOR_APPROVAL: 'Chờ duyệt', CONFIRMED: 'Đã duyệt', WAITING_FOR_EXPORT: 'Chờ xuất kho', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
 const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'UNDER_REPAIR'];
 const COMPONENT_SERIAL_STATUS = {
   ACTIVE: { label: 'Đang dùng', color: '#166534', bg: 'var(--color-success-bg)', border: 'var(--wms-success-border)' },
@@ -59,6 +61,14 @@ function RepairFormPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const userRoles = useMemo(() => getAuthRoles().map(r => String(r || '').toUpperCase()), []);
+  const isManagerOrAdmin = useMemo(() => userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER'), [userRoles]);
+  const isTechnician = useMemo(() => userRoles.some(r => r === 'TECHNICIAN' || r === 'ROLE_TECHNICIAN'), [userRoles]);
+  const isAccountant = useMemo(() => userRoles.some(r => r === 'ACCOUNTANT' || r === 'ROLE_ACCOUNTANT'), [userRoles]);
+
+  const canTechnicianActions = isTechnician || isManagerOrAdmin;
+  const canAccountantActions = isAccountant || isManagerOrAdmin;
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [repair, setRepair] = useState(null);
@@ -70,6 +80,7 @@ function RepairFormPage() {
   const [variants, setVariants] = useState([]);
   const [users, setUsers] = useState([]);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
   const handleCustomerSaved = (newCustomer) => {
     setCustomers(prev => [...prev, newCustomer]);
@@ -189,7 +200,7 @@ function RepairFormPage() {
     invoiceMethod: 'none',
     receivedDate: today(),
     expectedDate: '',
-    responsiblePerson: '',
+    responsiblePerson: getAuthFullName(),
     attachedDoc: '',
     referenceId: '',
     referenceCode: '',
@@ -204,9 +215,11 @@ function RepairFormPage() {
   const [addingType, setAddingType] = useState(null); // 'PART' or 'FEE'
   const [visibleColumns, setVisibleColumns] = useState({
     description: true,
-    serialNumber: true
+    serialNumber: false
   });
   const [showReferenceModal, setShowReferenceModal] = useState(false);
+  const [showInventoryDocsModal, setShowInventoryDocsModal] = useState(false);
+  const [inventoryDocs, setInventoryDocs] = useState([]);
 
   const [sourceWarranty, setSourceWarranty] = useState(null);
   const [componentSerialTree, setComponentSerialTree] = useState(null);
@@ -341,10 +354,11 @@ function RepairFormPage() {
         if (!isActive) return;
         setComponentSerialTree(unwrap(res) || null);
       })
-      .catch(() => {
+      .catch((err) => {
         if (!isActive) return;
         setComponentSerialTree(null);
-        setComponentSerialError('Không tải được danh sách linh kiện bên trong.');
+        const errMsg = err.response?.data?.message || 'Không tải được danh sách linh kiện bên trong.';
+        setComponentSerialError(errMsg);
       })
       .finally(() => {
         if (isActive) setComponentSerialLoading(false);
@@ -363,12 +377,13 @@ function RepairFormPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cusRes, prodRes, whRes, varRes, userRes] = await Promise.allSettled([
+      const [cusRes, prodRes, whRes, varRes, userRes, vatRes] = await Promise.allSettled([
         customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         axiosClient.get('/products', { params: { size: 1000 } }),
         inventoryImportApi.getWarehouses({ size: 100 }),
         axiosClient.get('/products/variants', { params: { size: 1000 } }),
-        axiosClient.get('/users', { params: { size: 1000 } })
+        axiosClient.get('/users', { params: { size: 1000 } }),
+        businessSettingsApi.getDefaultVat()
       ]);
 
       const extractContent = (res) => {
@@ -385,6 +400,10 @@ function RepairFormPage() {
       setWarehouses(extractContent(whRes));
       setVariants(extractContent(varRes));
       setUsers(extractContent(userRes));
+
+      if (vatRes.status === 'fulfilled' && vatRes.value?.data?.data) {
+        setVatConfig(vatRes.value.data.data);
+      }
 
       if (isNew) {
         const searchParams = new URLSearchParams(location.search);
@@ -621,39 +640,34 @@ function RepairFormPage() {
   };
 
   const handleChangeStatus = async (status) => {
-    if (status === 'DONE') {
-      // Kiểm tra linh kiện có trackSerial nhưng chưa quét serial
-      const missingSerial = (repair.lines || []).find(l => {
-        const variant = variants.find(v => String(v.id) === String(l.componentVariantId));
-        if (!variant?.trackSerial) return false;
-
-        if (l.actionType === 'ADD') {
-          return !l.serialNumberId;
-        } else if (l.actionType === 'REPLACE') {
-          return !(l.serialNumberId || l.serialNumber) || !l.replacementSerialNumberId;
-        } else if (l.actionType === 'REMOVE') {
-          return !(l.serialNumberId || l.serialNumber);
-        }
-        return false;
-      });
-      if (missingSerial) {
-        const variant = variants.find(v => String(v.id) === String(missingSerial.componentVariantId));
-        const name = missingSerial.componentVariant?.productName || variant?.productName || missingSerial.componentName || 'Linh kiện';
-        showToast('error', `"${name}" quản lý theo Serial Number nhưng chưa được nhập/quét mã serial. Vui lòng hoàn thành trước khi kết thúc.`);
-        return;
-      }
-    }
-
     setSaving(true);
     try {
-      await repairApi.updateRepairStatus(id, { status: status, note: 'Chuyển trạng thái từ giao diện' });
-      showToast('success', 'Chuyển trạng thái thành công');
+      const res = await repairApi.updateRepairStatus(id, { status, note: '' });
+      showToast('success', `Đã chuyển sang ${STAGE_LABELS[status]} thành công`);
       loadData();
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.response?.data?.userMessage || 'Chuyển trạng thái thất bại';
-      showToast('error', errorMsg);
+      showToast('error', err.response?.data?.message || err.response?.data?.userMessage || 'Lỗi chuyển trạng thái');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleViewInventoryDocs = async () => {
+    try {
+      const [exRes, imRes] = await Promise.all([
+        axiosClient.get(`/api/v1/exports/history?referenceType=REPAIR&referenceId=${id}`),
+        axiosClient.get(`/api/v1/imports/history?referenceType=REPAIR&referenceId=${id}`)
+      ]);
+      const exData = unwrap(exRes) || [];
+      const imData = unwrap(imRes) || [];
+      
+      setInventoryDocs([
+        ...exData.map(d => ({ ...d, type: 'EXPORT' })),
+        ...imData.map(d => ({ ...d, type: 'IMPORT' }))
+      ]);
+      setShowInventoryDocsModal(true);
+    } catch (e) {
+      showToast('error', 'Lỗi khi lấy thông tin phiếu kho');
     }
   };
 
@@ -765,6 +779,24 @@ function RepairFormPage() {
     }
   };
 
+  const handleUpdateLineFields = async (lineId, key, updates) => {
+    if (isNew) {
+      setPendingLines(prev => prev.map(l => ((l.id && l.id === lineId) || (l._key && l._key === key)) ? { ...l, ...updates } : l));
+    } else {
+      setRepair(prev => ({
+        ...prev,
+        lines: prev.lines.map(l => l.id === lineId ? { ...l, ...updates } : l)
+      }));
+      try {
+        const res = await repairApi.updateRepairLine(id, lineId, updates);
+        mergeUpdatedLine(unwrap(res));
+      } catch (err) {
+        showToast('error', 'Cập nhật thất bại');
+        loadData();
+      }
+    }
+  };
+
   const handleChangeLineActionType = async (lineId, key, actionType) => {
     const serialReset = {
       serialNumberId: null,
@@ -819,6 +851,23 @@ function RepairFormPage() {
       } catch (err) {
         showToast('error', 'Cập nhật dịch vụ thất bại');
         loadData(); // revert
+      }
+    }
+  };
+
+  const handleUpdateFeeFields = async (feeId, key, updates) => {
+    if (isNew) {
+      setPendingFees(prev => prev.map(f => ((f.id && f.id === feeId) || (f._key && f._key === key)) ? { ...f, ...updates } : f));
+    } else {
+      setRepair(prev => ({
+        ...prev,
+        fees: prev.fees.map(f => f.id === feeId ? { ...f, ...updates } : f)
+      }));
+      try {
+        await repairApi.updateRepairFee(id, feeId, updates);
+      } catch (err) {
+        showToast('error', 'Cập nhật dịch vụ thất bại');
+        loadData();
       }
     }
   };
@@ -906,12 +955,14 @@ function RepairFormPage() {
       setPendingLines(prev => prev.map(l => ({
         ...l,
         isFreeWarranty: isChecked,
-        unitPrice: isChecked ? 0 : (l._salePrice || 0)
+        unitPrice: isChecked ? 0 : (l._salePrice || 0),
+        vatPercent: isChecked ? 0 : vatConfig.defaultVatRate
       })));
       setPendingFees(prev => prev.map(f => ({
         ...f,
         isFreeWarranty: isChecked,
-        feeAmount: isChecked ? 0 : (f._originalAmount || f.feeAmount)
+        feeAmount: isChecked ? 0 : (f._originalAmount || f.feeAmount),
+        vatPercent: isChecked ? 0 : vatConfig.defaultVatRate
       })));
     } else {
       // Optimistic update
@@ -920,12 +971,14 @@ function RepairFormPage() {
         lines: (prev.lines || []).map(l => ({
           ...l,
           isFreeWarranty: isChecked,
-          unitPrice: isChecked ? 0 : (l.componentVariant?.salePrice || 0)
+          unitPrice: isChecked ? 0 : (l.componentVariant?.salePrice || 0),
+          vatPercent: isChecked ? 0 : vatConfig.defaultVatRate
         })),
         fees: (prev.fees || []).map(f => ({
           ...f,
           isFreeWarranty: isChecked,
-          feeAmount: isChecked ? 0 : (f._originalAmount || products.find(p => p.productName === f.feeName)?.salePrice || f.feeAmount || 0)
+          feeAmount: isChecked ? 0 : (f._originalAmount || products.find(p => p.productName === f.feeName)?.salePrice || f.feeAmount || 0),
+          vatPercent: isChecked ? 0 : vatConfig.defaultVatRate
         }))
       }));
 
@@ -933,7 +986,10 @@ function RepairFormPage() {
       try {
         const promises = [];
         (repair.lines || []).forEach(l => {
-          promises.push(repairApi.updateRepairLine(id, l.id, { isFreeWarranty: isChecked, unitPrice: isChecked ? 0 : (l.componentVariant?.salePrice || 0) }));
+          promises.push(repairApi.updateRepairLine(id, l.id, { isFreeWarranty: isChecked, unitPrice: isChecked ? 0 : (l.componentVariant?.salePrice || 0), vatPercent: isChecked ? 0 : vatConfig.defaultVatRate }));
+        });
+        (repair.fees || []).forEach(f => {
+          promises.push(repairApi.updateRepairFee(id, f.id, { isFreeWarranty: isChecked, feeAmount: isChecked ? 0 : (f._originalAmount || products.find(p => p.productName === f.feeName)?.salePrice || f.feeAmount || 0), vatPercent: isChecked ? 0 : vatConfig.defaultVatRate }));
         });
         await Promise.all(promises);
       } catch (err) {
@@ -999,6 +1055,7 @@ function RepairFormPage() {
               <span className={`${styles.badge} ${
                 ['CONFIRMED', 'DONE'].includes(currentStatus) ? styles.badgeSuccess :
                 currentStatus === 'UNDER_REPAIR' ? styles.badgeWarning :
+                currentStatus === 'WAITING_FOR_EXPORT' ? styles.badgeWarning :
                 currentStatus === 'CANCELLED' ? styles.badgeDanger :
                 currentStatus === 'QUOTATION' ? styles.badgePrimary :
                 styles.badgeInfo
@@ -1176,7 +1233,7 @@ function RepairFormPage() {
                 </div>
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Người chịu trách nhiệm <span style={{ color: 'red' }}>*</span></label>
-                  <input type="text" className="misa-input" disabled={!isEditable} placeholder="Nhập tên nhân viên..." value={formData.responsiblePerson} onChange={e => handleFormChange('responsiblePerson', e.target.value)} />
+                  <input type="text" className="misa-input" disabled value={formData.responsiblePerson} readOnly />
                 </div>
               </div>
             </div>
@@ -1268,7 +1325,17 @@ function RepairFormPage() {
                     </td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="number" min="0" step="1" max="10" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.vatPercent || 0} onChange={(e) => handleUpdateLineField(line.id, line._key, 'vatPercent', Math.min(10, Math.max(0, Number(e.target.value))))} />
+                        <select
+                          className="misa-input"
+                          style={{ width: '60px', padding: '2px 4px', height: '28px', textAlign: 'right', appearance: 'auto' }}
+                          disabled={line.isFreeWarranty}
+                          value={line.vatPercent ?? vatConfig.defaultVatRate}
+                          onChange={(e) => handleUpdateLineField(line.id, line._key, 'vatPercent', Number(e.target.value))}
+                        >
+                          {vatConfig.allowedVatRates.map(rate => (
+                            <option key={rate} value={rate}>{rate}</option>
+                          ))}
+                        </select>
                       ) : (line.vatPercent || 0)}
                     </td>
                     <td align="right" style={{ fontWeight: '500' }}>
@@ -1282,12 +1349,11 @@ function RepairFormPage() {
                     <td align="center">
                       <input type="checkbox" disabled={!isEditable} checked={line.isFreeWarranty} onChange={(e) => {
                         const isChecked = e.target.checked;
-                        handleUpdateLineField(line.id, line._key, 'isFreeWarranty', isChecked);
                         if (isChecked) {
-                          handleUpdateLineField(line.id, line._key, 'unitPrice', 0);
+                          handleUpdateLineFields(line.id, line._key, { isFreeWarranty: true, unitPrice: 0, vatPercent: 0 });
                         } else {
                           const originalPrice = line.componentVariant?.salePrice || line._salePrice || 0;
-                          handleUpdateLineField(line.id, line._key, 'unitPrice', originalPrice);
+                          handleUpdateLineFields(line.id, line._key, { isFreeWarranty: false, unitPrice: originalPrice, vatPercent: vatConfig.defaultVatRate });
                         }
                       }} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
                     </td>
@@ -1372,7 +1438,17 @@ function RepairFormPage() {
                     </td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="number" min="0" step="1" max="10" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.vatPercent || 0} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'vatPercent', Math.min(10, Math.max(0, Number(e.target.value))))} />
+                        <select
+                          className="misa-input"
+                          style={{ width: '60px', padding: '2px 4px', height: '28px', textAlign: 'right', appearance: 'auto' }}
+                          disabled={fee.isFreeWarranty}
+                          value={fee.vatPercent ?? vatConfig.defaultVatRate}
+                          onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'vatPercent', Number(e.target.value))}
+                        >
+                          {vatConfig.allowedVatRates.map(rate => (
+                            <option key={rate} value={rate}>{rate}</option>
+                          ))}
+                        </select>
                       ) : (fee.vatPercent || 0)}
                     </td>
                     <td align="right" style={{ fontWeight: '500' }}>
@@ -1384,7 +1460,15 @@ function RepairFormPage() {
                       })()}
                     </td>
                     <td align="center">
-                      <input type="checkbox" disabled={!isEditable} checked={fee.isFreeWarranty} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'isFreeWarranty', e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                      <input type="checkbox" disabled={!isEditable} checked={fee.isFreeWarranty} onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        if (isChecked) {
+                          handleUpdateFeeFields(fee.id, fee._key, { isFreeWarranty: true, feeAmount: 0, vatPercent: 0 });
+                        } else {
+                          const originalAmount = fee._originalAmount || products.find(p => p.productName === fee.feeName)?.salePrice || fee.feeAmount || 0;
+                          handleUpdateFeeFields(fee.id, fee._key, { isFreeWarranty: false, feeAmount: originalAmount, vatPercent: vatConfig.defaultVatRate });
+                        }
+                      }} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
                     </td>
                     {visibleColumns.description && (
                       <td>
@@ -1405,10 +1489,10 @@ function RepairFormPage() {
 
                 {/* HÀNG THÊM MỚI (INLINE ROW) */}
                 {addingType === 'PART' && (
-                  <NewInlineRow repair={repair} type="PART" variants={variants} inventoryMap={inventoryMap} onSave={handleSaveLine} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} />
+                  <NewInlineRow repair={repair} type="PART" variants={variants} inventoryMap={inventoryMap} onSave={handleSaveLine} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} vatConfig={vatConfig} />
                 )}
                 {addingType === 'FEE' && (
-                  <NewInlineRow repair={repair} type="FEE" variants={products.filter(p => p.productType === 'Dịch vụ')} onSave={handleSaveFee} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} />
+                  <NewInlineRow repair={repair} type="FEE" variants={products.filter(p => p.productType === 'Dịch vụ')} onSave={handleSaveFee} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} vatConfig={vatConfig} />
                 )}
               </tbody>
             </table>
@@ -1476,13 +1560,13 @@ function RepairFormPage() {
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
             <button className="btn-misa-cancel" onClick={() => handleGoBack()} style={{ marginRight: '8px' }}>Hủy bỏ</button>
-            {!isNew && currentStatus === 'DONE' && (
+            {!isNew && ['WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'].includes(currentStatus) && (
               <>
                 {repair?.lines?.some(l => ['ADD', 'REPLACE'].includes(l.actionType)) && (
-                  <button className="btn-misa-outline" onClick={() => navigate('/export-slips', { state: { filterDocCode: 'REP-EX-' + repair.repairCode } })} style={{ marginRight: '8px' }}><i className="bi bi-box-arrow-up-right"></i> Xem phiếu xuất kho</button>
+                  <button className="btn-misa-outline" onClick={() => navigate('/export-slips', { state: { referenceType: 'REPAIR', referenceId: repair.id } })} style={{ marginRight: '8px' }}><i className="bi bi-box-arrow-up-right"></i> Xem phiếu xuất kho</button>
                 )}
                 {repair?.lines?.some(l => ['REMOVE', 'REPLACE'].includes(l.actionType)) && (
-                  <button className="btn-misa-outline" onClick={() => navigate('/import-history', { state: { filterDocCode: 'REP-SCRAP-' + repair.repairCode } })}><i className="bi bi-box-arrow-in-down-left"></i> Xem phiếu nhập phế liệu</button>
+                  <button className="btn-misa-outline" onClick={() => navigate('/import-history', { state: { referenceType: 'REPAIR', referenceId: repair.id } })}><i className="bi bi-box-arrow-in-down-left"></i> Xem phiếu nhập phế liệu</button>
                 )}
               </>
             )}
@@ -1493,12 +1577,16 @@ function RepairFormPage() {
                 <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
                   <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
                 </button>
-                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }}>
-                  Xác nhận sửa chữa
-                </button>
-                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
-                  Hủy đơn
-                </button>
+                {canTechnicianActions && (
+                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('QUOTATION')} style={{ marginRight: '8px', backgroundColor: 'var(--wms-primary)', borderColor: 'var(--wms-primary)' }}>
+                    Lên báo giá
+                  </button>
+                )}
+                {canTechnicianActions && (
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                    Hủy đơn
+                  </button>
+                )}
               </>
             )}
 
@@ -1507,33 +1595,79 @@ function RepairFormPage() {
                 <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
                   <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
                 </button>
-                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }}>
-                  Xác nhận sửa chữa
+                {canTechnicianActions && (
+                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('WAITING_FOR_APPROVAL')} style={{ marginRight: '8px', backgroundColor: 'var(--color-warning)', color: '#000', borderColor: 'var(--color-warning)' }}>
+                    Gửi xin duyệt
+                  </button>
+                )}
+                {canTechnicianActions && (
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                    Hủy đơn
+                  </button>
+                )}
+              </>
+            )}
+
+            {!isNew && repair && repair.repairStatus === 'WAITING_FOR_APPROVAL' && (
+              <>
+                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
+                  <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
                 </button>
-                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
-                  Hủy đơn
-                </button>
+                {canAccountantActions && (
+                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }}>
+                    Duyệt / Xác nhận
+                  </button>
+                )}
+                {canAccountantActions && (
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px' }} disabled={saving} onClick={() => handleChangeStatus('QUOTATION')}>
+                    Từ chối
+                  </button>
+                )}
+                {canAccountantActions && (
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                    Hủy đơn
+                  </button>
+                )}
               </>
             )}
 
             {!isNew && repair && repair.repairStatus === 'CONFIRMED' && (
               <>
-                <button className="btn-misa-post" style={{ marginRight: '8px' }} disabled={saving} onClick={() => handleChangeStatus('UNDER_REPAIR')}>
-                  Bắt đầu sửa chữa
+                {canAccountantActions && (
+                  <button className="btn-misa-post" style={{ marginRight: '8px' }} disabled={saving} onClick={() => handleChangeStatus('WAITING_FOR_EXPORT')}>
+                    Chờ xuất kho
+                  </button>
+                )}
+                {canAccountantActions && (
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                    Hủy lệnh
+                  </button>
+                )}
+              </>
+            )}
+
+            {!isNew && repair && repair.repairStatus === 'WAITING_FOR_EXPORT' && (
+              <>
+                <button className="btn-misa-post" style={{ marginRight: '8px', opacity: 0.7 }} disabled={true}>
+                  <i className="bi bi-hourglass-split" style={{ marginRight: '4px' }}></i> Chờ kho xuất linh kiện
                 </button>
-                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
-                  Hủy lệnh
-                </button>
+                {canAccountantActions && (
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                    Hủy lệnh
+                  </button>
+                )}
               </>
             )}
             {!isNew && repair && repair.repairStatus === 'UNDER_REPAIR' && (
               <>
-                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('DONE')} style={{ marginRight: '8px' }}>
-                  Kết thúc sửa chữa
-                </button>
+                {canTechnicianActions && (
+                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('DONE')} style={{ marginRight: '8px' }}>
+                    Kết thúc sửa chữa
+                  </button>
+                )}
               </>
             )}
-            {isEditable && (
+            {isEditable && canTechnicianActions && (
               <button className="btn-misa-post" disabled={saving || !!codeError} onClick={handleSave}>
                 <i className="bi bi-save"></i> {isNew ? 'Lưu mới' : 'Lưu lại'}
               </button>
@@ -1766,12 +1900,12 @@ function FeeNameInput({ value, suggestions = [], onChange, onCommit, disabled = 
   );
 }
 
-function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, underWarranty, visibleColumns = {} }) {
+function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, underWarranty, visibleColumns = {}, vatConfig = { defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] } }) {
   const showRepairCols = repair && !['DRAFT', 'QUOTATION'].includes(repair.repairStatus);
   const [form, setForm] = useState(
     type === 'PART'
-      ? { actionType: 'ADD', componentVariantId: '', quantity: 1, unitPrice: 0, vatPercent: 0, isFreeWarranty: underWarranty || false, note: '' }
-      : { feeName: '', feeAmount: 0, vatPercent: 0, isFreeWarranty: underWarranty || false, note: '' }
+      ? { actionType: 'ADD', componentVariantId: '', quantity: 1, unitPrice: 0, vatPercent: vatConfig.defaultVatRate, isFreeWarranty: underWarranty || false, note: '' }
+      : { feeName: '', feeAmount: 0, vatPercent: vatConfig.defaultVatRate, isFreeWarranty: underWarranty || false, note: '' }
   );
   const [isSaving, setIsSaving] = useState(false);
   const skipPartCommitRef = useRef(false);
@@ -1898,19 +2032,21 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
         />
       </td>
       <td align="right">
-        <input
-          type="number"
-          min="0" step="1" max="10"
+        <select
           className="misa-input"
           disabled={isSaving || isFree}
-          value={form.vatPercent || 0}
-          onChange={e => setForm({ ...form, vatPercent: Math.min(10, Math.max(0, Number(e.target.value))) })}
+          value={form.vatPercent ?? vatConfig.defaultVatRate}
+          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
           onBlur={() => savePart(form)}
           onKeyDown={e => {
             if (e.key === 'Enter') savePart(form);
           }}
-          style={{ padding: '2px 4px', height: '28px', width: '60px', textAlign: 'right' }}
-        />
+          style={{ padding: '2px 4px', height: '28px', width: '60px', textAlign: 'right', appearance: 'auto' }}
+        >
+          {vatConfig.allowedVatRates.map(rate => (
+            <option key={rate} value={rate}>{rate}</option>
+          ))}
+        </select>
       </td>
       {/* 7. Thành tiền */}
       <td align="right" style={{ fontWeight: '500' }}>
@@ -1923,7 +2059,8 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       </td>
       {/* 8. Bảo hành */}
       <td align="center"><input type="checkbox" disabled={isSaving} checked={form.isFreeWarranty} onChange={e => {
-        const nextForm = { ...form, isFreeWarranty: e.target.checked };
+        const isChecked = e.target.checked;
+        const nextForm = { ...form, isFreeWarranty: isChecked, unitPrice: isChecked ? 0 : form.unitPrice, vatPercent: isChecked ? 0 : vatConfig.defaultVatRate };
         setForm(nextForm);
         savePart(nextForm);
       }} style={{ width: '16px', height: '16px', cursor: isSaving ? 'not-allowed' : 'pointer' }} /></td>
@@ -2029,19 +2166,21 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
         />
       </td>
       <td align="right">
-        <input
-          type="number"
-          min="0" step="1" max="10"
+        <select
           className="misa-input"
           disabled={isSaving || isFree}
-          style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }}
-          value={form.vatPercent || 0}
-          onChange={e => setForm({ ...form, vatPercent: Math.min(10, Math.max(0, Number(e.target.value))) })}
+          style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px', appearance: 'auto' }}
+          value={form.vatPercent ?? vatConfig.defaultVatRate}
+          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
           onBlur={() => saveFee(form)}
           onKeyDown={e => {
             if (e.key === 'Enter') saveFee(form);
           }}
-        />
+        >
+          {vatConfig.allowedVatRates.map(rate => (
+            <option key={rate} value={rate}>{rate}</option>
+          ))}
+        </select>
       </td>
       {/* 7. Thành tiền */}
       <td align="right" style={{ fontWeight: '500' }}>
@@ -2055,7 +2194,8 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       {/* 8. Bảo hành */}
       <td align="center">
         <input type="checkbox" disabled={isSaving} checked={form.isFreeWarranty} onChange={e => {
-          const nextForm = { ...form, isFreeWarranty: e.target.checked, feeAmount: e.target.checked ? 0 : form.feeAmount };
+          const isChecked = e.target.checked;
+          const nextForm = { ...form, isFreeWarranty: isChecked, feeAmount: isChecked ? 0 : form.feeAmount, vatPercent: isChecked ? 0 : vatConfig.defaultVatRate };
           setForm(nextForm);
           saveFee(nextForm);
         }} style={{ width: '16px', height: '16px', cursor: isSaving ? 'not-allowed' : 'pointer' }} />

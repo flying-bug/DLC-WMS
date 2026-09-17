@@ -201,28 +201,7 @@ function WarrantyListPage() {
   };
 
   const getTableColumns = () => {
-    const tableCols = [
-      {
-        title: <input
-          type="checkbox"
-          className={styles.checkbox}
-          checked={rows.length > 0 && selectedIds.length === rows.length}
-          onChange={handleSelectAll}
-        />,
-        width: '40px',
-        align: 'center',
-        render: (_, item) => (
-          <div style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-            <input
-              type="checkbox"
-              className={styles.checkbox}
-              checked={selectedIds.includes(item.id)}
-              onChange={(e) => handleSelectRow(e, item.id)}
-            />
-          </div>
-        )
-      }
-    ];
+    const tableCols = [];
 
     if (columns.warrantyCode) {
       tableCols.push({

@@ -3,8 +3,8 @@ spring:
     name: backend
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    username: root
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
@@ -39,9 +39,9 @@ backup:
   path: ${BACKUP_PATH:/tmp/backups}
 
 google:
-  client-id: ${GMAIL_CLIENT_ID:}
+  client-id: ${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}
   client-secret: ${GMAIL_CLIENT_SECRET:}
-  refresh-token: ${GMAIL_REFRESH_TOKEN:}
+  refresh-token: ${GMAIL_REFRESH_TOKEN:1//04KBPq7hKygPUCgYIARAAGAQSNgF-L9Irb_g6d0iM3EJgsq6OGRXOQ-oPiugQgXmRjf5eylrUB013TdaOuRW5Fy-KdPNb--XHXQ}
   oauth:
     redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI:http://localhost:8080/api/v1/email/google/callback}
     scopes: ${GOOGLE_OAUTH_SCOPES:https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/userinfo.email}
@@ -83,9 +83,4 @@ app:
   # Chỉ bật ở local/dev để debug - KHÔNG bật ở Production vì sẽ lộ chi tiết lỗi
   # (stack trace class name, message SQL/constraint...) cho client.
   expose-error-details: ${APP_EXPOSE_ERROR_DETAILS:false}
-  jwt:
-    # Bắt buộc set qua biến môi trường (backend/.env cục bộ, secret manager khi deploy).
-    # Không đặt giá trị mặc định ở đây - nếu để trống, JwtUtils sẽ tự sinh secret ngẫu
-    # nhiên cho từng lần khởi động (chỉ dùng được cho local/dev, token mất hiệu lực mỗi lần restart).
-    secret: ${JWT_SECRET:}
 

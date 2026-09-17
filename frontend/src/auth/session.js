@@ -71,6 +71,10 @@ export function getAuthUserId() {
     return rawUserId ? Number(rawUserId) : null;
 }
 
+export function getAuthFullName() {
+    return sessionStorage.getItem('fullName') || localStorage.getItem('fullName') || '';
+}
+
 export function setAuthSession(session, rememberMe = false) {
     if (!session?.token) {
         return;
@@ -105,6 +109,12 @@ export function setAuthSession(session, rememberMe = false) {
         sessionStorage.removeItem('userId');
     }
 
+    if (session.fullName) {
+        sessionStorage.setItem('fullName', session.fullName);
+    } else {
+        sessionStorage.removeItem('fullName');
+    }
+
     // If rememberMe is true, also backup to localStorage
     if (rememberMe) {
         localStorage.setItem('token', session.token);
@@ -112,12 +122,14 @@ export function setAuthSession(session, rememberMe = false) {
         if (session.roles) localStorage.setItem('roles', JSON.stringify(session.roles));
         if (session.permissions) localStorage.setItem('permissions', JSON.stringify(session.permissions));
         if (session.id != null) localStorage.setItem('userId', String(session.id));
+        if (session.fullName) localStorage.setItem('fullName', session.fullName);
     } else {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('roles');
         localStorage.removeItem('permissions');
         localStorage.removeItem('userId');
+        localStorage.removeItem('fullName');
     }
 
     window.dispatchEvent(new CustomEvent(AUTH_EVENT, {
@@ -131,11 +143,13 @@ export function clearAuthSession() {
     sessionStorage.removeItem('roles');
     sessionStorage.removeItem('permissions');
     sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('fullName');
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('roles');
     localStorage.removeItem('permissions');
     localStorage.removeItem('userId');
+    localStorage.removeItem('fullName');
 }
 
 // Auto-restore session from localStorage if user re-opens the browser
@@ -149,6 +163,8 @@ if (!sessionStorage.getItem('token') && localStorage.getItem('token')) {
     if (savedPerms) sessionStorage.setItem('permissions', savedPerms);
     const savedUserId = localStorage.getItem('userId');
     if (savedUserId) sessionStorage.setItem('userId', savedUserId);
+    const savedFullName = localStorage.getItem('fullName');
+    if (savedFullName) sessionStorage.setItem('fullName', savedFullName);
 }
 
 export function forceLogout(message) {

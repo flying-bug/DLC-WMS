@@ -92,7 +92,8 @@ class InventoryPostingServiceExportGuardTest {
                 mock(AppNotificationService.class),
                 mock(DocumentDependencyService.class),
                 mock(AuditLogService.class),
-                mock(WarehouseAccessGuard.class)
+                mock(WarehouseAccessGuard.class),
+                mock(org.springframework.context.ApplicationEventPublisher.class)
         );
     }
 

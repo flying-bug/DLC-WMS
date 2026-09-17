@@ -172,10 +172,11 @@ public class Repair {
     @JoinColumn(name = "warranty_id", insertable = false, updatable = false)
     private Warranty warranty;
 
-    public void initOrder(String repairCode, Long partnerId, Long productId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, Boolean underWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note, Long createdBy) {
+    public void initOrder(String repairCode, Long partnerId, Long productId, Long productVariantId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, Boolean underWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note, Long createdBy) {
         this.repairCode = repairCode;
         this.partnerId = partnerId;
         this.productId = productId;
+        this.productVariantId = productVariantId;
         this.productQuantity = productQuantity != null ? productQuantity : 1;
         this.productUnit = productUnit;
         this.warehouseId = warehouseId;
@@ -199,9 +200,10 @@ public class Repair {
         this.repairCost = BigDecimal.ZERO;
     }
 
-    public void updateDetails(Long partnerId, Long productId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, String internalNotes, Boolean newWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note) {
+    public void updateDetails(Long partnerId, Long productId, Long productVariantId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, String internalNotes, Boolean newWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note) {
         if (partnerId != null) this.partnerId = partnerId;
         if (productId != null) this.productId = productId;
+        if (productVariantId != null) this.productVariantId = productVariantId;
         if (productQuantity != null) this.productQuantity = productQuantity;
         if (productUnit != null) this.productUnit = productUnit;
         if (warehouseId != null) this.warehouseId = warehouseId;
@@ -289,23 +291,45 @@ public class Repair {
     public void moveToQuotation() {
         if (!RepairStatus.DRAFT.name().equals(this.repairStatus)
                 && !RepairStatus.CONFIRMED.name().equals(this.repairStatus)
-                && !RepairStatus.UNDER_REPAIR.name().equals(this.repairStatus)) {
+                && !RepairStatus.UNDER_REPAIR.name().equals(this.repairStatus)
+                && !RepairStatus.WAITING_FOR_APPROVAL.name().equals(this.repairStatus)) {
             throw new IllegalStateException("Không thể chuyển trạng thái sang Báo Giá");
         }
         this.repairStatus = RepairStatus.QUOTATION.name();
     }
 
+    public void sendForApproval() {
+        if (!RepairStatus.QUOTATION.name().equals(this.repairStatus)) {
+            throw new IllegalStateException("Chỉ có thể gửi duyệt khi ở trạng thái Báo Giá");
+        }
+        this.repairStatus = RepairStatus.WAITING_FOR_APPROVAL.name();
+    }
+
+    public void reject(String reason) {
+        if (!RepairStatus.WAITING_FOR_APPROVAL.name().equals(this.repairStatus)) {
+            throw new IllegalStateException("Chỉ có thể từ chối khi ở trạng thái Chờ duyệt");
+        }
+        this.repairStatus = RepairStatus.QUOTATION.name();
+        if (reason != null) {
+            this.note = this.note != null ? this.note + "\nLý do từ chối: " + reason : "Lý do từ chối: " + reason;
+        }
+    }
+
     public void confirm() {
-        if (!RepairStatus.DRAFT.name().equals(this.repairStatus)
-                && !RepairStatus.QUOTATION.name().equals(this.repairStatus)) {
-            throw new IllegalStateException("Không thể xác nhận ở trạng thái hiện tại");
+        if (!RepairStatus.WAITING_FOR_APPROVAL.name().equals(this.repairStatus)) {
+            throw new IllegalStateException("Chỉ có thể xác nhận khi ở trạng thái Chờ duyệt");
         }
         this.repairStatus = RepairStatus.CONFIRMED.name();
     }
 
+    public void waitForExport() {
+        this.repairStatus = RepairStatus.WAITING_FOR_EXPORT.name();
+    }
+
     public void startRepair() {
-        if (!RepairStatus.CONFIRMED.name().equals(this.repairStatus)) {
-            throw new IllegalStateException("Chỉ có thể tiến hành sửa chữa khi lệnh đã được xác nhận");
+        if (!RepairStatus.WAITING_FOR_EXPORT.name().equals(this.repairStatus)
+                && !RepairStatus.CONFIRMED.name().equals(this.repairStatus)) {
+            throw new IllegalStateException("Chỉ có thể tiến hành sửa chữa khi kho đã xuất linh kiện hoặc sau khi xác nhận lệnh (nếu không cần xuất/nhập kho)");
         }
         this.repairStatus = RepairStatus.UNDER_REPAIR.name();
     }

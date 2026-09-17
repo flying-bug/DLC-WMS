@@ -399,6 +399,18 @@
   border: 1px solid var(--status-danger-border);
 }
 
+.badgePrimary {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badgePurple {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
 /* Pagination */
 .pagination {
   display: none;

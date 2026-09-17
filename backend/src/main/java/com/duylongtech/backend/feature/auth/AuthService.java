@@ -68,10 +68,15 @@ public class AuthService {
         String role = roles.stream().findFirst().orElse("ROLE_USER");
         String jwt = jwtUtils.generateJwtToken(userDetails.getUsername(), role);
 
+        String fullName = userRepository.findByUsername(userDetails.getUsername())
+                .map(User::getFullName)
+                .orElse(userDetails.getUsername());
+
         return JwtResponse.builder()
                 .token(jwt)
                 .id(userDetails.getId())
                 .username(userDetails.getUsername())
+                .fullName(fullName)
                 .role(role)
                 .roles(roles)
                 .permissions(permissions)
@@ -116,6 +121,7 @@ public class AuthService {
                     .token(jwt)
                     .id(user.getId())
                     .username(user.getUsername())
+                    .fullName(user.getFullName())
                     .role(role)
                     .roles(roles)
                     .permissions(permissions)

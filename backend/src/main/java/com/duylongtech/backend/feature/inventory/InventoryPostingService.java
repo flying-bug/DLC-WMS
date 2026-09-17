@@ -79,6 +79,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 @Service
 @RequiredArgsConstructor
 public class InventoryPostingService {
@@ -98,6 +100,7 @@ public class InventoryPostingService {
     public static final String ISSUE_PURPOSE_SALES = "SALES"; // Xuất kho bán hàng – tự sinh bảo hành
     public static final String ISSUE_PURPOSE_USAGE = "USAGE"; // Xuất kho sử dụng nội bộ – không sinh bảo hành
     public static final String ISSUE_PURPOSE_ASSEMBLY = "ASSEMBLY"; // Xuất kho lắp ráp/tháo dỡ
+    public static final String ISSUE_PURPOSE_REPAIR = "REPAIR"; // Xuất kho sửa chữa
 
     // Phân loại phiếu xuất/nhập kho tự động từ module Chuyển kho
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
@@ -106,12 +109,12 @@ public class InventoryPostingService {
 
     // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
     private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE,
-            ISSUE_PURPOSE_ASSEMBLY);
+            ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_REPAIR);
 
     // Tập hợp các mục đích hợp lệ toàn bộ (bắt cả nội bộ và người dùng)
     private static final Set<String> VALID_ALL_EXPORT_PURPOSES = Set.of(
             ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_TRANSFER_OUT,
-            ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
+            ISSUE_PURPOSE_INVENTORY_ADJUSTMENT, ISSUE_PURPOSE_REPAIR);
 
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
@@ -142,6 +145,7 @@ public class InventoryPostingService {
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
     private final com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard warehouseAccessGuard;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
@@ -394,6 +398,8 @@ public class InventoryPostingService {
                     null, null);
         } catch (Exception ignored) {
         }
+        
+        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, saved.getId(), saved.getReferenceType(), saved.getReferenceId()));
 
         return toResponse(saved);
     }
@@ -600,6 +606,8 @@ public class InventoryPostingService {
                     null, null);
         } catch (Exception ignored) {
         }
+        
+        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, savedImport.getId(), savedImport.getReferenceType(), savedImport.getReferenceId()));
 
         return toResponse(savedImport);
     }

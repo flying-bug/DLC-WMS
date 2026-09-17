@@ -116,6 +116,7 @@ public class RepairService {
                 repairCode,
                 request.getPartnerId(),
                 request.getProductId(),
+                request.getProductVariantId(),
                 request.getProductQuantity(),
                 trimToNull(request.getProductUnit()),
                 request.getWarehouseId(),
@@ -159,6 +160,7 @@ public class RepairService {
         repair.updateDetails(
                 request.getPartnerId(),
                 request.getProductId(),
+                request.getProductVariantId(),
                 request.getProductQuantity(),
                 trimToNull(request.getProductUnit()),
                 request.getWarehouseId(),
@@ -204,7 +206,7 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        repair.updateDetails(null, null, null, null, null, null, null, null, null, null, null, null, null, null, trimToNull(notes), null, null, null, null, null);
+        repair.updateDetails(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, trimToNull(notes), null, null, null, null, null);
         Repair saved = repairRepository.save(repair);
         return toDetailResponse(saved);
     }
