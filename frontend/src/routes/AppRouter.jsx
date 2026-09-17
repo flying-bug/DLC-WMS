@@ -4,7 +4,6 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
-import AnalyticsDashboard from '../pages/Dashboard/AnalyticsDashboard';
 import UnitPage from '../pages/Unit/UnitPage';
 import ProductPage from '../pages/Product/ProductPage';
 import ProductCategoryPage from '../pages/ProductCategory/ProductCategoryPage';
@@ -86,7 +85,6 @@ const getDefaultAuthenticatedPath = () => {
     // và bị đưa thẳng tới /main-dashboard thay vì bàn làm việc của họ.
     if (roles.some(role => ['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER'].includes(role))) return '/warehouse-workspace';
     if (roles.some(role => ['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER'].includes(role))) return '/cashier-workspace';
-    if (hasPermission('report_summary:view')) return '/main-dashboard';
     if (roles.some(role => ['TECHNICIAN', 'ROLE_TECHNICIAN'].includes(role))) return '/dashboard';
     return '/dashboard';
 };
@@ -169,9 +167,6 @@ function AppRoutes() {
                 <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN']} />}>
                     {/* Thủ kho / Thủ quỹ bị khóa vào bàn làm việc riêng, không được vào Tổng quan chung */}
                     <Route element={<ProtectedRoute disallowedRoles={['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER', 'CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER']} />}>
-                        <Route element={<ProtectedRoute requiredPermission="report_summary:view" />}>
-                            <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
-                        </Route>
                     </Route>
                     {/* Chi Thu kho (import:post/export:post) va Quan ly moi duoc vao ban lam viec Thu kho */}
                     <Route element={<ProtectedRoute requiredPermission={['import:post', 'export:post']} />}>
@@ -233,6 +228,7 @@ function AppRoutes() {
                         <Route path="/repairs/create" element={<RepairFormPage />} />
                         <Route path="/repairs/:id" element={<RepairFormPage />} />
                         <Route path="/repairs/:id/edit" element={<RepairFormPage />} />
+                        <Route path="/repair/:id" element={<RepairFormPage />} />
                     </Route>
                     <Route element={<ProtectedRoute requiredPermission="assembly_config:view" />}>
                         <Route path="/assembly-boms" element={<AssemblyBomPage />} />

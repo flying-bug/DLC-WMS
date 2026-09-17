@@ -17,8 +17,10 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
   QUOTATION: { label: 'Báo giá', code: 'primary' },
+  WAITING_FOR_APPROVAL: { label: 'Chờ duyệt', code: 'warning' },
   CONFIRMED: { label: 'Đã xác nhận', code: 'success' },
-  UNDER_REPAIR: { label: 'Đang sửa chữa', code: 'warning' },
+  WAITING_FOR_EXPORT: { label: 'Chờ xuất kho', code: 'warning' },
+  UNDER_REPAIR: { label: 'Đang sửa chữa', code: 'purple' },
   DONE: { label: 'Hoàn tất', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
@@ -186,28 +188,7 @@ function RepairListPage() {
   };
 
   const getTableColumns = () => {
-    const tableCols = [
-      {
-        title: <input
-          type="checkbox"
-          className={styles.checkbox}
-          checked={rows.length > 0 && selectedIds.length === rows.length}
-          onChange={handleSelectAll}
-        />,
-        width: '40px',
-        align: 'center',
-        render: (_, item) => (
-          <div style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-            <input
-              type="checkbox"
-              className={styles.checkbox}
-              checked={selectedIds.includes(item.id)}
-              onChange={(e) => handleSelectRow(e, item.id)}
-            />
-          </div>
-        )
-      }
-    ];
+    const tableCols = [];
 
     if (columns.repairCode) {
       tableCols.push({
@@ -251,6 +232,7 @@ function RepairListPage() {
             item.statusCode === 'info' ? styles.badgeInfo :
             item.statusCode === 'warning' ? styles.badgeWarning :
             item.statusCode === 'primary' ? styles.badgePrimary :
+            item.statusCode === 'purple' ? styles.badgePurple :
             styles.badgeDanger
           }`}>
             {item.statusLabel}
