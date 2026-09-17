@@ -9,6 +9,7 @@ export const PERMISSION_ACTIONS = [
     { key: 'delete', label: 'Xóa' },
     { key: 'export', label: 'Xuất file' },
     { key: 'print', label: 'In ấn' },
+    { key: 'post', label: 'Ghi sổ' },
     { key: 'submit', label: 'Trình duyệt' },
     { key: 'approve', label: 'Duyệt' },
     { key: 'execute', label: 'Thực hiện' },
@@ -92,8 +93,8 @@ export const PERMISSION_CATEGORIES = [
 export const getInitialPermissionsState = () => ({
     // Quản lý kho
     warehouse_master: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-    import: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-    export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+    import: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false, post: false },
+    export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false, post: false },
     transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
     stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
 
