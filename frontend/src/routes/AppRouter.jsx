@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '../constants';
+import ErrorBoundary from '../components/ErrorBoundary';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
@@ -135,9 +136,18 @@ const RootRedirect = () => {
     return <Navigate to={getDefaultAuthenticatedPath()} replace />;
 };
 
-function AppRouter() {
+// Mỗi trang tự bọc chính nó bằng <AdminLayout> (xem AdminLayout.jsx) thay vì được
+// AdminLayout bọc qua route lồng nhau, nên nếu logic của trang throw ngay trong thân hàm
+// (trước khi kịp trả về JSX chứa AdminLayout), lỗi đó xảy ra ở cấp cha của AdminLayout -
+// một ErrorBoundary đặt bên trong AdminLayout sẽ không bắt được. Đặt ở đây, bọc quanh toàn
+// bộ <Routes>, mới chắc chắn bắt được mọi lỗi render của bất kỳ trang nào. Key theo
+// pathname để tự reset khi điều hướng sang trang khác - nếu không, một khi đã crash thì
+// ErrorBoundary (nằm trên Router) sẽ giữ nguyên màn hình lỗi mãi vì đổi URL không tự
+// remount nó.
+function AppRoutes() {
+    const location = useLocation();
     return (
-        <BrowserRouter>
+        <ErrorBoundary key={location.pathname}>
             <Routes>
                 {/* Guest / Public Routes */}
                 <Route element={<PublicRoute />}>
@@ -293,6 +303,14 @@ function AppRouter() {
                 {/* Catch-all Redirect */}
                 <Route path="*" element={<NotFoundRedirect />} />
             </Routes>
+        </ErrorBoundary>
+    );
+}
+
+function AppRouter() {
+    return (
+        <BrowserRouter>
+            <AppRoutes />
         </BrowserRouter>
     );
 }

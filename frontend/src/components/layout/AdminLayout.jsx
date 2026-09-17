@@ -8,6 +8,7 @@ import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
 import WorkspaceModeDropdown from '../ui/WorkspaceModeDropdown/WorkspaceModeDropdown';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeContext';
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
+import ErrorBoundary from '../ErrorBoundary';
 
 import styles from './AdminLayout.module.css';
 
@@ -445,7 +446,9 @@ const AdminLayout = ({ children }) => {
                 </header>
 
                 <main className={styles.content}>
-                    {children || <Outlet />}
+                    <ErrorBoundary key={location.pathname}>
+                        {children || <Outlet />}
+                    </ErrorBoundary>
                 </main>
                 <ActiveWorkflowGuide />
             </div>
