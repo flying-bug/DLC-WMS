@@ -35,13 +35,13 @@ public class GoogleDriveService {
 
     private final SystemSettingRepository settingRepo;
 
-    @Value("${google.client-id:${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}}")
+    @Value("${google.client-id:${GMAIL_CLIENT_ID:}}")
     private String defaultClientId;
 
-    @Value("${google.client-secret:${GMAIL_CLIENT_SECRET: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}}")
+    @Value("${google.client-secret:${GMAIL_CLIENT_SECRET:}}")
     private String defaultClientSecret;
 
-    @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:1//04KBPq7hKygPUCgYIARAAGAQSNgF-L9Irb_g6d0iM3EJgsq6OGRXOQ-oPiugQgXmRjf5eylrUB013TdaOuRW5Fy-KdPNb--XHXQ}}")
+    @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:}}")
     private String defaultRefreshToken;
 
     private static final String APP_NAME = "DLC-WMS Backup";

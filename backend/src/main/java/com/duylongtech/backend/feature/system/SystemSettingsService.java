@@ -94,7 +94,7 @@ public class SystemSettingsService {
     }
 
     public String getOAuthAuthUrl(String redirectUri) {
-        String clientId = env.getProperty("google.client-id", "889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com");
+        String clientId = env.getProperty("google.client-id");
         return "https://accounts.google.com/o/oauth2/v2/auth" +
                 "?client_id=" + clientId +
                 "&redirect_uri=" + java.net.URLEncoder.encode(redirectUri, java.nio.charset.StandardCharsets.UTF_8) +
@@ -106,7 +106,7 @@ public class SystemSettingsService {
 
     @Transactional
     public void exchangeOAuthCode(String code, String redirectUri) throws Exception {
-        String clientId = env.getProperty("google.client-id", "889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com");
+        String clientId = env.getProperty("google.client-id");
 
         org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
         org.springframework.util.MultiValueMap<String, String> body = new org.springframework.util.LinkedMultiValueMap<>();

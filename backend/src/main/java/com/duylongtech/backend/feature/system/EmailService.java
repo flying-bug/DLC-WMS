@@ -45,13 +45,13 @@ public class EmailService {
     @Value("${spring.mail.username:computerduylong@gmail.com}")
     private String fromEmail;
 
-    @Value("${google.client-id:${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}}")
+    @Value("${google.client-id:${GMAIL_CLIENT_ID:}}")
     private String gmailClientId;
 
-    @Value("${google.client-secret:${GMAIL_CLIENT_SECRET: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}}")
+    @Value("${google.client-secret:${GMAIL_CLIENT_SECRET:}}")
     private String gmailClientSecret;
 
-    @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:1//04r_huLp3CGjLCgYIARAAGAQSNgF-L9IruxTRi1RfR3nF2bXEio5AOmicfwAEFudp6c5keNISsei6Tz_LAtAiTXP6b6NGaKRwDA}}")
+    @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:}}")
     private String gmailRefreshToken;
 
     // Khởi tạo lazy để lỗi NIO Selector cục bộ (nếu có) không chặn cả Spring context
