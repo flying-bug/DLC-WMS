@@ -200,12 +200,19 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("payment", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("transfer", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
-        moduleActions.put("assembly_config", new String[]{"view", "add", "edit"});
-        // approve/submit: AssemblyOrderController đã dùng "assembly:approve"/"assembly:submit"
-        // và RoleService đã có sẵn logic gán 2 quyền này cho Kế toán/Kỹ thuật viên, nhưng chưa
-        // từng được seed - nghĩa là quyền này chưa bao giờ thực sự tồn tại để cấp cho ai, nên
-        // mọi API duyệt/nộp BOM và lệnh lắp ráp/tháo dỡ trước giờ luôn trả 403 cho tất cả role.
-        moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print", "approve", "submit"});
+        // "delete" từng chỉ được tạo qua migration SQL V52 (INSERT IGNORE trực tiếp vào
+        // PERMISSIONS), không qua map này - trên môi trường mà V52 không áp dụng được, quyền
+        // này không tồn tại, nên bất kỳ role/user nào có "assembly_config:delete" trong ma
+        // trận phân quyền đều lưu lỗi "Quyền không tồn tại: assembly_config:delete" (xem
+        // RoleService.updateRolePermissions). Khai báo lại ở đây để việc tạo quyền không phụ
+        // thuộc vào lịch sử migration đã áp dụng hay chưa.
+        moduleActions.put("assembly_config", new String[]{"view", "add", "edit", "delete"});
+        // approve/submit/execute/complete: AssemblyOrderController đã dùng các quyền này và
+        // RoleService đã có sẵn logic gán cho Kế toán/Kỹ thuật viên/Thủ kho, nhưng approve/
+        // submit chưa từng được seed ở đây (chỉ qua V52), và execute/complete thì hoàn toàn
+        // chưa có nơi nào khác seed - nghĩa là quyền chưa bao giờ thực sự tồn tại để cấp cho
+        // ai trên môi trường V52 không áp dụng được.
+        moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print", "approve", "submit", "execute", "complete"});
         moduleActions.put("warranty", new String[]{"view", "add", "edit"});
         moduleActions.put("repair", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
