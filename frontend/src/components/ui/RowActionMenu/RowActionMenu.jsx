@@ -19,6 +19,16 @@ export default function RowActionMenu({
   const updatePosition = useCallback(() => {
     if (!open || !triggerRef.current || !menuRef.current) return;
 
+    // ResponsiveTable renders a desktop <table> and a mobile card list at the
+    // same time and only hides the inactive one with CSS, so this component
+    // can be mounted twice for the same row. The hidden trigger's rect is
+    // zeroed out, which would otherwise clamp the menu to the top-left
+    // corner of the screen as a stray "ghost" menu - skip positioning it.
+    if (triggerRef.current.offsetParent === null) {
+      setPosition(current => ({ ...current, visibility: 'hidden' }));
+      return;
+    }
+
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const menuWidth = menuRef.current.offsetWidth;
     const menuHeight = menuRef.current.offsetHeight;
