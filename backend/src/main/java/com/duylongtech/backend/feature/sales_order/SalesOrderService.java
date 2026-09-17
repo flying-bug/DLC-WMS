@@ -337,13 +337,20 @@ public class SalesOrderService {
     }
 
     /**
-     * Release tất cả reservations HOLDING của một SO.
+     * Release tất cả reservations đang giữ chỗ (HOLDING lẫn BACKORDERED) của một SO.
      * Gọi khi: hủy SO, hoặc scheduled job dọn expired reservations.
+     *
+     * approveSalesOrder() cộng quantity_reserved cho CẢ HAI trạng thái HOLDING và
+     * BACKORDERED (xem trên) - trước đây hàm này chỉ release HOLDING, nên hủy một
+     * SO bị backorder (hàng không đủ lúc duyệt) sẽ không bao giờ trả lại phần
+     * quantity_reserved đó, làm tồn "khả dụng" của biến thể đó bị âm dần vĩnh viễn.
      */
     @Transactional
     public void releaseReservations(Long salesOrderId, Long warehouseId) {
-        List<StockReservation> holdings = stockReservationRepository
-                .findBySalesOrderIdAndStatus(salesOrderId, StockReservationStatus.HOLDING.name());
+        List<StockReservation> holdings = new java.util.ArrayList<>(stockReservationRepository
+                .findBySalesOrderIdAndStatus(salesOrderId, StockReservationStatus.HOLDING.name()));
+        holdings.addAll(stockReservationRepository
+                .findBySalesOrderIdAndStatus(salesOrderId, StockReservationStatus.BACKORDERED.name()));
 
         for (StockReservation r : holdings) {
             Long whId = r.getWarehouseId() != null ? r.getWarehouseId() : warehouseId;
