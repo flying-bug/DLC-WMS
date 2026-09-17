@@ -317,15 +317,12 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
 
         // 1. Tài khoản Super Admin
+        // Chỉ gán role/quyền mặc định lúc TẠO MỚI - nếu admin đã tồn tại thì không đụng vào
+        // (trước đây nhánh này chạy vô điều kiện mỗi lần backend khởi động, nên bất kỳ quyền
+        // nào admin được cấp thêm qua màn Phân quyền/Quyền riêng đều bị ghi đè về lại đúng 3
+        // module account/auth/audit ngay lần deploy/restart kế tiếp).
         Optional<User> adminOpt = userRepository.findByUsername("admin");
-        if (adminOpt.isPresent()) {
-            User admin = adminOpt.get();
-            Set<RoleEntity> roles = new HashSet<>();
-            roles.add(superAdminRole);
-                        admin.updateRoles(roles);
-            admin.updatePermissions(adminPermissions);
-            userRepository.save(admin);
-        } else {
+        if (adminOpt.isEmpty()) {
             Set<RoleEntity> roles = new HashSet<>();
             roles.add(superAdminRole);
 
