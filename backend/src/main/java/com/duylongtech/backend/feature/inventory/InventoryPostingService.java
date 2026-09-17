@@ -984,12 +984,19 @@ public class InventoryPostingService {
         return value;
     }
 
+    // Split on comma/semicolon/whitespace/newline, not just newline - users paste
+    // scanned or copy-pasted serials comma-separated on one line, and the
+    // unpost-time deletion logic a few lines up already expects that (see the
+    // split("[,;\\s\\n]+") calls above). A newline-only split let a whole
+    // comma-joined line through as a single "serial" when posting, which then
+    // failed to insert once it was longer than serial_numbers.normalized_serial_number
+    // (VARCHAR(100)) instead of failing the (correct) expected-quantity check first.
     public List<String> parseSerialNumbers(String serialNumbersText) {
         String normalized = trimToNull(serialNumbersText);
         if (normalized == null) {
             return List.of();
         }
-        return List.of(normalized.split("\\R"))
+        return List.of(normalized.split("[,;\\s\\n]+"))
                 .stream()
                 .map(this::trimToNull)
                 .filter(value -> value != null)
