@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
+import * as warehouseApi from '../../api/warehouseApi';
 import styles from './CreateEmployeePage.module.css';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { ROLE_OPTIONS } from '../../utils/roleOptions';
+
+const WAREHOUSE_SCOPED_ROLES = ['ROLE_WAREHOUSE_CONTROLLER', 'ROLE_TECHNICIAN'];
 
 const PHONE_REGEX = /^(?:\+84|0)(?:3[2-9]|5[5689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,6 +36,8 @@ function CreateEmployeePage() {
     const { showToast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [selectedRoles, setSelectedRoles] = useState(['ROLE_WAREHOUSE_CONTROLLER']);
+    const [warehouses, setWarehouses] = useState([]);
+    const [selectedWarehouseIds, setSelectedWarehouseIds] = useState([]);
     const [formData, setFormData] = useState({
         username: '',
         fullName: '',
@@ -53,6 +58,19 @@ function CreateEmployeePage() {
         }));
     };
 
+    const needsWarehouse = selectedRoles.some(r => WAREHOUSE_SCOPED_ROLES.includes(r));
+
+    useEffect(() => {
+        if (!needsWarehouse || warehouses.length > 0) return;
+        warehouseApi.getWarehouses({ page: 0, size: 100 })
+            .then(res => {
+                const payload = res.data.data || res.data;
+                const content = payload.content || (Array.isArray(payload) ? payload : []);
+                setWarehouses(content);
+            })
+            .catch(() => showToast('error', 'Không thể tải danh sách kho.'));
+    }, [needsWarehouse]);
+
     const toggleRole = (roleValue) => {
         setSelectedRoles(prev => {
             if (prev.includes(roleValue)) {
@@ -65,6 +83,12 @@ function CreateEmployeePage() {
                 return [...prev, roleValue];
             }
         });
+    };
+
+    const toggleWarehouse = (warehouseId) => {
+        setSelectedWarehouseIds(prev =>
+            prev.includes(warehouseId) ? prev.filter(id => id !== warehouseId) : [...prev, warehouseId]
+        );
     };
 
     const handleSave = async (e) => {
@@ -110,6 +134,10 @@ function CreateEmployeePage() {
             showToast('warning', 'Vui lòng chọn ít nhất 1 vai trò cho nhân viên.');
             return;
         }
+        if (needsWarehouse && selectedWarehouseIds.length === 0) {
+            showToast('warning', 'Vui lòng chọn ít nhất 1 kho phụ trách cho vai trò Thủ kho/Kỹ thuật viên.');
+            return;
+        }
 
         try {
             setIsSaving(true);
@@ -129,7 +157,8 @@ function CreateEmployeePage() {
                 department: primaryRoleLabel,
                 address: formData.address.trim(),
                 status: 'APPROVED',
-                roles: selectedRoles
+                roles: selectedRoles,
+                warehouseIds: needsWarehouse ? selectedWarehouseIds : []
             };
 
             await axiosClient.post('/users', payload);
@@ -352,6 +381,49 @@ function CreateEmployeePage() {
                             })}
                         </div>
                     </div>
+
+                    {/* Card 3: Warehouse assignment - only for Thủ kho / Kỹ thuật viên */}
+                    {needsWarehouse && (
+                        <div className={styles.card}>
+                            <h2 className={styles.cardTitle}>
+                                <i className="bi bi-building"></i> Kho phụ trách <span className={styles.required}>*</span>
+                            </h2>
+                            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
+                                Vai trò Thủ kho/Kỹ thuật viên chỉ được thao tác trên các kho được gán dưới đây. Có thể gán/bỏ thêm sau tại trang chi tiết kho, tab "Nhân sự".
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+                                {warehouses.length === 0 ? (
+                                    <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Đang tải danh sách kho...</div>
+                                ) : (
+                                    warehouses.map(w => {
+                                        const isChecked = selectedWarehouseIds.includes(w.id);
+                                        return (
+                                            <div
+                                                key={w.id}
+                                                onClick={() => toggleWarehouse(w.id)}
+                                                style={{
+                                                    padding: '10px 14px',
+                                                    borderRadius: '8px',
+                                                    border: `1.5px solid ${isChecked ? 'var(--color-primary, var(--color-primary-bright))' : 'var(--color-border, var(--wms-border-base))'}`,
+                                                    background: isChecked ? 'rgba(59, 130, 246, 0.06)' : 'var(--color-surface, #fff)',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '10px'
+                                                }}
+                                            >
+                                                <input type="checkbox" checked={isChecked} onChange={() => {}} style={{ cursor: 'pointer', accentColor: 'var(--color-primary, var(--color-primary-bright))' }} />
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: '13px' }}>{w.name}</div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{w.code}</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     <div className={styles.securityNote}>
                         <i className="bi bi-lock"></i> Mọi dữ liệu cá nhân được lưu trữ theo giao thức bảo mật và quy định hiện hành của Duy Long Computer.

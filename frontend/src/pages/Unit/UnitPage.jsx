@@ -84,6 +84,11 @@ const UnitPage = () => {
         };
     });
 
+    // Handle client-side pagination if backend returns unpaginated List (fallback)
+    const displayRows = totalPages === 1 && totalElements > pageSize
+        ? rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+        : rows;
+
     const handleExport = () => {
         const headers = ['Tên đơn vị tính', 'Mô tả', 'Trạng thái'];
         const data = rows.map(item => [
@@ -292,7 +297,7 @@ const UnitPage = () => {
                 <div className={styles.tableContainer}>
                     <ResponsiveTable
                         columns={tableColumns}
-                        data={rows}
+                        data={displayRows}
                         loading={loading}
                         emptyMessage="Không tìm thấy đơn vị tính nào"
                         actions={renderActions}

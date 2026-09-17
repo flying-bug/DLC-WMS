@@ -65,6 +65,7 @@ public class StocktakeService {
     private final WarehouseRepository warehouseRepository;
     private final InventoryDocumentService inventoryDocumentService;
     private final SerialNumberRepository serialNumberRepository;
+    private final com.duylongtech.backend.feature.auth.UserRepository userRepository;
 
     @Autowired(required = false)
     private UserWarehouseRoleRepository userWarehouseRoleRepository;
@@ -174,10 +175,12 @@ public class StocktakeService {
     }
 
     @Transactional
-    public StocktakeResponse updateStocktake(Long id, StocktakeRequest req) {
+    public StocktakeResponse updateStocktake(Long id, StocktakeRequest req, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
         validateRequest(req);
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+
+        checkStorekeeperRestriction(stocktake, userPrincipal);
 
         if (!DocumentStatus.DRAFT.name().equals(stocktake.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
@@ -201,9 +204,11 @@ public class StocktakeService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public StocktakeResponse postStocktake(Long id, Long processedBy) {
+    public StocktakeResponse postStocktake(Long id, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+
+        checkStorekeeperRestriction(stocktake, userPrincipal);
 
         if (!DocumentStatus.DRAFT.name().equals(stocktake.getStatus())) {
             throw new BusinessException(SystemMessage.STK_ERR_005.getMessage());
@@ -302,6 +307,14 @@ public class StocktakeService {
     private StocktakeResponse toResponse(Stocktake entity) {
         StocktakeResponse response = stocktakeMapper.toResponse(entity);
         
+        if (entity.getCreatedBy() != null) {
+            userRepository.findById(entity.getCreatedBy()).ifPresent(user -> {
+                boolean isAccountant = user.getRoles().stream()
+                        .anyMatch(r -> "ACCOUNTANT".equals(r.getName()) || "ROLE_ACCOUNTANT".equals(r.getName()));
+                response.setCreatedByAccountant(isAccountant);
+            });
+        }
+
         if (entity.getWarehouseId() != null) {
             warehouseRepository.findById(entity.getWarehouseId())
                     .ifPresent(w -> response.setWarehouseName(w.getName()));
@@ -340,5 +353,21 @@ public class StocktakeService {
         }
 
         return response;
+    }
+
+    private void checkStorekeeperRestriction(Stocktake stocktake, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
+        if (userPrincipal == null) return;
+        boolean isStorekeeper = userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("STOREKEEPER"));
+        boolean isAccountantOrAdmin = userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("ACCOUNTANT") || a.getAuthority().contains("ADMIN") || a.getAuthority().contains("MANAGER"));
+        
+        if (isStorekeeper && !isAccountantOrAdmin && stocktake.getCreatedBy() != null) {
+            userRepository.findById(stocktake.getCreatedBy()).ifPresent(creator -> {
+                boolean createdByAccountant = creator.getRoles().stream()
+                        .anyMatch(r -> "ACCOUNTANT".equals(r.getName()) || "ROLE_ACCOUNTANT".equals(r.getName()));
+                if (createdByAccountant) {
+                    throw new BusinessException("Thủ kho không được phép sửa phiếu kiểm kê do kế toán tạo. Chỉ có quyền xem.");
+                }
+            });
+        }
     }
 }

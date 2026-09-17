@@ -29,4 +29,5 @@ public class StocktakeResponse {
     private LocalDateTime updatedAt;
     private List<StocktakeLineResponse> lines;
     private List<StocktakeParticipantResponse> participants;
+    private boolean createdByAccountant;
 }

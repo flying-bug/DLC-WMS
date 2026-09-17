@@ -59,8 +59,10 @@ public class WarehouseController {
     // US2: GET - Danh sách kho
     // ──────────────────────────────────────────────────────────
 
+    // account:add cũng được phép gọi để phục vụ picker "Kho phụ trách" khi Super Admin
+    // tạo tài khoản Thủ kho/Kỹ thuật mới (trang Tạo nhân viên không có warehouse_master:view).
     @GetMapping
-    @PreAuthorize("hasAuthority('warehouse_master:view') or hasRole('MANAGER')")
+    @PreAuthorize("hasAuthority('warehouse_master:view') or hasAuthority('account:add') or hasRole('MANAGER')")
     public ResponseEntity<ApiResponse<Page<WarehouseResponse>>> getWarehouses(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,

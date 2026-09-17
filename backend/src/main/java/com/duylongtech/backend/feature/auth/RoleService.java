@@ -33,8 +33,12 @@ public class RoleService {
     public List<RoleEntity> getAllRoles(String module) {
         List<RoleEntity> roles = roleRepository.findAll();
         if ("WAREHOUSE".equalsIgnoreCase(module)) {
+            // Chỉ các vai trò thực sự cần gán theo từng kho (Thủ kho, Kỹ thuật viên).
+            // Quản lý/Kế toán được bypass ràng buộc kho ở WarehouseAccessGuard nên không cần gán ở đây.
             roles = roles.stream()
-                    .filter(r -> r.getCode() != null && !r.getCode().toUpperCase().contains("SUPER_ADMIN") && !r.getCode().toUpperCase().contains("HR_MANAGER"))
+                    .filter(r -> r.getCode() != null
+                            && (r.getCode().toUpperCase().contains("WAREHOUSE_CONTROLLER")
+                                    || r.getCode().toUpperCase().contains("TECHNICIAN")))
                     .collect(Collectors.toList());
         }
         return roles;

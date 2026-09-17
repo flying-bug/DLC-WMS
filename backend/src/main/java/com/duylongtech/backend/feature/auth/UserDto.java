@@ -38,4 +38,7 @@ public class UserDto {
     private String address;
     private List<String> roles;
     private List<String> permissions;
+    // Kho được gán ngay lúc tạo tài khoản, chỉ áp dụng khi roles chứa
+    // ROLE_WAREHOUSE_CONTROLLER hoặc ROLE_TECHNICIAN (xem UserService.createUser).
+    private List<Long> warehouseIds;
 }

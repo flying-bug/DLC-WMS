@@ -13,6 +13,7 @@ import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue, formatDateOnly } from '../../utils/dateFormat';
+import { getAuthRoles } from '../../auth/session';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 
@@ -20,6 +21,11 @@ function StocktakeDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+
+  const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase());
+  const isStorekeeper = userRoles.some(r => r.includes('STOREKEEPER'));
+  const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('ADMIN') || r.includes('MANAGER'));
+  const isReadOnlyForStorekeeper = formData?.createdByAccountant && isStorekeeper && !isAccountantOrAdmin;
 
   const [warehouses, setWarehouses] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
@@ -67,7 +73,8 @@ function StocktakeDetailPage() {
           isValueStocktake: false,
           status: data.status,
           referenceImportId: data.referenceImportId,
-          referenceExportId: data.referenceExportId
+          referenceExportId: data.referenceExportId,
+          createdByAccountant: data.createdByAccountant
         });
 
         if (data.lines) {
@@ -610,11 +617,18 @@ function StocktakeDetailPage() {
               Chi tiết Bảng kiểm kê {formData.code}
             </h1>
           </button>
-          {formData.isProcessed ? (
-            <div className={styles.processedStamp}>Đã xử lý chênh lệch</div>
-          ) : (
-            <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}>Chờ xử lý chênh lệch</div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isReadOnlyForStorekeeper && (
+              <div className={styles.processedStamp} style={{ backgroundColor: 'var(--wms-bg-subtle)', borderColor: 'var(--wms-border-base)', color: 'var(--wms-text-muted)', fontSize: '12px', padding: '4px 8px' }}>
+                <i className="bi bi-lock"></i> Kế toán tạo - Chỉ xem
+              </div>
+            )}
+            {formData.isProcessed ? (
+              <div className={styles.processedStamp}>Đã xử lý chênh lệch</div>
+            ) : (
+              <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}>Chờ xử lý chênh lệch</div>
+            )}
+          </div>
         </div>
 
         {/* Master Data Section */}
@@ -745,26 +759,30 @@ function StocktakeDetailPage() {
               </>
             ) : (
               <>
-                <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
-                  <i className="bi bi-pencil"></i> Sửa
-                </button>
-                {lines.some(l => Number(l.diffQty || 0) < 0
-                  || (l.serials || []).some(s => s.scanStatus === 'MISSING')) && (
-                  <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
-                    <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
-                  </button>
-                )}
-                {lines.some(l => Number(l.diffQty || 0) > 0
-                  || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED')) && (
-                  <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
-                    <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
-                  </button>
-                )}
-                {!lines.some(l => Number(l.diffQty || 0) !== 0
-                  || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED')) && (
-                  <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
-                    <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
-                  </button>
+                {!isReadOnlyForStorekeeper && (
+                  <>
+                    <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
+                      <i className="bi bi-pencil"></i> Sửa
+                    </button>
+                    {lines.some(l => Number(l.diffQty || 0) < 0
+                      || (l.serials || []).some(s => s.scanStatus === 'MISSING')) && (
+                      <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
+                        <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
+                      </button>
+                    )}
+                    {lines.some(l => Number(l.diffQty || 0) > 0
+                      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED')) && (
+                      <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
+                        <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
+                      </button>
+                    )}
+                    {!lines.some(l => Number(l.diffQty || 0) !== 0
+                      || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED')) && (
+                      <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+                        <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
+                      </button>
+                    )}
+                  </>
                 )}
               </>
             )}

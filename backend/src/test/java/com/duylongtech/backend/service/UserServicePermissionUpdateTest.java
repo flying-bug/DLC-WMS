@@ -11,6 +11,7 @@ import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.auth.UserService;
 import com.duylongtech.backend.feature.system.CloudinaryService;
 import com.duylongtech.backend.feature.system.EmailService;
+import com.duylongtech.backend.feature.warehouse.UserWarehouseRoleRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -63,7 +64,7 @@ class UserServicePermissionUpdateTest {
     private static UserService service(UserRepository userRepository, RoleRepository roleRepository,
             PermissionRepository permissionRepository, UserMapper userMapper) {
         return new UserService(userRepository, roleRepository, mock(PasswordEncoder.class), permissionRepository,
-                mock(CloudinaryService.class), mock(EmailService.class), userMapper);
+                mock(CloudinaryService.class), mock(EmailService.class), userMapper, mock(UserWarehouseRoleRepository.class));
     }
 
     private static User user() {

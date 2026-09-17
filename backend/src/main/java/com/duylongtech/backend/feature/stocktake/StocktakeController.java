@@ -110,7 +110,7 @@ public class StocktakeController {
         if (request.getCreatedBy() == null && userPrincipal != null) {
             request.setCreatedBy(userPrincipal.getId());
         }
-        StocktakeResponse response = stocktakeService.updateStocktake(id, request);
+        StocktakeResponse response = stocktakeService.updateStocktake(id, request, userPrincipal);
         return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
                 .success(true)
                 .data(response)
@@ -123,8 +123,7 @@ public class StocktakeController {
     public ResponseEntity<ApiResponse<StocktakeResponse>> postStocktake(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
-        Long processedBy = userPrincipal != null ? userPrincipal.getId() : null;
-        StocktakeResponse response = stocktakeService.postStocktake(id, processedBy);
+        StocktakeResponse response = stocktakeService.postStocktake(id, userPrincipal);
         return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
                 .success(true)
                 .data(response)

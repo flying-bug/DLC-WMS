@@ -6,6 +6,7 @@ import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
 import WarehouseDeleteModal from '../../components/warehouse/WarehouseDeleteModal';
 import Toast from '../../components/ui/Toast/Toast';
 import WarehouseInventoryList from './components/WarehouseInventoryList';
+import WarehouseStaffList from './components/WarehouseStaffList';
 import styles from './WarehouseDetailPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
@@ -241,6 +242,12 @@ const WarehouseDetailPage = () => {
                         Tồn kho
                     </button>
                     <button 
+                        className={`${styles.tabItem} ${activeTab === 'staff' ? styles.active : ''}`}
+                        onClick={() => setActiveTab('staff')}
+                    >
+                        Nhân sự
+                    </button>
+                    <button 
                         className={`${styles.tabItem} ${activeTab === 'history' ? styles.active : ''}`}
                         onClick={() => setActiveTab('history')}
                     >
@@ -328,6 +335,13 @@ const WarehouseDetailPage = () => {
                 {activeTab === 'inventory' && (
                     <div className={styles.tabContent}>
                         <WarehouseInventoryList warehouseId={id} />
+                    </div>
+                )}
+
+                {/* Tab Staff */}
+                {activeTab === 'staff' && (
+                    <div className={styles.tabContent}>
+                        <WarehouseStaffList warehouseId={id} />
                     </div>
                 )}
 

@@ -55,6 +55,7 @@ public class UserService {
     private final CloudinaryService cloudinaryService;
     private final EmailService emailService;
     private final UserMapper userMapper;
+    private final com.duylongtech.backend.feature.warehouse.UserWarehouseRoleRepository userWarehouseRoleRepository;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
@@ -233,6 +234,28 @@ public class UserService {
         user.updateRoles(roles);
 
         User savedUser = userRepository.save(user);
+
+        // Nếu tài khoản có role Thủ kho/Kỹ thuật và admin đã chọn sẵn kho phụ trách,
+        // gán luôn quan hệ user-kho-vai trò để user thao tác được ngay, không phải chờ
+        // Manager vào từng kho gán thủ công ở tab "Nhân sự".
+        List<Long> warehouseScopedRoleIds = roles.stream()
+                .filter(r -> r.getCode() != null
+                        && (r.getCode().toUpperCase().contains("WAREHOUSE_CONTROLLER")
+                                || r.getCode().toUpperCase().contains("TECHNICIAN")))
+                .map(RoleEntity::getId)
+                .toList();
+        if (!warehouseScopedRoleIds.isEmpty() && userDto.getWarehouseIds() != null) {
+            for (Long warehouseId : userDto.getWarehouseIds()) {
+                if (warehouseId == null) continue;
+                for (Long roleId : warehouseScopedRoleIds) {
+                    com.duylongtech.backend.feature.warehouse.UserWarehouseRole mapping =
+                            new com.duylongtech.backend.feature.warehouse.UserWarehouseRole();
+                    mapping.initRole(savedUser.getId(), warehouseId, roleId);
+                    userWarehouseRoleRepository.save(mapping);
+                }
+            }
+        }
+
         try {
             emailService.sendNewEmployeeCredentialsEmail(email, fullName, username, temporaryPassword);
         } catch (Exception e) {
