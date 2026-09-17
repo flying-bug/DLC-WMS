@@ -421,13 +421,19 @@ public class SalesOrderService {
             }
         });
 
-        // Kiểm tra nếu tất cả reservations đều FULFILLED → SO = POSTED
+        // Kiểm tra nếu tất cả reservations đều FULFILLED → SO = POSTED. Với SO đa kho, mỗi
+        // phiếu xuất (1 kho) ghi sổ xong chỉ fulfill phần reservation của kho đó - so.markAsPosted()
+        // chỉ thực sự chạy ở lần gọi cuối cùng, khi TẤT CẢ các kho đã ghi sổ xong.
         List<StockReservation> all = stockReservationRepository.findBySalesOrderId(salesOrderId);
-        boolean allFulfilled = all.stream().allMatch(r -> StockReservationStatus.FULFILLED.name().equals(r.getStatus()));
+        boolean allFulfilled = !all.isEmpty()
+                && all.stream().allMatch(r -> StockReservationStatus.FULFILLED.name().equals(r.getStatus()));
         if (allFulfilled) {
             salesOrderRepository.findById(salesOrderId).ifPresent(so -> {
-                // so.setStatus(DocumentStatus.POSTED.name()); // Will be updated by InventoryPostingService instead
-                salesOrderRepository.save(so);
+                if (DocumentStatus.APPROVED.name().equals(so.getStatus())) {
+                    so.markAsPosted();
+                    salesOrderRepository.save(so);
+                    log.info("Đơn bán hàng {} đã xuất kho đủ toàn bộ hàng hóa -> chuyển trạng thái POSTED", so.getSoCode());
+                }
             });
         }
     }

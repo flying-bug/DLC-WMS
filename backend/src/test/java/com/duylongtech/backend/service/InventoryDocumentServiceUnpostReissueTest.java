@@ -36,6 +36,7 @@ import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrderService;
 import com.duylongtech.backend.feature.stocktake.StocktakeRepository;
 import com.duylongtech.backend.feature.system.CodeGeneratorService;
+import com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard;
 import com.duylongtech.backend.feature.warehouse.WarehouseRepository;
 import com.duylongtech.backend.feature.warranty.WarrantyLifecycleService;
 import com.duylongtech.backend.feature.warranty.WarrantyRepository;
@@ -80,6 +81,7 @@ class InventoryDocumentServiceUnpostReissueTest {
                 mock(InventoryCostLayerRepository.class),
                 mock(InventoryValidationService.class),
                 inventoryPostingService,
+                mock(WarehouseAccessGuard.class),
                 mock(InventoryLedgerRepository.class),
                 mock(SerialNumberRepository.class),
                 mock(PartnerLedgerService.class),

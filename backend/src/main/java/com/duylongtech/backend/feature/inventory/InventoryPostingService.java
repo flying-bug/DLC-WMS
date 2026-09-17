@@ -141,10 +141,12 @@ public class InventoryPostingService {
     private final AppNotificationService appNotificationService;
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
+    private final com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard warehouseAccessGuard;
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
         InventoryDocument doc = findExportOrThrow(id);
+        warehouseAccessGuard.checkAccess(doc.getWarehouseId());
         if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
                 && !DocumentStatus.UNPOSTED.name().equals(doc.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_046.getMessage());
@@ -464,6 +466,7 @@ public class InventoryPostingService {
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postImport(Long id) {
         InventoryDocument doc = findImportOrThrow(id);
+        warehouseAccessGuard.checkAccess(doc.getWarehouseId());
         if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
                 && !DocumentStatus.UNPOSTED.name().equals(doc.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_040.getMessage());
@@ -604,6 +607,7 @@ public class InventoryPostingService {
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findImportOrThrow(id);
+        warehouseAccessGuard.checkAccess(doc.getWarehouseId());
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
             throw new BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đang ở trạng thái ĐÃ GHI SỔ (POSTED).");
         }
@@ -686,6 +690,7 @@ public class InventoryPostingService {
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findExportOrThrow(id);
+        warehouseAccessGuard.checkAccess(doc.getWarehouseId());
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
             throw new BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đang ở trạng thái ĐÃ GHI SỔ (POSTED).");
         }

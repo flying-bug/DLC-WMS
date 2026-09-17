@@ -170,9 +170,26 @@ function SalesOrderListPage() {
   const handleCreateExport = async (so) => {
     try {
       const res = await soApi.createExportFromSO(so.id);
-      const exportId = unwrap(res)?.id;
-      showToast('success', 'Đã tạo phiếu xuất kho. Đang chuyển sang trang xuất kho...');
-      setTimeout(() => navigate(`/export-slips/${exportId}/edit`), 800);
+      // Đơn hàng có dòng ở nhiều kho khác nhau sẽ sinh ra nhiều phiếu xuất (1 phiếu/kho) -
+      // luôn nhận về mảng, kể cả khi chỉ có 1 phiếu.
+      const exportDocs = unwrap(res) || [];
+      if (exportDocs.length === 1) {
+        showToast('success', 'Đã tạo phiếu xuất kho. Đang chuyển sang trang xuất kho...');
+        setTimeout(() => navigate(`/export-slips/${exportDocs[0].id}/edit`), 800);
+      } else if (exportDocs.length > 1) {
+        // ExportSlipPage đọc filter qua location.state (referenceId/referenceType), không
+        // qua query string - dùng đúng cơ chế sẵn có để lọc thẳng ra các phiếu vừa tạo.
+        setTimeout(() => navigate('/export-slips', {
+          state: {
+            referenceId: so.id,
+            referenceType: 'SALES_ORDER',
+            toastMessage: `Đơn hàng có sản phẩm ở nhiều kho - đã tự động tạo ${exportDocs.length} phiếu xuất kho cho các kho tương ứng.`,
+            toastType: 'success',
+          },
+        }), 800);
+      } else {
+        showToast('error', 'Không thể tạo phiếu xuất kho');
+      }
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không thể tạo phiếu xuất kho');
     }

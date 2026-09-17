@@ -110,7 +110,7 @@ public class InventoryDocumentController {
     @Operation(summary = "Tạo draft phiếu xuất kho từ Sales Order đã duyệt")
     @PreAuthorize("hasAuthority('export:add')")
     @Auditable(action = AuditAction.CREATE, entityName = "ExportSlip", actionDescription = "Tạo phiếu xuất kho từ Sales Order")
-    public ApiResponse<InventoryDocumentResponse> createExportFromSalesOrder(
+    public ApiResponse<java.util.List<InventoryDocumentResponse>> createExportFromSalesOrder(
             @PathVariable Long soId
     ) {
         String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();

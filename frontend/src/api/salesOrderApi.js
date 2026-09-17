@@ -34,7 +34,8 @@ export const recordPayment = (id, amount) =>
 export const sendQuoteEmail = (id, data) =>
   axiosClient.post(`${BASE}/${id}/send-quote-email`, data);
 
-// Tạo draft phiếu xuất kho từ SO đã duyệt
+// Tạo draft phiếu xuất kho từ SO đã duyệt. Trả về 1 phiếu cho mỗi kho có dòng hàng cần
+// xuất trong SO (SalesOrderLine.warehouseId) - luôn là mảng, kể cả khi chỉ có 1 phiếu.
 export const createExportFromSO = (soId) =>
   axiosClient.post(`/exports/from-sales-order/${soId}`);
 

@@ -172,6 +172,7 @@ public class InventoryDocumentService {
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
     private final InventoryValidationService inventoryValidationService;
     private final InventoryPostingService inventoryPostingService;
+    private final com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard warehouseAccessGuard;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final PartnerLedgerService partnerLedgerService;
@@ -243,18 +244,29 @@ public class InventoryDocumentService {
             referenceType = "ASSEMBLY_ORDER";
         }
 
+        // Thủ kho chỉ được thấy chứng từ của kho mình phụ trách (USER_WAREHOUSE_ROLES);
+        // null = không giới hạn (Manager/Kế toán), rỗng = có giới hạn nhưng chưa được gán kho nào.
+        List<Long> allowedWarehouseIds = warehouseAccessGuard.resolveAllowedWarehouseIds();
+        if (allowedWarehouseIds != null && allowedWarehouseIds.isEmpty()) {
+            return List.of();
+        }
+        if (allowedWarehouseIds != null && warehouseId != null && !allowedWarehouseIds.contains(warehouseId)) {
+            return List.of();
+        }
+
         String normalizedKeyword = trimToNull(keyword);
         String normalizedStatus = normalizeOptionalStatus(status);
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
         String normalizedReferenceType = normalizeOptionalReference(referenceType);
         boolean noFilters = normalizedKeyword == null && fromDate == null && toDate == null && normalizedStatus == null
                 && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null
-                && referenceId == null && partnerId == null && salespersonId == null;
+                && referenceId == null && partnerId == null && salespersonId == null
+                && allowedWarehouseIds == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllExports()
                 : inventoryDocumentRepository.searchExports(normalizedKeyword, fromDate, toDate, normalizedStatus,
                         warehouseId, normalizedIssuePurpose, normalizedReferenceType, referenceId, partnerId,
-                        salespersonId);
+                        salespersonId, allowedWarehouseIds);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -284,18 +296,29 @@ public class InventoryDocumentService {
             referenceType = "ASSEMBLY_ORDER";
         }
 
+        // Thủ kho chỉ được thấy chứng từ của kho mình phụ trách (USER_WAREHOUSE_ROLES);
+        // null = không giới hạn (Manager/Kế toán), rỗng = có giới hạn nhưng chưa được gán kho nào.
+        List<Long> allowedWarehouseIds = warehouseAccessGuard.resolveAllowedWarehouseIds();
+        if (allowedWarehouseIds != null && allowedWarehouseIds.isEmpty()) {
+            return List.of();
+        }
+        if (allowedWarehouseIds != null && warehouseId != null && !allowedWarehouseIds.contains(warehouseId)) {
+            return List.of();
+        }
+
         String normalizedKeyword = trimToNull(keyword);
         String normalizedStatus = normalizeOptionalStatus(status);
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
         String normalizedReferenceType = normalizeOptionalReference(referenceType);
         boolean noFilters = normalizedKeyword == null && fromDate == null && toDate == null && normalizedStatus == null
                 && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null
-                && referenceId == null && partnerId == null && salespersonId == null;
+                && referenceId == null && partnerId == null && salespersonId == null
+                && allowedWarehouseIds == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllImports()
                 : inventoryDocumentRepository.searchImports(normalizedKeyword, fromDate, toDate, normalizedStatus,
                         warehouseId, normalizedIssuePurpose, normalizedReferenceType, referenceId, partnerId,
-                        salespersonId);
+                        salespersonId, allowedWarehouseIds);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -1070,26 +1093,21 @@ public class InventoryDocumentService {
         return toResponse(doc, false);
     }
 
+    private record SoLineRemaining(SalesOrderLine line, BigDecimal remaining) {
+    }
+
+    // Một SO có thể có các dòng xuất từ nhiều kho khác nhau (SalesOrderLine.warehouseId) -
+    // sinh riêng 1 phiếu xuất DRAFT cho mỗi kho thay vì gộp chung vào 1 phiếu như trước, để
+    // thủ kho mỗi kho chỉ thấy và ghi sổ đúng phần việc của kho mình.
     @Transactional
-    public InventoryDocumentResponse createExportFromSalesOrder(Long soId, Long actorUserId) {
+    public List<InventoryDocumentResponse> createExportFromSalesOrder(Long soId, Long actorUserId) {
         SalesOrder so = salesOrderRepository.findById(soId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn hàng SO " + soId));
         if (!DocumentStatus.APPROVED.name().equals(so.getStatus())) {
             throw new BusinessException(SystemMessage.INV_ERR_002.getMessage());
         }
 
-        InventoryDocument doc = new InventoryDocument();
-        doc.initExportDocument(resolveCreateDocCode(null));
-        doc.setDocDate(LocalDate.now());
-        doc.setPartnerId(so.getPartnerId());
-        doc.setWarehouseId(so.getWarehouseId());
-        doc.setReferenceType("SALES_ORDER");
-        doc.setReferenceId(so.getId());
-        doc.setSalesOrderId(so.getId());
-        doc.assignCreator(actorUserId);
-        doc.updateStatus(DEFAULT_STATUS);
-        doc.setIssuePurpose(ISSUE_PURPOSE_SALES);
-
+        Map<Long, List<SoLineRemaining>> linesByWarehouse = new java.util.LinkedHashMap<>();
         for (SalesOrderLine soLine : so.getLines()) {
             BigDecimal exported = inventoryDocumentLineRepository
                     .sumExportedQuantityBySalesOrderIdAndVariantId(so.getId(), soLine.getVariantId());
@@ -1099,28 +1117,54 @@ public class InventoryDocumentService {
             if (remaining.compareTo(ZERO) <= 0) {
                 continue;
             }
-
-            InventoryDocumentLine line = new InventoryDocumentLine();
-            line.setInventoryDocument(doc);
-            line.setVariantId(soLine.getVariantId());
-            line.setQuantityOut(remaining);
-            line.setQuantityIn(ZERO);
-            line.setUnitCost(ZERO);
-            line.setUnitPrice(soLine.getUnitPrice());
-            line.setVatRate(soLine.getVatRate());
-            line.setVatPercent(soLine.getVatRate());
-            line.setWarrantyMonths(soLine.getWarrantyMonths());
-            line.setNote(soLine.getNote());
-            doc.addExportLine(line);
+            Long lineWarehouseId = soLine.getWarehouseId() != null ? soLine.getWarehouseId() : so.getWarehouseId();
+            linesByWarehouse.computeIfAbsent(lineWarehouseId, k -> new java.util.ArrayList<>())
+                    .add(new SoLineRemaining(soLine, remaining));
         }
 
-        if (doc.getLines().isEmpty()) {
+        if (linesByWarehouse.isEmpty()) {
             throw new BusinessException(SystemMessage.INV_ERR_001.getMessage());
         }
 
-        InventoryDocument saved = inventoryDocumentRepository.save(doc);
-        notifyWarehouseOfNewDocument(saved, EXPORT_DOC_TYPE);
-        return toResponse(saved);
+        List<InventoryDocumentResponse> results = new java.util.ArrayList<>();
+        for (Map.Entry<Long, List<SoLineRemaining>> entry : linesByWarehouse.entrySet()) {
+            InventoryDocument doc = new InventoryDocument();
+            doc.initExportDocument(resolveCreateDocCode(null));
+            doc.setDocDate(LocalDate.now());
+            doc.setPartnerId(so.getPartnerId());
+            doc.setWarehouseId(entry.getKey());
+            doc.setReferenceType("SALES_ORDER");
+            doc.setReferenceId(so.getId());
+            doc.setSalesOrderId(so.getId());
+            doc.assignCreator(actorUserId);
+            doc.updateStatus(DEFAULT_STATUS);
+            doc.setIssuePurpose(ISSUE_PURPOSE_SALES);
+
+            for (SoLineRemaining lr : entry.getValue()) {
+                SalesOrderLine soLine = lr.line();
+                InventoryDocumentLine line = new InventoryDocumentLine();
+                line.setInventoryDocument(doc);
+                line.setVariantId(soLine.getVariantId());
+                line.setQuantityOut(lr.remaining());
+                line.setQuantityIn(ZERO);
+                line.setUnitCost(ZERO);
+                line.setUnitPrice(soLine.getUnitPrice());
+                line.setVatRate(soLine.getVatRate());
+                line.setVatPercent(soLine.getVatRate());
+                line.setWarrantyMonths(soLine.getWarrantyMonths());
+                line.setNote(soLine.getNote());
+                doc.addExportLine(line);
+            }
+
+            // saveAndFlush ngay trong vòng lặp: resolveCreateDocCode() sinh mã kế tiếp bằng
+            // cách query lại DB (findAllExportDocCodes) - không flush trước thì phiếu tiếp
+            // theo trong cùng vòng lặp này có thể sinh trùng docCode với phiếu vừa tạo.
+            InventoryDocument saved = inventoryDocumentRepository.saveAndFlush(doc);
+            notifyWarehouseOfNewDocument(saved, EXPORT_DOC_TYPE);
+            results.add(toResponse(saved));
+        }
+
+        return results;
     }
 
     /**
