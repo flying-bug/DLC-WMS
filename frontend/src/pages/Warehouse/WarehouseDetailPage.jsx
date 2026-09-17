@@ -198,7 +198,7 @@ const WarehouseDetailPage = () => {
                 <div className={styles.pageHeader}>
                     <div className={styles.headerLeft}>
                         <button className={styles.btnBack} onClick={handleBack} title="Quay lại">
-                            <i className="fas fa-arrow-left"></i>
+                            <i className="bi bi-arrow-left"></i>
                         </button>
                         <h2 className={styles.pageTitle}>{warehouse.name} ({warehouse.code})</h2>
                         <div className={`${styles.statusBadge} ${isActiveStatus(warehouse.status) ? styles.statusActive : styles.statusStopped}`}>
@@ -256,7 +256,7 @@ const WarehouseDetailPage = () => {
                             <div className={styles.kpiCard}>
                                 <div className={styles.kpiHeader}>
                                     <div className={styles.kpiIconWrapper} style={{ backgroundColor: '#eef2ff', color: '#4f46e5' }}>
-                                        <i className="fas fa-boxes"></i>
+                                        <i className="bi bi-boxes"></i>
                                     </div>
                                     <span className={styles.kpiTrend} style={{ color: '#16a34a' }}>Tổng quan</span>
                                 </div>
@@ -268,7 +268,7 @@ const WarehouseDetailPage = () => {
                             <div className={styles.kpiCard}>
                                 <div className={styles.kpiHeader}>
                                     <div className={styles.kpiIconWrapper} style={{ backgroundColor: '#fff7ed', color: '#ea580c' }}>
-                                        <i className="fas fa-clipboard-list"></i>
+                                        <i className="bi bi-clipboard-data"></i>
                                     </div>
                                     <span className={styles.kpiTrend} style={{ color: 'var(--wms-text-muted)' }}>Thực tế</span>
                                 </div>
@@ -282,7 +282,7 @@ const WarehouseDetailPage = () => {
                         {/* 4. Main Content */}
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
-                                <i className="fas fa-info-circle"></i>
+                                <i className="bi bi-info-circle"></i>
                                 <h3>Thông tin cơ bản</h3>
                                     </div>
                                     <div className={styles.cardBody}>
@@ -336,7 +336,7 @@ const WarehouseDetailPage = () => {
                     <div className={styles.tabContent}>
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
-                                <i className="fas fa-history"></i>
+                                <i className="bi bi-clock-history"></i>
                                 <h3>Lịch sử hoạt động</h3>
                             </div>
                             <div className={styles.cardBody}>
@@ -349,7 +349,7 @@ const WarehouseDetailPage = () => {
                                         {logs.map(log => (
                                             <div key={log.id} className={styles.timelineItem}>
                                                 <div className={styles.timelineIcon}>
-                                                    <i className={log.action === 'CREATE' ? 'fas fa-plus' : log.action === 'UPDATE' ? 'fas fa-pencil-alt' : 'fas fa-trash-alt'}></i>
+                                                    <i className={log.action === 'CREATE' ? 'bi bi-plus' : log.action === 'UPDATE' ? 'bi bi-pencil' : 'bi bi-trash'}></i>
                                                 </div>
                                                 <div className={styles.timelineContent}>
                                                     <div className={styles.timelineHeader}>

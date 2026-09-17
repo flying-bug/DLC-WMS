@@ -499,7 +499,8 @@ public class InventoryPostingService {
 
         // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (luôn luôn ghi nhận nếu có
         // partnerId)
-        if (savedImport.getPartnerId() != null) {
+        if (savedImport.getPartnerId() != null
+                && !"SCRAP".equalsIgnoreCase(savedImport.getIssuePurpose())) {
             BigDecimal totalImportValue = savedImport.getLines().stream()
                     .map(l -> {
                         if (l.getLineAmount() != null && l.getLineAmount().compareTo(BigDecimal.ZERO) > 0) {

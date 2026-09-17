@@ -46,6 +46,15 @@ public class RepairLine {
     @Column(name = "replacement_serial_number_text", length = 255)
     private String replacementSerialNumberText;
 
+    @Column(name = "removed_variant_id")
+    private Long removedVariantId;
+
+    @Column(name = "removed_quantity", precision = 15, scale = 4)
+    private BigDecimal removedQuantity;
+
+    @Column(name = "scrap_condition", length = 50)
+    private String scrapCondition;
+
     @Setter(AccessLevel.NONE)
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
@@ -119,5 +128,13 @@ public class RepairLine {
         if (serialNumberText != null) this.serialNumberText = serialNumberText.isEmpty() ? null : serialNumberText;
         if (replacementSerialNumberId != null) this.replacementSerialNumberId = replacementSerialNumberId == -1 ? null : replacementSerialNumberId;
         if (replacementSerialNumberText != null) this.replacementSerialNumberText = replacementSerialNumberText.isEmpty() ? null : replacementSerialNumberText;
+    }
+
+    public void recordRemoval(Long variantId, BigDecimal quantity, Long serialId, String serialText, String condition) {
+        this.removedVariantId = variantId;
+        this.removedQuantity = quantity;
+        this.serialNumberId = serialId;
+        this.serialNumberText = serialText;
+        this.scrapCondition = condition;
     }
 }

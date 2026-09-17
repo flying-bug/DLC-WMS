@@ -47,6 +47,7 @@ import com.duylongtech.backend.feature.assembly.AssemblyBomRepository;
 import com.duylongtech.backend.feature.assembly.DeviceComponentSerialRepository;
 import com.duylongtech.backend.feature.stocktake.StocktakeRepository;
 import com.duylongtech.backend.feature.repair.RepairRepository;
+import com.duylongtech.backend.feature.repair.RepairInventorySyncService;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderSerialRepository;
 import lombok.RequiredArgsConstructor;
@@ -196,6 +197,7 @@ public class InventoryDocumentService {
     private final AppNotificationService appNotificationService;
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
+    private final RepairInventorySyncService repairInventorySyncService;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -390,15 +392,27 @@ public class InventoryDocumentService {
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
+        InventoryDocument repairDocument = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
+        repairInventorySyncService.validatePost(repairDocument);
         InventoryDocumentResponse response = inventoryPostingService.postExport(id);
-        inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
+        inventoryDocumentRepository.findById(id).ifPresent(document -> {
+            synchronizeAssemblyOrder(document);
+            repairInventorySyncService.afterPost(document);
+        });
         return response;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postImport(Long id) {
+        InventoryDocument repairDocument = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
+        repairInventorySyncService.validatePost(repairDocument);
         InventoryDocumentResponse response = inventoryPostingService.postImport(id);
-        inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
+        inventoryDocumentRepository.findById(id).ifPresent(document -> {
+            synchronizeAssemblyOrder(document);
+            repairInventorySyncService.afterPost(document);
+        });
         return response;
     }
 
@@ -1152,6 +1166,11 @@ public class InventoryDocumentService {
     public Long createExportForRepair(Long repairId, String repairCode, Long warehouseId, Long partnerId,
             Long createdBy, Long salespersonId, String recipientName, List<RepairStockOutLineRequest> lines) {
         String docCode = "REP-EX-" + repairCode;
+        var existing = inventoryDocumentRepository.findByReferenceTypeAndReferenceIdAndIssuePurpose(
+                "REPAIR", repairId, "REPAIR");
+        if (existing.isPresent()) {
+            return existing.get().getId();
+        }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
             return null;
         }
@@ -1161,6 +1180,7 @@ public class InventoryDocumentService {
         exportDoc.setIssuePurpose("REPAIR");
         exportDoc.setReferenceType("REPAIR");
         exportDoc.setReferenceId(repairId);
+        exportDoc.setReferenceRepairId(repairId);
         exportDoc.setWarehouseId(warehouseId);
         exportDoc.setPartnerId(partnerId);
         exportDoc.setDocDate(LocalDate.now());
@@ -1203,6 +1223,11 @@ public class InventoryDocumentService {
     public Long createScrapImportForRepair(Long repairId, String repairCode, Long scrapWarehouseId, Long partnerId,
             Long createdBy, Long salespersonId, String recipientName, List<RepairScrapLineRequest> lines) {
         String scrapDocCode = "REP-SCRAP-" + repairCode;
+        var existing = inventoryDocumentRepository.findByReferenceTypeAndReferenceIdAndIssuePurpose(
+                "REPAIR", repairId, "SCRAP");
+        if (existing.isPresent()) {
+            return existing.get().getId();
+        }
         if (inventoryDocumentRepository.existsByDocCode(scrapDocCode)) {
             return null;
         }
@@ -1212,6 +1237,7 @@ public class InventoryDocumentService {
         scrapDoc.setIssuePurpose("SCRAP");
         scrapDoc.setReferenceType("REPAIR");
         scrapDoc.setReferenceId(repairId);
+        scrapDoc.setReferenceRepairId(repairId);
         scrapDoc.setWarehouseId(scrapWarehouseId);
         scrapDoc.setPartnerId(partnerId);
         scrapDoc.setDocDate(LocalDate.now());
@@ -1380,6 +1406,9 @@ public class InventoryDocumentService {
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
+        InventoryDocument repairDocument = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
+        repairInventorySyncService.validateUnpost(repairDocument);
         InventoryDocumentResponse response = inventoryPostingService.unpostImport(id, reason, currentUserId);
         inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
         return response;
@@ -1387,8 +1416,14 @@ public class InventoryDocumentService {
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
+        InventoryDocument repairDocument = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
+        repairInventorySyncService.validateUnpost(repairDocument);
         InventoryDocumentResponse response = inventoryPostingService.unpostExport(id, reason, currentUserId);
-        inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
+        inventoryDocumentRepository.findById(id).ifPresent(document -> {
+            synchronizeAssemblyOrder(document);
+            repairInventorySyncService.afterUnpost(document);
+        });
         return response;
     }
 

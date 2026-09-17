@@ -109,7 +109,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
             <div className={`misa-modal ${styles.modalContainer}`}>
                 <div className="misa-modal-header">
                     <h3>In mã vạch - {product.productName}</h3>
-                    <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--wms-text-subtle)' }}></i>
+                    <i className="bi bi-x" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--wms-text-subtle)' }}></i>
                 </div>
 
                 <div className={`misa-modal-body ${styles.modalBody}`}>
@@ -205,7 +205,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                                         onClick={handleAutoGenerateSerials}
                                         disabled={isGenerating}
                                     >
-                                        <i className="fas fa-magic" style={{ marginRight: '6px' }}></i>
+                                        <i className="bi bi-magic" style={{ marginRight: '6px' }}></i>
                                         {isGenerating ? 'Đang sinh mã...' : 'Tự động sinh mã'}
                                     </button>
                                     {serialsText.length > 0 && (
@@ -216,7 +216,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                                             onClick={() => setSerialsText('')}
                                             title="Xóa toàn bộ mã đã nhập"
                                         >
-                                            <i className="fas fa-trash-alt" style={{ marginRight: '6px' }}></i>
+                                            <i className="bi bi-trash" style={{ marginRight: '6px' }}></i>
                                             Xóa hết
                                         </button>
                                     )}
@@ -275,7 +275,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) =
                 <div className="misa-modal-footer">
                     <button className="btn-misa-cancel" onClick={onClose}>Hủy</button>
                     <button className="btn-misa-save" onClick={handlePrint} disabled={totalLabels === 0}>
-                        <i className="fas fa-print" style={{ marginRight: '6px' }}></i> In tem
+                        <i className="bi bi-printer" style={{ marginRight: '6px' }}></i> In tem
                     </button>
                 </div>
             </div>

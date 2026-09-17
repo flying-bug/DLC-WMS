@@ -353,6 +353,23 @@
   cursor: pointer;
 }
 
+.loadingState,
+.emptyState {
+  padding: 40px 20px !important;
+  text-align: center !important;
+  color: var(--color-text-muted-2) !important;
+}
+
+.emptyIcon {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--color-text-muted-2);
+}
+
+.emptyText {
+  font-size: 14px;
+}
+
 .link {
   color: var(--color-primary);
   text-decoration: none;

@@ -9,6 +9,9 @@ import com.duylongtech.backend.feature.purchase_order.PurchaseOrderResponse;
 import com.duylongtech.backend.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
+import com.duylongtech.backend.feature.product.ProductVariant;
+import com.duylongtech.backend.feature.product.ProductVariantRepository;
+import com.duylongtech.backend.feature.audit.AuditLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +46,8 @@ import com.duylongtech.backend.feature.purchase_order.PurchaseOrderService;
 public class PurchaseOrderService {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final AuditLogService auditLogService;
     private final PartnerRepository partnerRepository;
     private final UserRepository userRepository;
     private final PartnerLedgerService partnerLedgerService;
@@ -246,5 +251,43 @@ public class PurchaseOrderService {
         response.setIsFullyImported(isFullyImported);
         response.setLines(lineResponses);
         return response;
+    }
+
+    @Transactional
+    public void autoCreatePurchaseOrder(Long repairId, String repairCode, Long warehouseId, java.util.Map<Long, java.math.BigDecimal> shortfall, Long actorId) {
+        Partner defaultSupplier = partnerRepository.findAll().stream().filter(p -> Boolean.TRUE.equals(p.getIsSupplier())).findFirst().orElse(null);
+        if (defaultSupplier == null) {
+            throw new BusinessException("Không tìm thấy Nhà cung cấp mặc định để tự động tạo PO");
+        }
+
+        String poCode = generateNextPoCode();
+        PurchaseOrder po = new PurchaseOrder();
+        po.initOrder(poCode, defaultSupplier.getId(), java.time.LocalDate.now(), null, null, 
+                "Tự động tạo PO bổ sung linh kiện cho lệnh sửa chữa " + repairCode, actorId);
+        
+        purchaseOrderRepository.save(po);
+
+        for (java.util.Map.Entry<Long, java.math.BigDecimal> entry : shortfall.entrySet()) {
+            Long variantId = entry.getKey();
+            java.math.BigDecimal missingQty = entry.getValue();
+
+            ProductVariant variant = productVariantRepository.findById(variantId).orElse(null);
+            if (variant == null) continue;
+            
+            java.math.BigDecimal unitPrice = variant.getCostPrice() != null ? variant.getCostPrice() : java.math.BigDecimal.ZERO;
+
+            PurchaseOrderLine line = new PurchaseOrderLine();
+            line.setPurchaseOrder(po);
+            line.initLine(variantId, missingQty, unitPrice, java.math.BigDecimal.ZERO, null, "");
+            po.addLine(line);
+        }
+
+        po.recalculateTotals();
+        purchaseOrderRepository.save(po);
+
+        auditLogService.logEvent(
+                "SYSTEM", "CREATE_AUTO_PO", "PurchaseOrder", po.getId(),
+                "SUCCESS", "Tạo PO nháp " + poCode + " do thiếu linh kiện cho lệnh " + repairCode, null, null
+        );
     }
 }

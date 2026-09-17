@@ -32,4 +32,14 @@ public class CodeGeneratorService {
         String format = "%s%0" + padding + "d";
         return String.format(format, prefix, next);
     }
+
+    /**
+     * Xem trước mã tiếp theo mà không làm tăng bộ đếm.
+     */
+    public String previewCode(String tableName, String columnName, String prefix, int padding) {
+        String sequenceKey = tableName.toLowerCase() + "." + columnName.toLowerCase() + "." + prefix;
+        long next = codeSequenceAllocator.previewNextValue(sequenceKey, tableName, columnName, prefix);
+        String format = "%s%0" + padding + "d";
+        return String.format(format, prefix, next);
+    }
 }

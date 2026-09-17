@@ -16,29 +16,29 @@ const MENU_CONFIG = [
         id: 'main',
         label: 'PHÂN HỆ',
         items: [
-            { path: '/main-dashboard', icon: 'fas fa-chart-pie', label: 'Tổng quan', moduleId: 'overview', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer', 'report_debt', 'report_sales', 'report_summary'] },
-            { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Kho', moduleId: 'warehouse', moduleKeys: ['import', 'export', 'transfer', 'stocktake', 'assembly', 'assembly_config', 'warehouse_master', 'report_balance', 'report_ledger', 'report_transfer'] },
+            { path: '/main-dashboard', icon: 'bi bi-pie-chart', label: 'Tổng quan', moduleId: 'overview', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer', 'report_debt', 'report_sales', 'report_summary'] },
+            { path: '/dashboard', icon: 'bi bi-building', label: 'Kho', moduleId: 'warehouse', moduleKeys: ['import', 'export', 'transfer', 'stocktake', 'assembly', 'assembly_config', 'warehouse_master', 'report_balance', 'report_ledger', 'report_transfer'] },
             { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase', moduleKey: 'purchase_order' },
             { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales', moduleKeys: ['sales_order', 'einvoice'] },
             { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi', moduleId: 'finance', moduleKey: 'payment' },
-            { path: '/warranties', icon: 'fas fa-shield-alt', label: 'Dịch vụ', moduleId: 'service', moduleKeys: ['warranty', 'repair'] }
+            { path: '/warranties', icon: 'bi bi-shield-check', label: 'Dịch vụ', moduleId: 'service', moduleKeys: ['warranty', 'repair'] }
         ]
     },
     {
         id: 'catalog',
         label: 'DANH MỤC',
         items: [
-            { path: '/customers', icon: 'fas fa-handshake', label: 'Đối tác', moduleId: 'partner', moduleKeys: ['customer', 'supplier'] },
-            { path: '/products', icon: 'fas fa-boxes', label: 'Vật tư hàng hóa', moduleId: 'catalog', moduleKeys: ['product', 'product_category', 'brand', 'unit'] }
+            { path: '/customers', icon: 'bi bi-person-raised-hand', label: 'Đối tác', moduleId: 'partner', moduleKeys: ['customer', 'supplier'] },
+            { path: '/products', icon: 'bi bi-boxes', label: 'Vật tư hàng hóa', moduleId: 'catalog', moduleKeys: ['product', 'product_category', 'brand', 'unit'] }
         ]
     },
     {
         id: 'system',
         label: 'HỆ THỐNG',
         items: [
-            { path: '/ai-chat', icon: 'fas fa-robot', label: 'Trợ lý AI', moduleKey: 'ai_chat' },
+            { path: '/ai-chat', icon: 'bi bi-robot', label: 'Trợ lý AI', moduleKey: 'ai_chat' },
             { path: '/business-settings', icon: 'bi bi-sliders2-vertical', label: 'Thiết lập nghiệp vụ', managerOrAdmin: true },
-            { path: '/operations', icon: 'fas fa-cogs', label: 'Vận hành kỹ thuật', adminOnly: true }
+            { path: '/operations', icon: 'bi bi-gear', label: 'Vận hành kỹ thuật', adminOnly: true }
         ]
     }
 ];
@@ -312,7 +312,7 @@ const AdminLayout = ({ children }) => {
                                 className={styles.mobileCloseBtn}
                                 onClick={() => setMobileMenuOpen(false)}
                             >
-                                <i className="fas fa-times"></i>
+                                <i className="bi bi-x"></i>
                             </button>
                         </div>
                         <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
@@ -327,7 +327,7 @@ const AdminLayout = ({ children }) => {
                                             aria-expanded={isExpanded}
                                         >
                                             <span>{group.label}</span>
-                                            <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
+                                            <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`}></i>
                                         </div>
                                         {isExpanded && (
                                             <div className={styles.groupItems}>
@@ -369,7 +369,7 @@ const AdminLayout = ({ children }) => {
                             <div className={styles.workspaceBrandInfo}>
                                 <span className={styles.workspaceBrandTitle}>Duy Long Computer</span>
                                 <span className={styles.workspaceBrandMode}>
-                                    <i className={workspaceMode === WORKSPACE_MODES.CASHIER ? 'fas fa-cash-register' : 'fas fa-boxes'}></i>
+                                    <i className={workspaceMode === WORKSPACE_MODES.CASHIER ? 'bi bi-cash-stack' : 'bi bi-boxes'}></i>
                                     {workspaceMode === WORKSPACE_MODES.CASHIER ? 'Bàn làm việc Thủ quỹ' : 'Bàn làm việc Thủ kho'}
                                 </span>
                             </div>
@@ -381,7 +381,7 @@ const AdminLayout = ({ children }) => {
                             onClick={() => setMobileMenuOpen(true)}
                             aria-label="Mở menu"
                         >
-                            <i className="fas fa-bars"></i>
+                            <i className="bi bi-list"></i>
                         </button>
                     )}
 
@@ -420,7 +420,7 @@ const AdminLayout = ({ children }) => {
                                     type="button"
                                     style={tab.adminOnly ? { color: 'var(--wms-primary)', fontWeight: 'bold' } : {}}
                                 >
-                                    {tab.adminOnly && <i className="fas fa-database" style={{ marginRight: '6px' }}></i>}
+                                    {tab.adminOnly && <i className="bi bi-database" style={{ marginRight: '6px' }}></i>}
                                     {tab.label}
                                 </button>
                             );

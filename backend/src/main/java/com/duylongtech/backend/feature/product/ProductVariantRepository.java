@@ -33,17 +33,17 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             "LEFT JOIN FETCH p.category " +
             "LEFT JOIN FETCH p.unit " +
             "WHERE (:search IS NULL OR :search = '' " +
-            "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+            "OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+            "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+            "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', TRIM(:search), '%'))) " +
             "AND (:excludeServices = false OR p.productType IS NULL OR p.productType NOT IN ('Dịch vụ', 'Dich vu'))",
             countQuery = "SELECT COUNT(v) FROM ProductVariant v JOIN v.product p " +
                     "WHERE (:search IS NULL OR :search = '' " +
-                    "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%')) " +
-                    "OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-                    "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
-                    "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                    "OR LOWER(v.sku) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+                    "OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+                    "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
+                    "OR LOWER(p.productName) LIKE LOWER(CONCAT('%', TRIM(:search), '%'))) " +
                     "AND (:excludeServices = false OR p.productType IS NULL OR p.productType NOT IN ('Dịch vụ', 'Dich vu'))")
     Page<ProductVariant> searchVariants(@Param("search") String search, @Param("excludeServices") boolean excludeServices, Pageable pageable);
 }

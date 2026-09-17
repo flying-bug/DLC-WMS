@@ -62,7 +62,6 @@ import com.duylongtech.backend.feature.system.CodeGeneratorService;
 @Slf4j
 public class RepairService {
 
-    private static final Set<String> EDITABLE_STATUSES = Set.of(RepairStatus.DRAFT.name(), RepairStatus.QUOTATION.name(), RepairStatus.UNDER_REPAIR.name());
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
     private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REPLACE", "REMOVE");
 
@@ -77,18 +76,37 @@ public class RepairService {
     private final AuditLogService auditLogService;
     private final CodeGeneratorService codeGeneratorService;
     private final InventoryBalanceRepository inventoryBalanceRepository;
+    private final com.duylongtech.backend.feature.inventory.InventoryDocumentRepository inventoryDocumentRepository;
     private final com.duylongtech.backend.feature.repair.RepairMapper repairMapper;
+    private final RepairPhotoRepository repairPhotoRepository;
 
     // =====================================================================
     // READ Operations
     // =====================================================================
 
     @Transactional(readOnly = true)
-    public Page<RepairResponse> getRepairs(String keyword, String status, LocalDate fromDate, LocalDate toDate, int page, int size) {
+    public Page<RepairResponse> getRepairs(String keyword, String status, Long technicianId, LocalDate fromDate, LocalDate toDate, int page, int size) {
+        Long currentUserId = resolveCurrentUserId();
+        User currentUser = userRepository.findById(currentUserId).orElse(null);
+        boolean isTechnician = currentUser != null && currentUser.getRoles().stream().anyMatch(r -> "ROLE_TECHNICIAN".equals(r.getCode()));
+        boolean isAdmin = currentUser != null && currentUser.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getCode()));
+
+        Long effectiveTechnicianId = technicianId;
+        if (isTechnician && !isAdmin) {
+            effectiveTechnicianId = currentUserId;
+        }
+
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1));
         String normalizedStatus = trimToNull(status) != null ? status.trim().toUpperCase() : null;
-        return repairRepository.searchRepairs(trimToNull(keyword), normalizedStatus, fromDate, toDate, pageable)
+        return repairRepository.searchRepairs(trimToNull(keyword), normalizedStatus, effectiveTechnicianId, fromDate, toDate, pageable)
                 .map(this::toSummaryResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RepairTechnicianResponse> getActiveTechnicians() {
+        return userRepository.findByRoles_CodeAndStatus("ROLE_TECHNICIAN", "APPROVED").stream()
+                .map(u -> new RepairTechnicianResponse(u.getId(), u.getUsername(), u.getFullName(), u.getPhone()))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -107,15 +125,22 @@ public class RepairService {
         validateCreateRequest(request);
 
         Long currentUserId = resolveCurrentUserId();
-        String repairCode = trimToNull(request.getRepairCode()) != null
-                ? trimToNull(request.getRepairCode())
-                : generateRepairCode();
+        String requestedCode = trimToNull(request.getRepairCode());
+        String repairCode;
+        if (requestedCode == null || requestedCode.equals(previewRepairCode())) {
+            // User did not provide a custom code, or they left the previewed code unchanged.
+            // We safely generate the real auto-incrementing code to guarantee uniqueness and increment the sequence.
+            repairCode = generateRepairCode();
+        } else {
+            repairCode = requestedCode;
+        }
 
         Repair repair = new Repair();
         repair.initOrder(
                 repairCode,
                 request.getPartnerId(),
                 request.getProductId(),
+                request.getProductVariantId(),
                 request.getProductQuantity(),
                 trimToNull(request.getProductUnit()),
                 request.getWarehouseId(),
@@ -133,8 +158,13 @@ public class RepairService {
                 resolveInvoiceMethod(request.getInvoiceMethod()),
                 trimToNull(request.getResponsiblePerson()),
                 trimToNull(request.getNote()),
-                currentUserId
+                currentUserId,
+                trimToNull(request.getExternalDeviceStatus())
         );
+
+        if (request.getAssignedTechnicianId() != null) {
+            repair.assign(request.getAssignedTechnicianId(), currentUserId);
+        }
 
         Repair saved = repairRepository.save(repair);
 
@@ -151,14 +181,12 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        // Chỉ cho phép sửa ở trạng thái DRAFT hoặc QUOTATION
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
-        }
+        checkEditPermission(repair);
 
         repair.updateDetails(
                 request.getPartnerId(),
                 request.getProductId(),
+                request.getProductVariantId(),
                 request.getProductQuantity(),
                 trimToNull(request.getProductUnit()),
                 request.getWarehouseId(),
@@ -176,8 +204,14 @@ public class RepairService {
                 request.getRepairWarrantyEndDate(),
                 request.getInvoiceMethod() != null ? resolveInvoiceMethod(request.getInvoiceMethod()) : null,
                 trimToNull(request.getResponsiblePerson()),
-                trimToNull(request.getNote())
+                trimToNull(request.getNote()),
+                trimToNull(request.getExternalDeviceStatus())
         );
+
+        if (request.getAssignedTechnicianId() != null) {
+            repair.setAssignedTechnicianId(request.getAssignedTechnicianId());
+        }
+
         // repair.applyWarrantyZeroPrice() is already called inside updateDetails if underWarranty changed from false to true.
         // Wait, applyWarrantyZeroPrice in entity needs the lines, which are mapped. 
         // We might need to ensure lines are updated.
@@ -204,7 +238,7 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        repair.updateDetails(null, null, null, null, null, null, null, null, null, null, null, null, null, null, trimToNull(notes), null, null, null, null, null);
+        repair.updateDetails(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, trimToNull(notes), null, null, null, null, null, null);
         Repair saved = repairRepository.save(repair);
         return toDetailResponse(saved);
     }
@@ -218,9 +252,7 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(repairId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
-        }
+        checkEditPermission(repair);
 
         validateLineRequest(request);
 
@@ -269,9 +301,7 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_LINE_NOT_FOUND);
         }
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
-        }
+        checkEditPermission(repair);
 
         
         if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
@@ -310,9 +340,7 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(repairId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
-        }
+        checkEditPermission(repair);
 
         RepairLine line = repairLineRepository.findById(lineId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_LINE_NOT_FOUND));
@@ -334,9 +362,7 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(repairId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
-        }
+        checkEditPermission(repair);
 
         if (trimToNull(request.getFeeName()) == null) {
             throw new BusinessException(SystemMessage.FIELD_REQUIRED);
@@ -377,9 +403,7 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(repairId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
-        }
+        checkEditPermission(repair);
 
         RepairFee fee = repairFeeRepository.findById(feeId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_FEE_NOT_FOUND));
@@ -397,9 +421,7 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(repairId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
-        }
+        checkEditPermission(repair);
 
         RepairFee fee = repairFeeRepository.findById(feeId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_FEE_NOT_FOUND));
@@ -534,6 +556,31 @@ public class RepairService {
 
         response.setLines(lineResponses);
         response.setFees(feeResponses);
+
+        // Include photos (grouped by phase for easy frontend consumption)
+        try {
+            List<RepairPhotoResponse> photoResponses = repairPhotoRepository
+                    .findByRepairIdOrderByCreatedAtAsc(repair.getId())
+                    .stream()
+                    .map(p -> RepairPhotoResponse.builder()
+                            .id(p.getId())
+                            .repairId(p.getRepairId())
+                            .phase(p.getPhase())
+                            .category(p.getCategory())
+                            .secureUrl(p.getSecureUrl())
+                            .publicId(p.getPublicId())
+                            .caption(p.getCaption())
+                            .locked(p.getLocked())
+                            .uploadedBy(p.getUploadedBy())
+                            .createdAt(p.getCreatedAt())
+                            .watermarkedAt(p.getWatermarkedAt())
+                            .build())
+                    .collect(Collectors.toList());
+            response.setPhotos(photoResponses);
+        } catch (Exception ex) {
+            log.warn("Không tải được ảnh cho lệnh sửa chữa #{}: {}", repair.getId(), ex.getMessage());
+        }
+
         return response;
     }
 
@@ -783,8 +830,12 @@ public class RepairService {
         }
     }
 
-    private String generateRepairCode() {
+    public String generateRepairCode() {
         return codeGeneratorService.generateCode("repairs", "repair_code", "SC", 6);
+    }
+
+    public String previewRepairCode() {
+        return codeGeneratorService.previewCode("repairs", "repair_code", "SC", 6);
     }
 
     /**
@@ -831,6 +882,35 @@ public class RepairService {
         }
     }
 
+    private void checkEditPermission(Repair repair) {
+        Long currentUserId = resolveCurrentUserId();
+        User currentUser = userRepository.findById(currentUserId).orElse(null);
+        boolean isTechnician = currentUser != null && currentUser.getRoles().stream().anyMatch(r -> "ROLE_TECHNICIAN".equals(r.getCode()));
+        boolean isAdmin = currentUser != null && currentUser.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getCode()));
+
+        String status = repair.getRepairStatus();
+
+        if (isAdmin) {
+            if (RepairStatus.CLOSED.name().equals(status) || RepairStatus.CANCELLED.name().equals(status)) {
+                throw new BusinessException("Không thể sửa phiếu đã hoàn thành hoặc đã hủy");
+            }
+            return;
+        }
+
+        if (isTechnician) {
+            if (!currentUserId.equals(repair.getAssignedTechnicianId())) {
+                throw new BusinessException("Bạn không được quyền sửa phiếu của KTV khác");
+            }
+            if (!RepairStatus.DIAGNOSING.name().equals(status)) {
+                throw new BusinessException("KTV chỉ được sửa thông tin ở trạng thái ASSIGNED");
+            }
+        } else {
+            if (!RepairStatus.DRAFT.name().equals(status)) {
+                throw new BusinessException("Chỉ được sửa thông tin ở trạng thái DRAFT");
+            }
+        }
+    }
+
     private ProductVariant resolveRepairVariant(Long variantId, Long serialNumberId, Long legacyProductId) {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new BusinessException("SKU cua thiet bi sua chua khong ton tai"));
@@ -851,4 +931,10 @@ public class RepairService {
         return variant;
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getLinkedDocumentsCount(Long repairId) {
+        long exportCount = inventoryDocumentRepository.countByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, "EX_SO");
+        long importCount = inventoryDocumentRepository.countByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, "IN_PO");
+        return java.util.Map.of("exportCount", exportCount, "importCount", importCount);
+    }
 }

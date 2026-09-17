@@ -160,9 +160,9 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
     };
 
     const filteredCategories = categories.filter(cat =>
-        (cat.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (cat.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (cat.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (cat.name || '').toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+        (cat.code || '').toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+        (cat.description || '').toLowerCase().includes(searchTerm.trim().toLowerCase())
     );
 
     return (
@@ -201,7 +201,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                         <span style={{ color: 'var(--color-text-placeholder)' }}>Tìm kiếm danh mục</span>
                     )
                 )}
-                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
+                <i className={`bi bi-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: 'var(--color-text-placeholder)', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
             </div>
 
             {isOpen && rect && createPortal(
@@ -1544,7 +1544,7 @@ const ProductPage = () => {
                         >
                             {importing ? (
                                 <>
-                                    <i className="fas fa-spinner fa-spin" style={{ color: 'var(--wms-primary)' }}></i> Đang nhập...
+                                    <i className="bi bi-arrow-repeat" style={{ color: 'var(--wms-primary)', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i> Đang nhập...
                                 </>
                             ) : (
                                 <>
@@ -1853,7 +1853,7 @@ const ProductPage = () => {
                                             onClick={(e) => { e.stopPropagation(); setShowTypeMenu(v => !v); }}
                                             style={{ cursor: 'pointer' }}
                                         >
-                                            <i className="fas fa-box" style={{ fontSize: '11px' }}></i> {formData.productType}
+                                            <i className="bi bi-box" style={{ fontSize: '11px' }}></i> {formData.productType}
                                         </span>
                                         {showTypeMenu && (
                                             <div className={styles.typeMenu} onClick={(e) => e.stopPropagation()}>
@@ -1892,8 +1892,8 @@ const ProductPage = () => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <i className="fas fa-question-circle" style={{ color: 'var(--color-text-placeholder)', fontSize: '16px', cursor: 'pointer' }}></i>
-                                    <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
+                                    <i className="bi bi-question-circle" style={{ color: 'var(--color-text-placeholder)', fontSize: '16px', cursor: 'pointer' }}></i>
+                                    <i className="bi bi-x" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-placeholder)' }}></i>
                                 </div>
                             </div>
 
@@ -1920,7 +1920,7 @@ const ProductPage = () => {
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                             <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
                                                     <label className={styles.fieldLabel}>
-                                                        {isMultiVariantCreate() ? 'Mã sản phẩm (*)' : 'Mã sản phẩm'}
+                                                        Mã sản phẩm {isMultiVariantCreate() && <span className={styles.required}>*</span>}
                                                     </label>
                                                     <input
                                                         type="text"
@@ -2087,7 +2087,7 @@ const ProductPage = () => {
                                                             setSavingCat(false);
                                                         }
                                                     }}>
-                                                        {savingCat ? <i className="fas fa-spinner fa-spin"></i> : 'Lưu'}
+                                                        {savingCat ? <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}></i> : 'Lưu'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -2272,7 +2272,7 @@ const ProductPage = () => {
                                                                 showToast('error', err.response?.data?.userMessage || 'Không thể thêm ĐVT.');
                                                             } finally { setSavingUnit(false); }
                                                         }}>
-                                                        {savingUnit ? <i className="fas fa-spinner fa-spin"></i> : 'Lưu'}
+                                                        {savingUnit ? <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}></i> : 'Lưu'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -2349,7 +2349,7 @@ const ProductPage = () => {
                                                                 showToast('error', err.response?.data?.userMessage || 'Không thể thêm thương hiệu.');
                                                             } finally { setSavingBrand(false); }
                                                         }}>
-                                                        {savingBrand ? <i className="fas fa-spinner fa-spin"></i> : 'Lưu'}
+                                                        {savingBrand ? <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}></i> : 'Lưu'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -2401,7 +2401,9 @@ const ProductPage = () => {
                                         {/* Giá bán & Thuế VAT */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                             <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>{isMultiVariantCreate() ? 'Giá bán mặc định cho SKU' : 'Giá bán (VNĐ)'}</label>
+                                                    <label className={styles.fieldLabel}>
+                                                        {isMultiVariantCreate() ? 'Giá bán mặc định cho SKU' : <>Giá bán (VNĐ) <span className={styles.required}>*</span></>}
+                                                    </label>
                                                 <input
                                                     type="text"
                                                     className={styles.fieldInput}
@@ -2474,14 +2476,14 @@ const ProductPage = () => {
                                                     />
                                                 ) : (
                                                     <div className={styles.imageUploadPlaceholder}>
-                                                        <i className="fas fa-image" style={{ fontSize: '36px', color: 'var(--color-border-muted)', marginBottom: '8px' }}></i>
+                                                        <i className="bi bi-image" style={{ fontSize: '36px', color: 'var(--color-border-muted)', marginBottom: '8px' }}></i>
                                                         <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500 }}>Tải ảnh lên</span>
                                                         <span style={{ fontSize: '10px', color: 'var(--color-text-placeholder)', textAlign: 'center', marginTop: '4px', lineHeight: 1.4 }}>Dung lượng tối đa 2MB (JPG, PNG)</span>
                                                     </div>
                                                 )}
                                                 {uploadingImage && (
                                                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--color-primary-bright)' }}></i>
+                                                        <i className="bi bi-arrow-repeat" style={{ fontSize: '24px', color: 'var(--color-primary-bright)', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
                                                     </div>
                                                 )}
                                             </div>
@@ -2495,7 +2497,7 @@ const ProductPage = () => {
                                         </label>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
                                             <label style={{ cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}>
-                                                <i className="fas fa-pencil-alt" style={{ fontSize: '15px' }}></i>
+                                                <i className="bi bi-pencil" style={{ fontSize: '15px' }}></i>
                                                 <input
                                                     type="file"
                                                     accept="image/png,image/jpeg,image/webp,image/gif"
@@ -2506,7 +2508,7 @@ const ProductPage = () => {
                                             </label>
                                             <span style={{ color: 'var(--color-border-muted)' }}>|</span>
                                             <i
-                                                className="fas fa-trash-alt"
+                                                className="bi bi-trash"
                                                 style={{ fontSize: '15px', color: '#6b7280', cursor: 'pointer' }}
                                                 onClick={() => setFormData(fd => ({ ...fd, imageUrl: '' }))}
                                             ></i>
@@ -2635,7 +2637,7 @@ const ProductPage = () => {
                                                                 onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-placeholder)'; e.currentTarget.style.background = 'transparent'; }}
                                                                 title="Xóa danh mục"
                                                             >
-                                                                <i className="bi bi-trash3"></i>
+                                                                <i className="bi bi-trash"></i>
                                                             </button>
                                                         </div>
                                                     ))}
@@ -2744,7 +2746,7 @@ const ProductPage = () => {
                                                                     }}
                                                                     title="Xóa đơn vị chuyển đổi"
                                                                 >
-                                                                    <i className="bi bi-trash3"></i>
+                                                                    <i className="bi bi-trash"></i>
                                                                 </button>
                                                             </div>
                                                         ))
@@ -2775,7 +2777,7 @@ const ProductPage = () => {
                                 <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <button className="btn-misa-draft" onClick={() => handleSave(false)}>
-                                        <i className="fas fa-plus-circle" style={{ marginRight: '6px' }}></i>Lưu & Thêm tiếp
+                                        <i className="bi bi-plus-circle" style={{ marginRight: '6px' }}></i>Lưu & Thêm tiếp
                                     </button>
                                     <button className="btn-misa-save" onClick={() => handleSave(true)}>Lưu</button>
                                 </div>
@@ -2789,7 +2791,7 @@ const ProductPage = () => {
                         <div className="misa-modal" style={{ width: '900px', maxWidth: '95vw', maxHeight: '90vh' }}>
                             <div className="misa-modal-header">
                                 <h3>Quản lý SKU - {selectedProduct.productCode}</h3>
-                                <i className="fas fa-times" onClick={() => setShowVariantModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, var(--wms-text-subtle))' }}></i>
+                                <i className="bi bi-x" onClick={() => setShowVariantModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, var(--wms-text-subtle))' }}></i>
                             </div>
 
                             <div className="misa-modal-body">
@@ -2963,7 +2965,7 @@ const ProductPage = () => {
                                                         onClick={() => handleRemoveSpecRow(item.id)}
                                                         title="Xóa dòng"
                                                     >
-                                                        <i className="fas fa-trash-alt"></i>
+                                                        <i className="bi bi-trash"></i>
                                                     </button>
                                                 </div>
                                             ))}
@@ -2972,7 +2974,7 @@ const ProductPage = () => {
                                                 className={styles.addSpecBtn}
                                                 onClick={handleAddSpecRow}
                                             >
-                                                <i className="fas fa-plus" style={{ marginRight: 6 }}></i> Thêm dòng thông số
+                                                <i className="bi bi-plus" style={{ marginRight: 6 }}></i> Thêm dòng thông số
                                             </button>
                                         </div>
                                     )}
@@ -3312,7 +3314,7 @@ const ProductPage = () => {
                         disabled={isSavingExcel || excelPreviewData.filter(r => r.isValid).length === 0}
                     >
                         {isSavingExcel ? (
-                            <><i className="fas fa-spinner fa-spin"></i> Đang lưu...</>
+                            <><i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}></i> Đang lưu...</>
                         ) : (
                             <><i className="bi bi-save"></i> Chỉ lưu {excelPreviewData.filter(r => r.isValid).length} dòng hợp lệ</>
                         )}

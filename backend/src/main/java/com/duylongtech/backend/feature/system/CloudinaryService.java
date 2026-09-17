@@ -99,6 +99,20 @@ public class CloudinaryService {
         }
     }
 
+    /**
+     * Xóa ảnh trên Cloudinary theo public_id.
+     * Trả về true nếu xóa thành công, false nếu không tìm thấy tài nguyên.
+     */
+    public boolean deleteImage(String publicId) {
+        if (publicId == null || publicId.isBlank()) return false;
+        try {
+            Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            return "ok".equals(result.get("result"));
+        } catch (IOException e) {
+            throw new BusinessException("Không thể xóa ảnh khỏi Cloudinary: " + e.getMessage(), e);
+        }
+    }
+
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(SystemMessage.CLOUD_ERR_006.getMessage());

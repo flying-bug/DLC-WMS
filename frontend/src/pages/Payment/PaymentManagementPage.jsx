@@ -618,11 +618,11 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                       <td className={styles.textCenter}>
                         {item.status === 'POSTED' ? (
                           <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                            <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+                            <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
                           </span>
                         ) : (
                           <span className={`${styles.badge} ${styles.badgeDraft}`}>
-                            <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+                            <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
                           </span>
                         )}
                       </td>
@@ -646,7 +646,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                               setOpenDropdownId(item.id);
                             }}
                           >
-                            Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                            Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
                           </button>
                           {openDropdownId === item.id && createPortal(
                             <div
@@ -661,7 +661,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                   setDetailItem(item);
                                 }}
                               >
-                                <i className="fas fa-eye"></i> Xem chi tiết
+                                <i className="bi bi-eye"></i> Xem chi tiết
                               </button>
                               <button
                                 type="button"
@@ -671,7 +671,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                   printPaymentReceipt(item, { partnerName: item.partnerName, salespersonName: '' });
                                 }}
                               >
-                                <i className="fas fa-print"></i> In phiếu
+                                <i className="bi bi-printer"></i> In phiếu
                               </button>
                               {item.status === 'DRAFT' && (
                                 <>
@@ -683,7 +683,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                       guard('payment:edit', () => handleStartEdit(item));
                                     }}
                                   >
-                                    <i className="fas fa-edit"></i> Sửa phiếu nháp
+                                    <i className="bi bi-pencil"></i> Sửa phiếu nháp
                                   </button>
                                   <button
                                     type="button"
@@ -693,7 +693,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                                       guard('payment:delete', () => setDeletingItem(item));
                                     }}
                                   >
-                                    <i className="fas fa-trash-alt"></i> Xóa phiếu nháp
+                                    <i className="bi bi-trash"></i> Xóa phiếu nháp
                                   </button>
                                 </>
                               )}
@@ -855,7 +855,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
             <div className={styles.modalBody}>
               <div className={styles.fieldRow}>
                 <label className={styles.label}>
-                  {mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'} <span>*</span>
+                  {mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'} <span style={{ color: 'var(--wms-danger)' }}>*</span>
                 </label>
                 <Select
                   options={partnerOptions}
@@ -886,7 +886,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                 <div className={styles.fieldRow}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <label className={styles.label} style={{ margin: 0 }}>
-                      Số tiền <span>*</span>
+                      Số tiền <span style={{ color: 'var(--wms-danger)' }}>*</span>
                     </label>
                     {Number(debtBalance || 0) > 0 && formPartnerId && (
                       <button

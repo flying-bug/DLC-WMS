@@ -15,7 +15,7 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
     Optional<StockTransfer> findByTransferCode(String transferCode);
 
     @Query("SELECT DISTINCT t FROM StockTransfer t LEFT JOIN FETCH t.lines l WHERE " +
-           "(:transferCode IS NULL OR LOWER(t.transferCode) LIKE LOWER(CONCAT('%',:transferCode,'%'))) AND " +
+           "(:transferCode IS NULL OR LOWER(t.transferCode) LIKE LOWER(CONCAT('%', TRIM(:transferCode), '%'))) AND " +
            "(:status IS NULL OR t.status = :status) AND " +
            "(:fromDate IS NULL OR t.transferDate >= :fromDate) AND " +
            "(:toDate IS NULL OR t.transferDate <= :toDate) " +

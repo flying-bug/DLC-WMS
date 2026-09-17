@@ -238,4 +238,11 @@ public class EInvoiceController {
             inv.getIssuedAt() != null ? inv.getIssuedAt().toString() : "2026-08-18"
         );
     }
+
+    @GetMapping("/repair/{repairId}/draft")
+    @PreAuthorize("hasAuthority('einvoice:view')")
+    @Operation(summary = "Lấy Hóa đơn điện tử nháp của phiếu sửa chữa")
+    public ApiResponse<EInvoiceResponse> getDraftInvoiceByRepairId(@PathVariable Long repairId) {
+        return ApiResponse.success(einvoiceService.getDraftInvoiceByRepairId(repairId));
+    }
 }

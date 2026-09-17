@@ -1074,7 +1074,7 @@ public class ReportRepository {
                 FROM repairs r
                 LEFT JOIN partners pt ON r.partner_id = pt.id
                 LEFT JOIN products p ON r.product_id = p.id
-                WHERE r.repair_status = 'CONFIRMED'
+                WHERE r.repair_status IN ('WAITING_STOCK', 'IN_REPAIR', 'WAITING_SCRAP_RETURN')
                   AND (COALESCE(r.under_warranty, FALSE) = TRUE OR r.warranty_id IS NOT NULL)
                 ORDER BY r.received_date DESC, r.id DESC
                 """;

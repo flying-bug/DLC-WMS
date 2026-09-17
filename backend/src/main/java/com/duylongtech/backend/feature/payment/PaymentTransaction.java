@@ -25,6 +25,15 @@ public class PaymentTransaction {
     @Column(name = "partner_id", nullable = false)
     private Long partnerId;
 
+    @Column(name = "reference_type", length = 30)
+    private String referenceType;
+
+    @Column(name = "reference_id")
+    private Long referenceId;
+
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "partner_id", insertable = false, updatable = false)
     private Partner partner;
@@ -41,6 +50,9 @@ public class PaymentTransaction {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "created_by")
+    private Long createdBy;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -53,5 +65,12 @@ public class PaymentTransaction {
         this.paymentMethod = paymentMethod;
         this.note = note;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void linkReference(String referenceType, Long referenceId, String idempotencyKey, Long createdBy) {
+        this.referenceType = referenceType;
+        this.referenceId = referenceId;
+        this.idempotencyKey = idempotencyKey;
+        this.createdBy = createdBy;
     }
 }

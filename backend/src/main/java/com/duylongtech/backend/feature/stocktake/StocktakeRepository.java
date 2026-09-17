@@ -14,7 +14,7 @@ import java.util.Optional;
 public interface StocktakeRepository extends JpaRepository<Stocktake, Long> {
 
     @Query("SELECT s FROM Stocktake s " +
-           "WHERE (:stocktakeCode IS NULL OR LOWER(s.stocktakeCode) LIKE LOWER(CONCAT('%',:stocktakeCode,'%'))) " +
+           "WHERE (:stocktakeCode IS NULL OR LOWER(s.stocktakeCode) LIKE LOWER(CONCAT('%', TRIM(:stocktakeCode), '%'))) " +
            "AND (:status IS NULL OR s.status = :status) " +
            "AND (:fromDate IS NULL OR s.stocktakeDate >= :fromDate) " +
            "AND (:toDate IS NULL OR s.stocktakeDate <= :toDate) " +

@@ -66,7 +66,7 @@ export default function RowActionMenu({
         aria-expanded={open}
         onClick={onToggle}
       >
-        Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+        Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
       </button>
       {open && typeof document !== 'undefined' && createPortal(
         <div

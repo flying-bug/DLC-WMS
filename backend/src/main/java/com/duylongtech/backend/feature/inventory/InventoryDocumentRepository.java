@@ -12,7 +12,7 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 
 public interface InventoryDocumentRepository extends JpaRepository<InventoryDocument, Long> {
 
-    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'EX_SO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_EXPORT') AND (:keyword IS NULL OR (LOWER(e.docCode) LIKE LOWER(CONCAT('%',:keyword,'%')) OR EXISTS (SELECT 1 FROM InventoryDocumentLine line LEFT JOIN ProductVariant pv ON line.variantId = pv.id WHERE line.inventoryDocument = e AND (LOWER(line.serialNumbersText) LIKE LOWER(CONCAT('%',:keyword,'%')) OR LOWER(pv.barcode) LIKE LOWER(CONCAT('%',:keyword,'%')) OR LOWER(pv.sku) LIKE LOWER(CONCAT('%',:keyword,'%')))))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:issuePurpose IS NULL OR e.issuePurpose = :issuePurpose) AND (:referenceType IS NULL OR e.referenceType = :referenceType) AND (:referenceId IS NULL OR e.referenceId = :referenceId) AND (:partnerId IS NULL OR e.partnerId = :partnerId) AND (:salespersonId IS NULL OR e.salespersonId = :salespersonId) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'EX_SO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_EXPORT') AND (:keyword IS NULL OR (LOWER(e.docCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR EXISTS (SELECT 1 FROM InventoryDocumentLine line LEFT JOIN ProductVariant pv ON line.variantId = pv.id WHERE line.inventoryDocument = e AND (LOWER(line.serialNumbersText) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR LOWER(pv.barcode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR LOWER(pv.sku) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:issuePurpose IS NULL OR e.issuePurpose = :issuePurpose) AND (:referenceType IS NULL OR e.referenceType = :referenceType) AND (:referenceId IS NULL OR e.referenceId = :referenceId) AND (:partnerId IS NULL OR e.partnerId = :partnerId) AND (:salespersonId IS NULL OR e.salespersonId = :salespersonId) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
     List<InventoryDocument> searchExports(@Param("keyword") String keyword,
                                          @Param("fromDate") LocalDate fromDate,
                                          @Param("toDate") LocalDate toDate,
@@ -30,7 +30,7 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
     @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.id = :id AND e.docType = 'EX_SO'")
     Optional<InventoryDocument> findExportByIdWithLines(@Param("id") Long id);
 
-    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_IMPORT') AND (:keyword IS NULL OR (LOWER(e.docCode) LIKE LOWER(CONCAT('%',:keyword,'%')) OR EXISTS (SELECT 1 FROM InventoryDocumentLine line LEFT JOIN ProductVariant pv ON line.variantId = pv.id WHERE line.inventoryDocument = e AND (LOWER(line.serialNumbersText) LIKE LOWER(CONCAT('%',:keyword,'%')) OR LOWER(pv.barcode) LIKE LOWER(CONCAT('%',:keyword,'%')) OR LOWER(pv.sku) LIKE LOWER(CONCAT('%',:keyword,'%')))))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:issuePurpose IS NULL OR e.issuePurpose = :issuePurpose) AND (:referenceType IS NULL OR e.referenceType = :referenceType) AND (:referenceId IS NULL OR e.referenceId = :referenceId) AND (:partnerId IS NULL OR e.partnerId = :partnerId) AND (:salespersonId IS NULL OR e.salespersonId = :salespersonId) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_IMPORT') AND (:keyword IS NULL OR (LOWER(e.docCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR EXISTS (SELECT 1 FROM InventoryDocumentLine line LEFT JOIN ProductVariant pv ON line.variantId = pv.id WHERE line.inventoryDocument = e AND (LOWER(line.serialNumbersText) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR LOWER(pv.barcode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR LOWER(pv.sku) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:issuePurpose IS NULL OR e.issuePurpose = :issuePurpose) AND (:referenceType IS NULL OR e.referenceType = :referenceType) AND (:referenceId IS NULL OR e.referenceId = :referenceId) AND (:partnerId IS NULL OR e.partnerId = :partnerId) AND (:salespersonId IS NULL OR e.salespersonId = :salespersonId) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
     List<InventoryDocument> searchImports(@Param("keyword") String keyword,
                                           @Param("fromDate") LocalDate fromDate,
                                           @Param("toDate") LocalDate toDate,
@@ -75,6 +75,14 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
     boolean existsByPurchaseOrderIdAndIssuePurposeAndStatusIn(Long purchaseOrderId, String issuePurpose, List<String> statuses);
 
     boolean existsByReferenceTypeAndReferenceIdAndDocType(String referenceType, Long referenceId, String docType);
+
+    long countByReferenceTypeAndReferenceIdAndDocType(String referenceType, Long referenceId, String docType);
+
+    Optional<InventoryDocument> findByReferenceTypeAndReferenceIdAndIssuePurpose(
+            String referenceType, Long referenceId, String issuePurpose);
+
+    boolean existsByReferenceTypeAndReferenceIdAndIssuePurposeAndStatus(
+            String referenceType, Long referenceId, String issuePurpose, String status);
 
     @Query("SELECT DISTINCT d FROM InventoryDocument d LEFT JOIN FETCH d.lines WHERE d.referenceType = :referenceType AND d.referenceId = :referenceId ORDER BY d.id")
     List<InventoryDocument> findByReferenceWithLines(@Param("referenceType") String referenceType,

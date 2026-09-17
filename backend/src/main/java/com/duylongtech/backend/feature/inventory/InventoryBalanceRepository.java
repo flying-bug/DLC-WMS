@@ -18,6 +18,11 @@ import com.duylongtech.backend.feature.warehouse.Warehouse;
 
 public interface InventoryBalanceRepository extends JpaRepository<InventoryBalance, Long> {
 
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId ORDER BY b.id")
+  List<InventoryBalance> findAllByWarehouseAndVariantForUpdate(@Param("warehouseId") Long warehouseId,
+      @Param("variantId") Long variantId);
+
   @org.springframework.data.jpa.repository.Modifying
   @Query("DELETE FROM InventoryBalance b WHERE b.variantId IN :variantIds")
   void deleteByVariantIdIn(@Param("variantIds") List<Long> variantIds);

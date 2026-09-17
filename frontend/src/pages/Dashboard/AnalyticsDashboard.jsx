@@ -115,23 +115,23 @@ const getTransactionStatusMeta = (status) => {
 const getTransactionIconMeta = (entityType) => {
     switch (entityType) {
         case 'PURCHASE_ORDER':
-            return { icon: 'fas fa-box-open', backgroundColor: '#ffedd5', color: '#ea580c' };
+            return { icon: 'bi bi-box-seam', backgroundColor: '#ffedd5', color: '#ea580c' };
         case 'SALES_ORDER':
-            return { icon: 'fas fa-truck-loading', backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary)' };
+            return { icon: 'bi bi-truck', backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary)' };
         case 'IMPORT_DOCUMENT':
-            return { icon: 'fas fa-arrow-down', backgroundColor: 'var(--color-success-bg)', color: '#16a34a' };
+            return { icon: 'bi bi-arrow-down', backgroundColor: 'var(--color-success-bg)', color: '#16a34a' };
         case 'EXPORT_DOCUMENT':
-            return { icon: 'fas fa-arrow-up', backgroundColor: '#e0f2fe', color: 'var(--color-info-hover)' };
+            return { icon: 'bi bi-arrow-up', backgroundColor: '#e0f2fe', color: 'var(--color-info-hover)' };
         case 'ASSEMBLY_ORDER':
-            return { icon: 'fas fa-cogs', backgroundColor: '#ede9fe', color: '#7c3aed' };
+            return { icon: 'bi bi-gear', backgroundColor: '#ede9fe', color: '#7c3aed' };
         case 'DISASSEMBLY_ORDER':
-            return { icon: 'fas fa-tools', backgroundColor: '#fee2e2', color: 'var(--wms-danger)' };
+            return { icon: 'bi bi-tools', backgroundColor: '#fee2e2', color: 'var(--wms-danger)' };
         case 'WARRANTY_REPAIR':
-            return { icon: 'fas fa-shield-alt', backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary-hover)' };
+            return { icon: 'bi bi-shield-check', backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary-hover)' };
         case 'REPAIR':
-            return { icon: 'fas fa-wrench', backgroundColor: '#fef3c7', color: 'var(--wms-warning-hover)' };
+            return { icon: 'bi bi-wrench', backgroundColor: '#fef3c7', color: 'var(--wms-warning-hover)' };
         default:
-            return { icon: 'fas fa-history', backgroundColor: 'var(--color-bg)', color: '#4b5563' };
+            return { icon: 'bi bi-clock-history', backgroundColor: 'var(--color-bg)', color: '#4b5563' };
     }
 };
 
@@ -249,7 +249,7 @@ function AnalyticsDashboard() {
                 id: `low-${configuredLowStockProducts[0].productId}`,
                 title: `${configuredLowStockProducts[0].productName} đang dưới ngưỡng tồn`,
                 time: `Tồn ${quantity(configuredLowStockProducts[0].stockQty)} / Mức cảnh báo ${quantity(configuredLowStockProducts[0].minStockQty)}`,
-                icon: 'fas fa-exclamation-triangle',
+                icon: 'bi bi-exclamation-triangle',
                 color: 'red',
                 onClick: () => setActiveDetail('lowStock')
             }
@@ -259,7 +259,7 @@ function AnalyticsDashboard() {
                 id: `repair-${confirmedWarrantyRepairs[0].id}`,
                 title: `${confirmedWarrantyRepairs[0].repairCode} đang chờ xử lý bảo hành`,
                 time: confirmedWarrantyRepairs[0].partnerName || 'Chưa có khách hàng',
-                icon: 'fas fa-tools',
+                icon: 'bi bi-tools',
                 color: 'purple',
                 onClick: () => setActiveDetail('repairs')
             }
@@ -269,7 +269,7 @@ function AnalyticsDashboard() {
                 id: `po-${approvedPurchaseOrders[0].id}`,
                 title: `${approvedPurchaseOrders[0].code} đã duyệt, chờ nhập hàng`,
                 time: approvedPurchaseOrders[0].partnerName || 'Chưa có nhà cung cấp',
-                icon: 'fas fa-box-open',
+                icon: 'bi bi-box-seam',
                 color: 'orange',
                 onClick: () => setActiveDetail('purchaseOrders')
             }
@@ -281,7 +281,7 @@ function AnalyticsDashboard() {
             key: 'purchaseOrders',
             title: 'Đơn mua',
             value: quantity(dashboard?.approvedPurchaseOrdersCount || 0),
-            icon: 'fas fa-box-open',
+            icon: 'bi bi-box-seam',
             color: 'orange',
             trend: 'Các đơn mua đang ở trạng thái đã duyệt',
             data: KPI_SPARKLINES.purchaseOrders
@@ -290,7 +290,7 @@ function AnalyticsDashboard() {
             key: 'backorderedSalesOrders',
             title: 'Đơn chờ nhập',
             value: quantity(dashboard?.backorderedSalesOrdersCount || 0),
-            icon: 'fas fa-hourglass-half',
+            icon: 'bi bi-hourglass-split',
             color: 'primary',
             trend: 'Đơn bán duyệt nhưng chờ nhập hàng',
             data: KPI_SPARKLINES.salesOrders,
@@ -300,7 +300,7 @@ function AnalyticsDashboard() {
             key: 'salesOrders',
             title: 'Đơn bán',
             value: quantity(dashboard?.approvedSalesOrdersCount || 0),
-            icon: 'fas fa-truck-loading',
+            icon: 'bi bi-truck',
             color: 'green',
             trend: 'Các đơn bán đang ở trạng thái đã duyệt',
             data: KPI_SPARKLINES.salesOrders
@@ -309,7 +309,7 @@ function AnalyticsDashboard() {
             key: 'lowStock',
             title: 'Sắp hết hàng',
             value: `${quantity(dashboard?.configuredLowStockProductsCount || 0)} SP`,
-            icon: 'fas fa-exclamation-triangle',
+            icon: 'bi bi-exclamation-triangle',
             color: 'red',
             trend: `${configuredLowStockProducts.length} sản phẩm hiện đang dưới mức cảnh báo`,
             data: KPI_SPARKLINES.lowStock
@@ -318,7 +318,7 @@ function AnalyticsDashboard() {
             key: 'repairs',
             title: 'Chờ bảo hành',
             value: `${quantity(dashboard?.confirmedWarrantyRepairsCount || 0)} đơn`,
-            icon: 'fas fa-tools',
+            icon: 'bi bi-tools',
             color: 'purple',
             trend: 'Các đơn bảo hành đã xác nhận sửa chữa',
             data: KPI_SPARKLINES.repairs
@@ -462,10 +462,10 @@ function AnalyticsDashboard() {
                     </div>
                     <div className={styles.headerActions}>
                         <button className="btn-misa-outline" onClick={() => navigate('/import-history')}>
-                            <i className="fas fa-plus"></i> Phiếu Nhập
+                            <i className="bi bi-plus"></i> Phiếu Nhập
                         </button>
                         <button className="btn-misa-primary" onClick={() => navigate('/export-slips')}>
-                            <i className="fas fa-paper-plane"></i> Xuất Kho Mới
+                            <i className="bi bi-send"></i> Xuất Kho Mới
                         </button>
                     </div>
                 </div>
@@ -500,7 +500,7 @@ function AnalyticsDashboard() {
                                         <p className={styles.kpiTitle}>{kpi.title}</p>
                                         <h3 className={styles.kpiValue}>{loading ? '...' : kpi.value}</h3>
                                         <p className={styles.kpiTrend}>
-                                            <i className="fas fa-chart-line" style={{ marginRight: 4 }}></i>
+                                            <i className="bi bi-graph-up" style={{ marginRight: 4 }}></i>
                                             {loading ? 'Đang tải dữ liệu...' : kpi.trend}
                                         </p>
                                     </div>
@@ -708,7 +708,7 @@ function AnalyticsDashboard() {
                             <div className={styles.cardHeader}>
                                 <h3 className={styles.cardTitle}>Top 5 Thành Phẩm Tồn Nhiều</h3>
                                 <button className={styles.viewAllBtn} onClick={() => setActiveDetail('inventory')}>
-                                    Xem tất cả <i className="fas fa-arrow-right" style={{ marginLeft: '4px' }}></i>
+                                    Xem tất cả <i className="bi bi-arrow-right" style={{ marginLeft: '4px' }}></i>
                                 </button>
                             </div>
                             <div className={styles.topProductsList}>

@@ -22,6 +22,23 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
 
     List<StockReservation> findBySalesOrderIdAndStatus(Long salesOrderId, String status);
 
+    List<StockReservation> findByRepairId(Long repairId);
+
+    List<StockReservation> findByRepairIdAndStatus(Long repairId, String status);
+
+    Optional<StockReservation> findByRepairIdAndVariantIdAndWarehouseId(
+        Long repairId, Long variantId, Long warehouseId
+    );
+
+    @Modifying
+    @Query("""
+        UPDATE StockReservation r SET r.status = :newStatus
+        WHERE r.repairId = :repairId AND r.status = :oldStatus
+    """)
+    int updateStatusByRepairId(@Param("repairId") Long repairId,
+                               @Param("oldStatus") String oldStatus,
+                               @Param("newStatus") String newStatus);
+
     /**
      * Bulk-release: sets the status of every given reservation in one statement instead of
      * one save() per row - used by StockReservationExpiryJob.

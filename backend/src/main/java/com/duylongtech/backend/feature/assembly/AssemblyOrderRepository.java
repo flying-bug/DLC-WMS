@@ -31,13 +31,13 @@ public interface AssemblyOrderRepository extends JpaRepository<AssemblyOrder, Lo
             "LEFT JOIN FETCH o.lines l " +
             "LEFT JOIN FETCH l.componentVariant cv " +
             "LEFT JOIN FETCH cv.product cp " +
-            "WHERE (:keyword IS NULL OR LOWER(o.orderCode) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(b.bomCode) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(b.bomName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(tv.sku) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(tv.variantName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(tp.productCode) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(tp.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "WHERE (:keyword IS NULL OR LOWER(o.orderCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+            "OR LOWER(b.bomCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+            "OR LOWER(b.bomName) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+            "OR LOWER(tv.sku) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+            "OR LOWER(tv.variantName) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+            "OR LOWER(tp.productCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) " +
+            "OR LOWER(tp.productName) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))) " +
             "AND (:orderType IS NULL OR o.orderType = :orderType) " +
             "AND (:status IS NULL OR o.status = :status) " +
             "AND (:warehouseId IS NULL OR o.warehouseId = :warehouseId) " +

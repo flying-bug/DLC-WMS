@@ -39,9 +39,27 @@ public class GmailOAuthService {
     private final TokenEncryptionService encryptionService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    // Khởi tạo lazy: tạo HttpClient ngay trong constructor có thể làm crash
+    // toàn bộ Spring context nếu môi trường máy chặn NIO Selector (ví dụ
+    // lỗi "Unable to establish loopback connection" trên một số máy Windows).
+    // Trì hoãn tới lần gọi Gmail API đầu tiên để không chặn khởi động app.
+    private volatile HttpClient httpClient;
+
+    private HttpClient httpClient() {
+        HttpClient client = httpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = httpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(10))
+                            .build();
+                    httpClient = client;
+                }
+            }
+        }
+        return client;
+    }
 
     // Volatile cache cho access token (in-memory only, không lưu DB)
     private volatile String cachedAccessToken = null;
@@ -97,7 +115,7 @@ public class GmailOAuthService {
                     .POST(HttpRequest.BodyPublishers.ofString(formBody))
                     .build();
 
-            HttpResponse<String> tokenResponse = httpClient.send(tokenRequest, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> tokenResponse = httpClient().send(tokenRequest, HttpResponse.BodyHandlers.ofString());
             if (tokenResponse.statusCode() < 200 || tokenResponse.statusCode() >= 300) {
                 log.error("Google token exchange failed (HTTP {}): {}", tokenResponse.statusCode(), tokenResponse.body());
                 throw new BusinessException("Không thể lấy token từ Google. Vui lòng thử lại.");
@@ -119,7 +137,7 @@ public class GmailOAuthService {
                     .GET()
                     .build();
 
-            HttpResponse<String> userInfoResponse = httpClient.send(userInfoRequest, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> userInfoResponse = httpClient().send(userInfoRequest, HttpResponse.BodyHandlers.ofString());
             String connectedEmail = "unknown@gmail.com";
             if (userInfoResponse.statusCode() >= 200 && userInfoResponse.statusCode() < 300) {
                 JsonNode userInfo = objectMapper.readTree(userInfoResponse.body());
@@ -171,7 +189,7 @@ public class GmailOAuthService {
                             .timeout(Duration.ofSeconds(10))
                             .POST(HttpRequest.BodyPublishers.noBody())
                             .build();
-                    httpClient.send(revokeRequest, HttpResponse.BodyHandlers.ofString());
+                    httpClient().send(revokeRequest, HttpResponse.BodyHandlers.ofString());
                     log.info("Gmail OAuth token revoked on Google");
                 } catch (Exception e) {
                     log.warn("Failed to revoke Google token (non-critical): {}", e.getMessage());
@@ -247,7 +265,7 @@ public class GmailOAuthService {
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .build();
 
-            HttpResponse<String> response = httpClient.send(sendRequest, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient().send(sendRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new RuntimeException("Gmail API send failed (HTTP " + response.statusCode() + "): " + response.body());
             }
@@ -292,7 +310,7 @@ public class GmailOAuthService {
                 .POST(HttpRequest.BodyPublishers.ofString(formBody))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient().send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Failed to refresh Gmail access token (HTTP " + response.statusCode() + "): " + response.body());
         }

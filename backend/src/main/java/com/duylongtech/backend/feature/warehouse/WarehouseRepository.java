@@ -18,14 +18,14 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
     java.util.List<Warehouse> findByStatus(String status);
 
     @Query("SELECT w FROM Warehouse w WHERE " +
-           "LOWER(w.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%'))")
+           "LOWER(w.code) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) OR " +
+           "LOWER(w.name) LIKE LOWER(CONCAT('%', TRIM(:search), '%'))")
     Page<Warehouse> searchByCodeOrName(@Param("search") String search, Pageable pageable);
 
 
 
     @Query("SELECT w FROM Warehouse w WHERE " +
-           "(:search IS NULL OR :search = '' OR LOWER(w.code) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.address) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:search IS NULL OR :search = '' OR LOWER(w.code) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) OR LOWER(w.name) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) OR LOWER(w.address) LIKE LOWER(CONCAT('%', TRIM(:search), '%'))) AND " +
            "(:status IS NULL OR :status = '' OR w.status = :status)")
     Page<Warehouse> searchWarehouses(@Param("search") String search, 
                                      @Param("status") String status, 

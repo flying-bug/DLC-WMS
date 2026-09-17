@@ -258,3 +258,8 @@
   padding: 8px 12px;
   color: var(--color-text-strong, var(--wms-text-title));
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

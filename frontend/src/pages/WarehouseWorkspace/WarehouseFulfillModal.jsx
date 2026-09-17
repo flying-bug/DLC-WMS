@@ -185,7 +185,7 @@ export default function WarehouseFulfillModal({
         {/* HEADER */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitle}>
-            <i className="fas fa-barcode" style={{ color: 'var(--wms-primary)' }}></i>
+            <i className="bi bi-upc" style={{ color: 'var(--wms-primary)' }}></i>
             Kiểm đếm, Quét mã & Xác nhận Ghi sổ kho: {slip.docCode}
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
@@ -197,7 +197,7 @@ export default function WarehouseFulfillModal({
         <div className={styles.modalBody}>
           {/* BARCODE SCANNER INPUT */}
           <form onSubmit={handleScanSubmit} className={styles.scannerBar}>
-            <i className={`fas fa-qrcode ${styles.scanIcon}`}></i>
+            <i className={`bi bi-qr-code ${styles.scanIcon}`}></i>
             <div className={styles.scanInputWrapper}>
               <input
                 ref={scanInputRef}
@@ -214,7 +214,7 @@ export default function WarehouseFulfillModal({
           {/* TABLE OF ITEMS */}
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--wms-text-muted)' }}>
-              <i className="fas fa-spinner fa-spin" style={{ fontSize: '1.5rem', marginRight: '8px' }}></i>
+              <i className="bi bi-arrow-repeat" style={{ fontSize: '1.5rem', marginRight: '8px', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
               Đang tải danh sách vật tư hàng hóa...
             </div>
           ) : (
@@ -312,11 +312,11 @@ export default function WarehouseFulfillModal({
             >
               {submitting ? (
                 <>
-                  <i className="fas fa-spinner fa-spin"></i> Đang ghi sổ kho...
+                  <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}></i> Đang ghi sổ kho...
                 </>
               ) : (
                 <>
-                  <i className="fas fa-check-circle"></i> Xác nhận & Ghi sổ kho
+                  <i className="bi bi-check-circle"></i> Xác nhận & Ghi sổ kho
                 </>
               )}
             </button>

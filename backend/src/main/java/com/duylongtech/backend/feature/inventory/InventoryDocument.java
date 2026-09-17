@@ -42,6 +42,7 @@ public class InventoryDocument {
     @Column(name = "reference_repair_id")
     private Long referenceRepairId;
 
+
     @Column(name = "warehouse_id")
     private Long warehouseId;
 

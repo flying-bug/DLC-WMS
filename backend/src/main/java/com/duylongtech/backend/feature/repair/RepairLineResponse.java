@@ -34,6 +34,9 @@ public class RepairLineResponse {
     private String serialNumber;
     private Long replacementSerialNumberId;
     private String replacementSerialNumber;
+    private Long removedVariantId;
+    private BigDecimal removedQuantity;
+    private String scrapCondition;
     private BigDecimal vatPercent;
 
     private String note;

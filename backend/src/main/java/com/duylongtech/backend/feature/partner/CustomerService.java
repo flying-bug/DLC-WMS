@@ -91,7 +91,8 @@ public class CustomerService {
     private static final String INACTIVE         = com.duylongtech.backend.enums.EntityStatus.INACTIVE.name();
     private static final String DEFAULT_GROUP    = "RETAIL";
     private static final Set<String> VALID_GROUPS = Set.of("RETAIL", "WHOLESALE", "DISTRIBUTOR");
-    private static final Set<String> REPAIRING_STATUSES = Set.of("RECEIVED", "REPAIRING");
+    private static final Set<String> REPAIRING_STATUSES = Set.of(
+            "DRAFT", "WAITING_CONFIRM", "WAITING_STOCK", "IN_REPAIR", "WAITING_SCRAP_RETURN");
 
     private final PartnerRepository partnerRepository;
     private final AuditLogService   auditLogService;
@@ -153,6 +154,15 @@ public class CustomerService {
             throw new BusinessException(SystemMessage.CUST_VIEW_SEED_DATA_DENIED);
         }
         return toResponse(customer);
+    }
+
+    @Transactional(readOnly = true)
+    public Partner requireActiveCustomer(Long id) {
+        Partner customer = findCustomerOrThrow(id);
+        if (!APPROVED.equals(customer.getStatus())) {
+            throw new BusinessException("Khách hàng phải đang hoạt động");
+        }
+        return customer;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -59,7 +59,7 @@ export const StatisticCard = ({
             </div>
             {trend && (
                 <div className={`${styles.statTrend} ${trend.type === 'up' ? styles.trendUp : styles.trendDown}`}>
-                    <i className={`fas fa-arrow-${trend.type === 'up' ? 'up' : 'down'}`}></i>
+                    <i className={`bi bi-arrow-${trend.type === 'up' ? 'up' : 'down'}`}></i>
                     <span>{trend.value}</span>
                 </div>
             )}

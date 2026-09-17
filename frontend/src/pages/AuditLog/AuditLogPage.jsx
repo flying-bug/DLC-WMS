@@ -387,7 +387,7 @@ function AuditLogPage() {
                                 <p>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
                             </div>
                             <button type="button" className={styles.closeBtn} onClick={closeDetail} aria-label="Đóng chi tiết nhật ký">
-                                <i className="fas fa-times" aria-hidden="true"></i>
+                                <i className="bi bi-x" aria-hidden="true"></i>
                             </button>
                         </div>
 

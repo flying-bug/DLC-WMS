@@ -12,6 +12,7 @@ import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.feature.inventory.InventoryDocument;
 import com.duylongtech.backend.feature.partner.Partner;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
+import com.duylongtech.backend.feature.repair.Repair;
 
 @Entity
 @Table(name = "E_INVOICES")
@@ -30,6 +31,13 @@ public class EInvoice {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_order_id", insertable = false, updatable = false)
     private SalesOrder salesOrder;
+
+    @Column(name = "repair_id")
+    private Long repairId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repair_id", insertable = false, updatable = false)
+    private Repair repair;
 
     @Column(name = "inventory_document_id")
     private Long inventoryDocumentId;

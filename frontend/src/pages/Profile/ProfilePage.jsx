@@ -216,7 +216,7 @@ function ProfilePage() {
                     </div>
                     <div className={styles.breadcrumb}>
                         <span className={styles.breadcrumbLink} onClick={() => navigate('/dashboard')}>Dashboard</span>
-                        <i className="fas fa-chevron-right"></i>
+                        <i className="bi bi-chevron-right"></i>
                         <span>{isEditing ? 'Chỉnh sửa hồ sơ' : 'Thông tin cá nhân'}</span>
                     </div>
                 </div>
@@ -242,7 +242,7 @@ function ProfilePage() {
                                                 disabled={uploading}
                                             />
                                             <span className={styles.avatarAction}>
-                                                <i className={uploading ? 'fas fa-spinner fa-spin' : 'fas fa-camera'}></i>
+                                                <i className={uploading ? 'bi bi-arrow-repeat' : 'bi bi-camera'} style={uploading ? { animation: 'spin 1s linear infinite', display: 'inline-block' } : undefined}></i>
                                                 {uploading ? 'Đang tải...' : 'Đổi ảnh'}
                                             </span>
                                         </label>
@@ -268,10 +268,10 @@ function ProfilePage() {
                                 {!isEditing && (
                                     <div className={styles.heroActions}>
                                         <button className={styles.btnSecondary} type="button" onClick={() => navigate('/change-password')}>
-                                            <i className="fas fa-key"></i> Đổi mật khẩu
+                                            <i className="bi bi-key"></i> Đổi mật khẩu
                                         </button>
                                         <button className={styles.btnPrimary} type="button" onClick={() => navigate('/profile/edit')}>
-                                            <i className="fas fa-pen"></i> Chỉnh sửa
+                                            <i className="bi bi-pencil"></i> Chỉnh sửa
                                         </button>
                                     </div>
                                 )}
@@ -281,7 +281,7 @@ function ProfilePage() {
                                 <form className={styles.formPanel} onSubmit={handleProfileSubmit} noValidate>
                                     <div className={styles.fieldGrid}>
                                         <div className={styles.detailGroup}>
-                                            <label className={styles.detailLabel} htmlFor="fullName">Họ và tên</label>
+                                            <label className={styles.detailLabel} htmlFor="fullName">Họ và tên <span className={styles.required}>*</span></label>
                                             <input
                                                 id="fullName"
                                                 name="fullName"
@@ -298,7 +298,7 @@ function ProfilePage() {
                                         </div>
 
                                         <div className={styles.detailGroup}>
-                                            <label className={styles.detailLabel} htmlFor="phone">Số điện thoại</label>
+                                            <label className={styles.detailLabel} htmlFor="phone">Số điện thoại <span className={styles.required}>*</span></label>
                                             <input
                                                 id="phone"
                                                 name="phone"
@@ -323,7 +323,7 @@ function ProfilePage() {
 
                                     <div className={styles.formActions}>
                                         <button className={styles.btnPrimary} type="submit" disabled={saving}>
-                                            <i className={saving ? 'fas fa-spinner fa-spin' : 'fas fa-save'}></i>
+                                            <i className={saving ? 'bi bi-arrow-repeat' : 'bi bi-save'} style={saving ? { animation: 'spin 1s linear infinite', display: 'inline-block' } : undefined}></i>
                                             {saving ? 'Đang lưu...' : 'Lưu thông tin'}
                                         </button>
                                         <button className={styles.btnSecondary} type="button" onClick={cancelEdit} disabled={saving}>

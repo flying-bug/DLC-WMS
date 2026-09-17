@@ -24,4 +24,7 @@ public class PaymentResponse {
     private String note;
     private LocalDateTime createdAt;
     private BigDecimal partnerDebtBalance;
+    private String referenceType;
+    private Long referenceId;
+    private String idempotencyKey;
 }

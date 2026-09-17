@@ -160,9 +160,9 @@ const WarehouseListPage = () => {
     };
 
     const getSortIcon = (key) => {
-        if (sortConfig.key !== key) return <i className={`fas fa-sort ${styles.sortIcon} ${styles.sortIconInactive}`}></i>;
-        if (sortConfig.direction === 'asc') return <i className={`fas fa-sort-up ${styles.sortIcon}`}></i>;
-        return <i className={`fas fa-sort-down ${styles.sortIcon}`}></i>;
+        if (sortConfig.key !== key) return <i className={`bi bi-arrow-down-up ${styles.sortIcon} ${styles.sortIconInactive}`}></i>;
+        if (sortConfig.direction === 'asc') return <i className={`bi bi-caret-up-fill ${styles.sortIcon}`}></i>;
+        return <i className={`bi bi-caret-down-fill ${styles.sortIcon}`}></i>;
     };
 
     const getStatusBadge = (status) => {

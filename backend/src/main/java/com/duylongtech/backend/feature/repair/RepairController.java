@@ -1,12 +1,12 @@
 package com.duylongtech.backend.feature.repair;
 
-import com.duylongtech.backend.feature.repair.RepairFeeRequest;
-import com.duylongtech.backend.feature.repair.RepairLineRequest;
-import com.duylongtech.backend.feature.repair.RepairRequest;
-import com.duylongtech.backend.feature.repair.RepairStatusRequest;
 import com.duylongtech.backend.common.ApiResponse;
+import com.duylongtech.backend.feature.repair.RepairCloseRequest;
+import com.duylongtech.backend.feature.repair.RepairFeeRequest;
 import com.duylongtech.backend.feature.repair.RepairFeeResponse;
+import com.duylongtech.backend.feature.repair.RepairLineRequest;
 import com.duylongtech.backend.feature.repair.RepairLineResponse;
+import com.duylongtech.backend.feature.repair.RepairRequest;
 import com.duylongtech.backend.feature.repair.RepairResponse;
 import com.duylongtech.backend.feature.repair.RepairService;
 import com.duylongtech.backend.feature.repair.RepairWorkflowService;
@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -42,6 +43,7 @@ import org.springframework.web.bind.annotation.*;
 public class RepairController {
 
     private final RepairService repairService;
+    private final RepairTokenService repairTokenService;
     private final RepairWorkflowService repairWorkflowService;
 
     // =========================================================================
@@ -58,12 +60,13 @@ public class RepairController {
     public ApiResponse<Page<RepairResponse>> getRepairs(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long technicianId,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fromDate,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate toDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(repairService.getRepairs(keyword, status, fromDate, toDate, page, size));
+        return ApiResponse.success(repairService.getRepairs(keyword, status, technicianId, fromDate, toDate, page, size));
     }
 
     @GetMapping("/check-code")
@@ -73,6 +76,13 @@ public class RepairController {
     public ApiResponse<java.util.Map<String, Boolean>> checkRepairCode(@RequestParam String code) {
         boolean exists = repairService.checkCodeExists(code);
         return ApiResponse.success(java.util.Map.of("exists", exists));
+    }
+
+    @GetMapping("/preview-code")
+    @PreAuthorize("hasAuthority('repair:add')")
+    @Operation(summary = "Lấy mã lệnh sinh tự động dự kiến")
+    public ApiResponse<java.util.Map<String, String>> previewRepairCode() {
+        return ApiResponse.success(java.util.Map.of("code", repairService.previewRepairCode()));
     }
 
     @GetMapping("/{id}")
@@ -218,31 +228,106 @@ public class RepairController {
     // =========================================================================
     // 4. Workflow: Chuyển trạng thái
     // =========================================================================
+    // 4. Workflow actions
+    // =========================================================================
 
-    @PutMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('repair:edit')")
-    @Operation(
-            summary = "Chuyển trạng thái lệnh sửa chữa",
-            description = """
-                    State Machine:
-                    DRAFT -> QUOTATION -> CONFIRMED -> UNDER_REPAIR -> DONE
-                    Bất kỳ trạng thái nào (trừ DONE) -> CANCELLED
-                    
-                    Lưu ý quan trọng:
-                    - Chuyển sang CONFIRMED: Kiểm tra tồn kho linh kiện ADD, tạo phiếu xuất kho DRAFT (Reserve).
-                      Nếu không đủ tồn kho -> Trả về 400 REP05.
-                    - Chuyển sang DONE: Ghi sổ phiếu kho, sinh phiếu Scrap (nếu có REMOVE), sinh Invoice.
-                    """
-    )
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Chuyển trạng thái thành công")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400",
-            description = "Chuyển trạng thái không hợp lệ hoặc không đủ tồn kho (REP05)"
-    )
-    public ApiResponse<RepairResponse> updateStatus(
-            @PathVariable Long id,
-            @Valid @RequestBody RepairStatusRequest request
-    ) {
-        return ApiResponse.success(repairWorkflowService.transitionStatus(id, request.getStatus(), request.getNote()));
+    @PostMapping("/{id}/assign")
+    @PreAuthorize("hasRole('ACCOUNTANT') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('RECEPTIONIST')")
+    public ApiResponse<RepairResponse> assign(@PathVariable Long id) {
+        return ApiResponse.success(repairWorkflowService.assign(id));
+    }
+
+    @GetMapping("/technicians")
+    @PreAuthorize("hasAuthority('repair:view')")
+    public ApiResponse<java.util.List<RepairTechnicianResponse>> getTechnicians() {
+        return ApiResponse.success(repairService.getActiveTechnicians());
+    }
+
+    @PutMapping("/{id}/diagnosis")
+    @PreAuthorize("hasAnyRole('TECHNICIAN','SUPER_ADMIN','MANAGER')")
+    public ApiResponse<RepairResponse> saveDiagnosis(@PathVariable Long id,
+            @RequestBody RepairDiagnosisRequest request) {
+        return ApiResponse.success(repairWorkflowService.saveDiagnosis(id, request));
+    }
+
+    @PostMapping("/{id}/submit-quotation")
+    @PreAuthorize("hasAnyRole('TECHNICIAN','SUPER_ADMIN','MANAGER')")
+    public ApiResponse<RepairResponse> submitQuotation(@PathVariable Long id) {
+        return ApiResponse.success(repairWorkflowService.submitQuotation(id));
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ACCOUNTANT') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    public ApiResponse<RepairResponse> approve(@PathVariable Long id) {
+        return ApiResponse.success(repairWorkflowService.approve(id));
+    }
+
+    @PostMapping("/{id}/decline")
+    @PreAuthorize("hasRole('ACCOUNTANT') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    public ApiResponse<RepairResponse> decline(@PathVariable Long id,
+            @RequestBody WorkflowActionRequest request) {
+        return ApiResponse.success(repairWorkflowService.decline(id, request.getReason()));
+    }
+
+    @PostMapping("/{id}/complete-repair")
+    @PreAuthorize("hasAnyRole('TECHNICIAN','SUPER_ADMIN','MANAGER')")
+    public ApiResponse<RepairResponse> completeRepair(@PathVariable Long id,
+            @Valid @RequestBody RepairFinishRequest request) {
+        return ApiResponse.success(repairWorkflowService.completeRepair(id, request));
+    }
+
+    @PostMapping("/{id}/close")
+    @PreAuthorize("hasRole('ACCOUNTANT') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    public ApiResponse<RepairResponse> close(@PathVariable Long id, @RequestBody(required = false) RepairCloseRequest request) {
+        return ApiResponse.success(repairWorkflowService.close(id, request));
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('ACCOUNTANT') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    public ApiResponse<RepairResponse> cancel(@PathVariable Long id,
+            @RequestBody WorkflowActionRequest request) {
+        return ApiResponse.success(repairWorkflowService.cancel(id, request.getReason()));
+    }
+
+    @PostMapping("/{id}/cancel-parts-export")
+    @PreAuthorize("hasAnyRole('WAREHOUSE_CONTROLLER','SUPER_ADMIN','MANAGER')")
+    public ApiResponse<RepairResponse> cancelPartsExport(@PathVariable Long id,
+            @RequestBody WorkflowActionRequest request) {
+        return ApiResponse.success(repairWorkflowService.cancelPartsExport(id, request.getReason()));
+    }
+
+    @GetMapping("/{id}/inventory-documents")
+    @PreAuthorize("hasAuthority('repair:view')")
+    public ApiResponse<java.util.List<com.duylongtech.backend.feature.inventory.InventoryDocumentResponse>> documents(
+            @PathVariable Long id) {
+        return ApiResponse.success(repairWorkflowService.getDocuments(id));
+    }
+
+    @PostMapping("/{id}/payment-documents")
+    @PreAuthorize("hasRole('ACCOUNTANT') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    public ApiResponse<com.duylongtech.backend.feature.payment.PaymentResponse> createPayment(
+            @PathVariable Long id, @Valid @RequestBody RepairPaymentRequest request) {
+        return ApiResponse.success(repairWorkflowService.createPayment(id, request));
+    }
+
+    @PostMapping("/{id}/return-device")
+    @PreAuthorize("hasRole('ACCOUNTANT') or hasRole('SUPER_ADMIN') or hasRole('MANAGER')")
+    public ApiResponse<RepairResponse> returnDevice(@PathVariable Long id,
+            @Valid @RequestBody RepairReturnRequest request) {
+        return ApiResponse.success(repairWorkflowService.returnDevice(id, request));
+    }
+
+    @PostMapping("/{id}/share-token")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER', 'TECHNICIAN', 'ACCOUNTANT')")
+    public ResponseEntity<java.util.Map<String, String>> generateShareToken(@PathVariable Long id) {
+        String token = repairTokenService.generateTokenForRepair(id);
+        return ResponseEntity.ok(java.util.Map.of("token", token));
+    }
+
+    @GetMapping("/{id}/linked-documents")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER', 'TECHNICIAN', 'ACCOUNTANT')")
+    @Operation(summary = "Lấy số lượng chứng từ kho liên kết", description = "Trả về số lượng phiếu xuất và phiếu nhập kho được liên kết với phiếu sửa chữa này")
+    public ApiResponse<java.util.Map<String, Long>> getLinkedDocumentsCount(@PathVariable Long id) {
+        return ApiResponse.success(repairService.getLinkedDocumentsCount(id));
     }
 }

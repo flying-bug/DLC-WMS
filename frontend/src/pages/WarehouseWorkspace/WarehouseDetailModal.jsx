@@ -30,7 +30,7 @@ export default function WarehouseDetailModal({
         {/* HEADER */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitle}>
-            <i className="fas fa-file-alt" style={{ color: 'var(--wms-primary)' }}></i>
+            <i className="bi bi-file-earmark-text" style={{ color: 'var(--wms-primary)' }}></i>
             Chi tiết chứng từ kho: {slip.docCode}
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
@@ -162,7 +162,7 @@ export default function WarehouseDetailModal({
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               onClick={handlePrint}
             >
-              <i className="fas fa-print"></i> In phiếu kho
+              <i className="bi bi-printer"></i> In phiếu kho
             </button>
           </div>
           <div className={styles.footerActions}>
@@ -175,7 +175,7 @@ export default function WarehouseDetailModal({
                   if (onOpenFulfill) onOpenFulfill(slip);
                 }}
               >
-                <i className="fas fa-barcode"></i> Quét mã & Ghi sổ kho
+                <i className="bi bi-upc"></i> Quét mã & Ghi sổ kho
               </button>
             ) : (
               <button
@@ -187,7 +187,7 @@ export default function WarehouseDetailModal({
                   if (onOpenUnpost) onOpenUnpost(slip);
                 }}
               >
-                <i className="fas fa-undo-alt"></i> Bỏ ghi sổ kho
+                <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ kho
               </button>
             )}
             <button type="button" className={styles.btnCancel} onClick={onClose}>

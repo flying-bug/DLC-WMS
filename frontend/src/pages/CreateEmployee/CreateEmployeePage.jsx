@@ -7,6 +7,8 @@ import { useToast } from '../../contexts/ToastContext';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { ROLE_OPTIONS } from '../../utils/roleOptions';
 
+const PHONE_REGEX = /^(?:\+84|0)(?:3[2-9]|5[5689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const parseDisplayDateToIso = (value) => {
     const text = String(value || '').trim();
@@ -80,8 +82,16 @@ function CreateEmployeePage() {
             showToast('warning', 'Vui lòng nhập Số điện thoại.');
             return;
         }
+        if (!PHONE_REGEX.test(formData.phone.trim())) {
+            showToast('warning', 'Số điện thoại không đúng định dạng.');
+            return;
+        }
         if (!formData.email.trim()) {
             showToast('warning', 'Vui lòng nhập Địa chỉ Email.');
+            return;
+        }
+        if (!EMAIL_REGEX.test(formData.email.trim())) {
+            showToast('warning', 'Địa chỉ Email không đúng định dạng.');
             return;
         }
         if (formData.idCard.trim()) {
@@ -298,7 +308,7 @@ function CreateEmployeePage() {
                     {/* Card 2: Roles */}
                     <div className={styles.card}>
                         <h2 className={styles.cardTitle}>
-                            <i className="bi bi-shield-check"></i> Vai trò & Quyền hạn hệ thống
+                            <i className="bi bi-shield-check"></i> Vai trò & Quyền hạn hệ thống <span className={styles.required}>*</span>
                         </h2>
                         <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
                             Chọn một hoặc nhiều vai trò cho tài khoản. Hệ thống sẽ tự động gộp các quyền tương ứng.

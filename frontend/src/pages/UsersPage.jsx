@@ -281,9 +281,9 @@ function UsersPage() {
     // Derived Data
     const filteredUsers = usersData.filter(u => {
         const matchSearch = searchTerm ?
-            (u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                u.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                u.email.toLowerCase().includes(searchTerm.toLowerCase())) : true;
+            (u.name.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+                u.code.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+                u.email.toLowerCase().includes(searchTerm.trim().toLowerCase())) : true;
 
         const matchStatus = statusFilter === 'APPROVED' ? u.status === 'APPROVED'
                           : statusFilter === 'INACTIVE' ? u.status !== 'APPROVED'

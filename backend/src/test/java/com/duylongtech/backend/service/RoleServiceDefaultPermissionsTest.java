@@ -22,6 +22,7 @@ class RoleServiceDefaultPermissionsTest {
                 "transfer:view", "transfer:add",
                 "stocktake:view", "stocktake:add",
                 "warehouse_master:view", "warehouse_master:add",
+                "repair:view", "repair:add", "repair:edit", "repair:delete",
                 "report_ledger:view", "report_ledger:export",
                 "report_transfer:view", "report_transfer:export",
                 "report_balance:view", "report_balance:export"
@@ -34,6 +35,7 @@ class RoleServiceDefaultPermissionsTest {
                 "unit:view", "unit:add", "unit:edit",
                 "brand:view", "brand:add", "brand:edit",
                 "transfer:view", "stocktake:view", "warehouse_master:view",
+                "repair:view", "repair:add", "repair:edit", "repair:delete",
                 "report_ledger:view", "report_ledger:export",
                 "report_transfer:view", "report_transfer:export",
                 "report_balance:view", "report_balance:export"
@@ -42,6 +44,15 @@ class RoleServiceDefaultPermissionsTest {
         assertEquals(Set.of("warranty:view"), codes(RoleService.getDefaultPermissionsForRole("ROLE_TECHNICIAN", permissions)).stream()
                 .filter(code -> code.startsWith("warranty:"))
                 .collect(Collectors.toSet()));
+
+        assertEquals(Set.of("repair:view", "repair:add", "repair:edit", "repair:delete"),
+                codes(RoleService.getDefaultPermissionsForRole("ROLE_TECHNICIAN", permissions)).stream()
+                        .filter(code -> code.startsWith("repair:"))
+                        .collect(Collectors.toSet()));
+        assertEquals(Set.of("repair:view"),
+                codes(RoleService.getDefaultPermissionsForRole("ROLE_WAREHOUSE_CONTROLLER", permissions)).stream()
+                        .filter(code -> code.startsWith("repair:"))
+                        .collect(Collectors.toSet()));
     }
 
     private static Set<PermissionEntity> permissions(String... codes) {

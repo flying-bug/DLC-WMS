@@ -112,9 +112,9 @@ public class RoleService {
                     String code = perm.getCode();
                     if (Arrays.asList("transfer", "stocktake").contains(mod)) {
                         result.add(perm);
-                    } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print").contains(code)) {
+                    } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print", "import:post").contains(code)) {
                         result.add(perm);
-                    } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
+                    } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print", "export:post").contains(code)) {
                         result.add(perm);
                     } else if (Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
                         result.add(perm);
@@ -123,6 +123,8 @@ public class RoleService {
                     } else if ("assembly_config".equals(mod) && "assembly_config:view".equals(code)) {
                         result.add(perm);
                     } else if ("assembly".equals(mod) && Arrays.asList("assembly:view", "assembly:execute", "assembly:complete").contains(code)) {
+                        result.add(perm);
+                    } else if ("repair".equals(mod) && "repair:view".equals(code)) {
                         result.add(perm);
                     }
                 }
@@ -166,6 +168,8 @@ public class RoleService {
                     } else if ("assembly".equals(mod) && Arrays.asList("assembly:view", "assembly:approve").contains(code)) {
                         result.add(perm);
                     } else if ("payment".equals(mod)) {
+                        result.add(perm);
+                    } else if ("repair".equals(mod)) {
                         result.add(perm);
                     } else if (Arrays.asList("export", "transfer", "stocktake", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
                         result.add(perm);

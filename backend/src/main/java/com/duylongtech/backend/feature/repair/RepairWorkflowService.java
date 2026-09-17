@@ -1,778 +1,572 @@
 package com.duylongtech.backend.feature.repair;
 
-import com.duylongtech.backend.enums.DocumentStatus;
-import com.duylongtech.backend.enums.RepairStatus;
-import com.duylongtech.backend.enums.SerialInstallStatus;
-
 import com.duylongtech.backend.constant.SystemMessage;
-
+import com.duylongtech.backend.enums.*;
 import com.duylongtech.backend.exception.BusinessException;
-
-import com.duylongtech.backend.feature.product.ProductVariantRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import com.duylongtech.backend.feature.assembly.AssemblyOrder;
-import com.duylongtech.backend.feature.assembly.DeviceComponentSerial;
-import com.duylongtech.backend.feature.assembly.DeviceComponentSerialRepository;
 import com.duylongtech.backend.feature.audit.AuditLogService;
 import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.feature.auth.UserRepository;
-import com.duylongtech.backend.feature.inventory.InventoryBalance;
-import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
-import com.duylongtech.backend.feature.inventory.RepairScrapLineRequest;
-import com.duylongtech.backend.feature.inventory.RepairStockOutLineRequest;
+import com.duylongtech.backend.feature.einvoice.EInvoiceService;
+import com.duylongtech.backend.feature.inventory.*;
+import com.duylongtech.backend.feature.partner.Partner;
+import com.duylongtech.backend.feature.partner.PartnerRepository;
+import com.duylongtech.backend.feature.notification.AppNotificationService;
+import com.duylongtech.backend.feature.payment.PaymentResponse;
+import com.duylongtech.backend.feature.payment.PaymentService;
+import com.duylongtech.backend.feature.partner.PartnerLedgerRepository;
+import com.duylongtech.backend.feature.partner.PartnerLedgerService;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderService;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.SerialNumber;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
-import com.duylongtech.backend.feature.repair.Repair;
-import com.duylongtech.backend.feature.repair.RepairFeeRepository;
-import com.duylongtech.backend.feature.repair.RepairLine;
-import com.duylongtech.backend.feature.repair.RepairLineRepository;
-import com.duylongtech.backend.feature.repair.RepairRepository;
-import com.duylongtech.backend.feature.repair.RepairResponse;
-import com.duylongtech.backend.feature.repair.RepairService;
 import com.duylongtech.backend.feature.warehouse.Warehouse;
 import com.duylongtech.backend.feature.warehouse.WarehouseRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import com.duylongtech.backend.feature.system.EmailService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/**
- * Service xử lý chuyển trạng thái (State Machine) của Lệnh Sửa Chữa.
- *
- * State Machine:
- *   DRAFT -> QUOTATION -> CONFIRMED -> UNDER_REPAIR -> DONE
- *   Bất kỳ trạng thái nào (trừ DONE) -> CANCELLED
- *
- * Tích hợp:
- *   - Hard Block khi kho thiếu linh kiện ADD trước khi CONFIRMED
- *   - Tạo phiếu xuất kho DRAFT (Reserve) khi CONFIRMED
- *   - Ghi sổ phiếu kho (Post) + sinh Invoice khi DONE
- *   - Sinh phiếu nhập kho Scrap cho linh kiện REMOVE khi DONE
- *   - Ghi Audit Log cho mọi thao tác đổi trạng thái
- */
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RepairWorkflowService {
-
-    // Kho phế liệu mặc định - ID có thể cấu hình hoặc lookup từ DB
-    // Trong triển khai thực tế nên dùng cấu hình hoặc lookup warehouse by code "SCRAP"
-    private static final String SCRAP_WAREHOUSE_CODE = "SCRAP";
-    private static final String REPAIR_DOC_TYPE_EXPORT = "EX_SO"; // Xuất linh kiện để sửa
-    private static final String REPAIR_DOC_TYPE_IMPORT = "IN_PO"; // Nhập linh kiện tháo ra (Scrap)
-    private static final String ACTION_ADD = "ADD";
-    private static final String ACTION_REPLACE = "REPLACE";
-    private static final String ACTION_REMOVE = "REMOVE";
-    private static final String COMPONENT_STATUS_ACTIVE = SerialInstallStatus.ACTIVE.name();
-    private static final String COMPONENT_STATUS_REPLACED = "REPLACED";
-    private static final String COMPONENT_STATUS_REMOVED = SerialInstallStatus.REMOVED.name();
-
-    // Định nghĩa các bước chuyển trạng thái hợp lệ
-    private static final Map<RepairStatus, Set<RepairStatus>> VALID_TRANSITIONS = Map.of(
-            RepairStatus.DRAFT,        Set.of(RepairStatus.QUOTATION, RepairStatus.CONFIRMED, RepairStatus.CANCELLED),
-            RepairStatus.QUOTATION,    Set.of(RepairStatus.CONFIRMED, RepairStatus.DRAFT, RepairStatus.CANCELLED),
-            RepairStatus.CONFIRMED,    Set.of(RepairStatus.UNDER_REPAIR, RepairStatus.QUOTATION, RepairStatus.CANCELLED),
-            RepairStatus.UNDER_REPAIR, Set.of(RepairStatus.DONE, RepairStatus.QUOTATION, RepairStatus.CANCELLED),
-            RepairStatus.DONE,         Set.of(),      // Terminal state
-            RepairStatus.CANCELLED,    Set.of()       // Terminal state
-    );
+    private static final String REPAIR = "REPAIR";
+    private static final String GOOD = "GOOD";
 
     private final RepairRepository repairRepository;
     private final RepairLineRepository repairLineRepository;
-    private final RepairFeeRepository repairFeeRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final UserRepository userRepository;
-    private final AuditLogService auditLogService;
-    private final RepairService repairService;
-    private final ProductVariantRepository productVariantRepository;
+    private final StockReservationRepository stockReservationRepository;
+    private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentService inventoryDocumentService;
+    private final EInvoiceService eInvoiceService;
+    private final PurchaseOrderService purchaseOrderService;
+    private final EmailService emailService;
+    private final WarehouseRepository warehouseRepository;
+    private final PartnerRepository partnerRepository;
+    private final UserRepository userRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final SerialNumberRepository serialNumberRepository;
-    private final DeviceComponentSerialRepository deviceComponentSerialRepository;
+    private final RepairService repairService;
+    private final PaymentService paymentService;
+    private final AuditLogService auditLogService;
+    private final AppNotificationService notificationService;
+    private final RepairInventorySyncService repairInventorySyncService;
+    private final PartnerLedgerService partnerLedgerService;
+    private final PartnerLedgerRepository partnerLedgerRepository;
+    private final RepairPhotoService repairPhotoService;
 
-    @FunctionalInterface
-    private interface RepairTransitionHandler {
-        void handle(Repair repair);
+    @Transactional
+    public RepairResponse assign(Long repairId) {
+        requireAnyRole("ROLE_ACCOUNTANT", "ROLE_SUPER_ADMIN", "ROLE_MANAGER", "ROLE_RECEPTIONIST");
+        Repair repair = lockRepair(repairId);
+        if (!RepairStatus.DRAFT.name().equals(repair.getRepairStatus())) {
+            throw invalidTransition();
+        }
+        if (repair.getPartnerId() == null || repair.getAssignedTechnicianId() == null || repair.getWarehouseId() == null) {
+            throw new BusinessException("Lệnh chưa đủ khách hàng, kho và KTV");
+        }
+        repair.assign(repair.getAssignedTechnicianId(), currentUserId());
+        repairRepository.save(repair);
+        // Lock INTAKE photos once assigned - tiếp nhận đã đủ ảnh
+        repairPhotoService.lockPhotosForStatus(repair.getId(), RepairStatus.DIAGNOSING.name());
+        audit(repair, "ASSIGN", "Giao KTV: " + repair.getAssignedTechnicianId());
+        notifyAfterCommit(null, repair.getAssignedTechnicianId(), "Lệnh sửa chữa mới: " + repair.getRepairCode(),
+                "Bạn được phân công lệnh " + repair.getRepairCode(), repair.getId());
+        return detail(repair);
     }
 
-    // Mỗi trạng thái đích tự khai báo side-effect + cách mutate Repair của mình ở đây.
-    // Thêm 1 trạng thái mới (vd. WAITING_FOR_PART) chỉ cần thêm 1 entry vào map này,
-    // không cần sửa switch nào trong transitionStatus().
-    // Lưu ý: DRAFT là target hợp lệ theo VALID_TRANSITIONS (từ QUOTATION) nhưng Repair
-    // chưa có method mutate về DRAFT - cố tình không có entry cho nó ở đây, giữ đúng
-    // hành vi hiện tại (no-op, không đổi status) - đây là 1 vấn đề riêng, không thuộc
-    // phạm vi refactor OCP này.
-    private final Map<RepairStatus, RepairTransitionHandler> transitionHandlers = Map.of(
-            RepairStatus.QUOTATION, Repair::moveToQuotation,
-            RepairStatus.CONFIRMED, repair -> { handleConfirm(repair); repair.confirm(); },
-            RepairStatus.UNDER_REPAIR, Repair::startRepair,
-            RepairStatus.DONE, repair -> { handleDone(repair); repair.complete(); },
-            RepairStatus.CANCELLED, repair -> { handleCancel(repair); repair.cancel(); }
-    );
-
-    /**
-     * Chuyển trạng thái chính.
-     * Mỗi bước có thể kích hoạt side-effects khác nhau.
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public RepairResponse transitionStatus(Long repairId, String targetStatus, String note) {
-        // Load repair với pessimistic lock để tránh concurrent modifications
-        Repair repair = repairRepository.findWithDetailsById(repairId)
-                .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
-
-        String currentStatus = repair.getRepairStatus();
-        String normalizedTarget = targetStatus.trim().toUpperCase();
-
-        RepairStatus current;
-        RepairStatus target;
-        try {
-            current = RepairStatus.valueOf(currentStatus);
-            target = RepairStatus.valueOf(normalizedTarget);
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException(SystemMessage.REP_INVALID_STATUS_TRANSITION);
-        }
-
-        // Validate transition
-        Set<RepairStatus> allowedNext = VALID_TRANSITIONS.getOrDefault(current, Set.of());
-        if (!allowedNext.contains(target)) {
-            throw new BusinessException(SystemMessage.REP_INVALID_STATUS_TRANSITION);
-        }
-
-        String previousStatus = repair.getRepairStatus();
-
-        // Side-effects + cập nhật trạng thái, tra theo bảng transitionHandlers ở trên
-        // thay vì 2 khối switch riêng biệt.
-        RepairTransitionHandler handler = transitionHandlers.get(target);
-        if (handler != null) {
-            handler.handle(repair);
-        }
-
-        Repair saved = repairRepository.save(repair);
-
-        // Audit log
-        String username = getCurrentUsername();
-        auditLogService.logEvent(
-                username, "UPDATE", "Repair", repairId,
-                "SUCCESS",
-                String.format("Chuyển trạng thái lệnh %s: %s -> %s. %s",
-                        repair.getRepairCode(), previousStatus, normalizedTarget,
-                        note != null ? "Ghi chú: " + note : ""),
-                null, null
-        );
-
-        return repairService.toDetailResponse(repairRepository.findWithDetailsById(saved.getId()).orElse(saved));
+    @Transactional
+    public RepairResponse saveDiagnosis(Long repairId, RepairDiagnosisRequest request) {
+        Repair repair = lockRepair(repairId);
+        requireAssignedTechnician(repair);
+        if (!RepairStatus.DIAGNOSING.name().equals(repair.getRepairStatus())) throw invalidTransition();
+        repair.setDiagnosisNote(trimToNull(request.getDiagnosisNote()));
+        repair.setSolutionDescription(trimToNull(request.getSolutionDescription()));
+        repairRepository.save(repair);
+        audit(repair, "DIAGNOSE", "Cập nhật chẩn đoán");
+        return detail(repair);
     }
 
-    // =====================================================================
-    // CONFIRMED: Kiểm tra tồn kho & tạo phiếu xuất kho Draft (Reserve)
-    // =====================================================================
-
-    private void handleConfirm(Repair repair) {
-        // Hard Block 1: Phải có partner
-        if (repair.getPartnerId() == null) {
-            throw new BusinessException(SystemMessage.REP_PARTNER_REQUIRED);
+    @Transactional
+    public RepairResponse submitQuotation(Long repairId) {
+        Repair repair = lockRepair(repairId);
+        requireAssignedTechnician(repair);
+        if (!RepairStatus.DIAGNOSING.name().equals(repair.getRepairStatus())) {
+            throw invalidTransition();
         }
-
-        List<RepairLine> addLines = getLinesForStockOut(repair.getId());
-
-        if (addLines.isEmpty()) {
-            // Không có linh kiện cần xuất -> chỉ phí dịch vụ, cho phép CONFIRM
-            log.info("[Repair {}] Không có linh kiện ADD, bỏ qua kiểm tra tồn kho", repair.getRepairCode());
-            return;
-        }
-
-        // Hard Block 2: Kiểm tra tồn kho cho từng linh kiện ADD
-        // Ưu tiên warehouseId từ lệnh sửa chữa, nếu không có thì lấy warehouse mặc định
-        Long warehouseId = resolveRepairWarehouseId(repair);
-
-        // Sort theo (variantId, serialNumberId) trước khi lock từng dòng bằng FOR UPDATE:
-        // nếu không sort, 2 lệnh sửa chữa CONFIRM đồng thời dùng chung linh kiện nhưng có
-        // thứ tự dòng khác nhau có thể khóa chéo nhau -> deadlock ở DB.
-        List<RepairLine> sortedLines = addLines.stream()
-                .sorted(Comparator
-                        .comparing(RepairLine::getComponentVariantId, Comparator.nullsFirst(Long::compareTo))
-                        .thenComparing(this::resolveStockOutSerialNumberId, Comparator.nullsFirst(Long::compareTo)))
-                .toList();
-
-        for (RepairLine line : sortedLines) {
-            InventoryBalance balance;
-            Long stockSerialNumberId = resolveStockOutSerialNumberId(line);
-            if (stockSerialNumberId != null) {
-                balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
-                        warehouseId, line.getComponentVariantId(), stockSerialNumberId, "GOOD").orElse(null);
+        if (Boolean.TRUE.equals(repair.getUnderWarranty())) {
+            Map<Long, BigDecimal> shortfall = reserveAndGetShortfall(repair);
+            if (shortfall.isEmpty()) {
+                repair.markUnderRepair();
+                repairRepository.save(repair);
+                audit(repair, "SUBMIT_QUOTATION", "Bảo hành 100%: Đủ linh kiện, tự động chuyển UNDER_REPAIR");
             } else {
-                balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                        warehouseId, line.getComponentVariantId(), "GOOD").orElse(null);
+                repair.markWaitingForParts();
+                repairRepository.save(repair);
+                audit(repair, "SUBMIT_QUOTATION", "Bảo hành 100%: Thiếu linh kiện -> WAITING_FOR_PARTS");
+                purchaseOrderService.autoCreatePurchaseOrder(repair.getId(), repair.getRepairCode(), repair.getWarehouseId(), shortfall, currentUserId());
             }
-
-            BigDecimal available = balance != null
-                    ? balance.getQuantityOnHand().subtract(balance.getQuantityReserved())
-                    : BigDecimal.ZERO;
-
-            if (available.compareTo(line.getQuantity()) < 0) {
-                log.warn("[Repair {}] Không đủ tồn kho. Variant {}: cần {}, có {}",
-                        repair.getRepairCode(), line.getComponentVariantId(),
-                        line.getQuantity(), available);
-                throw new BusinessException(SystemMessage.REP_INSUFFICIENT_INVENTORY);
-            }
+        } else {
+            repair.submitQuotation(currentUserId());
+            repairRepository.save(repair);
+            audit(repair, "SUBMIT_QUOTATION", "KTV gửi báo giá");
         }
-
-        log.info("[Repair {}] Xác nhận lệnh sửa chữa thành công, tồn kho hợp lệ", repair.getRepairCode());
+        return detail(repair);
     }
 
-    // =====================================================================
-    // DONE: Ghi sổ phiếu kho + Sinh Scrap + (stub) Sinh Invoice
-    // =====================================================================
-
-    private void handleDone(Repair repair) {
-        // 0. Validate serial cho linh kiện có quản lý serial.
-        List<RepairLine> allAddLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_ADD);
-        List<RepairLine> replaceLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_REPLACE);
-        List<RepairLine> removeLines = repairLineRepository.findByRepairIdAndActionType(
-                repair.getId(), ACTION_REMOVE);
-
-        // Batch-resolve serial number & component variant 1 lần cho toàn bộ lệnh sửa,
-        // thay vì mỗi bước bên dưới (validate, tạo phiếu, cập nhật mapping) tự query lại
-        // theo từng dòng - trước đây gây N+1 (và có chỗ query trùng 2 lần cho cùng 1 dòng).
-        Map<Long, SerialNumber> serialById = loadSerialsForLines(repair, allAddLines, replaceLines, removeLines);
-        Map<Long, ProductVariant> variantById = loadVariantsForLines(allAddLines, replaceLines, removeLines);
-
-        validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD, variantById, serialById);
-        validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE, variantById, serialById);
-        validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE, variantById, serialById);
-
-        // 1. Post phiếu xuất kho linh kiện ADD (nếu có)
-        List<RepairLine> stockOutLines = new java.util.ArrayList<>(allAddLines);
-        stockOutLines.addAll(replaceLines);
-        if (!stockOutLines.isEmpty()) {
-            createFinalInventoryDocuments(repair, stockOutLines, serialById);
+    @Transactional
+    public RepairResponse approve(Long repairId) {
+        requireAnyRole("ROLE_ACCOUNTANT", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        Repair repair = lockRepair(repairId);
+        if (!RepairStatus.QUOTATION_PENDING.name().equals(repair.getRepairStatus())) {
+            throw invalidTransition();
         }
+        Long actorId = currentUserId();
+        Warehouse repairWarehouse = warehouseRepository.findById(repair.getWarehouseId())
+                .orElseThrow(() -> new BusinessException(SystemMessage.WH_NOT_FOUND));
+        Long scrapWarehouseId = repair.getScrapWarehouseId();
+        
+        repair.approve(actorId, scrapWarehouseId);
+        repairRepository.save(repair);
+        // Lock DIAGNOSIS photos - báo giá đã được lập, không chỉnh sửa chẩn đoán nữa
+        repairPhotoService.lockPhotosForStatus(repair.getId(), RepairStatus.APPROVED.name());
 
-        // 2. Sinh phiếu nhập kho Scrap cho linh kiện REMOVE (nếu có)
-        List<RepairLine> scrapLines = new java.util.ArrayList<>(removeLines);
-        scrapLines.addAll(replaceLines);
-        if (!scrapLines.isEmpty()) {
-            createScrapDocument(repair, scrapLines, serialById);
+        Map<Long, BigDecimal> shortfall = reserveAndGetShortfall(repair);
+        
+        if (shortfall.isEmpty()) {
+            repair.markUnderRepair();
+            repairRepository.save(repair);
+            audit(repair, "APPROVE", "Khách đồng ý, duyệt báo giá (đủ linh kiện -> UNDER_REPAIR)");
+        } else {
+            repair.markWaitingForParts();
+            repairRepository.save(repair);
+            audit(repair, "APPROVE", "Duyệt báo giá (thiếu linh kiện -> WAITING_FOR_PARTS)");
+            // TASK-11: Call auto PO
+            purchaseOrderService.autoCreatePurchaseOrder(repair.getId(), repair.getRepairCode(), repair.getWarehouseId(), shortfall, actorId);
         }
-
-        // 3. Cập nhật cấu hình serial bên trong PC sau sửa chữa.
-        updateDeviceComponentSerialLifecycle(repair, allAddLines, replaceLines, removeLines, serialById);
-
-        // 4. Stub: Sinh Invoice nếu invoice_method != 'none'
-        if (!"none".equals(repair.getInvoiceMethod()) && repair.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
-            log.info("[Repair {}] Invoice method: {} - Total: {}. Invoice generation stub (sẽ implement ở Phase 3)",
-                    repair.getRepairCode(), repair.getInvoiceMethod(), repair.getTotalAmount());
-            // TODO: Gọi InvoiceService khi implement module Invoicing
-        }
+        return detail(repair);
     }
 
-    /**
-     * Chuẩn bị dữ liệu và ủy quyền cho InventoryDocumentService tạo + POST phiếu xuất
-     * kho (trừ kho thực tế) cho các linh kiện ADD - RepairWorkflowService không tự
-     * new Entity/gọi thẳng repository của module Inventory nữa.
-     */
-    private void createFinalInventoryDocuments(Repair repair, List<RepairLine> addLines, Map<Long, SerialNumber> serialById) {
-        Long warehouseId = resolveRepairWarehouseId(repair);
-        Long currentUserId = resolveCurrentUserId();
-
-        List<RepairStockOutLineRequest> lineRequests = new java.util.ArrayList<>();
-        for (RepairLine rLine : addLines) {
-            BigDecimal actualDoneQty = rLine.getQuantity();
-            if (actualDoneQty.compareTo(BigDecimal.ZERO) <= 0) continue;
-
-            Long stockOutSerialNumberId = resolveStockOutSerialNumberId(rLine);
-            String serialNumbersText = resolveStockOutSerialText(rLine);
-            if (stockOutSerialNumberId != null) {
-                SerialNumber sn = serialById.get(stockOutSerialNumberId);
-                if (sn != null) {
-                    serialNumbersText = sn.getSerialNumber();
-                }
-            }
-
-            String lineNote = (ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
-                    + (rLine.getNote() != null ? rLine.getNote() : "");
-            lineRequests.add(new RepairStockOutLineRequest(rLine.getComponentVariantId(), actualDoneQty,
-                    rLine.getUnitPrice(), stockOutSerialNumberId, serialNumbersText, lineNote));
+    @Transactional
+    public RepairResponse decline(Long repairId, String reason) {
+        requireAnyRole("ROLE_ACCOUNTANT", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        Repair repair = lockRepair(repairId);
+        if (!RepairStatus.QUOTATION_PENDING.name().equals(repair.getRepairStatus())) {
+            throw invalidTransition();
         }
-
-        if (lineRequests.isEmpty()) {
-            return;
-        }
-
-        Long docId = inventoryDocumentService.createExportForRepair(repair.getId(), repair.getRepairCode(), warehouseId,
-                repair.getPartnerId(), currentUserId,
-                repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId,
-                repair.getResponsiblePerson(), lineRequests);
-
-        if (docId == null) {
-            log.warn("[Repair {}] Phiếu xuất kho REP-EX-{} đã tồn tại hoặc không có dòng hợp lệ, bỏ qua",
-                    repair.getRepairCode(), repair.getRepairCode());
-            return;
-        }
-
-        try {
-            inventoryDocumentService.postExport(docId);
-            log.info("[Repair {}] Đã tạo và POST phiếu xuất kho REP-EX-{} thành công qua InventoryDocumentService",
-                    repair.getRepairCode(), repair.getRepairCode());
-        } catch (Exception e) {
-            log.error("[Repair {}] Lỗi khi POST phiếu xuất kho REP-EX-{}: {}",
-                    repair.getRepairCode(), repair.getRepairCode(), e.getMessage());
-            throw new BusinessException(String.format(SystemMessage.REP_ERR_009.getMessage(), e.getMessage()));
-        }
+        String normalizedReason = requireText(reason, "Lý do từ chối là bắt buộc");
+        repair.decline(currentUserId(), normalizedReason);
+        repairRepository.save(repair);
+        audit(repair, "DECLINE", "Khách từ chối sửa: " + normalizedReason);
+        return detail(repair);
     }
 
-    /**
-     * Chuẩn bị dữ liệu và ủy quyền cho InventoryDocumentService tạo + POST phiếu nhập
-     * kho Scrap cho linh kiện bị tháo ra (REMOVE).
-     */
-    private void createScrapDocument(Repair repair, List<RepairLine> removeLines, Map<Long, SerialNumber> serialById) {
-        Long scrapWarehouseId = resolveScrapWarehouseId();
-        if (scrapWarehouseId == null) {
-            log.warn("[Repair {}] Không tìm thấy kho Scrap, bỏ qua nhập kho phế liệu", repair.getRepairCode());
-            return;
+    @Transactional
+    public RepairResponse completeRepair(Long repairId, RepairFinishRequest request) {
+        Repair repair = lockRepair(repairId);
+        requireAssignedTechnician(repair);
+        if (!RepairStatus.UNDER_REPAIR.name().equals(repair.getRepairStatus())) {
+            throw invalidTransition();
         }
-
-        Long currentUserId = resolveCurrentUserId();
-
-        List<RepairScrapLineRequest> lineRequests = new java.util.ArrayList<>();
-        for (RepairLine line : removeLines) {
-            String serialNumbersText = line.getSerialNumberText();
-            if (line.getSerialNumberId() != null) {
-                SerialNumber sn = serialById.get(line.getSerialNumberId());
-                if (sn != null) {
-                    serialNumbersText = sn.getSerialNumber();
-                }
-            }
-            lineRequests.add(new RepairScrapLineRequest(resolveRemovedComponentVariantId(line, serialById),
-                    line.getQuantity(), line.getSerialNumberId(), serialNumbersText));
-        }
-
-        if (lineRequests.isEmpty()) {
-            return;
-        }
-
-        Long docId = inventoryDocumentService.createScrapImportForRepair(repair.getId(), repair.getRepairCode(),
-                scrapWarehouseId, repair.getPartnerId(), currentUserId,
-                repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId,
-                repair.getResponsiblePerson(), lineRequests);
-
-        if (docId == null) {
-            log.warn("[Repair {}] Phiếu Scrap REP-SCRAP-{} đã tồn tại hoặc không có dòng hợp lệ, bỏ qua",
-                    repair.getRepairCode(), repair.getRepairCode());
-            return;
-        }
-
-        try {
-            inventoryDocumentService.postImport(docId);
-            log.info("[Repair {}] Đã tạo và POST phiếu Scrap REP-SCRAP-{} thành công qua InventoryDocumentService",
-                    repair.getRepairCode(), repair.getRepairCode());
-        } catch (Exception e) {
-            log.error("[Repair {}] Lỗi khi POST phiếu Scrap REP-SCRAP-{}: {}",
-                    repair.getRepairCode(), repair.getRepairCode(), e.getMessage());
-            throw new BusinessException(String.format(SystemMessage.REP_ERR_008.getMessage(), e.getMessage()));
-        }
-    }
-
-    // =====================================================================
-    // CANCELLED
-    // =====================================================================
-
-    private void handleCancel(Repair repair) {
-        if (RepairStatus.DONE.name().equals(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_CANCEL);
-        }
-        // Với luồng mới, không có phiếu DRAFT, không giữ chỗ -> Không cần rollback inventory
-        log.info("[Repair {}] Hủy lệnh sửa chữa", repair.getRepairCode());
-    }
-
-    // =====================================================================
-    // Utility helpers
-    // =====================================================================
-
-    /**
-     * Giải quyết warehouse ID cho lệnh sửa chữa.
-     * Trả về warehouseId lưu trên Repair nếu có, nếu không lấy kho mặc định (APPROVED, không phải SCRAP).
-     */
-    private Long resolveRepairWarehouseId(Repair repair) {
-        if (repair != null && repair.getWarehouseId() != null) {
-            return repair.getWarehouseId();
-        }
-        throw new BusinessException(SystemMessage.WH_NOT_FOUND);
-    }
-
-    /**
-     * Tìm kho Scrap để nhập linh kiện tháo ra.
-     * Warehouse có code = 'SCRAP' hoặc type = 'SCRAP'.
-     */
-    private Long resolveScrapWarehouseId() {
-        return warehouseRepository.findAll().stream()
-                .filter(w -> "SCRAP".equalsIgnoreCase(w.getCode())
-                        || "SCRAP".equalsIgnoreCase(w.getType()))
-                .findFirst()
-                .map(Warehouse::getId)
-                .orElse(null);
-    }
-
-    private Long resolveCurrentUserId() {
-        String username = getCurrentUsername();
-        return userRepository.findByUsername(username)
-                .map(User::getId)
-                .orElse(1L);
-    }
-
-    private String getCurrentUsername() {
-        try {
-            return SecurityContextHolder.getContext().getAuthentication().getName();
-        } catch (Exception e) {
-            return "system";
-        }
-    }
-
-    private void validateSerialPresenceForTrackedLines(List<RepairLine> lines, String actionType,
-            Map<Long, ProductVariant> variantById, Map<Long, SerialNumber> serialById) {
-        for (RepairLine line : lines) {
-            ProductVariant variant = variantById.get(line.getComponentVariantId());
-            if (variant == null || !productTracksSerial(variant)) {
-                continue;
-            }
-
-            boolean missingSerial = switch (actionType) {
-                case ACTION_ADD -> line.getSerialNumberId() == null;
-                case ACTION_REPLACE -> trimToNull(resolveLineSerial(line, serialById)) == null
-                        || line.getReplacementSerialNumberId() == null;
-                default -> trimToNull(resolveLineSerial(line, serialById)) == null;
-            };
-            if (missingSerial) {
-                String variantName = variantName(variant);
-                throw new BusinessException(
-                        String.format(SystemMessage.REP_SERIAL_REQUIRED.getMessage(), variantName));
+        String outcome = normalizeOutcome(request.getOutcome());
+        repair.completeRepair(currentUserId(), outcome, request.getQcResult(), request.getQcNote(), request.getQcChecklist());
+        repairRepository.save(repair);
+        
+        // TASK-16: Generate inventory documents at completion
+        generateInventoryDocumentsAtCompletion(repair, currentUserId(), repair.getScrapWarehouseId());
+        
+        // TASK-16: Create draft invoice if needed
+        eInvoiceService.createDraftInvoiceFromRepair(repair, currentUserId());
+        
+        // Lock COMPLETION photos after repair is done
+        repairPhotoService.lockPhotosForStatus(repair.getId(), RepairStatus.READY_FOR_DELIVERY.name());
+        
+        // TASK-19: Send Email on Complete
+        String customerEmail = null;
+        String customerName = null;
+        if (repair.getPartnerId() != null) {
+            Partner partner = partnerRepository.findById(repair.getPartnerId()).orElse(null);
+            if (partner != null && partner.getEmail() != null && !partner.getEmail().isBlank()) {
+                customerEmail = partner.getEmail();
+                customerName = partner.getName();
             }
         }
+        
+        if (customerEmail != null) {
+            emailService.sendRepairCompletedEmail(
+                    customerEmail, 
+                    repair.getRepairCode(), 
+                    customerName, 
+                    repair.getIssueDescription(), 
+                    repair.getSolutionDescription(), 
+                    repair.getCustomerPayAmount()
+            );
+        }
+
+        audit(repair, "COMPLETE_REPAIR", "Hoàn thành kỹ thuật sửa chữa");
+        notifyCompleted(repair);
+        return detail(repair);
     }
 
-    /**
-     * Gom tất cả serialNumberId/replacementSerialNumberId cần dùng trong handleDone
-     * (bao gồm cả serial thành phẩm của repair) và tải 1 lần duy nhất.
-     */
-    private Map<Long, SerialNumber> loadSerialsForLines(Repair repair, List<RepairLine> addLines,
-            List<RepairLine> replaceLines, List<RepairLine> removeLines) {
-        Set<Long> serialIds = new HashSet<>();
-        if (repair.getSerialNumberId() != null) {
-            serialIds.add(repair.getSerialNumberId());
+    @Transactional
+    public RepairResponse close(Long repairId, RepairCloseRequest request) {
+        requireAnyRole("ROLE_ACCOUNTANT", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        Repair repair = lockRepair(repairId);
+        if (!RepairStatus.READY_FOR_DELIVERY.name().equals(repair.getRepairStatus())) {
+            throw invalidTransition();
         }
-        for (List<RepairLine> lines : List.of(addLines, replaceLines, removeLines)) {
-            for (RepairLine line : lines) {
-                if (line.getSerialNumberId() != null) {
-                    serialIds.add(line.getSerialNumberId());
-                }
-                if (line.getReplacementSerialNumberId() != null) {
-                    serialIds.add(line.getReplacementSerialNumberId());
-                }
+        
+        String paymentStatus = request != null ? request.getPaymentStatus() : null;
+        
+        if ("DEBT_RECORDED".equals(paymentStatus)) {
+            if (repair.getCustomerPayAmount().compareTo(BigDecimal.ZERO) > 0
+                    && partnerLedgerRepository.findTopByEntityTypeAndEntityIdOrderByIdDesc("REPAIR", repair.getId()).isEmpty()) {
+                partnerLedgerService.recordLedger(repair.getPartnerId(), "REPAIR", repair.getId(), repair.getRepairCode(),
+                        repair.getCustomerPayAmount(), BigDecimal.ZERO,
+                        "Ghi nhận phải thu từ lệnh sửa chữa " + repair.getRepairCode());
             }
         }
-        if (serialIds.isEmpty()) {
-            return Map.of();
-        }
-        return serialNumberRepository.findAllById(serialIds).stream()
-                .collect(Collectors.toMap(SerialNumber::getId, s -> s));
+
+        repair.closeRepair(currentUserId(), paymentStatus);
+        repairRepository.save(repair);
+        audit(repair, "CLOSE", "Đóng phiếu sửa chữa");
+        return detail(repair);
     }
 
-    /**
-     * Gom tất cả componentVariantId cần dùng trong handleDone và tải 1 lần duy nhất.
-     */
-    private Map<Long, ProductVariant> loadVariantsForLines(List<RepairLine> addLines,
-            List<RepairLine> replaceLines, List<RepairLine> removeLines) {
-        Set<Long> variantIds = new HashSet<>();
-        for (List<RepairLine> lines : List.of(addLines, replaceLines, removeLines)) {
-            for (RepairLine line : lines) {
-                if (line.getComponentVariantId() != null) {
-                    variantIds.add(line.getComponentVariantId());
-                }
-            }
-        }
-        if (variantIds.isEmpty()) {
-            return Map.of();
-        }
-        return productVariantRepository.findAllById(variantIds).stream()
-                .collect(Collectors.toMap(ProductVariant::getId, v -> v));
-    }
-
-    private void updateDeviceComponentSerialLifecycle(Repair repair, List<RepairLine> addLines,
-            List<RepairLine> replaceLines, List<RepairLine> removeLines, Map<Long, SerialNumber> serialById) {
-        if (repair.getSerialNumberId() == null) {
-            return;
-        }
-
-        SerialNumber targetSerialNumber = serialById.get(repair.getSerialNumberId());
-        if (targetSerialNumber == null || targetSerialNumber.getVariantId() == null
-                || trimToNull(targetSerialNumber.getSerialNumber()) == null) {
-            log.warn("[Repair {}] Không tìm thấy serial thành phẩm để cập nhật cấu hình linh kiện", repair.getRepairCode());
-            return;
-        }
-
-        String targetSerial = targetSerialNumber.getSerialNumber().trim();
-        Long targetVariantId = targetSerialNumber.getVariantId();
-        List<DeviceComponentSerial> mappings = new java.util.ArrayList<>(
-                deviceComponentSerialRepository.findByTargetVariantIdAndTargetSerial(targetVariantId, targetSerial));
-
-        if (mappings.isEmpty()) {
-            log.info("[Repair {}] Serial {} chưa có mapping lắp ráp, bỏ qua cập nhật cấu hình linh kiện",
-                    repair.getRepairCode(), targetSerial);
-            return;
-        }
-
-        AssemblyOrder sourceOrder = mappings.stream()
-                .map(DeviceComponentSerial::getSourceAssemblyOrder)
-                .filter(java.util.Objects::nonNull)
-                .findFirst()
-                .orElse(null);
-        ProductVariant targetVariant = mappings.stream()
-                .map(DeviceComponentSerial::getTargetVariant)
-                .filter(java.util.Objects::nonNull)
-                .findFirst()
-                .orElseGet(() -> productVariantRepository.findById(targetVariantId).orElse(null));
-
-        if (targetVariant == null) {
-            log.warn("[Repair {}] Mapping serial {} thiếu SKU thành phẩm, bỏ qua cập nhật",
-                    repair.getRepairCode(), targetSerial);
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        Long currentUserId = resolveCurrentUserId();
-        java.util.List<RepairLine> serialAddLines = addLines.stream()
-                .filter(line -> trimToNull(resolveLineSerial(line, serialById)) != null)
+    // TASK-16: Generate inventory documents at completion
+    private void generateInventoryDocumentsAtCompletion(Repair repair, Long actorId, Long scrapWarehouseId) {
+        List<RepairLine> lines = repairLineRepository.findByRepairId(repair.getId());
+        
+        List<RepairLine> exportLines = lines.stream()
+                .filter(l -> "ADD".equals(l.getActionType()) || "REPLACE".equals(l.getActionType()))
                 .toList();
-        java.util.List<RepairLine> serialReplaceLines = replaceLines.stream()
-                .filter(line -> trimToNull(resolveLineSerial(line, serialById)) != null)
-                .filter(line -> trimToNull(resolveReplacementLineSerial(line, serialById)) != null)
+        List<RepairLine> importLines = lines.stream()
+                .filter(l -> "REMOVE".equals(l.getActionType()) || "REPLACE".equals(l.getActionType()))
                 .toList();
-        java.util.List<RepairLine> serialRemoveLines = removeLines.stream()
-                .filter(line -> trimToNull(resolveLineSerial(line, serialById)) != null)
+        
+        User technician = userRepository.findById(repair.getAssignedTechnicianId()).orElseThrow();
+
+        if (!exportLines.isEmpty()) {
+            List<RepairStockOutLineRequest> outLines = exportLines.stream()
+                    .map(line -> new RepairStockOutLineRequest(line.getComponentVariantId(), line.getQuantity(),
+                            line.getUnitPrice(), null, null, "Linh kiện cho lệnh " + repair.getRepairCode()))
+                    .toList();
+            inventoryDocumentService.createExportForRepair(repair.getId(), repair.getRepairCode(),
+                    repair.getWarehouseId(), repair.getPartnerId(), actorId, repair.getAssignedTechnicianId(),
+                    technician.getFullName(), outLines);
+        }
+
+        if (!importLines.isEmpty() && scrapWarehouseId != null) {
+            List<RepairScrapLineRequest> inLines = importLines.stream()
+                    .map(line -> new RepairScrapLineRequest(line.getComponentVariantId(), line.getQuantity(),
+                            line.getSerialNumberId(), trimToNull(line.getSerialNumberText())))
+                    .toList();
+            inventoryDocumentService.createScrapImportForRepair(repair.getId(), repair.getRepairCode(),
+                    scrapWarehouseId, repair.getPartnerId(), actorId, repair.getAssignedTechnicianId(),
+                    technician.getFullName(), inLines);
+        }
+    }
+
+    // TASK-10: Reserve and get shortfall
+    private Map<Long, BigDecimal> reserveAndGetShortfall(Repair repair) {
+        List<RepairLine> lines = repairLineRepository.findByRepairId(repair.getId());
+        List<RepairLine> exportLines = lines.stream()
+                .filter(l -> "ADD".equals(l.getActionType()) || "REPLACE".equals(l.getActionType()))
                 .toList();
-        java.util.List<DeviceComponentSerial> changedMappings = new java.util.ArrayList<>();
-
-        for (RepairLine replaceLine : serialReplaceLines) {
-            String removedSerial = resolveLineSerial(replaceLine, serialById);
-            String replacementSerial = resolveReplacementLineSerial(replaceLine, serialById);
-            DeviceComponentSerial currentMapping = findActiveMapping(mappings, replaceLine.getComponentVariantId(), removedSerial);
-            if (currentMapping == null) {
-                throw new BusinessException(String.format(SystemMessage.REP_ERR_007.getMessage(), removedSerial, targetSerial));
-            }
-            if (findActiveMapping(mappings, replaceLine.getComponentVariantId(), replacementSerial) != null) {
-                throw new BusinessException(String.format(SystemMessage.REP_ERR_006.getMessage(), replacementSerial, targetSerial));
-            }
-
-            currentMapping.markAsRemoved(repair.getId(), null, "Tháo dỡ thay thế linh kiện");
-            currentMapping.markAsReplaced(replacementSerial);
-            markRemovedByRepair(currentMapping, repair, now);
-            currentMapping.setNote(appendNote(currentMapping.getNote(),
-                    "Thay thế bởi serial " + replacementSerial + " từ phiếu sửa " + repair.getRepairCode()));
-            changedMappings.add(currentMapping);
-
-            DeviceComponentSerial newMapping = buildActiveRepairMapping(
-                    sourceOrder, targetVariant, targetSerial, replaceLine, replacementSerial, repair, now, currentUserId,
-                    "Thay thế serial " + removedSerial + " từ phiếu sửa " + repair.getRepairCode());
-            mappings.add(newMapping);
-            changedMappings.add(newMapping);
-        }
-
-        for (RepairLine removeLine : serialRemoveLines) {
-            String removedSerial = resolveLineSerial(removeLine, serialById);
-            DeviceComponentSerial currentMapping = findActiveMapping(mappings, removeLine.getComponentVariantId(), removedSerial);
-            if (currentMapping == null) {
-                throw new BusinessException(String.format(SystemMessage.REP_ERR_007.getMessage(), removedSerial, targetSerial));
-            }
-
-            currentMapping.markAsRemoved(repair.getId(), null, "Tháo dỡ thay thế linh kiện");
-            currentMapping.markAsReplaced(null);
-            markRemovedByRepair(currentMapping, repair, now);
-            currentMapping.setNote(appendNote(currentMapping.getNote(),
-                    "Loại bỏ từ phiếu sửa " + repair.getRepairCode()));
-            changedMappings.add(currentMapping);
-        }
-
-        for (RepairLine addLine : serialAddLines) {
-            String addedSerial = resolveLineSerial(addLine, serialById);
-            if (findActiveMapping(mappings, addLine.getComponentVariantId(), addedSerial) != null) {
-                throw new BusinessException(String.format(SystemMessage.REP_ERR_006.getMessage(), addedSerial, targetSerial));
-            }
-
-            DeviceComponentSerial newMapping = buildActiveRepairMapping(
-                    sourceOrder, targetVariant, targetSerial, addLine, addedSerial, repair, now, currentUserId,
-                    "Lắp thêm từ phiếu sửa " + repair.getRepairCode());
-            mappings.add(newMapping);
-            changedMappings.add(newMapping);
-        }
-
-        if (!changedMappings.isEmpty()) {
-            deviceComponentSerialRepository.saveAll(changedMappings);
-            log.info("[Repair {}] Đã cập nhật {} dòng mapping serial cho PC {}",
-                    repair.getRepairCode(), changedMappings.size(), targetSerial);
-        }
-    }
-
-    private DeviceComponentSerial findActiveMapping(List<DeviceComponentSerial> mappings, Long componentVariantId, String componentSerial) {
-        String normalizedSerial = trimToNull(componentSerial);
-        if (normalizedSerial == null) {
-            return null;
-        }
-
-        DeviceComponentSerial sameVariant = mappings.stream()
-                .filter(this::isActiveComponentSerial)
-                .filter(mapping -> mapping.getComponentVariant() != null)
-                .filter(mapping -> java.util.Objects.equals(mapping.getComponentVariant().getId(), componentVariantId))
-                .filter(mapping -> normalizedSerial.equalsIgnoreCase(mapping.getComponentSerial()))
-                .findFirst()
-                .orElse(null);
-        if (sameVariant != null) {
-            return sameVariant;
-        }
-
-        return mappings.stream()
-                .filter(this::isActiveComponentSerial)
-                .filter(mapping -> normalizedSerial.equalsIgnoreCase(mapping.getComponentSerial()))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private DeviceComponentSerial buildActiveRepairMapping(AssemblyOrder sourceOrder, ProductVariant targetVariant,
-            String targetSerial,
-            RepairLine line, String componentSerial, Repair repair, LocalDateTime now, Long currentUserId, String note) {
-        ProductVariant componentVariant = productVariantRepository.findById(line.getComponentVariantId())
-                .orElseThrow(() -> new BusinessException("Không tìm thấy linh kiện " + line.getComponentVariantId()));
-
-        DeviceComponentSerial dcs = new DeviceComponentSerial();
-        dcs.initForRepair(sourceOrder, targetVariant, targetSerial, componentVariant, componentSerial.trim(), repair.getId(), appendNote(note, trimToNull(line.getNote())), currentUserId);
-        return dcs;
-    }
-
-    private void markRemovedByRepair(DeviceComponentSerial mapping, Repair repair, LocalDateTime removedAt) {
-        mapping.markAsRemoved(repair.getId(), null, null);
-    }
-
-    private List<RepairLine> getLinesForStockOut(Long repairId) {
-        java.util.List<RepairLine> lines = new java.util.ArrayList<>(
-                repairLineRepository.findByRepairIdAndActionType(repairId, ACTION_ADD));
-        lines.addAll(repairLineRepository.findByRepairIdAndActionType(repairId, ACTION_REPLACE));
-        return lines;
-    }
-
-    private Long resolveStockOutSerialNumberId(RepairLine line) {
-        if (line == null) {
-            return null;
-        }
-        return ACTION_REPLACE.equals(line.getActionType())
-                ? line.getReplacementSerialNumberId()
-                : line.getSerialNumberId();
-    }
-
-    private String resolveStockOutSerialText(RepairLine line) {
-        if (line == null) {
-            return null;
-        }
-        return ACTION_REPLACE.equals(line.getActionType())
-                ? line.getReplacementSerialNumberText()
-                : line.getSerialNumberText();
-    }
-
-    private Long resolveRemovedComponentVariantId(RepairLine line, Map<Long, SerialNumber> serialById) {
-        if (line == null) {
-            return null;
-        }
-        if (line.getSerialNumberId() != null) {
-            SerialNumber sn = serialById.get(line.getSerialNumberId());
-            return sn != null ? sn.getVariantId() : line.getComponentVariantId();
-        }
-        String removedSerial = trimToNull(line.getSerialNumberText());
-        if (removedSerial != null) {
-            List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(removedSerial);
-            if (serials.size() == 1) {
-                return serials.get(0).getVariantId();
+        
+        Map<Long, BigDecimal> shortfall = new java.util.HashMap<>();
+        if (!exportLines.isEmpty()) {
+            Map<Long, BigDecimal> requiredByVariant = exportLines.stream().collect(Collectors.groupingBy(
+                    RepairLine::getComponentVariantId, TreeMap::new,
+                    Collectors.reducing(BigDecimal.ZERO, RepairLine::getQuantity, BigDecimal::add)));
+            for (Map.Entry<Long, BigDecimal> required : requiredByVariant.entrySet()) {
+                BigDecimal missing = reserve(repair, required.getKey(), required.getValue());
+                if (missing.compareTo(BigDecimal.ZERO) > 0) {
+                    shortfall.put(required.getKey(), missing);
+                }
             }
         }
-        return line.getComponentVariantId();
+        return shortfall;
     }
 
-    private boolean isActiveComponentSerial(DeviceComponentSerial mapping) {
-        return mapping != null
-                && (mapping.getStatus() == null || COMPONENT_STATUS_ACTIVE.equalsIgnoreCase(mapping.getStatus()));
+    @Transactional
+    public RepairResponse cancel(Long repairId, String reason) {
+        requireAnyRole("ROLE_ACCOUNTANT", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        Repair repair = lockRepair(repairId);
+        String normalizedReason = requireText(reason, "Lý do hủy là bắt buộc");
+        List<InventoryDocument> documents = inventoryDocumentRepository.findByReferenceWithLines(REPAIR, repairId);
+        if (documents.stream().anyMatch(doc -> DocumentStatus.POSTED.name().equals(doc.getStatus()))) {
+            throw new BusinessException("Lệnh đã có chứng từ kho ghi sổ; phải unpost hợp lệ trước khi hủy");
+        }
+        documents.stream().filter(doc -> !DocumentStatus.CANCELLED.name().equals(doc.getStatus()))
+                .forEach(doc -> doc.updateStatus(DocumentStatus.CANCELLED.name()));
+        inventoryDocumentRepository.saveAll(documents);
+        releaseReservations(repairId);
+        repair.cancel(currentUserId(), normalizedReason);
+        repairRepository.save(repair);
+        audit(repair, "CANCEL", normalizedReason);
+        return detail(repair);
     }
 
-    private boolean productTracksSerial(ProductVariant variant) {
-        return variant != null
-                && variant.getProduct() != null
-                && Boolean.TRUE.equals(variant.getProduct().getTrackSerial());
+    @Transactional
+    public RepairResponse cancelPartsExport(Long repairId, String reason) {
+        Repair repair = lockRepair(repairId);
+        if (!RepairStatus.APPROVED.name().equals(repair.getRepairStatus())) throw invalidTransition();
+        repairInventorySyncService.requireWarehouseAccess(repair.getWarehouseId());
+        InventoryDocument document = inventoryDocumentRepository
+                .findByReferenceTypeAndReferenceIdAndIssuePurpose(REPAIR, repairId,
+                        "REPAIR")
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất linh kiện"));
+        if (!DocumentStatus.DRAFT.name().equals(document.getStatus())) {
+            throw new BusinessException("Chỉ được hủy phiếu xuất đang ở trạng thái DRAFT");
+        }
+        String normalizedReason = requireText(reason, "Lý do hủy phiếu xuất là bắt buộc");
+        document.updateStatus(DocumentStatus.CANCELLED.name());
+        document.setNote((document.getNote() == null ? "" : document.getNote() + " - ")
+                + "Hủy: " + normalizedReason);
+        inventoryDocumentRepository.save(document);
+        releaseReservations(repairId);
+        // Do not rollback status to QUOTATION_PENDING here, keep it APPROVED or just handle appropriately.
+        // Actually since we don't have returnToWaitingConfirm anymore, we can just leave it as APPROVED and let them re-approve?
+        // Wait, if it's APPROVED and they cancel parts export, it stays APPROVED but without parts export.
+        // The user might need to decline or re-approve. We'll just leave it as APPROVED for now.
+        repairRepository.save(repair);
+        audit(repair, "CANCEL_PARTS_EXPORT", normalizedReason);
+        return detail(repair);
     }
 
-    private String resolveLineSerial(RepairLine line, Map<Long, SerialNumber> serialById) {
-        if (line == null) {
-            return null;
-        }
-        if (line.getSerialNumberId() != null) {
-            SerialNumber sn = serialById.get(line.getSerialNumberId());
-            String serial = sn != null ? trimToNull(sn.getSerialNumber()) : null;
-            return serial != null ? serial : trimToNull(line.getSerialNumberText());
-        }
-        return trimToNull(line.getSerialNumberText());
+    @Transactional(readOnly = true)
+    public List<InventoryDocumentResponse> getDocuments(Long repairId) {
+        repairRepository.findById(repairId).orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
+        return inventoryDocumentRepository.findByReferenceWithLines(REPAIR, repairId).stream()
+                .map(doc -> "EX_SO".equals(doc.getDocType())
+                        ? inventoryDocumentService.getExportDetail(doc.getId())
+                        : inventoryDocumentService.getImportDetail(doc.getId()))
+                .toList();
     }
 
-    private String resolveReplacementLineSerial(RepairLine line, Map<Long, SerialNumber> serialById) {
-        if (line == null) {
-            return null;
+    @Transactional
+    public PaymentResponse createPayment(Long repairId, RepairPaymentRequest request) {
+        requireAnyRole("ROLE_ACCOUNTANT", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        Repair repair = lockRepair(repairId);
+        if (!RepairStatus.CLOSED.name().equals(repair.getRepairStatus()) && !RepairStatus.READY_FOR_DELIVERY.name().equals(repair.getRepairStatus())) throw invalidTransition();
+        if (repair.getCustomerPayAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Lệnh không phát sinh khoản thu khách hàng");
         }
-        if (line.getReplacementSerialNumberId() != null) {
-            SerialNumber sn = serialById.get(line.getReplacementSerialNumberId());
-            String serial = sn != null ? trimToNull(sn.getSerialNumber()) : null;
-            return serial != null ? serial : trimToNull(line.getReplacementSerialNumberText());
-        }
-        return trimToNull(line.getReplacementSerialNumberText());
+        return paymentService.createRepairReceipt(repair.getId(), repair.getPartnerId(),
+                repair.getCustomerPayAmount(), request.getPaymentMethod(), request.getIdempotencyKey(), currentUserId());
     }
 
-    private String variantName(ProductVariant variant) {
-        if (variant == null) {
-            return "Linh kiện";
-        }
-        String productName = variant.getProduct() != null ? trimToNull(variant.getProduct().getProductName()) : null;
-        String variantName = trimToNull(variant.getVariantName());
-        if (productName == null) {
-            return variantName != null ? variantName : "Linh kiện";
-        }
-        if (variantName == null || productName.equals(variantName)) {
-            return productName + " (" + variant.getSku() + ")";
-        }
-        return productName + " - " + variantName + " (" + variant.getSku() + ")";
+    @Transactional
+    public RepairResponse returnDevice(Long repairId, RepairReturnRequest request) {
+        requireAnyRole("ROLE_ACCOUNTANT", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        Repair repair = lockRepair(repairId);
+        repair.markReturned(currentUserId(), "BG-" + repair.getRepairCode(),
+                requireText(request.getRecipientName(), "Tên người nhận là bắt buộc"),
+                requireText(request.getRecipientPhone(), "Số điện thoại người nhận là bắt buộc"),
+                trimToNull(request.getNote()));
+        repairRepository.save(repair);
+        audit(repair, "RETURN_DEVICE", "Bàn giao thiết bị");
+        return detail(repair);
     }
 
-    private String appendNote(String current, String addition) {
-        String normalizedAddition = trimToNull(addition);
-        if (normalizedAddition == null) {
-            return trimToNull(current);
+    private void validateSubmit(Repair repair) {
+        if (repair.getPartnerId() == null || repair.getAssignedTechnicianId() == null
+                || repair.getWarehouseId() == null) {
+            throw new BusinessException("Lệnh chưa đủ khách hàng, kho và KTV");
         }
-        String normalizedCurrent = trimToNull(current);
-        if (normalizedCurrent == null) {
-            return normalizedAddition;
+        User technician = userRepository.findById(repair.getAssignedTechnicianId())
+                .orElseThrow(() -> new BusinessException("Không tìm thấy kỹ thuật viên"));
+        if (!DocumentStatus.APPROVED.name().equalsIgnoreCase(technician.getStatus())
+                || technician.getRoles().stream().noneMatch(role -> "ROLE_TECHNICIAN".equals(role.getCode()))) {
+            throw new BusinessException("Người được phân công phải là kỹ thuật viên đang hoạt động");
         }
-        return normalizedCurrent + "\n" + normalizedAddition;
+        if (repair.getSerialNumberId() != null
+                && repairRepository.existsActiveBySerialNumberId(repair.getSerialNumberId(), repair.getId())) {
+            throw new BusinessException("Thiết bị đang có lệnh sửa chữa hoạt động khác");
+        }
+    }
+
+    private BigDecimal reserve(Repair repair, Long variantId, BigDecimal quantity) {
+        inventoryBalanceRepository.findAllByWarehouseAndVariantForUpdate(repair.getWarehouseId(), variantId);
+        stockReservationRepository.findActiveByVariantAndWarehouseForUpdate(
+                variantId, repair.getWarehouseId(), StockReservationStatus.HOLDING.name());
+        BigDecimal available = inventoryBalanceRepository.sumAvailableQuantityByWarehouseAndVariant(
+                repair.getWarehouseId(), variantId, GOOD);
+                
+        BigDecimal actualAvailable = available == null ? BigDecimal.ZERO : available;
+        BigDecimal toReserve = quantity.min(actualAvailable);
+        BigDecimal missing = quantity.subtract(toReserve);
+        String status = missing.compareTo(BigDecimal.ZERO) > 0 ? StockReservationStatus.BACKORDERED.name() : StockReservationStatus.HOLDING.name();
+
+        StockReservation reservation = stockReservationRepository
+                .findByRepairIdAndVariantIdAndWarehouseId(repair.getId(), variantId, repair.getWarehouseId())
+                .orElseGet(StockReservation::new);
+        if (reservation.getId() == null) {
+            reservation.initRepairReservation(repair.getId(), variantId, repair.getWarehouseId(), quantity,
+                    status, LocalDateTime.now().plusHours(24));
+            stockReservationRepository.save(reservation);
+            
+            if (toReserve.compareTo(BigDecimal.ZERO) > 0) {
+                InventoryBalance balance = inventoryBalanceRepository
+                        .findByWarehouseAndVariantForUpdate(repair.getWarehouseId(), variantId, GOOD)
+                        .orElseGet(() -> {
+                            InventoryBalance created = new InventoryBalance();
+                            created.initBalance(repair.getWarehouseId(), variantId, null, GOOD,
+                                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                            return inventoryBalanceRepository.save(created);
+                        });
+                balance.setQuantityReserved(balance.getQuantityReserved().add(toReserve));
+                inventoryBalanceRepository.save(balance);
+            }
+            
+            auditLogService.logEvent(currentUsername(), "RESERVE", "Repair", repair.getId(), "SUCCESS",
+                    "Giữ " + toReserve + " / Cần " + quantity + " SKU " + variantId + " tại kho " + repair.getWarehouseId(), null, null);
+        }
+        return missing;
+    }
+
+    private void validateRemoval(RepairRemovalRequest removal) {
+        ProductVariant variant = productVariantRepository.findById(removal.getVariantId())
+                .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện tháo ra"));
+        boolean serialTracked = variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getTrackSerial());
+        if (serialTracked && removal.getQuantity().stripTrailingZeros().scale() > 0) {
+            throw new BusinessException("Số lượng linh kiện quản lý serial phải là số nguyên");
+        }
+        if (serialTracked && removal.getSerialNumberId() == null) {
+            throw new BusinessException("Linh kiện quản lý serial phải khai báo serial tháo ra");
+        }
+        if (removal.getSerialNumberId() != null) {
+            SerialNumber serial = serialNumberRepository.findById(removal.getSerialNumberId())
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy serial linh kiện tháo ra"));
+            if (!removal.getVariantId().equals(serial.getVariantId())) {
+                throw new BusinessException("Serial tháo ra không thuộc SKU đã khai báo");
+            }
+        }
+    }
+
+    private void releaseReservations(Long repairId) {
+        for (StockReservation reservation : stockReservationRepository
+                .findByRepairIdAndStatus(repairId, StockReservationStatus.HOLDING.name())) {
+            inventoryBalanceRepository.decrementReservedQuantity(reservation.getWarehouseId(),
+                    reservation.getVariantId(), reservation.getQuantityReserved());
+            reservation.setStatus(StockReservationStatus.RELEASED.name());
+            stockReservationRepository.save(reservation);
+            auditLogService.logEvent(currentUsername(), "RELEASE_RESERVATION", "Repair", repairId, "SUCCESS",
+                    "Giải phóng " + reservation.getQuantityReserved() + " SKU " + reservation.getVariantId(), null, null);
+        }
+    }
+
+    private Repair lockRepair(Long id) {
+        return repairRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
+    }
+
+    private void requireAssignedTechnician(Repair repair) {
+        Long actorId = currentUserId();
+        if (hasAnyRole("ROLE_SUPER_ADMIN", "ROLE_MANAGER")) return;
+        if (!hasRole("ROLE_TECHNICIAN") || !actorId.equals(repair.getAssignedTechnicianId())) {
+            throw new BusinessException("Chỉ kỹ thuật viên được phân công mới được thực hiện thao tác này");
+        }
+    }
+
+    private String normalizeOutcome(String value) {
+        String outcome = requireText(value, "Kết quả sửa chữa là bắt buộc").toUpperCase();
+        try { return RepairOutcome.valueOf(outcome).name(); }
+        catch (IllegalArgumentException ex) { throw new BusinessException("Kết quả sửa chữa không hợp lệ"); }
+    }
+
+    private RepairResponse detail(Repair repair) {
+        return repairService.toDetailResponse(repairRepository.findWithDetailsById(repair.getId()).orElse(repair));
+    }
+
+    private BusinessException invalidTransition() {
+        return new BusinessException(SystemMessage.REP_INVALID_STATUS_TRANSITION);
+    }
+
+    private void audit(Repair repair, String action, String description) {
+        auditLogService.logEvent(currentUsername(), action, "Repair", repair.getId(), "SUCCESS",
+                repair.getRepairCode() + ": " + description, null, null);
+    }
+
+    private void notifyCompleted(Repair repair) {
+        notifyAfterCommit(null, repair.getCreatedBy(), "Hoàn tất sửa chữa: " + repair.getRepairCode(),
+                "Lệnh đã hoàn tất kỹ thuật và kho", repair.getId());
+    }
+
+    private void recordRepairDebt(Repair repair) {
+        if (repair.getCustomerPayAmount().compareTo(BigDecimal.ZERO) <= 0
+                || partnerLedgerRepository.findTopByEntityTypeAndEntityIdOrderByIdDesc("REPAIR", repair.getId()).isPresent()) {
+            return;
+        }
+        partnerLedgerService.recordLedger(repair.getPartnerId(), "REPAIR", repair.getId(), repair.getRepairCode(),
+                repair.getCustomerPayAmount(), BigDecimal.ZERO,
+                "Ghi nhận phải thu từ lệnh sửa chữa " + repair.getRepairCode());
+    }
+
+    private void notifyAfterCommit(String role, Long userId, String title, String message, Long repairId) {
+        Runnable send = () -> {
+            try {
+                notificationService.createNotification(role, userId, title, message,
+                        "REPAIR", "REPAIR", repairId, "/repairs/" + repairId + "/edit");
+            } catch (RuntimeException ignored) { }
+        };
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            send.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCommit() { send.run(); }
+        });
+    }
+
+    private Long currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) throw new BusinessException("Không xác định được người dùng hiện tại");
+        return userRepository.findByUsername(authentication.getName()).map(User::getId)
+                .orElseThrow(() -> new BusinessException("Không xác định được người dùng hiện tại"));
+    }
+
+    private String currentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null ? authentication.getName() : "system";
+    }
+
+    private boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority).anyMatch(role::equals);
+    }
+
+    private boolean hasAnyRole(String... roles) {
+        return Arrays.stream(roles).anyMatch(this::hasRole);
+    }
+
+    private void requireAnyRole(String... roles) {
+        if (!hasAnyRole(roles)) throw new BusinessException("Bạn không có quyền thực hiện thao tác này");
+    }
+
+    private String requireText(String value, String message) {
+        String normalized = trimToNull(value);
+        if (normalized == null) throw new BusinessException(message);
+        return normalized;
     }
 
     private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
+        if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }

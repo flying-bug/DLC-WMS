@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import com.duylongtech.backend.feature.product.SerialNumber;
 
 /**
@@ -30,11 +31,15 @@ public class RepairResponse {
     private Long productVariantId;
     private String sku;
     private String variantName;
+    private String manualDeviceName;
+    private String manualDeviceIdentifier;
+    private String externalDeviceStatus;
     private Integer productQuantity;
     private String productUnit;
 
     // Kho thực hiện lệnh sửa chữa
     private Long warehouseId;
+    private Long scrapWarehouseId;
 
     // Serial thiết bị
     private Long serialNumberId;
@@ -59,6 +64,8 @@ public class RepairResponse {
 
     // Mô tả
     private String issueDescription;
+
+
     private String diagnosisNote;
     private String internalNotes;
     private String solutionDescription;
@@ -71,9 +78,35 @@ public class RepairResponse {
 
     // Tài chính
     private BigDecimal totalAmount;
+    private String feePolicy;
+    private BigDecimal customerSharePercent;
+    private BigDecimal customerPayAmount;
+    private BigDecimal companyCoveredAmount;
 
     // Kỹ thuật viên phụ trách
     private String responsiblePerson;
+    private Long assignedTechnicianId;
+    private String assignedTechnicianName;
+    private String repairOutcome;
+    private String rejectReason;
+    private LocalDateTime rejectedAt;
+    private Long rejectedBy;
+    private LocalDateTime submittedAt;
+    private Long submittedBy;
+    private LocalDateTime acceptedAt;
+    private Long acceptedBy;
+    private LocalDateTime completedAt;
+    private Long completedBy;
+    private String cancelReason;
+    private LocalDateTime cancelledAt;
+    private Long cancelledBy;
+    private LocalDateTime returnedAt;
+    private Long returnedBy;
+    private String recipientName;
+    private String recipientPhone;
+    private String returnNote;
+    private String handoverCode;
+    private Set<String> allowedActions;
 
     // Ghi chú
     private String note;
@@ -88,4 +121,5 @@ public class RepairResponse {
     // Chi tiết linh kiện và phí
     private List<RepairLineResponse> lines;
     private List<RepairFeeResponse> fees;
+    private List<RepairPhotoResponse> photos;
 }

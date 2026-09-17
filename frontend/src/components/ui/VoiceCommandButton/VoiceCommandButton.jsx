@@ -120,7 +120,7 @@ export default function VoiceCommandButton() {
                 <div className={styles.transcriptPanel}>
                     {/* Header */}
                     <div className={styles.panelHeader}>
-                        <i className="fas fa-microphone-lines" aria-hidden="true" />
+                        <i className="bi bi-mic" aria-hidden="true" />
                         <span className={styles.panelTitle}>Lệnh giọng nói</span>
                         <span className={`${styles.statusPill} ${styles['status' + status.charAt(0).toUpperCase() + status.slice(1)]}`}>
                             {statusLabels[status]}
@@ -155,7 +155,7 @@ export default function VoiceCommandButton() {
                     {/* Error */}
                     {(voiceError || apiError) && (
                         <div className={styles.errorMessage}>
-                            <i className="fas fa-circle-exclamation" aria-hidden="true" />
+                            <i className="bi bi-exclamation-circle" aria-hidden="true" />
                             {voiceError || apiError}
                         </div>
                     )}
@@ -164,7 +164,7 @@ export default function VoiceCommandButton() {
                     {result && result.intent !== 'UNKNOWN' && (
                         <div className={styles.intentResult}>
                             <div className={styles.intentLabel}>
-                                <i className="fas fa-route" aria-hidden="true" /> Đã nhận diện
+                                <i className="bi bi-signpost-2" aria-hidden="true" /> Đã nhận diện
                             </div>
                             <div className={styles.intentMessage}>
                                 {result.confirmMessage}
@@ -174,7 +174,7 @@ export default function VoiceCommandButton() {
 
                     {result && result.intent === 'UNKNOWN' && (
                         <div className={styles.errorMessage}>
-                            <i className="fas fa-circle-question" aria-hidden="true" />
+                            <i className="bi bi-question-circle" aria-hidden="true" />
                             {result.confirmMessage || 'Không nhận diện được lệnh. Vui lòng thử lại.'}
                         </div>
                     )}
@@ -186,7 +186,7 @@ export default function VoiceCommandButton() {
                             className={styles.btnCancel}
                             onClick={handleClose}
                         >
-                            <i className="fas fa-xmark" aria-hidden="true" />
+                            <i className="bi bi-x" aria-hidden="true" />
                             Đóng
                         </button>
 
@@ -196,7 +196,7 @@ export default function VoiceCommandButton() {
                                 className={styles.btnRetry}
                                 onClick={handleRetry}
                             >
-                                <i className="fas fa-rotate-right" aria-hidden="true" />
+                                <i className="bi bi-arrow-clockwise" aria-hidden="true" />
                                 Thử lại
                             </button>
                         )}
@@ -207,7 +207,7 @@ export default function VoiceCommandButton() {
                                 className={styles.btnConfirm}
                                 onClick={handleConfirm}
                             >
-                                <i className="fas fa-check" aria-hidden="true" />
+                                <i className="bi bi-check" aria-hidden="true" />
                                 Xác nhận
                             </button>
                         )}
@@ -224,7 +224,7 @@ export default function VoiceCommandButton() {
                 title={isListening ? 'Dừng nghe' : 'Lệnh giọng nói'}
                 aria-label={isListening ? 'Dừng nghe giọng nói' : 'Bắt đầu lệnh giọng nói'}
             >
-                <i className={isListening ? 'fas fa-stop' : 'fas fa-microphone'} aria-hidden="true" />
+                <i className={isListening ? 'bi bi-stop-circle' : 'bi bi-mic'} aria-hidden="true" />
             </button>
         </div>
     );

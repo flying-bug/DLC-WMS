@@ -652,7 +652,7 @@ function CreateStocktakePage() {
             </div>
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Kiểm kê kho</label>
+                <label className={styles.formLabel}>Kiểm kê kho <span className={styles.required}>*</span></label>
                 <SearchableSelect id="stocktake-warehouseId" className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
                   <option value="all">Tất cả kho</option>
                   {warehouses.map(wh => (

@@ -50,6 +50,43 @@ public class PaymentService {
         return processPayment(request, "VOUCHER", "PC");
     }
 
+    @Transactional
+    public PaymentResponse createRepairReceipt(Long repairId, Long partnerId, BigDecimal amount,
+            String paymentMethod, String idempotencyKey, Long actorId) {
+        if (repairId == null || partnerId == null || amount == null || amount.compareTo(ZERO) <= 0) {
+            throw new BusinessException("Thông tin phiếu thu sửa chữa không hợp lệ");
+        }
+        String key = trimToNull(idempotencyKey);
+        if (key == null) throw new BusinessException("Idempotency key là bắt buộc");
+        var byKey = paymentTransactionRepository.findByIdempotencyKey(key);
+        if (byKey.isPresent()) {
+            PaymentTransaction existing = byKey.get();
+            if (!"REPAIR".equals(existing.getReferenceType()) || !repairId.equals(existing.getReferenceId())) {
+                throw new BusinessException("Idempotency key đã được sử dụng cho giao dịch khác");
+            }
+            Partner partner = partnerRepository.findById(existing.getPartnerId())
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác"));
+            return toResponse(existing, partner);
+        }
+        var byReference = paymentTransactionRepository
+                .findByReferenceTypeAndReferenceIdAndType("REPAIR", repairId, "RECEIPT");
+        if (byReference.isPresent()) {
+            PaymentTransaction existing = byReference.get();
+            Partner partner = partnerRepository.findById(existing.getPartnerId())
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác"));
+            return toResponse(existing, partner);
+        }
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác"));
+        PaymentTransaction transaction = new PaymentTransaction();
+        transaction.initTransaction(
+                codeGeneratorService.generateCode("PAYMENT_TRANSACTIONS", "transaction_code", "PT", 5),
+                "RECEIPT", partnerId, amount, DocumentStatus.DRAFT.name(),
+                normalizePaymentMethod(paymentMethod), "Thu tiền sửa chữa");
+        transaction.linkReference("REPAIR", repairId, key, actorId);
+        return toResponse(paymentTransactionRepository.save(transaction), partner);
+    }
+
     private PaymentResponse processPayment(PaymentRequest request, String type, String prefix) {
         if (request == null || request.getPartnerId() == null) {
             throw new BusinessException(SystemMessage.PAY_ERR_006.getMessage());
@@ -250,6 +287,9 @@ public class PaymentService {
                 .note(payment.getNote())
                 .createdAt(payment.getCreatedAt())
                 .partnerDebtBalance(getPartnerDebtBalance(partner.getId()))
+                .referenceType(payment.getReferenceType())
+                .referenceId(payment.getReferenceId())
+                .idempotencyKey(payment.getIdempotencyKey())
                 .build();
     }
 

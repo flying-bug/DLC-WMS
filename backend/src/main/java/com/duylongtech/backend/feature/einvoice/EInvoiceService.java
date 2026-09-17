@@ -106,6 +106,13 @@ public class EInvoiceService {
                 .orElse(null);
     }
 
+    @Transactional(readOnly = true)
+    public EInvoiceResponse getDraftInvoiceByRepairId(Long repairId) {
+        return einvoiceRepository.findFirstByRepairIdAndStatus(repairId, "DRAFT")
+                .map(this::toResponse)
+                .orElse(null);
+    }
+
     // ─── Issue E-Invoice from Sales Order or Export Document (Khoản 1 Điều 9 NĐ 123) ──
     @Transactional
     public EInvoiceResponse issueInvoiceFromSalesOrder(EInvoiceIssueRequest request, Long currentUserId) {
@@ -540,5 +547,43 @@ public class EInvoiceService {
             str = Character.toUpperCase(str.charAt(0)) + str.substring(1) + " đồng chẵn.";
         }
         return str;
+    }
+
+    @Transactional
+    public void createDraftInvoiceFromRepair(com.duylongtech.backend.feature.repair.Repair repair, Long currentUserId) {
+        if (!"E_INVOICE".equals(repair.getInvoiceMethod())) {
+            return;
+        }
+
+        Partner partner = partnerRepository.findById(repair.getPartnerId()).orElse(null);
+        if (partner == null) return;
+
+        EInvoice einvoice = new EInvoice();
+        einvoice.setRepairId(repair.getId());
+        einvoice.setPartnerId(partner.getId());
+        einvoice.setStatus("DRAFT");
+        
+        einvoice.setBuyerName(partner.getName());
+        einvoice.setBuyerLegalName(partner.getName());
+        einvoice.setBuyerTaxCode(partner.getTaxCode());
+        einvoice.setBuyerAddress(partner.getAddress());
+        einvoice.setBuyerPhone(partner.getPhone());
+        einvoice.setBuyerEmail(partner.getEmail());
+        einvoice.setCurrencyCode("VND");
+        einvoice.setExchangeRate(BigDecimal.ONE);
+        einvoice.setPaymentMethod("CK");
+
+        java.math.BigDecimal grandTotal = repair.getCustomerPayAmount();
+        java.math.BigDecimal subTotal = grandTotal; 
+        java.math.BigDecimal vatAmount = BigDecimal.ZERO; 
+        // For simplicity, we just use grandTotal as subtotal for the draft invoice
+
+        einvoice.setSubTotalAmount(subTotal);
+        einvoice.setVatAmount(vatAmount);
+        einvoice.setTotalAmount(grandTotal);
+        einvoice.setTotalAmountInWords("");
+        
+        einvoice.setCreatedBy(currentUserId != null ? currentUserId : 1L);
+        einvoiceRepository.save(einvoice);
     }
 }

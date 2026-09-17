@@ -31,4 +31,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * role đó bị đổi (đăng nhập lại để nhận đúng authorities mới).
      */
     List<User> findByRoles_Id(Long roleId);
+
+    /**
+     * Lấy danh sách user theo tên role và status.
+     */
+    List<User> findByRoles_NameAndStatus(String roleName, String status);
+
+    /**
+     * Lấy danh sách user theo code role và status.
+     */
+    List<User> findByRoles_CodeAndStatus(String roleCode, String status);
 }

@@ -26,6 +26,15 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
 
     boolean existsBySerialNumberId(Long serialNumberId);
 
+    @Query("""
+        SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Repair r
+        WHERE r.serialNumberId = :serialId
+          AND (:excludeId IS NULL OR r.id <> :excludeId)
+          AND r.repairStatus NOT IN ('DONE', 'CANCELLED')
+    """)
+    boolean existsActiveBySerialNumberId(@Param("serialId") Long serialId,
+                                         @Param("excludeId") Long excludeId);
+
     /**
      * Tìm kiếm danh sách lệnh sửa chữa có phân trang và lọc theo keyword/status.
      */
@@ -33,9 +42,10 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
     @Query("""
             SELECT r FROM Repair r
             WHERE (:status IS NULL OR r.repairStatus = :status)
+              AND (:technicianId IS NULL OR r.assignedTechnicianId = :technicianId)
               AND (
                 :keyword IS NULL
-                OR LOWER(r.repairCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(r.repairCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
               )
               AND (CAST(:fromDate AS date) IS NULL OR r.receivedDate >= :fromDate)
               AND (CAST(:toDate AS date) IS NULL OR r.receivedDate <= :toDate)
@@ -43,6 +53,7 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
             """)
     Page<Repair> searchRepairs(@Param("keyword") String keyword,
                                @Param("status") String status,
+                               @Param("technicianId") Long technicianId,
                                @Param("fromDate") java.time.LocalDate fromDate,
                                @Param("toDate") java.time.LocalDate toDate,
                                Pageable pageable);

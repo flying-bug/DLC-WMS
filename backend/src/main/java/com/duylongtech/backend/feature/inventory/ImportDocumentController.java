@@ -89,7 +89,7 @@ public class ImportDocumentController {
 
     @PostMapping("/{id}/post")
     @Operation(summary = "Post import slip")
-    @PreAuthorize("hasAuthority('import:edit')")
+    @PreAuthorize("hasAuthority('import:post')")
     @Auditable(action = AuditAction.POST, entityName = "ImportSlip", actionDescription = "Ghi sổ phiếu nhập kho")
     public ApiResponse<InventoryDocumentResponse> postImport(@PathVariable Long id) {
         return ApiResponse.success(inventoryDocumentService.postImport(id));

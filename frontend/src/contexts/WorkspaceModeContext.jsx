@@ -39,21 +39,21 @@ const BASE_MODE_CONFIGS = {
     id: 'ACCOUNTANT',
     label: 'Chế độ Kế toán',
     shortLabel: 'Kế toán',
-    icon: 'fas fa-calculator',
+    icon: 'bi bi-calculator',
     desc: ''
   },
   WAREHOUSE: {
     id: 'WAREHOUSE',
     label: 'Chế độ Thủ kho',
     shortLabel: 'Thủ kho',
-    icon: 'fas fa-boxes',
+    icon: 'bi bi-boxes',
     desc: ''
   },
   CASHIER: {
     id: 'CASHIER',
     label: 'Chế độ Thủ quỹ',
     shortLabel: 'Thủ quỹ',
-    icon: 'fas fa-cash-register',
+    icon: 'bi bi-cash-stack',
     desc: ''
   }
 };

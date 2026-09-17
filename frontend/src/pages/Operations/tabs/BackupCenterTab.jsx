@@ -406,7 +406,7 @@ function BackupCenterTab() {
                                                         disabled={actionLoading[b.id + '_del']}
                                                         title="Xóa"
                                                     >
-                                                        <i className={actionLoading[b.id + '_del'] ? 'bi bi-hourglass-split' : 'bi bi-trash3'} />
+                                                        <i className={actionLoading[b.id + '_del'] ? 'bi bi-hourglass-split' : 'bi bi-trash'} />
                                                     </button>
                                                 </div>
                                             </td>

@@ -275,6 +275,19 @@
   gap: 10px;
 }
 
+/* Cột phải chỉ chứa ngày/mã chứng từ ngắn, không nên bị bẻ theo từng ký tự
+   khi thẻ bị ép hẹp (global.css có overflow-wrap: anywhere làm fail-safe
+   chống tràn ngang toàn app) - cho phép cả dòng xuống hàng dưới label thay
+   vì giá trị bị nát chữ. */
+.formRightCol .formRow {
+  flex-wrap: wrap;
+}
+
+.formRightCol .fieldValue,
+.formRightCol .fieldValueCode {
+  white-space: nowrap;
+}
+
 .fieldLabel {
   width: 140px;
   color: var(--color-text-subtle, var(--wms-text-muted));
@@ -446,4 +459,9 @@
   padding: 8px 12px;
   font-size: 0.8125rem;
   color: var(--color-text-strong, var(--wms-text-title));
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

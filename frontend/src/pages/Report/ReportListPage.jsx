@@ -23,17 +23,17 @@ import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
 
 const REPORT_DOMAINS = [
-    { id: 'ALL', label: 'Tất cả báo cáo', icon: 'fas fa-th-large' },
-    { id: 'WAREHOUSE', label: 'Kho & Hàng hóa', icon: 'fas fa-boxes', role: 'Thủ kho' },
-    { id: 'CASHIER', label: 'Quỹ & Dòng tiền', icon: 'fas fa-cash-register', role: 'Thủ quỹ' },
-    { id: 'SALES', label: 'Kinh doanh & Bán hàng', icon: 'fas fa-chart-line', role: 'Kinh doanh' },
+    { id: 'ALL', label: 'Tất cả báo cáo', icon: 'bi bi-grid-3x3-gap' },
+    { id: 'WAREHOUSE', label: 'Kho & Hàng hóa', icon: 'bi bi-boxes', role: 'Thủ kho' },
+    { id: 'CASHIER', label: 'Quỹ & Dòng tiền', icon: 'bi bi-cash-stack', role: 'Thủ quỹ' },
+    { id: 'SALES', label: 'Kinh doanh & Bán hàng', icon: 'bi bi-graph-up', role: 'Kinh doanh' },
 ];
 
 const MOCK_CATEGORIES = [
     {
         id: 'favorites',
         title: 'Báo cáo yêu thích',
-        icon: 'fas fa-star',
+        icon: 'bi bi-star',
         domain: 'ALL',
         reports: [
             { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', desc: 'Theo dõi chi tiết lượng nhập, xuất và tồn của vật tư hàng hóa trong kỳ.', domain: 'WAREHOUSE' },
@@ -44,7 +44,7 @@ const MOCK_CATEGORIES = [
     {
         id: 'inventory-reports',
         title: 'Báo cáo tổng hợp tồn kho',
-        icon: 'fas fa-boxes-stacked',
+        icon: 'bi bi-boxes',
         domain: 'WAREHOUSE',
         roleBadge: 'Thủ kho',
         reports: [
@@ -55,7 +55,7 @@ const MOCK_CATEGORIES = [
     {
         id: 'detailed-reports',
         title: 'Báo cáo chi tiết kho & luân chuyển',
-        icon: 'fas fa-list-ul',
+        icon: 'bi bi-list-ul',
         domain: 'WAREHOUSE',
         roleBadge: 'Thủ kho',
         reports: [
@@ -67,7 +67,7 @@ const MOCK_CATEGORIES = [
     {
         id: 'cash-flow-reports',
         title: 'Báo cáo Quỹ, Thu chi & Dòng tiền',
-        icon: 'fas fa-cash-register',
+        icon: 'bi bi-cash-stack',
         domain: 'CASHIER',
         roleBadge: 'Thủ quỹ',
         reports: [
@@ -79,7 +79,7 @@ const MOCK_CATEGORIES = [
     {
         id: 'sales-reports',
         title: 'Báo cáo Kinh doanh & Lợi nhuận',
-        icon: 'fas fa-chart-line',
+        icon: 'bi bi-graph-up',
         domain: 'SALES',
         roleBadge: 'Kinh doanh',
         reports: [
@@ -427,8 +427,8 @@ const ReportListPage = () => {
 
         const matchedReports = reportsList.filter(
             (r) =>
-                r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                r.desc.toLowerCase().includes(searchTerm.toLowerCase())
+                r.name.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+                r.desc.toLowerCase().includes(searchTerm.trim().toLowerCase())
         );
 
         return { ...cat, reports: matchedReports };
@@ -475,7 +475,7 @@ const ReportListPage = () => {
                         {/* Filter and search controls */}
                         <div className={styles.toolbar}>
                             <div className={styles.searchBox}>
-                                <i className="fas fa-search"></i>
+                                <i className="bi bi-search"></i>
                                 <input
                                     type="text"
                                     placeholder="Tìm kiếm theo tên hoặc mô tả báo cáo..."
@@ -483,7 +483,7 @@ const ReportListPage = () => {
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                                 {searchTerm && (
-                                    <i className={`fas fa-times ${styles.clearIcon}`} onClick={() => setSearchTerm('')}></i>
+                                    <i className={`bi bi-x ${styles.clearIcon}`} onClick={() => setSearchTerm('')}></i>
                                 )}
                             </div>
                         </div>
@@ -492,7 +492,7 @@ const ReportListPage = () => {
                         <div className={styles.categoriesGrid}>
                             {filteredCategories.length === 0 ? (
                                 <div className={styles.noResults}>
-                                    <i className="fas fa-search-minus"></i>
+                                    <i className="bi bi-zoom-out"></i>
                                     <p>Không tìm thấy báo cáo nào phù hợp với tìm kiếm của bạn.</p>
                                 </div>
                             ) : (
@@ -524,9 +524,9 @@ const ReportListPage = () => {
                                                             onClick={(e) => toggleFavorite(report.id, e)}
                                                             title={favorites.includes(report.id) ? 'Bỏ yêu thích' : 'Yêu thích'}
                                                         >
-                                                            <i className={`${favorites.includes(report.id) ? 'fas' : 'far'} fa-star ${styles.starIcon}`}></i>
+                                                            <i className={`bi ${favorites.includes(report.id) ? 'bi-star-fill' : 'bi-star'} ${styles.starIcon}`}></i>
                                                         </button>
-                                                        <i className="fas fa-chevron-right className={styles.chevronIcon}"></i>
+                                                        <i className={`bi bi-chevron-right ${styles.chevronIcon}`}></i>
                                                     </div>
                                                 </div>
                                             ))}
@@ -549,7 +549,7 @@ const ReportListPage = () => {
                                         setReportData([]); 
                                     }
                                 }}>
-                                    <i className="fas fa-arrow-left"></i> {location.state?.fromDashboard ? 'Quay lại Dashboard' : 'Quay lại danh sách báo cáo'}
+                                    <i className="bi bi-arrow-left"></i> {location.state?.fromDashboard ? 'Quay lại Dashboard' : 'Quay lại danh sách báo cáo'}
                                 </button>
                             </div>
 
@@ -708,11 +708,11 @@ const ReportListPage = () => {
 
                                 {/* Actions */}
                                 <button className={styles.btnView} onClick={handleViewReport}>
-                                    <i className="fas fa-sync-alt"></i> Xem báo cáo
+                                    <i className="bi bi-arrow-repeat"></i> Xem báo cáo
                                 </button>
 
                                 <button className={styles.btnExport} onClick={handleExport} title="Xuất file Excel">
-                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i> Xuất khẩu
+                                    <i className="bi bi-file-earmark-excel" style={{ color: 'var(--color-excel)' }}></i> Xuất khẩu
                                 </button>
 
                                 <button className={styles.btnPrint} onClick={() => window.print()} title="In ấn báo cáo">
@@ -735,7 +735,7 @@ const ReportListPage = () => {
                                     </div>
                                 ) : reportData.length === 0 ? (
                                     <div className={styles.noDataContainer}>
-                                        <i className="fas fa-folder-open"></i>
+                                        <i className="bi bi-folder2-open"></i>
                                         <p>Không có dữ liệu phù hợp với bộ lọc đã chọn.</p>
                                     </div>
                                 ) : (
@@ -985,7 +985,7 @@ const ReportListPage = () => {
                                                                 <div className={styles.cashFlowKpiGrid}>
                                                                     <div className={styles.kpiCard}>
                                                                         <div className={styles.kpiIconBox} style={{ background: 'var(--wms-success-soft)', color: 'var(--wms-success)' }}>
-                                                                            <i className="fas fa-arrow-down"></i>
+                                                                            <i className="bi bi-arrow-down"></i>
                                                                         </div>
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Tổng thu trong kỳ</span>
@@ -999,7 +999,7 @@ const ReportListPage = () => {
 
                                                                     <div className={styles.kpiCard}>
                                                                         <div className={styles.kpiIconBox} style={{ background: '#fef2f2', color: 'var(--wms-danger)' }}>
-                                                                            <i className="fas fa-arrow-up"></i>
+                                                                            <i className="bi bi-arrow-up"></i>
                                                                         </div>
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Tổng chi trong kỳ</span>
@@ -1013,7 +1013,7 @@ const ReportListPage = () => {
 
                                                                     <div className={styles.kpiCard}>
                                                                         <div className={styles.kpiIconBox} style={{ background: 'var(--color-primary-soft)', color: 'var(--wms-primary)' }}>
-                                                                            <i className="fas fa-wallet"></i>
+                                                                            <i className="bi bi-wallet2"></i>
                                                                         </div>
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Dòng tiền ròng (Thu - Chi)</span>
@@ -1032,7 +1032,7 @@ const ReportListPage = () => {
 
                                                                     <div className={styles.kpiCard}>
                                                                         <div className={styles.kpiIconBox} style={{ background: 'var(--wms-warning-soft)', color: '#d97706' }}>
-                                                                            <i className="fas fa-university"></i>
+                                                                            <i className="bi bi-bank"></i>
                                                                         </div>
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Tiền mặt & Ngân hàng</span>

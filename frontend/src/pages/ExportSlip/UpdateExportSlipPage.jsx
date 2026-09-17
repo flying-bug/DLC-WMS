@@ -19,7 +19,7 @@ import styles from './UpdateExportSlipPage.module.css';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
-import { canViewPricing } from '../../auth/session';
+import { canViewPricing, hasPermission } from '../../auth/session';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -378,6 +378,10 @@ function UpdateExportSlipPage() {
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
+  // Cột quy đổi đơn vị (ĐVC/Tỷ lệ CĐ/Phép tính/SL ĐVC) chỉ có ý nghĩa khi ít nhất 1
+  // dòng thực sự quy đổi (tỷ lệ khác 1) - còn lại thì 4 cột này luôn lặp lại y hệt
+  // ĐVT/SL, chỉ tổ chiếm chỗ trong bảng vốn đã rất nhiều cột.
+  const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -722,6 +726,10 @@ function UpdateExportSlipPage() {
         focusField(`export-line-qty-${i}`);
         return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
       }
+      if (item.price !== undefined && item.price !== '' && Number(item.price) < 0) {
+        focusField(`export-line-price-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
+      }
       const product = productById.get(String(item.variantId));
       if (product?.trackSerial) {
         const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
@@ -882,7 +890,7 @@ function UpdateExportSlipPage() {
                 <div className={styles.cardBody}>
                   <div className="misa-form-row">
                     <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                      <label className="misa-label">Mã KH <span className="required">*</span></label>
+                      <label className="misa-label">Mã KH {form.issuePurpose === 'SALES' && <span className="required">*</span>}</label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
                           <Select
@@ -933,7 +941,18 @@ function UpdateExportSlipPage() {
                       <input
                         type="text"
                         className="misa-input"
-                        value={users.find(u => String(u.id) === String(form.salespersonId)) ? (users.find(u => String(u.id) === String(form.salespersonId)).fullName || users.find(u => String(u.id) === String(form.salespersonId)).username) : 'Đang tải...'}
+                        value={(() => {
+                          // Toàn trang đã qua khỏi màn hình "Đang tải dữ liệu..." nên mọi lần
+                          // fetch ban đầu - kể cả getUsers() - đã hoàn tất, không còn ca "đang
+                          // tải" hợp lệ nào ở đây nữa. Tách rõ 2 trường hợp: chưa từng gán ai
+                          // (salespersonId trống) vs. có gán nhưng không tra được tên - ví dụ
+                          // getUsers() bị 403 với vai trò không có account:view như Kế toán -
+                          // để không báo nhầm "Chưa phân công" khi thực ra đã có người phụ
+                          // trách, chỉ là không đủ quyền xem tên.
+                          if (!form.salespersonId) return 'Chưa phân công';
+                          const assignedUser = users.find(u => String(u.id) === String(form.salespersonId));
+                          return assignedUser ? (assignedUser.fullName || assignedUser.username) : 'Đã phân công (không đủ quyền xem tên)';
+                        })()}
                         readOnly
                         style={{ backgroundColor: 'var(--color-bg)' }}
                       />
@@ -1046,15 +1065,14 @@ function UpdateExportSlipPage() {
                   <thead>
                     <tr>
                       <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                      <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '220px', width: '24%' }}>Sản phẩm</th>
                       <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                       <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                       <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
-                      <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
-                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
-                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                      {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>}
+                      {hasAnyConversion && <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>}
                       <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                       <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                       {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
@@ -1083,19 +1101,8 @@ function UpdateExportSlipPage() {
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
                               onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                              displayMode="code"
-                              placeholder="Chọn mã"
-                            />
-                          </td>
-                          <td style={{ maxWidth: '300px' }}>
-                            <ProductGridSelect
-                              products={warehouseScopedProducts}
-                              inventoryMap={inventoryMap}
-                              value={item.variantId}
-                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                              onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                              displayMode="name"
-                              placeholder="Chọn hàng"
+                              displayMode="code-name"
+                              placeholder="Chọn mã hoặc tên hàng"
                             />
                           </td>
                           <td>
@@ -1121,10 +1128,10 @@ function UpdateExportSlipPage() {
                           <td className={styles.textRight}>
                             <input id={`export-line-qty-${index}`} type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                           </td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
-                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>}
+                          {hasAnyConversion && <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</td>}
                           <td align="center">
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               {product?.trackSerial && (
@@ -1220,9 +1227,11 @@ function UpdateExportSlipPage() {
           <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
             <i className="bi bi-save"></i> Lưu tạm
           </button>
-          <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
-          </button>
+          {hasPermission('export:post') && (
+            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            </button>
+          )}
         </div>
       </div>
       <CustomerModal

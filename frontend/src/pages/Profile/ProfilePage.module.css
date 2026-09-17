@@ -236,6 +236,11 @@
     display: block;
 }
 
+.required {
+    color: var(--color-danger);
+    margin-left: 4px;
+}
+
 .detailValue {
     min-height: 24px;
     font-size: 15px;
@@ -380,4 +385,9 @@
     .formActions {
         flex-direction: column;
     }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

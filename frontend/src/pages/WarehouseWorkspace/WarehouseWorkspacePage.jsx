@@ -114,7 +114,7 @@ export default function WarehouseWorkspacePage() {
       }
     } catch (err) {
       console.error('Error loading warehouse master list:', err);
-      showToast('danger', 'Không thể tải danh sách chứng từ kho');
+      showToast('error', 'Không thể tải danh sách chứng từ kho');
     } finally {
       setLoadingMaster(false);
     }
@@ -181,7 +181,7 @@ export default function WarehouseWorkspacePage() {
       showToast('success', `Đã bỏ ghi sổ chứng từ ${slipToUnpost.docCode || slipToUnpost.code}`);
       fetchMasterData();
     } catch (err) {
-      showToast('danger', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
+      showToast('error', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -214,27 +214,27 @@ export default function WarehouseWorkspacePage() {
     if (s === 'POSTED' || s === 'COMPLETED') {
       return (
         <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-          <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
+          <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã ghi sổ
         </span>
       );
     }
     if (s === 'APPROVED') {
       return (
         <span className={`${styles.badge} ${styles.badgeInfo}`}>
-          <i className="fas fa-check-double" style={{ marginRight: 4 }}></i>Đã duyệt
+          <i className="bi bi-check2-all" style={{ marginRight: 4 }}></i>Đã duyệt
         </span>
       );
     }
     if (s === 'UNPOSTED') {
       return (
         <span className={`${styles.badge} ${styles.badgeWarning}`}>
-          <i className="fas fa-undo" style={{ marginRight: 4 }}></i>Bỏ ghi sổ
+          <i className="bi bi-arrow-counterclockwise" style={{ marginRight: 4 }}></i>Bỏ ghi sổ
         </span>
       );
     }
     return (
       <span className={`${styles.badge} ${styles.badgeDraft}`}>
-        <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
+        <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Chờ ghi sổ
       </span>
     );
   };
@@ -293,11 +293,11 @@ export default function WarehouseWorkspacePage() {
             const isPosted = v === 'POSTED';
             return isPosted ? (
               <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã xử lý
+                <i className="bi bi-check" style={{ marginRight: 4 }}></i>Đã xử lý
               </span>
             ) : (
               <span className={`${styles.badge} ${styles.badgeDraft}`}>
-                <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Lưu tạm
+                <i className="bi bi-clock" style={{ marginRight: 4 }}></i>Lưu tạm
               </span>
             );
           }
@@ -315,7 +315,7 @@ export default function WarehouseWorkspacePage() {
                   className={styles.misaActionLink}
                   onClick={() => setOpenDropdownId(isOpen ? null : r.id)}
                 >
-                  Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                  Xem <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
                 </button>
                 {isOpen && (
                   <div className={styles.actionDropdownMenu}>
@@ -327,7 +327,7 @@ export default function WarehouseWorkspacePage() {
                         handleOpenForm(r);
                       }}
                     >
-                      <i className="fas fa-eye"></i> Xem chi tiết
+                      <i className="bi bi-eye"></i> Xem chi tiết
                     </button>
                   </div>
                 )}
@@ -348,7 +348,12 @@ export default function WarehouseWorkspacePage() {
           return isPosted ? (r.postedAt ? new Date(r.postedAt).toLocaleDateString('vi-VN') : r.docDate || '-') : '-';
         }
       },
-      { key: 'docDate', label: 'Ngày chứng từ', width: '110px' },
+      {
+        key: 'docDate',
+        label: 'Ngày chứng từ',
+        width: '110px',
+        render: (v) => v ? new Date(v).toLocaleDateString('vi-VN') : '-'
+      },
       {
         key: 'docCode',
         label: 'Số chứng từ',
@@ -427,7 +432,7 @@ export default function WarehouseWorkspacePage() {
                 className={styles.misaActionLink}
                 onClick={() => setOpenDropdownId(isOpen ? null : r.id)}
               >
-                {isPosted ? 'Xem' : 'Thực hiện'} <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+                {isPosted ? 'Xem' : 'Thực hiện'} <i className="bi bi-chevron-down" style={{ fontSize: '0.65rem' }}></i>
               </button>
 
               {isOpen && (
@@ -440,7 +445,7 @@ export default function WarehouseWorkspacePage() {
                       handleOpenForm(r);
                     }}
                   >
-                    <i className="fas fa-edit"></i> {isPosted ? 'Xem chi tiết' : 'Ghi sổ / Quét Serial'}
+                    <i className="bi bi-pencil"></i> {isPosted ? 'Xem chi tiết' : 'Ghi sổ / Quét Serial'}
                   </button>
                   <button
                     type="button"
@@ -450,7 +455,7 @@ export default function WarehouseWorkspacePage() {
                       handlePrint(r);
                     }}
                   >
-                    <i className="fas fa-print"></i> In phiếu
+                    <i className="bi bi-printer"></i> In phiếu
                   </button>
                   {isPosted && (
                     <button
@@ -462,7 +467,7 @@ export default function WarehouseWorkspacePage() {
                         setUnpostModalOpen(true);
                       }}
                     >
-                      <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
+                      <i className="bi bi-arrow-counterclockwise"></i> Bỏ ghi sổ
                     </button>
                   )}
                 </div>
@@ -633,7 +638,7 @@ export default function WarehouseWorkspacePage() {
           <div className={styles.titleGroup}>
             <h1 className={styles.pageTitle}>Bàn làm việc Thủ kho</h1>
             <span className={styles.personaBadge}>
-              <i className="fas fa-boxes"></i> Chế độ Thủ kho
+              <i className="bi bi-boxes"></i> Chế độ Thủ kho
             </span>
           </div>
 
@@ -644,7 +649,7 @@ export default function WarehouseWorkspacePage() {
               onClick={fetchMasterData}
               title="Tải lại dữ liệu"
             >
-              <i className="fas fa-sync-alt"></i> Nạp lại
+              <i className="bi bi-arrow-repeat"></i> Nạp lại
             </button>
             <button
               type="button"
@@ -653,7 +658,7 @@ export default function WarehouseWorkspacePage() {
               title="In chứng từ đang chọn"
               disabled={!selectedItem}
             >
-              <i className="fas fa-print"></i> In phiếu
+              <i className="bi bi-printer"></i> In phiếu
             </button>
           </div>
         </div>
@@ -662,7 +667,7 @@ export default function WarehouseWorkspacePage() {
         <div className={styles.toolbar}>
           <div className={styles.toolbarLeft}>
             <div className={styles.searchBox}>
-              <i className={`fas fa-search ${styles.searchIcon}`}></i>
+              <i className={`bi bi-search ${styles.searchIcon}`}></i>
               <input
                 type="text"
                 className={styles.searchInput}
@@ -678,7 +683,7 @@ export default function WarehouseWorkspacePage() {
                   aria-label="Xóa từ khóa tìm kiếm"
                   title="Xóa tìm kiếm"
                 >
-                  <i className="fas fa-times"></i>
+                  <i className="bi bi-x"></i>
                 </button>
               )}
             </div>

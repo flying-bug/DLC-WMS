@@ -34,9 +34,11 @@ public class SupplierRequest {
     private String name;
 
     /**
-     * Số điện thoại - validate định dạng Việt Nam.
+     * Số điện thoại (optional) - validate định dạng Việt Nam khi có nhập.
+     * "^$|" cho phép chuỗi rỗng đi qua vì @Pattern (khác @NotBlank) không tự bỏ qua "",
+     * chỉ bỏ qua null - nếu không, NCC không nhập SĐT vẫn bị từ chối với lỗi INVALID_PHONE.
      */
-    @Pattern(regexp = "^0[235789]\\d{8,9}$", message = "INVALID_PHONE")
+    @Pattern(regexp = "^$|^0[235789]\\d{8,9}$", message = "INVALID_PHONE")
     private String phone;
 
     /**

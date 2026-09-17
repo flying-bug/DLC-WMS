@@ -20,12 +20,15 @@ public class StockReservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "sales_order_id", nullable = false)
+    @Column(name = "sales_order_id")
     private Long salesOrderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_order_id", insertable = false, updatable = false)
     private SalesOrder salesOrder;
+
+    @Column(name = "repair_id")
+    private Long repairId;
 
     @Column(name = "variant_id", nullable = false)
     private Long variantId;
@@ -57,6 +60,16 @@ public class StockReservation {
 
     public void initReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityReserved, String status, LocalDateTime expiresAt) {
         this.salesOrderId = salesOrderId;
+        this.variantId = variantId;
+        this.warehouseId = warehouseId;
+        this.quantityReserved = quantityReserved;
+        this.status = status;
+        this.expiresAt = expiresAt;
+    }
+
+    public void initRepairReservation(Long repairId, Long variantId, Long warehouseId,
+            BigDecimal quantityReserved, String status, LocalDateTime expiresAt) {
+        this.repairId = repairId;
         this.variantId = variantId;
         this.warehouseId = warehouseId;
         this.quantityReserved = quantityReserved;

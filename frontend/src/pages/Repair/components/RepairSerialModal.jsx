@@ -236,7 +236,7 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
                   onMouseEnter={(e) => e.currentTarget.style.color = 'var(--wms-danger)'}
                   onMouseLeave={(e) => e.currentTarget.style.color = 'var(--wms-text-subtle)'}
                 >
-                  <i className="bi bi-trash3"></i>
+                  <i className="bi bi-trash"></i>
                 </button>
               </div>
             ))}

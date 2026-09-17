@@ -54,9 +54,25 @@ public class EmailService {
     @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:1//04r_huLp3CGjLCgYIARAAGAQSNgF-L9IruxTRi1RfR3nF2bXEio5AOmicfwAEFudp6c5keNISsei6Tz_LAtAiTXP6b6NGaKRwDA}}")
     private String gmailRefreshToken;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    // Khởi tạo lazy để lỗi NIO Selector cục bộ (nếu có) không chặn cả Spring context
+    // khởi động — xem GmailOAuthService cho chi tiết.
+    private volatile HttpClient httpClient;
+
+    private HttpClient httpClient() {
+        HttpClient client = httpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = httpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(10))
+                            .build();
+                    httpClient = client;
+                }
+            }
+        }
+        return client;
+    }
 
     private volatile String cachedAccessToken = null;
     private volatile Instant tokenExpiry = Instant.MIN;
@@ -125,7 +141,7 @@ public class EmailService {
                 .POST(HttpRequest.BodyPublishers.ofString(formBody))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient().send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Failed to refresh Google OAuth token (HTTP " + response.statusCode() + "): " + response.body());
         }
@@ -173,7 +189,7 @@ public class EmailService {
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient().send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new RuntimeException("Gmail API send failed (HTTP " + response.statusCode() + "): " + response.body());
         }
@@ -378,6 +394,26 @@ public class EmailService {
             sendEmail(toEmail, "[DLC-WMS] Báo cáo Chốt sổ kho ngày " + formattedDate + " - " + statusText, htmlMsg, "DLC-WMS Snapshot System");
         } catch (Exception e) {
             log.error("Failed to send daily snapshot notification email: {}", e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendRepairCompletedEmail(String toEmail, String repairCode, String customerName, String issueDesc, String solutionDesc, java.math.BigDecimal totalAmount) {
+        if (toEmail == null || toEmail.trim().isEmpty()) return;
+        try {
+            java.text.NumberFormat currencyFormat = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+            String formattedValue = currencyFormat.format(totalAmount != null ? totalAmount : java.math.BigDecimal.ZERO);
+            
+            String htmlMsg = String.format(com.duylongtech.backend.constant.EmailTemplate.REPAIR_COMPLETED,
+                    repairCode,
+                    HtmlUtils.htmlEscape(customerName != null ? customerName : "Quý khách"),
+                    HtmlUtils.htmlEscape(issueDesc != null ? issueDesc : "Không rõ"),
+                    HtmlUtils.htmlEscape(solutionDesc != null ? solutionDesc : "Hoàn tất"),
+                    totalAmount != null ? totalAmount : java.math.BigDecimal.ZERO
+            );
+            sendEmail(toEmail, "[DLC-WMS] Hoàn Tất Lệnh Sửa Chữa - " + repairCode, htmlMsg, "DLC-WMS Repair");
+        } catch (Exception e) {
+            log.error("Failed to send repair completed email: {}", e.getMessage());
         }
     }
 }

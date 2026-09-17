@@ -13,7 +13,7 @@ const WarehouseDeleteModal = ({ isOpen, onClose, onConfirm, warehouseName, wareh
                 
                 <div className={styles.modalBody}>
                     <div className={styles.warningContainer}>
-                        <i className={`fas fa-exclamation-triangle ${styles.warningIcon}`}></i>
+                        <i className={`bi bi-exclamation-triangle ${styles.warningIcon}`}></i>
                         <p className={styles.warningText}>Bạn có chắc chắn muốn xóa kho này?</p>
                     </div>
                     

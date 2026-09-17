@@ -147,10 +147,10 @@ const WarehouseStaffList = ({ warehouseId }) => {
                 </div>
                 <div className={styles.filterActions}>
                     <button className={styles.btnOutline} onClick={handleRefresh}>
-                        <i className="fas fa-sync-alt"></i> Làm mới
+                        <i className="bi bi-arrow-repeat"></i> Làm mới
                     </button>
                     <button className={styles.btnPrimary} onClick={() => setIsAssignModalOpen(true)}>
-                        <i className="fas fa-user-plus"></i> Thêm nhân sự kho
+                        <i className="bi bi-person-plus"></i> Thêm nhân sự kho
                     </button>
                 </div>
             </div>
@@ -171,14 +171,14 @@ const WarehouseStaffList = ({ warehouseId }) => {
                         {loading ? (
                             <tr>
                                 <td colSpan="5" className={styles.emptyState}>
-                                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: 'var(--color-text-placeholder)', marginBottom: '8px' }}></i>
+                                    <i className="bi bi-arrow-repeat" style={{ fontSize: '24px', color: 'var(--color-text-placeholder)', marginBottom: '8px', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
                                     <div className={styles.emptyText}>Đang tải dữ liệu...</div>
                                 </td>
                             </tr>
                         ) : staffs.length === 0 ? (
                             <tr>
                                 <td colSpan="5" className={styles.emptyState}>
-                                    <i className="fas fa-users-slash" style={{ fontSize: '48px', color: 'var(--wms-border-base)', marginBottom: '16px' }}></i>
+                                    <i className="bi bi-person-dash" style={{ fontSize: '48px', color: 'var(--wms-border-base)', marginBottom: '16px' }}></i>
                                     <div className={styles.emptyText}>Không có dữ liệu nhân sự phù hợp.</div>
                                 </td>
                             </tr>
@@ -217,7 +217,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                                                 title="Thu hồi quyền"
                                                 style={{ margin: '0 auto' }}
                                             >
-                                                <i className="fas fa-user-times"></i>
+                                                <i className="bi bi-person-x"></i>
                                             </button>
                                         )}
                                     </td>

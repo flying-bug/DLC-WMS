@@ -124,7 +124,7 @@ function UserProfileDropdown({ voiceEnabled, onToggleVoice, aiEnabled = true }) 
                             <div className={styles.dropdownDivider} />
                             <div className={styles.voiceSection} onClick={(e) => e.stopPropagation()}>
                                 <div className={styles.themeTitle}>
-                                    <i className="fas fa-microphone" /> Voice AI
+                                    <i className="bi bi-mic" /> Voice AI
                                 </div>
                                 <button
                                     type="button"

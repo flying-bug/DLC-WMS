@@ -124,7 +124,7 @@ export default function MasterDetailLayout({
               {masterLoading ? (
                 <tr>
                   <td colSpan={masterColumns.length + 1} className={styles.loadingCell}>
-                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px', color: 'var(--color-primary)' }}></i>
+                    <i className="bi bi-arrow-repeat" style={{ marginRight: '8px', color: 'var(--color-primary)', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
                     Đang tải dữ liệu chứng từ...
                   </td>
                 </tr>
@@ -196,7 +196,7 @@ export default function MasterDetailLayout({
                 onClick={() => handlePageChange(1)}
                 title="Trang đầu"
               >
-                <i className="fas fa-angle-double-left"></i>
+                <i className="bi bi-chevron-double-left"></i>
               </button>
               <button
                 type="button"
@@ -205,7 +205,7 @@ export default function MasterDetailLayout({
                 onClick={() => handlePageChange(safeCurrentPage - 1)}
                 title="Trang trước"
               >
-                <i className="fas fa-angle-left"></i>
+                <i className="bi bi-chevron-left"></i>
               </button>
               <span className={styles.pageNumber}>
                 {safeCurrentPage} / {totalPages}
@@ -217,7 +217,7 @@ export default function MasterDetailLayout({
                 onClick={() => handlePageChange(safeCurrentPage + 1)}
                 title="Trang sau"
               >
-                <i className="fas fa-angle-right"></i>
+                <i className="bi bi-chevron-right"></i>
               </button>
               <button
                 type="button"
@@ -226,7 +226,7 @@ export default function MasterDetailLayout({
                 onClick={() => handlePageChange(totalPages)}
                 title="Trang cuối"
               >
-                <i className="fas fa-angle-double-right"></i>
+                <i className="bi bi-chevron-double-right"></i>
               </button>
             </div>
           </div>
@@ -247,7 +247,7 @@ export default function MasterDetailLayout({
       {/* THANH PHÂN CÁCH (DIVIDER) */}
       <div className={styles.dividerBar} onClick={() => setDetailVisible(!detailVisible)}>
         <span className={styles.dividerTitle}>
-          <i className="fas fa-layer-group" style={{ marginRight: 6, color: 'var(--color-primary)' }}></i>
+          <i className="bi bi-layers" style={{ marginRight: 6, color: 'var(--color-primary)' }}></i>
           {detailTitle} {selectedItem?.docCode || selectedItem?.code ? `(Mã: ${selectedItem.docCode || selectedItem.code})` : ''}
         </span>
         <button
@@ -259,7 +259,7 @@ export default function MasterDetailLayout({
             setDetailVisible(!detailVisible);
           }}
         >
-          <i className={`fas fa-chevron-${detailVisible ? 'down' : 'up'}`}></i>
+          <i className={`bi bi-chevron-${detailVisible ? 'down' : 'up'}`}></i>
         </button>
       </div>
 
@@ -269,17 +269,17 @@ export default function MasterDetailLayout({
           <div className={styles.tableWrapper}>
             {!selectedItem ? (
               <div className={styles.emptyDetail}>
-                <i className="fas fa-mouse-pointer" style={{ fontSize: '1.25rem', color: 'var(--color-text-muted-2)' }}></i>
+                <i className="bi bi-cursor" style={{ fontSize: '1.25rem', color: 'var(--color-text-muted-2)' }}></i>
                 <span>{emptyDetailMessage}</span>
               </div>
             ) : detailLoading ? (
               <div className={styles.emptyDetail}>
-                <i className="fas fa-spinner fa-spin" style={{ fontSize: '1.25rem', color: 'var(--color-primary)' }}></i>
+                <i className="bi bi-arrow-repeat" style={{ fontSize: '1.25rem', color: 'var(--color-primary)', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
                 <span>Đang tải danh sách hàng hóa chi tiết...</span>
               </div>
             ) : detailData.length === 0 ? (
               <div className={styles.emptyDetail}>
-                <i className="fas fa-box-open" style={{ fontSize: '1.25rem', color: 'var(--color-text-muted-2)' }}></i>
+                <i className="bi bi-box-seam" style={{ fontSize: '1.25rem', color: 'var(--color-text-muted-2)' }}></i>
                 <span>Chứng từ này không có dòng hàng chi tiết nào.</span>
               </div>
             ) : (
@@ -361,7 +361,7 @@ export default function MasterDetailLayout({
                     onClick={() => setDetailPage(Math.max(1, safeDetailPage - 1))}
                     title="Trang trước"
                   >
-                    <i className="fas fa-angle-left"></i>
+                    <i className="bi bi-chevron-left"></i>
                   </button>
                   <span className={styles.pageNumber}>
                     {safeDetailPage} / {totalDetailPages}
@@ -373,7 +373,7 @@ export default function MasterDetailLayout({
                     onClick={() => setDetailPage(Math.min(totalDetailPages, safeDetailPage + 1))}
                     title="Trang sau"
                   >
-                    <i className="fas fa-angle-right"></i>
+                    <i className="bi bi-chevron-right"></i>
                   </button>
                 </div>
               </div>

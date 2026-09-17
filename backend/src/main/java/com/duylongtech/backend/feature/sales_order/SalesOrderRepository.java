@@ -22,8 +22,8 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
         LEFT JOIN FETCH so.partner p
         LEFT JOIN FETCH so.warehouse w
         LEFT JOIN FETCH so.createdByUser u
-        WHERE (:keyword IS NULL OR LOWER(so.soCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-            OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        WHERE (:keyword IS NULL OR LOWER(so.soCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
+            OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))
         AND (:status IS NULL OR so.status = :status)
         AND (:reservationStatus IS NULL OR EXISTS (
             SELECT 1 FROM StockReservation sr
@@ -90,7 +90,7 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
         JOIN v.product p
         LEFT JOIN p.unit u
         WHERE so.status = 'POSTED'
-        AND (:keyword IS NULL OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        AND (:keyword IS NULL OR LOWER(v.sku) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))
         AND (:fromDate IS NULL OR so.soDate >= :fromDate)
         AND (:toDate IS NULL OR so.soDate <= :toDate)
         GROUP BY v.sku, v.variantName, u.name

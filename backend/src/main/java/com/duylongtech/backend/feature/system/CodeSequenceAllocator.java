@@ -49,6 +49,19 @@ class CodeSequenceAllocator {
     }
 
     /**
+     * Xem trước giá trị tiếp theo mà không tăng bộ đếm (không cấp mã thật).
+     * Dùng để hiển thị lên giao diện mà không làm mất số nếu user hủy form.
+     */
+    @Transactional(readOnly = true)
+    public long previewNextValue(String sequenceKey, String tableName, String columnName, String prefix) {
+        CodeSequence seq = codeSequenceRepository.findById(sequenceKey).orElse(null);
+        if (seq == null) {
+            return currentMaxSuffix(tableName, columnName, prefix) + 1;
+        }
+        return seq.getNextValue() + 1;
+    }
+
+    /**
      * Quét toàn bộ mã hiện có khớp tiền tố để tìm số lớn nhất - chỉ chạy MỘT LẦN
      * cho mỗi (tableName, columnName, prefix) khi khởi tạo bộ đếm, không chạy lại
      * mỗi lần sinh mã.

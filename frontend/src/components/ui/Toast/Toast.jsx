@@ -51,14 +51,19 @@ function Toast({ isVisible = true, type = 'success', title, message, duration = 
 
     if (!isVisible) return null;
 
+    // type lạ (vd. gõ nhầm 'danger' thay vì 'error') sẽ khiến styles[type]/ICONS[type]
+    // ra undefined - toast render trong suốt, không icon, coi như biến mất trước mắt
+    // người dùng dù vẫn nằm đúng vị trí. Fallback về 'info' để luôn có style hợp lệ.
+    const safeType = styles[type] ? type : 'info';
+
     return (
         <div
-            className={`${styles.toast} ${styles[type]}`}
+            className={`${styles.toast} ${styles[safeType]}`}
             role="alert"
             aria-live="assertive"
             aria-atomic="true"
         >
-            <span className={styles.icon}>{ICONS[type]}</span>
+            <span className={styles.icon}>{ICONS[safeType]}</span>
             <div className={styles.body}>
                 {title && <p className={styles.title}>{title}</p>}
                 {message && <p className={styles.message}>{message}</p>}

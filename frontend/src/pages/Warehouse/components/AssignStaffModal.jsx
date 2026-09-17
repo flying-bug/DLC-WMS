@@ -124,7 +124,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                                             }}
                                         />
                                         {isSearching && (
-                                            <i className="fas fa-spinner fa-spin" style={{ position: 'absolute', right: '12px', top: '10px', color: 'var(--color-text-placeholder)' }}></i>
+                                            <i className="bi bi-arrow-repeat" style={{ position: 'absolute', right: '12px', top: '10px', color: 'var(--color-text-placeholder)', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
                                         )}
                                     </div>
                                     
@@ -147,7 +147,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                             ) : (
                                 <div className={styles.selectedUser}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <i className="fas fa-check-circle"></i>
+                                        <i className="bi bi-check-circle"></i>
                                         <span>Đã chọn: <strong>{searchTerm}</strong></span>
                                     </div>
                                     <button type="button" className={styles.changeUserBtn} onClick={() => {

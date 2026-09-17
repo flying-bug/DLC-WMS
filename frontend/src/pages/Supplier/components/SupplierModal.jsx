@@ -63,15 +63,35 @@ const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) =
         return true;
     };
 
+    // Chuẩn hóa chuỗi rỗng thành null trước khi gửi lên API - nếu không, các trường tùy
+    // chọn như phone/email vẫn được gửi đi dưới dạng "" thay vì null, và @Pattern phía
+    // backend coi "" là một giá trị không khớp regex (chỉ null mới được bỏ qua), nên NCC
+    // bị từ chối lưu với lỗi "Số điện thoại không hợp lệ" dù ô đó để trống.
+    const cleanString = (str) => (str && str.trim() !== '') ? str.trim() : null;
+
+    const buildPayload = () => ({
+        ...formData,
+        code: cleanString(formData.code),
+        name: cleanString(formData.name),
+        taxCode: cleanString(formData.taxCode),
+        phone: cleanString(formData.phone),
+        email: cleanString(formData.email),
+        address: cleanString(formData.address),
+        contactName: cleanString(formData.contactName),
+        bankName: cleanString(formData.bankName),
+        bankAccountNumber: cleanString(formData.bankAccountNumber),
+        bankBeneficiaryName: cleanString(formData.bankBeneficiaryName),
+    });
+
     const handleSave = () => {
         if (validate()) {
-            if (onSave) onSave(formData);
+            if (onSave) onSave(buildPayload());
         }
     };
 
     const handleSaveNext = () => {
         if (validate()) {
-            if (onSave) onSave(formData, true);
+            if (onSave) onSave(buildPayload(), true);
         }
     };
 

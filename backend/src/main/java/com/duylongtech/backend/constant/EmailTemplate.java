@@ -127,4 +127,32 @@ public class EmailTemplate {
     <p>Trân trọng,<br/><strong>Hệ thống tự động DLC-WMS</strong></p>
 </div>
 """;
+
+    public static final String REPAIR_COMPLETED = """
+<div style="font-family: Arial, sans-serif; padding: 24px; color: #334155; max-width: 700px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #16a34a; padding-bottom: 15px;">
+        <h2 style="color: #0f172a; margin-top: 0;">THÔNG BÁO HOÀN TẤT SỬA CHỮA</h2>
+        <p style="color: #64748b; margin-top: 5px; font-size: 14px;">Mã phiếu: <strong>%s</strong></p>
+    </div>
+    <p>Kính gửi <strong>%s</strong>,</p>
+    <p>Duy Long Computer xin thông báo thiết bị của Quý khách đã được sửa chữa/kiểm tra hoàn tất.</p>
+    
+    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #0f172a; font-size: 16px;">Chi tiết thực hiện</h3>
+        <table style="width: 100%%; font-size: 14px;">
+            <tr><td style="padding: 4px 0; color: #64748b; width: 40%%;">Tình trạng tiếp nhận:</td><td style="font-weight: bold;">%s</td></tr>
+            <tr><td style="padding: 4px 0; color: #64748b;">Nội dung sửa chữa:</td><td>%s</td></tr>
+            <tr><td style="padding: 4px 0; color: #64748b;">Kết quả QC:</td><td style="color: #16a34a; font-weight: bold;">ĐẠT</td></tr>
+            <tr><td style="padding: 4px 0; color: #64748b;">Tổng chi phí:</td><td style="color: #dc2626; font-weight: bold;">%,.0f đ</td></tr>
+        </table>
+    </div>
+
+    <p>Quý khách vui lòng mang theo phiếu biên nhận đến cửa hàng để nhận lại thiết bị. Thời gian làm việc từ 08:00 - 17:30 các ngày trong tuần.</p>
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; text-align: center;">
+        <p>Mọi thắc mắc xin vui lòng liên hệ Hotline: <strong>0987.654.321</strong></p>
+        <p>Trân trọng cảm ơn,<br/><strong>Duy Long Computer</strong></p>
+    </div>
+</div>
+""";
 }

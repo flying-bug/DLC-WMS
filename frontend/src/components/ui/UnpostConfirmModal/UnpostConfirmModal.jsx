@@ -57,7 +57,7 @@ export default function UnpostConfirmModal({
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <div className={styles.headerTitle}>
-            <i className="fas fa-undo-alt" style={{ color: 'var(--wms-danger)' }}></i>
+            <i className="bi bi-arrow-counterclockwise" style={{ color: 'var(--wms-danger)' }}></i>
             Bỏ ghi sổ Phiếu {docType}: {docCode}
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
@@ -68,13 +68,13 @@ export default function UnpostConfirmModal({
         <div className={styles.modalBody}>
           {checking ? (
             <div className={styles.checkingState}>
-              <i className="fas fa-spinner fa-spin" style={{ fontSize: '1.75rem' }}></i>
+              <i className="bi bi-arrow-repeat" style={{ fontSize: '1.75rem', animation: 'spin 1s linear infinite', display: 'inline-block' }}></i>
               <span>Đang kiểm tra ràng buộc 6 chiều (Âm kho, Serial, Lắp ráp PC, Bảo hành)...</span>
             </div>
           ) : checkResult && !checkResult.canUnpost ? (
             <div className={styles.conflictAlert}>
               <div className={styles.conflictTitle}>
-                <i className="fas fa-exclamation-triangle"></i>
+                <i className="bi bi-exclamation-triangle"></i>
                 Không thể bỏ ghi sổ trực tiếp!
               </div>
               <p>{checkResult.message}</p>
@@ -89,7 +89,7 @@ export default function UnpostConfirmModal({
           ) : (
             <>
               <div className={styles.safeAlert}>
-                <i className="fas fa-check-circle"></i>
+                <i className="bi bi-check-circle"></i>
                 <span>Chứng từ đủ điều kiện an toàn để bỏ ghi sổ. Tồn kho và serial sẽ được hoàn tác.</span>
               </div>
 
@@ -121,11 +121,11 @@ export default function UnpostConfirmModal({
             >
               {submitting ? (
                 <>
-                  <i className="fas fa-spinner fa-spin"></i> Đang xử lý...
+                  <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}></i> Đang xử lý...
                 </>
               ) : (
                 <>
-                  <i className="fas fa-undo-alt"></i> Xác nhận Bỏ ghi sổ
+                  <i className="bi bi-arrow-counterclockwise"></i> Xác nhận Bỏ ghi sổ
                 </>
               )}
             </button>

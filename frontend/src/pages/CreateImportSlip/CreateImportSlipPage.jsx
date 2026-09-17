@@ -30,7 +30,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
-import { canViewPricing } from '../../auth/session';
+import { canViewPricing, hasPermission } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -489,6 +489,7 @@ function CreateImportSlipPage() {
     return filterWarehouseProducts(products);
   }, [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const hasAnyConversion = items.some(item => Number(item.conversionRatio) > 0 && Number(item.conversionRatio) !== 1);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
@@ -774,6 +775,10 @@ function CreateImportSlipPage() {
       if (!Number.isInteger(qty) || qty <= 0) {
         focusField(`import-line-qty-${i}`);
         return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
+      }
+      if (item.price !== undefined && item.price !== '' && Number(item.price) < 0) {
+        focusField(`import-line-price-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
       }
       const product = productById.get(String(item.variantId));
       // Kế toán chỉ lập phiếu nhập dự kiến (số lượng, đơn giá, VAT theo hóa đơn NCC) - hàng
@@ -1254,11 +1259,10 @@ function CreateImportSlipPage() {
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
+                  <th style={{ minWidth: '230px', width: '30%' }}>Sản phẩm</th>
                   <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                  <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>
+                  {hasAnyConversion && <th style={{ minWidth: '110px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }} title="Quy đổi ra đơn vị chính (ĐVC) để hạch toán tồn kho">Quy đổi ĐVC</th>}
                   <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                   <th style={{ minWidth: '55px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
                   {showPricing && <th style={{ minWidth: '95px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
@@ -1289,19 +1293,8 @@ function CreateImportSlipPage() {
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
                           onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                          displayMode="code"
-                          placeholder="Chọn mã"
-                        />
-                      </td>
-                      <td>
-                        <ProductGridSelect
-                          products={filteredProducts}
-                          inventoryMap={inventoryMap}
-                          value={item.variantId}
-                          onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                          onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
-                          displayMode="name"
-                          placeholder="Chọn hàng"
+                          displayMode="code-name"
+                          placeholder="Chọn mã hoặc tên hàng"
                         />
                       </td>
                       <td>
@@ -1324,20 +1317,22 @@ function CreateImportSlipPage() {
                       <td align="right">
                         <input id={`import-line-qty-${index}`} type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                       </td>
-                      <td style={{ textAlign: 'center', fontSize: '12px' }}>
-                        {ratio === 1 ? (
-                          <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
-                        ) : (
-                          <span
-                            title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
-                          >
-                            <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
-                            {' = '}
-                            <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
-                            <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
-                          </span>
-                        )}
-                      </td>
+                      {hasAnyConversion && (
+                        <td style={{ textAlign: 'center', fontSize: '12px' }}>
+                          {ratio === 1 ? (
+                            <span style={{ color: 'var(--color-text-placeholder, #9ca3af)' }}>—</span>
+                          ) : (
+                            <span
+                              title={`${qty} ${product?.unitName || 'ĐVT'} ${op === 'DIVIDE' || op === '/' ? '÷' : '×'} ${ratio} = ${Number(baseQty.toFixed(4))} ${baseUnitName}`}
+                            >
+                              <span style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '÷' : '×'}{ratio}</span>
+                              {' = '}
+                              <span style={{ fontWeight: 600, color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4))}</span>
+                              <span style={{ color: '#4b5563' }}> {baseUnitName}</span>
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td align="center">
                         <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
                           {product?.trackSerial && (
@@ -1381,16 +1376,18 @@ function CreateImportSlipPage() {
               </tbody>
               <tfoot>
                 <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
-                  <td colSpan={4} style={{ borderRight: 'none' }}></td>
+                  <td colSpan={3} style={{ borderRight: 'none' }}></td>
                   <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
-                  <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
-                    {Number(items.reduce((sum, it) => {
-                      const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
-                      const op = it.conversionOperator || 'MULTIPLY';
-                      const qty = Number(it.quantity || 0);
-                      return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
-                    }, 0).toFixed(4))}
-                  </td>
+                  {hasAnyConversion && (
+                    <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
+                      {Number(items.reduce((sum, it) => {
+                        const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
+                        const op = it.conversionOperator || 'MULTIPLY';
+                        const qty = Number(it.quantity || 0);
+                        return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
+                      }, 0).toFixed(4))}
+                    </td>
+                  )}
                   <td colSpan={2} style={{ borderRight: 'none' }}></td>
                   {showPricing && <td></td>}
                   {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}
@@ -1517,9 +1514,11 @@ function CreateImportSlipPage() {
           <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
             <i className="bi bi-save"></i> Lưu tạm
           </button>
-          <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
-          </button>
+          {hasPermission('import:post') && (
+            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            </button>
+          )}
         </div>
       </div>
 

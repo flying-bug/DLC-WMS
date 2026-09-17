@@ -7,19 +7,19 @@ function PaymentOverviewPage() {
     const navigate = useNavigate();
 
     const processItems = [
-        { label: 'Khách hàng', icon: 'fas fa-user-friends', action: () => navigate('/customers') },
-        { label: 'Phiếu Thu', icon: 'fas fa-arrow-down', action: () => navigate('/payments/receipt') },
-        { label: 'Phải thu KH', icon: 'fas fa-file-invoice', action: () => navigate('/reports') },
-        { label: 'Sổ quỹ', icon: 'fas fa-wallet', action: () => navigate('/payments') },
-        { label: 'Phải trả NCC', icon: 'fas fa-file-invoice-dollar', action: () => navigate('/reports') },
-        { label: 'Phiếu Chi', icon: 'fas fa-arrow-up', action: () => navigate('/payments/expense') },
+        { label: 'Khách hàng', icon: 'bi bi-people', action: () => navigate('/customers') },
+        { label: 'Phiếu Thu', icon: 'bi bi-arrow-down', action: () => navigate('/payments/receipt') },
+        { label: 'Phải thu KH', icon: 'bi bi-receipt', action: () => navigate('/reports') },
+        { label: 'Sổ quỹ', icon: 'bi bi-wallet2', action: () => navigate('/payments') },
+        { label: 'Phải trả NCC', icon: 'bi bi-receipt', action: () => navigate('/reports') },
+        { label: 'Phiếu Chi', icon: 'bi bi-arrow-up', action: () => navigate('/payments/expense') },
     ];
 
     const toolbarItems = [
-        { label: 'Đối tác', icon: 'fas fa-handshake', action: () => navigate('/customers') },
-        { label: 'Đơn mua hàng', icon: 'fas fa-shopping-cart', action: () => navigate('/purchase-orders') },
-        { label: 'Đơn bán hàng', icon: 'fas fa-store', action: () => navigate('/sales-orders') },
-        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check', action: () => navigate('/stocktakes') }
+        { label: 'Đối tác', icon: 'bi bi-person-raised-hand', action: () => navigate('/customers') },
+        { label: 'Đơn mua hàng', icon: 'bi bi-cart', action: () => navigate('/purchase-orders') },
+        { label: 'Đơn bán hàng', icon: 'bi bi-shop', action: () => navigate('/sales-orders') },
+        { label: 'Kiểm kê', icon: 'bi bi-clipboard-check', action: () => navigate('/stocktakes') }
     ];
 
     const reportItems = [
@@ -77,7 +77,7 @@ function PaymentOverviewPage() {
                     <ul className={styles.reportList}>
                         {reportItems.map((report) => (
                             <li key={report.id} onClick={() => navigate('/reports', { state: { reportId: report.id, fromDashboard: true } })} style={{ cursor: 'pointer' }}>
-                                <i className="fas fa-chart-bar"></i>
+                                <i className="bi bi-bar-chart"></i>
                                 <span>{report.name}</span>
                             </li>
                         ))}
@@ -85,7 +85,7 @@ function PaymentOverviewPage() {
                     <div className={styles.allReports}>
                         <a href="#" onClick={(e) => { e.preventDefault(); navigate('/reports'); }}>
                             Tất cả báo cáo
-                            <i className="fas fa-arrow-right"></i>
+                            <i className="bi bi-arrow-right"></i>
                         </a>
                     </div>
                 </aside>

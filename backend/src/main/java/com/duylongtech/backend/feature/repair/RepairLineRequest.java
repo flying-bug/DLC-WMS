@@ -27,6 +27,9 @@ public class RepairLineRequest {
     private String serialNumber;
     private Long replacementSerialNumberId;
     private String replacementSerialNumber;
+    private Long removedVariantId;
+    private BigDecimal removedQuantity;
+    private String scrapCondition;
 
     @NotNull(message = "quantity là bắt buộc")
     @DecimalMin(value = "0.0001", message = "quantity phải lớn hơn 0")

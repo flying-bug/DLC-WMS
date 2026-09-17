@@ -69,8 +69,17 @@ public class RepairRequest {
     /** Ngày dự kiến */
     private LocalDate expectedDate;
 
-    /** Kỹ thuật viên phụ trách */
+    /** Kỹ thuật viên phụ trách (dạng text cũ) */
     private String responsiblePerson;
+
+    /** ID Kỹ thuật viên được phân công */
+    private Long assignedTechnicianId;
+
+    /** Thông tin thiết bị ngoài */
+    private String externalDeviceStatus;
+
+    /** Chính sách phí (WARRANTY / PAID) */
+    private String feePolicy;
 
     /** Ghi chú */
     private String note;

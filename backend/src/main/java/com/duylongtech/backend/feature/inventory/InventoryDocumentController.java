@@ -99,7 +99,7 @@ public class InventoryDocumentController {
 
     @PostMapping("/{id}/post")
     @Operation(summary = "Post export slip (Ghi Sổ)")
-    @PreAuthorize("hasAuthority('export:edit')")
+    @PreAuthorize("hasAuthority('export:post')")
     @Auditable(action = AuditAction.POST, entityName = "ExportSlip", actionDescription = "Ghi sổ phiếu xuất kho")
     public ApiResponse<InventoryDocumentResponse> postExport(@PathVariable Long id) {
         return ApiResponse.success(inventoryDocumentService.postExport(id));
@@ -108,7 +108,7 @@ public class InventoryDocumentController {
     // ─── Tạo phiếu xuất kho nhanh từ Sales Order đã duyệt ───────────────
     @PostMapping("/from-sales-order/{soId}")
     @Operation(summary = "Tạo draft phiếu xuất kho từ Sales Order đã duyệt")
-    @PreAuthorize("hasAuthority('export:add') or hasAuthority('sales_order:edit')")
+    @PreAuthorize("hasAuthority('export:add')")
     @Auditable(action = AuditAction.CREATE, entityName = "ExportSlip", actionDescription = "Tạo phiếu xuất kho từ Sales Order")
     public ApiResponse<InventoryDocumentResponse> createExportFromSalesOrder(
             @PathVariable Long soId

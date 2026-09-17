@@ -171,7 +171,7 @@ function ChangePasswordPage() {
                             <div className={styles.formActions}>
                                 <button type="submit" className={styles.btnPrimary} disabled={loading}>
                                     {loading ? (
-                                        <i className="fas fa-spinner fa-spin" />
+                                        <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }} />
                                     ) : (
                                         <i className="bi bi-floppy" />
                                     )}

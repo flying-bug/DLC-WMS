@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
-import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
 
@@ -116,7 +115,6 @@ function ImportHistoryPage() {
   const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [confirmPost, setConfirmPost] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const [selectedSlip, setSelectedSlip] = useState(null);
@@ -287,8 +285,8 @@ function ImportHistoryPage() {
     });
 
   const handleExport = () => {
-    const dataToExport = selectedIds.length > 0 
-      ? rows.filter(r => selectedIds.includes(r.id)) 
+    const dataToExport = selectedIds.length > 0
+      ? rows.filter(r => selectedIds.includes(r.id))
       : rows;
 
     if (dataToExport.length === 0) {
@@ -312,10 +310,10 @@ function ImportHistoryPage() {
   };
 
   const handleBulkPrint = () => {
-    const slipsToPrint = selectedIds.length > 0 
+    const slipsToPrint = selectedIds.length > 0
       ? slips.filter(s => selectedIds.includes(s.id))
       : [];
-      
+
     if (slipsToPrint.length === 0) {
       showToast('warning', 'Vui lòng chọn phiếu để in');
       return;
@@ -664,8 +662,8 @@ function ImportHistoryPage() {
                   Đã chọn <strong>{selectedIds.length}</strong> phiếu
                 </span>
                 <div className={styles.actionButtons}>
-                  <button 
-                    className={styles.btnSecondary} 
+                  <button
+                    className={styles.btnSecondary}
                     onClick={() => setSelectedIds([])}
                     style={{ backgroundColor: 'white', color: 'var(--wms-text-muted)', borderColor: 'var(--wms-border-base)' }}
                   >
@@ -774,15 +772,6 @@ function ImportHistoryPage() {
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
-                  {selectedSlip.status === 'DRAFT' && guard.check('import:edit') && (
-                    <button
-                      onClick={() => setConfirmPost(true)}
-                      className={styles.btnPrimary}
-                      style={{ padding: '6px 12px', fontSize: '13px' }}
-                    >
-                      <i className="bi bi-journal-check" style={{ marginRight: '6px' }}></i> Ghi sổ
-                    </button>
-                  )}
                   <button className={styles.modalClose} onClick={() => setSelectedSlip(null)}>&times;</button>
                 </div>
               </div>
@@ -856,8 +845,8 @@ function ImportHistoryPage() {
                         <span className={styles.infoLabel}>
                           <i className="bi bi-link-45deg"></i> Kèm chứng từ
                         </span>
-                        <span 
-                          className={styles.infoValue} 
+                        <span
+                          className={styles.infoValue}
                           style={{ color: 'var(--color-primary)', cursor: 'pointer', display: 'inline-block', marginTop: '4px' }}
                           onClick={() => handleNavigateReference(selectedSlip.referenceType, selectedSlip.referenceId)}
                           title="Bấm để xem chứng từ tham chiếu"
@@ -892,7 +881,24 @@ function ImportHistoryPage() {
                 {(() => {
                   const isAssembly = selectedSlip.issuePurpose === 'PRODUCTION' && selectedSlip.referenceType === 'ASSEMBLY_ORDER';
                   const displayVatAndTotal = showPricing && !isAssembly;
-                  
+
+                  // Cột quy đổi đơn vị (ĐVC/Tỷ lệ CĐ/Phép tính/SL ĐVC) chỉ có ý nghĩa khi ít
+                  // nhất 1 dòng thực sự quy đổi (tỷ lệ khác 1 hoặc ĐVT khác ĐVC) - còn lại thì
+                  // 4 cột này luôn lặp lại y hệt ĐVT/Số lượng, chỉ tổ chiếm chỗ khiến bảng phải
+                  // cuộn ngang mới thấy hết.
+                  const hasAnyConversion = (selectedSlip.lines || []).some(line => {
+                    const product = productById.get(line.variantId);
+                    const baseUnitName = line.baseUnitName || product?.unitName || '-';
+                    const unitName = line.unitName || product?.unitName || '-';
+                    const ratio = Number(line.conversionRatio) > 0 ? Number(line.conversionRatio) : 1;
+                    return ratio !== 1 || baseUnitName !== unitName;
+                  });
+
+                  const columnCount = 5 // STT, Mã SP, Tên sản phẩm, ĐVT, Số lượng
+                    + (hasAnyConversion ? 4 : 0)
+                    + (showPricing ? 1 : 0)
+                    + (displayVatAndTotal ? 3 : 0);
+
                   return (
                     <>
                       <table className={styles.detailTable}>
@@ -903,15 +909,14 @@ function ImportHistoryPage() {
                             <th>Tên sản phẩm</th>
                             <th>ĐVT</th>
                             <th className={styles.textCenter}>Số lượng</th>
-                            <th>ĐVC</th>
-                            <th className={styles.textCenter}>Tỷ lệ CĐ</th>
-                            <th className={styles.textCenter}>Phép tính</th>
-                            <th className={styles.textRight}>SL (ĐVC)</th>
+                            {hasAnyConversion && <th>ĐVC</th>}
+                            {hasAnyConversion && <th className={styles.textCenter}>Tỷ lệ CĐ</th>}
+                            {hasAnyConversion && <th className={styles.textCenter}>Phép tính</th>}
+                            {hasAnyConversion && <th className={styles.textRight}>SL (ĐVC)</th>}
                             {showPricing && <th className={styles.textRight}>Giá nhập</th>}
                             {displayVatAndTotal && <th className={styles.textRight}>% VAT</th>}
                             {displayVatAndTotal && <th className={styles.textRight}>Tiền VAT</th>}
                             {displayVatAndTotal && <th className={styles.textRight}>Thành tiền</th>}
-                            <th>Số Serial</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -925,30 +930,36 @@ function ImportHistoryPage() {
                             const baseQty = line.baseQuantity != null ? Number(line.baseQuantity) : ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
                             const hasSerial = line.serialNumbers && line.serialNumbers.length > 0;
                             return (
-                              <tr key={line.id || index}>
-                                <td>{index + 1}</td>
-                                <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
-                                <td style={{ fontWeight: '500' }}>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
-                                <td>{unitName}</td>
-                                <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
-                                <td>{baseUnitName}</td>
-                                <td className={styles.textCenter}>{ratio}</td>
-                                <td className={styles.textCenter} style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
-                                <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
-                                {showPricing && <td className={styles.textRight}>{money(line.unitCost)}</td>}
-                                {displayVatAndTotal && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
-                                {displayVatAndTotal && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitCost || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
-                                {displayVatAndTotal && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
-                                <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal', fontWeight: hasSerial ? '600' : 'normal', color: hasSerial ? '#0369a1' : 'inherit' }}>
-                                  {hasSerial ? (
-                                    <span style={{ fontSize: '13px' }}>
-                                      {line.serialNumbers.join(', ')}
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
-                                  )}
-                                </td>
-                              </tr>
+                              <Fragment key={line.id || index}>
+                                <tr>
+                                  <td>{index + 1}</td>
+                                  <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
+                                  <td style={{ fontWeight: '500' }}>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
+                                  <td>{unitName}</td>
+                                  <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
+                                  {hasAnyConversion && <td>{baseUnitName}</td>}
+                                  {hasAnyConversion && <td className={styles.textCenter}>{ratio}</td>}
+                                  {hasAnyConversion && <td className={styles.textCenter} style={{ fontWeight: 600, color: 'var(--wms-primary)' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>}
+                                  {hasAnyConversion && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--wms-success)' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>}
+                                  {showPricing && <td className={styles.textRight}>{money(line.unitCost)}</td>}
+                                  {displayVatAndTotal && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
+                                  {displayVatAndTotal && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitCost || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
+                                  {displayVatAndTotal && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
+                                </tr>
+                                {hasSerial && (
+                                  <tr>
+                                    <td colSpan={columnCount} style={{ backgroundColor: 'var(--wms-bg-soft)', padding: '8px 12px 8px 40px', whiteSpace: 'normal', wordWrap: 'break-word', borderBottom: '1px solid var(--wms-bg-hover)' }}>
+                                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#0369a1', marginRight: '6px' }}>
+                                        <i className="bi bi-upc-scan" style={{ marginRight: '4px' }}></i>
+                                        Serial ({line.serialNumbers.length}):
+                                      </span>
+                                      <span style={{ fontSize: '13px', color: 'var(--wms-text-strong)' }}>
+                                        {line.serialNumbers.join(', ')}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
                             );
                           })}
                         </tbody>
@@ -994,23 +1005,6 @@ function ImportHistoryPage() {
             </div>
           </div>
         )}
-        <ConfirmModal
-          isOpen={confirmPost}
-          title="Xác nhận ghi sổ"
-          message="Bạn có chắc chắn muốn ghi sổ phiếu nhập này không? Thao tác này không thể hoàn tác và sẽ cập nhật lại số lượng hàng hóa trong kho."
-          onConfirm={async () => {
-            setConfirmPost(false);
-            try {
-              await importApi.postImportSlip(selectedSlip.id);
-              loadSlips();
-              setSelectedSlip(prev => ({ ...prev, status: 'POSTED', statusLabel: STATUS_LABELS['POSTED'].label, statusCode: STATUS_LABELS['POSTED'].code }));
-              showToast('success', 'Ghi sổ phiếu nhập thành công!');
-            } catch (err) {
-              showToast('error', err.response?.data?.userMessage || 'Không thể ghi sổ phiếu nhập kho');
-            }
-          }}
-          onCancel={() => setConfirmPost(false)}
-        />
         <Modal
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
