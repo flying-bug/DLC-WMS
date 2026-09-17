@@ -258,16 +258,6 @@ public class InventoryDocumentService {
             return List.of();
         }
 
-        // Thủ kho chỉ được thấy chứng từ của kho mình phụ trách (USER_WAREHOUSE_ROLES);
-        // null = không giới hạn (Manager/Kế toán), rỗng = có giới hạn nhưng chưa được gán kho nào.
-        List<Long> allowedWarehouseIds = warehouseAccessGuard.resolveAllowedWarehouseIds();
-        if (allowedWarehouseIds != null && allowedWarehouseIds.isEmpty()) {
-            return List.of();
-        }
-        if (allowedWarehouseIds != null && warehouseId != null && !allowedWarehouseIds.contains(warehouseId)) {
-            return List.of();
-        }
-
         String normalizedKeyword = trimToNull(keyword);
         String normalizedStatus = normalizeOptionalStatus(status);
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
@@ -341,16 +331,6 @@ public class InventoryDocumentService {
                 issuePurpose = "ASSEMBLY";
                 referenceType = "ASSEMBLY_ORDER";
             }
-        }
-
-        // Thủ kho chỉ được thấy chứng từ của kho mình phụ trách (USER_WAREHOUSE_ROLES);
-        // null = không giới hạn (Manager/Kế toán), rỗng = có giới hạn nhưng chưa được gán kho nào.
-        List<Long> allowedWarehouseIds = warehouseAccessGuard.resolveAllowedWarehouseIds();
-        if (allowedWarehouseIds != null && allowedWarehouseIds.isEmpty()) {
-            return List.of();
-        }
-        if (allowedWarehouseIds != null && warehouseId != null && !allowedWarehouseIds.contains(warehouseId)) {
-            return List.of();
         }
 
         // Thủ kho chỉ được thấy chứng từ của kho mình phụ trách (USER_WAREHOUSE_ROLES);
