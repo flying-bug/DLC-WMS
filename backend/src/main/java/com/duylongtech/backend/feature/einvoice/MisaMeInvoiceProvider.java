@@ -108,6 +108,24 @@ public class MisaMeInvoiceProvider implements EInvoiceProvider {
     }
 
     @Override
+    public EInvoiceProviderResult replaceInvoice(EInvoiceProviderData data, String originalInvoiceSeries, String originalInvoiceNumber, String originalTransactionUuid) {
+        log.warn("[MisaMeInvoiceProvider] Replace invoice not yet supported - missing real MISA API integration docs.");
+        return EInvoiceProviderResult.builder()
+                .success(false)
+                .errorMessage("Nhà cung cấp MISA chưa hỗ trợ API thay thế hóa đơn — cần tài liệu tích hợp thực tế.")
+                .build();
+    }
+
+    @Override
+    public EInvoiceProviderResult adjustInvoice(EInvoiceProviderData data, String originalInvoiceSeries, String originalInvoiceNumber, String originalTransactionUuid, String adjustmentType) {
+        log.warn("[MisaMeInvoiceProvider] Adjust invoice not yet supported - missing real MISA API integration docs.");
+        return EInvoiceProviderResult.builder()
+                .success(false)
+                .errorMessage("Nhà cung cấp MISA chưa hỗ trợ API điều chỉnh hóa đơn — cần tài liệu tích hợp thực tế.")
+                .build();
+    }
+
+    @Override
     public byte[] getInvoicePdf(String invoiceSeries, String invoiceNumber, String transactionUuid) {
         return new byte[0];
     }

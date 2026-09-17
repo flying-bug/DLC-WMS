@@ -75,6 +75,70 @@ public class MockEInvoiceProvider implements EInvoiceProvider {
     }
 
     @Override
+    public EInvoiceProviderResult replaceInvoice(EInvoiceProviderData data, String originalInvoiceSeries, String originalInvoiceNumber, String originalTransactionUuid) {
+        log.info("[MockEInvoiceProvider] Replacing invoice {}/{} with new transaction: {}", originalInvoiceSeries, originalInvoiceNumber, data.getTransactionUuid());
+
+        long nextSeq = INVOICE_SEQUENCE.getAndIncrement();
+        String invoiceNumber = String.format("%07d", nextSeq);
+        String invoiceSeries = data.getInvoiceSeries() != null ? data.getInvoiceSeries() : "1C26TLL";
+        String templateCode = data.getTemplateCode() != null ? data.getTemplateCode() : "1/001";
+        String yearCode = "26";
+        String cqtCode = String.format("%s%s%s%04X", yearCode, "0100109106", invoiceNumber, RANDOM.nextInt(0xFFFF));
+        LocalDateTime now = LocalDateTime.now();
+
+        String rawResponseJson = String.format(
+                "{\"status\":\"SUCCESS\",\"provider\":\"MOCK\",\"action\":\"REPLACE\",\"invoiceNumber\":\"%s\",\"invoiceSeries\":\"%s\",\"cqtCode\":\"%s\",\"originalInvoiceSeries\":\"%s\",\"originalInvoiceNumber\":\"%s\",\"issuedAt\":\"%s\"}",
+                invoiceNumber, invoiceSeries, cqtCode, originalInvoiceSeries, originalInvoiceNumber, now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        );
+
+        return EInvoiceProviderResult.builder()
+                .success(true)
+                .invoiceNumber(invoiceNumber)
+                .invoiceSeries(invoiceSeries)
+                .templateCode(templateCode)
+                .cqtCode(cqtCode)
+                .cqtStatus("VALID")
+                .viewUrl("/api/v1/einvoices/preview/" + data.getTransactionUuid())
+                .pdfUrl("/api/v1/einvoices/download/" + data.getTransactionUuid())
+                .issuedAt(now)
+                .rawRequest(data.toString())
+                .rawResponse(rawResponseJson)
+                .build();
+    }
+
+    @Override
+    public EInvoiceProviderResult adjustInvoice(EInvoiceProviderData data, String originalInvoiceSeries, String originalInvoiceNumber, String originalTransactionUuid, String adjustmentType) {
+        log.info("[MockEInvoiceProvider] Adjusting ({}) invoice {}/{} with new transaction: {}", adjustmentType, originalInvoiceSeries, originalInvoiceNumber, data.getTransactionUuid());
+
+        long nextSeq = INVOICE_SEQUENCE.getAndIncrement();
+        String invoiceNumber = String.format("%07d", nextSeq);
+        String invoiceSeries = data.getInvoiceSeries() != null ? data.getInvoiceSeries() : "1C26TLL";
+        String templateCode = data.getTemplateCode() != null ? data.getTemplateCode() : "1/001";
+        String yearCode = "26";
+        String cqtCode = String.format("%s%s%s%04X", yearCode, "0100109106", invoiceNumber, RANDOM.nextInt(0xFFFF));
+        LocalDateTime now = LocalDateTime.now();
+
+        String rawResponseJson = String.format(
+                "{\"status\":\"SUCCESS\",\"provider\":\"MOCK\",\"action\":\"ADJUST\",\"adjustmentType\":\"%s\",\"invoiceNumber\":\"%s\",\"invoiceSeries\":\"%s\",\"cqtCode\":\"%s\",\"originalInvoiceSeries\":\"%s\",\"originalInvoiceNumber\":\"%s\",\"issuedAt\":\"%s\"}",
+                adjustmentType, invoiceNumber, invoiceSeries, cqtCode, originalInvoiceSeries, originalInvoiceNumber, now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        );
+
+        return EInvoiceProviderResult.builder()
+                .success(true)
+                .invoiceNumber(invoiceNumber)
+                .invoiceSeries(invoiceSeries)
+                .templateCode(templateCode)
+                .cqtCode(cqtCode)
+                .cqtStatus("VALID")
+                .viewUrl("/api/v1/einvoices/preview/" + data.getTransactionUuid())
+                .pdfUrl("/api/v1/einvoices/download/" + data.getTransactionUuid())
+                .issuedAt(now)
+                .rawRequest(data.toString())
+                .rawResponse(rawResponseJson)
+                .build();
+    }
+
+    @Override
     public byte[] getInvoicePdf(String invoiceSeries, String invoiceNumber, String transactionUuid) {
         String mockPdfContent = "%PDF-1.4 Mock E-Invoice content for " + invoiceSeries + " - " + invoiceNumber;
         return mockPdfContent.getBytes(StandardCharsets.UTF_8);

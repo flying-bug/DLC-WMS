@@ -10,5 +10,5 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class StockTransferReceiptDTO {
-    private List<String> serialNumbers; // Serials to receive
+    private List<StockTransferProcessLineDTO> lines;
 }

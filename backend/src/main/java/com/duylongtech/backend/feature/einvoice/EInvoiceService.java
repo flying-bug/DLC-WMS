@@ -439,6 +439,248 @@ public class EInvoiceService {
         return toResponse(saved);
     }
 
+    // ─── Replace E-Invoice (Điều 19 NĐ 123/2020/NĐ-CP) ───────────────────────────
+    @Transactional
+    public EInvoiceResponse replaceInvoice(Long id, EInvoiceReplaceRequest request, Long currentUserId) {
+        EInvoice original = einvoiceRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy hóa đơn điện tử #" + id));
+
+        ensureCanMutate(original);
+
+        EInvoiceProvider provider = providerFactory.getProvider(original.getProvider());
+
+        String buyerName = request.getBuyerName() != null ? request.getBuyerName() : original.getBuyerName();
+        String buyerLegalName = request.getBuyerLegalName() != null ? request.getBuyerLegalName() : original.getBuyerLegalName();
+        String buyerTaxCode = request.getBuyerTaxCode() != null ? request.getBuyerTaxCode() : original.getBuyerTaxCode();
+        String buyerAddress = request.getBuyerAddress() != null ? request.getBuyerAddress() : original.getBuyerAddress();
+        String buyerPhone = request.getBuyerPhone() != null ? request.getBuyerPhone() : original.getBuyerPhone();
+        String buyerEmail = request.getBuyerEmail() != null ? request.getBuyerEmail() : original.getBuyerEmail();
+
+        String txUuid = "RPL-" + original.getInvoiceNumber() + "-" + UUID.randomUUID().toString().substring(0, 8);
+
+        EInvoiceProviderData providerData = EInvoiceProviderData.builder()
+                .transactionUuid(txUuid)
+                .invoiceType(original.getInvoiceType())
+                .templateCode(original.getTemplateCode())
+                .invoiceSeries(original.getInvoiceSeries())
+                .invoiceDate(LocalDate.now())
+                .paymentMethod(original.getPaymentMethod())
+                .currencyCode(original.getCurrencyCode())
+                .exchangeRate(original.getExchangeRate())
+                .sellerTaxCode("0100109106")
+                .sellerLegalName("CÔNG TY TNHH CÔNG NGHỆ DUY LONG")
+                .sellerAddress("Hà Nội, Việt Nam")
+                .buyerName(buyerName)
+                .buyerLegalName(buyerLegalName)
+                .buyerTaxCode(buyerTaxCode)
+                .buyerAddress(buyerAddress)
+                .buyerPhone(buyerPhone)
+                .buyerEmail(buyerEmail)
+                .subTotalAmount(original.getSubTotalAmount())
+                .vatAmount(original.getVatAmount())
+                .totalAmount(original.getTotalAmount())
+                .totalAmountInWords(original.getTotalAmountInWords())
+                .build();
+
+        EInvoiceProviderResult result = provider.replaceInvoice(providerData, original.getInvoiceSeries(), original.getInvoiceNumber(), original.getTransactionUuid());
+        if (!result.isSuccess()) {
+            throw new BusinessException("Phát hành hóa đơn thay thế thất bại: " + result.getErrorMessage());
+        }
+
+        EInvoice replacement = new EInvoice();
+        replacement.setSalesOrderId(original.getSalesOrderId());
+        replacement.setInventoryDocumentId(original.getInventoryDocumentId());
+        replacement.setPartnerId(original.getPartnerId());
+        replacement.setInvoiceType(original.getInvoiceType());
+        replacement.setTemplateCode(result.getTemplateCode() != null ? result.getTemplateCode() : original.getTemplateCode());
+        replacement.setInvoiceSeries(result.getInvoiceSeries());
+        replacement.setInvoiceNumber(result.getInvoiceNumber());
+        replacement.setInvoiceDate(LocalDate.now());
+        replacement.setIssuedAt(result.getIssuedAt() != null ? result.getIssuedAt() : LocalDateTime.now());
+        replacement.setStatus("ISSUED");
+        replacement.setBuyerName(buyerName);
+        replacement.setBuyerLegalName(buyerLegalName);
+        replacement.setBuyerTaxCode(buyerTaxCode);
+        replacement.setBuyerAddress(buyerAddress);
+        replacement.setBuyerPhone(buyerPhone);
+        replacement.setBuyerEmail(buyerEmail);
+        replacement.setCurrencyCode(original.getCurrencyCode());
+        replacement.setExchangeRate(original.getExchangeRate());
+        replacement.setPaymentMethod(original.getPaymentMethod());
+        replacement.setSubTotalAmount(original.getSubTotalAmount());
+        replacement.setVatAmount(original.getVatAmount());
+        replacement.setTotalAmount(original.getTotalAmount());
+        replacement.setTotalAmountInWords(original.getTotalAmountInWords());
+        replacement.setCqtCode(result.getCqtCode());
+        replacement.setCqtStatus(result.getCqtStatus() != null ? result.getCqtStatus() : "VALID");
+        replacement.setTransactionUuid(txUuid);
+        replacement.setProvider(provider.getProviderName());
+        replacement.setViewUrl(result.getViewUrl());
+        replacement.setPdfUrl(result.getPdfUrl());
+        replacement.setRawRequest(result.getRawRequest());
+        replacement.setRawResponse(result.getRawResponse());
+        replacement.setOriginalInvoiceId(original.getId());
+        replacement.setCreatedBy(currentUserId != null ? currentUserId : 1L);
+
+        EInvoice saved = einvoiceRepository.save(replacement);
+
+        original.setStatus("REPLACED");
+        einvoiceRepository.save(original);
+
+        auditLogService.logEvent(
+                "System",
+                "REPLACE_EINVOICE",
+                "E_INVOICE",
+                saved.getId(),
+                "SUCCESS",
+                String.format("Thay thế HĐĐT số %s (Ký hiệu %s) bằng HĐ số %s - Lý do: %s",
+                        original.getInvoiceNumber(), original.getInvoiceSeries(), saved.getInvoiceNumber(), request.getReason()),
+                "127.0.0.1",
+                null
+        );
+
+        return toResponse(saved);
+    }
+
+    // ─── Adjust E-Invoice (Điều 19 NĐ 123/2020/NĐ-CP) ────────────────────────────
+    @Transactional
+    public EInvoiceResponse adjustInvoice(Long id, EInvoiceAdjustRequest request, Long currentUserId) {
+        EInvoice original = einvoiceRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy hóa đơn điện tử #" + id));
+
+        ensureCanMutate(original);
+
+        String adjustmentType = request.getAdjustmentType();
+        boolean isAmountAdjustment = "INCREASE".equals(adjustmentType) || "DECREASE".equals(adjustmentType);
+        if (!"INFO".equals(adjustmentType) && !isAmountAdjustment) {
+            throw new BusinessException("Loại điều chỉnh không hợp lệ. Chỉ chấp nhận INFO, INCREASE hoặc DECREASE.");
+        }
+
+        EInvoiceProvider provider = providerFactory.getProvider(original.getProvider());
+
+        String buyerName = "INFO".equals(adjustmentType) && request.getBuyerName() != null ? request.getBuyerName() : original.getBuyerName();
+        String buyerLegalName = "INFO".equals(adjustmentType) && request.getBuyerLegalName() != null ? request.getBuyerLegalName() : original.getBuyerLegalName();
+        String buyerTaxCode = "INFO".equals(adjustmentType) && request.getBuyerTaxCode() != null ? request.getBuyerTaxCode() : original.getBuyerTaxCode();
+        String buyerAddress = "INFO".equals(adjustmentType) && request.getBuyerAddress() != null ? request.getBuyerAddress() : original.getBuyerAddress();
+        String buyerPhone = "INFO".equals(adjustmentType) && request.getBuyerPhone() != null ? request.getBuyerPhone() : original.getBuyerPhone();
+        String buyerEmail = "INFO".equals(adjustmentType) && request.getBuyerEmail() != null ? request.getBuyerEmail() : original.getBuyerEmail();
+
+        BigDecimal subTotalAmount;
+        BigDecimal vatAmount;
+        BigDecimal totalAmount;
+        if (isAmountAdjustment) {
+            BigDecimal deltaSubTotal = request.getAdjustSubTotalAmount() != null ? request.getAdjustSubTotalAmount() : BigDecimal.ZERO;
+            BigDecimal deltaVat = request.getAdjustVatAmount() != null ? request.getAdjustVatAmount() : BigDecimal.ZERO;
+            if (deltaSubTotal.signum() < 0 || deltaVat.signum() < 0) {
+                throw new BusinessException("Giá trị điều chỉnh phải là số dương, chiều tăng/giảm được xác định theo loại điều chỉnh.");
+            }
+            int sign = "DECREASE".equals(adjustmentType) ? -1 : 1;
+            subTotalAmount = deltaSubTotal.multiply(BigDecimal.valueOf(sign));
+            vatAmount = deltaVat.multiply(BigDecimal.valueOf(sign));
+            totalAmount = subTotalAmount.add(vatAmount);
+        } else {
+            subTotalAmount = original.getSubTotalAmount();
+            vatAmount = original.getVatAmount();
+            totalAmount = original.getTotalAmount();
+        }
+        String amountInWords = isAmountAdjustment ? convertMoneyToWords(totalAmount.abs()) : original.getTotalAmountInWords();
+
+        String txUuid = "ADJ-" + original.getInvoiceNumber() + "-" + UUID.randomUUID().toString().substring(0, 8);
+
+        EInvoiceProviderData providerData = EInvoiceProviderData.builder()
+                .transactionUuid(txUuid)
+                .invoiceType(original.getInvoiceType())
+                .templateCode(original.getTemplateCode())
+                .invoiceSeries(original.getInvoiceSeries())
+                .invoiceDate(LocalDate.now())
+                .paymentMethod(original.getPaymentMethod())
+                .currencyCode(original.getCurrencyCode())
+                .exchangeRate(original.getExchangeRate())
+                .sellerTaxCode("0100109106")
+                .sellerLegalName("CÔNG TY TNHH CÔNG NGHỆ DUY LONG")
+                .sellerAddress("Hà Nội, Việt Nam")
+                .buyerName(buyerName)
+                .buyerLegalName(buyerLegalName)
+                .buyerTaxCode(buyerTaxCode)
+                .buyerAddress(buyerAddress)
+                .buyerPhone(buyerPhone)
+                .buyerEmail(buyerEmail)
+                .subTotalAmount(subTotalAmount)
+                .vatAmount(vatAmount)
+                .totalAmount(totalAmount)
+                .totalAmountInWords(amountInWords)
+                .build();
+
+        EInvoiceProviderResult result = provider.adjustInvoice(providerData, original.getInvoiceSeries(), original.getInvoiceNumber(), original.getTransactionUuid(), adjustmentType);
+        if (!result.isSuccess()) {
+            throw new BusinessException("Phát hành hóa đơn điều chỉnh thất bại: " + result.getErrorMessage());
+        }
+
+        EInvoice adjustment = new EInvoice();
+        adjustment.setSalesOrderId(original.getSalesOrderId());
+        adjustment.setInventoryDocumentId(original.getInventoryDocumentId());
+        adjustment.setPartnerId(original.getPartnerId());
+        adjustment.setInvoiceType(original.getInvoiceType());
+        adjustment.setTemplateCode(result.getTemplateCode() != null ? result.getTemplateCode() : original.getTemplateCode());
+        adjustment.setInvoiceSeries(result.getInvoiceSeries());
+        adjustment.setInvoiceNumber(result.getInvoiceNumber());
+        adjustment.setInvoiceDate(LocalDate.now());
+        adjustment.setIssuedAt(result.getIssuedAt() != null ? result.getIssuedAt() : LocalDateTime.now());
+        adjustment.setStatus("ISSUED");
+        adjustment.setBuyerName(buyerName);
+        adjustment.setBuyerLegalName(buyerLegalName);
+        adjustment.setBuyerTaxCode(buyerTaxCode);
+        adjustment.setBuyerAddress(buyerAddress);
+        adjustment.setBuyerPhone(buyerPhone);
+        adjustment.setBuyerEmail(buyerEmail);
+        adjustment.setCurrencyCode(original.getCurrencyCode());
+        adjustment.setExchangeRate(original.getExchangeRate());
+        adjustment.setPaymentMethod(original.getPaymentMethod());
+        adjustment.setSubTotalAmount(subTotalAmount);
+        adjustment.setVatAmount(vatAmount);
+        adjustment.setTotalAmount(totalAmount);
+        adjustment.setTotalAmountInWords(amountInWords);
+        adjustment.setCqtCode(result.getCqtCode());
+        adjustment.setCqtStatus(result.getCqtStatus() != null ? result.getCqtStatus() : "VALID");
+        adjustment.setTransactionUuid(txUuid);
+        adjustment.setProvider(provider.getProviderName());
+        adjustment.setViewUrl(result.getViewUrl());
+        adjustment.setPdfUrl(result.getPdfUrl());
+        adjustment.setRawRequest(result.getRawRequest());
+        adjustment.setRawResponse(result.getRawResponse());
+        adjustment.setOriginalInvoiceId(original.getId());
+        adjustment.setAdjustmentType(adjustmentType);
+        adjustment.setCreatedBy(currentUserId != null ? currentUserId : 1L);
+
+        EInvoice saved = einvoiceRepository.save(adjustment);
+
+        original.setStatus("ADJUSTED");
+        einvoiceRepository.save(original);
+
+        auditLogService.logEvent(
+                "System",
+                "ADJUST_EINVOICE",
+                "E_INVOICE",
+                saved.getId(),
+                "SUCCESS",
+                String.format("Điều chỉnh (%s) HĐĐT số %s (Ký hiệu %s) bằng HĐ số %s - Lý do: %s",
+                        adjustmentType, original.getInvoiceNumber(), original.getInvoiceSeries(), saved.getInvoiceNumber(), request.getReason()),
+                "127.0.0.1",
+                null
+        );
+
+        return toResponse(saved);
+    }
+
+    private void ensureCanMutate(EInvoice invoice) {
+        if (!"ISSUED".equals(invoice.getStatus())) {
+            throw new BusinessException(String.format(
+                    "Hóa đơn số %s đang ở trạng thái %s, không thể thay thế/điều chỉnh. Chỉ có thể thao tác trên hóa đơn đã phát hành (ISSUED) và chưa bị hủy/thay thế/điều chỉnh trước đó.",
+                    invoice.getInvoiceNumber(), invoice.getStatus()
+            ));
+        }
+    }
+
     // ─── Mapping Entity -> Response DTO ─────────────────────────────────────────
     private EInvoiceResponse toResponse(EInvoice e) {
         if (e == null) return null;
@@ -482,6 +724,10 @@ public class EInvoiceService {
                 .canceledAt(e.getCanceledAt())
                 .canceledBy(e.getCanceledBy())
                 .canceledByName(e.getCanceledByUser() != null ? e.getCanceledByUser().getFullName() : (e.getCanceledBy() != null ? "Quản trị viên" : null))
+                .originalInvoiceId(e.getOriginalInvoiceId())
+                .originalInvoiceNumber(e.getOriginalInvoice() != null ? e.getOriginalInvoice().getInvoiceNumber() : null)
+                .originalInvoiceSeries(e.getOriginalInvoice() != null ? e.getOriginalInvoice().getInvoiceSeries() : null)
+                .adjustmentType(e.getAdjustmentType())
                 .createdBy(e.getCreatedBy())
                 .createdByName(e.getCreatedByUser() != null ? e.getCreatedByUser().getFullName() : null)
                 .createdAt(e.getCreatedAt())

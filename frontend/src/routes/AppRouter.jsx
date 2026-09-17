@@ -60,6 +60,7 @@ import BusinessSettingsPage from '../pages/BusinessSettings/BusinessSettingsPage
 import MobileScannerPage from '../pages/MobileScanner/MobileScannerPage';
 import WarehouseWorkspacePage from '../pages/WarehouseWorkspace/WarehouseWorkspacePage';
 import WarehouseDocumentFormPage from '../pages/WarehouseWorkspace/WarehouseDocumentFormPage';
+import WarehouseTransferFormPage from '../pages/WarehouseWorkspace/WarehouseTransferFormPage';
 import CashierWorkspacePage from '../pages/CashierWorkspace/CashierWorkspacePage';
 import { getAuthRoles, hasPermission } from '../auth/session';
 
@@ -178,6 +179,7 @@ function AppRoutes() {
                         <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
                         <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
                         <Route path="/warehouse-workspace/exports/:id" element={<WarehouseDocumentFormPage />} />
+                        <Route path="/warehouse-workspace/transfers/:id" element={<WarehouseTransferFormPage />} />
                     </Route>
                     {/* Ban lam viec Thu quy: chi Thu quy va Quan ly - giong Thu kho, day la workspace
                         rieng theo ROLE chu khong phai theo permission (Ke toan cung co du quyen

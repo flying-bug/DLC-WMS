@@ -43,9 +43,7 @@ function CreateStocktakePage() {
 
   const [lines, setLines] = useState([]);
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
-  const [participants, setParticipants] = useState([
-    { name: 'Nguyễn Văn A', title: 'Thủ kho', represent: 'Kho chính' }
-  ]);
+  const [participants, setParticipants] = useState([]);
 
   const fetchStockData = async (selectedWhId) => {
     if (!selectedWhId || selectedWhId === 'all') {
@@ -622,9 +620,7 @@ function CreateStocktakePage() {
   const totalBookQty = lines.reduce((acc, l) => acc + (Number(l.bookQty) || 0), 0);
   const totalCountQty = lines.reduce((acc, l) => acc + (Number(l.countQty) || 0), 0);
   const totalDiffQty = lines.reduce((acc, l) => acc + (Number(l.diffQty) || 0), 0);
-  const totalGood100 = lines.reduce((acc, l) => acc + (Number(l.good100) || 0), 0);
-  const totalBad = lines.reduce((acc, l) => acc + (Number(l.bad) || 0), 0);
-  const totalLost = lines.reduce((acc, l) => acc + (Number(l.lost) || 0), 0);
+
 
   const participantsColumns = [
     { title: 'STT', width: '5%', align: 'center', render: (_, __, idx) => idx + 1 },
@@ -756,36 +752,7 @@ function CreateStocktakePage() {
         {Number(line.diffQty) > 0 ? `+${line.diffQty}` : line.diffQty}
       </span>
     )},
-    { title: 'TỐT 100%', align: 'right', render: (_, line, idx) => (
-      isSaved ? <span className={styles.numberCol}>{line.good100}</span> : (
-        <input
-          type="number"
-          style={{ textAlign: 'right', width: '100%', maxWidth: '70px' }}
-          value={line.good100}
-          onChange={(e) => handleQualityChange(idx, 'good100', e.target.value)}
-        />
-      )
-    )},
-    { title: 'KÉM CẤP', align: 'right', render: (_, line, idx) => (
-      isSaved ? <span className={styles.numberCol}>{line.bad}</span> : (
-        <input
-          type="number"
-          style={{ textAlign: 'right', width: '100%', maxWidth: '70px' }}
-          value={line.bad}
-          onChange={(e) => handleQualityChange(idx, 'bad', e.target.value)}
-        />
-      )
-    )},
-    { title: 'HỎNG/MẤT', align: 'right', render: (_, line, idx) => (
-      isSaved ? <span className={styles.numberCol}>{line.lost}</span> : (
-        <input
-          type="number"
-          style={{ textAlign: 'right', width: '100%', maxWidth: '70px' }}
-          value={line.lost}
-          onChange={(e) => handleQualityChange(idx, 'lost', e.target.value)}
-        />
-      )
-    )},
+
     { title: 'XỬ LÝ', width: '12%', render: (_, line, idx) => (
       isSaved ? line.action : (
         <SearchableSelect
@@ -823,9 +790,7 @@ function CreateStocktakePage() {
       <td className={styles.numberCol} style={{ textAlign: 'right', color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
         {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
       </td>
-      <td className={styles.numberCol} style={{ textAlign: 'right' }}>{totalGood100}</td>
-      <td className={styles.numberCol} style={{ textAlign: 'right' }}>{totalBad}</td>
-      <td className={styles.numberCol} style={{ textAlign: 'right' }}>{totalLost}</td>
+
       <td colSpan={isSaved ? 1 : 2}></td>
     </tr>
   );
@@ -836,7 +801,6 @@ function CreateStocktakePage() {
       <div style={{ color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
         Chênh lệch: {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
       </div>
-      <div>Tốt: {totalGood100} | Kém: {totalBad} | Hỏng/Mất: {totalLost}</div>
     </div>
   );
 

@@ -25,7 +25,6 @@ function StocktakeDetailPage() {
   const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase());
   const isStorekeeper = userRoles.some(r => r.includes('STOREKEEPER'));
   const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('ADMIN') || r.includes('MANAGER'));
-  const isReadOnlyForStorekeeper = formData?.createdByAccountant && isStorekeeper && !isAccountantOrAdmin;
 
   const [warehouses, setWarehouses] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
@@ -42,6 +41,8 @@ function StocktakeDetailPage() {
     isValueStocktake: false
   });
 
+  const isReadOnlyForStorekeeper = formData?.createdByAccountant && isStorekeeper && !isAccountantOrAdmin;
+
   const [isSaved, setIsSaved] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -52,9 +53,7 @@ function StocktakeDetailPage() {
 
   const [lines, setLines] = useState([]);
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
-  const [participants, setParticipants] = useState([
-    { name: 'Nguyễn Văn A', title: 'Thủ kho', represent: 'Kho chính' }
-  ]);
+  const [participants, setParticipants] = useState([]);
 
   const fetchStocktakeData = async () => {
     try {
@@ -174,6 +173,120 @@ function StocktakeDetailPage() {
     setLines(prev => prev.filter((_, idx) => idx !== index));
   };
 
+  // Serial Modal State & Logic
+  const [serialModal, setSerialModal] = useState({
+    isOpen: false,
+    lineIndex: null,
+    loading: false,
+    scanInput: '',
+    systemSerials: [],
+    scannedList: [],
+    filterTab: 'ALL'
+  });
+
+  const openSerialModal = async (lineIdx) => {
+    const line = lines[lineIdx];
+    if (!line || !line.variantId || !formData.warehouseId || formData.warehouseId === 'all') {
+      showToast('error', 'Vui lòng chọn Kho và Sản phẩm trước khi quét Serial');
+      return;
+    }
+
+    setSerialModal({
+      isOpen: true,
+      lineIndex: lineIdx,
+      loading: true,
+      scanInput: '',
+      systemSerials: [],
+      scannedList: line.serials ? line.serials.filter(s => s.scanStatus !== 'MISSING') : [],
+      filterTab: 'ALL'
+    });
+
+    try {
+      const res = await stocktakeApi.getAvailableSerials(formData.warehouseId, line.variantId);
+      const sysSerials = res?.data?.data || res?.data || [];
+      const sysList = Array.isArray(sysSerials) ? sysSerials : [];
+
+      const initialScanned = line.serials ? line.serials.filter(s => s.scanStatus !== 'MISSING') : [];
+
+      setSerialModal(prev => ({
+        ...prev,
+        loading: false,
+        systemSerials: sysList,
+        scannedList: initialScanned
+      }));
+    } catch (err) {
+      console.error('Failed to load available serials', err);
+      setSerialModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleScanSerialSubmit = (e) => {
+    if (e) e.preventDefault();
+    const code = serialModal.scanInput.trim();
+    if (!code) return;
+
+    const exists = serialModal.scannedList.find(s => s.serialNumber.toLowerCase() === code.toLowerCase());
+    if (exists) {
+      showToast('warning', `Serial ${code} đã được quét trước đó`);
+      setSerialModal(prev => ({ ...prev, scanInput: '' }));
+      return;
+    }
+
+    const sysMatch = serialModal.systemSerials.find(s => s.serialNumber.toLowerCase() === code.toLowerCase());
+    const newEntry = {
+      serialNumberId: sysMatch ? sysMatch.id : null,
+      serialNumber: sysMatch ? sysMatch.serialNumber : code,
+      scanStatus: sysMatch ? 'MATCHED' : 'UNEXPECTED'
+    };
+
+    setSerialModal(prev => ({
+      ...prev,
+      scanInput: '',
+      scannedList: [...prev.scannedList, newEntry]
+    }));
+  };
+
+  const handleRemoveScannedSerial = (serialNum) => {
+    setSerialModal(prev => ({
+      ...prev,
+      scannedList: prev.scannedList.filter(s => s.serialNumber !== serialNum)
+    }));
+  };
+
+  const handleSaveSerialModal = () => {
+    if (serialModal.lineIndex === null) return;
+    const idx = serialModal.lineIndex;
+
+    const scannedSet = new Set(serialModal.scannedList.map(s => s.serialNumber.toLowerCase()));
+    const missingSerials = serialModal.systemSerials
+      .filter(s => !scannedSet.has(s.serialNumber.toLowerCase()))
+      .map(s => ({
+        serialNumberId: s.id,
+        serialNumber: s.serialNumber,
+        scanStatus: 'MISSING'
+      }));
+
+    const finalSerials = [...serialModal.scannedList, ...missingSerials];
+    const validCount = serialModal.scannedList.length;
+
+    setLines(prev => prev.map((line, lIdx) => {
+      if (lIdx !== idx) return line;
+      const diff = validCount - line.bookQty;
+      return {
+        ...line,
+        countQty: validCount,
+        diffQty: diff,
+        good100: serialModal.scannedList.filter(s => s.scanStatus === 'MATCHED').length,
+        bad: serialModal.scannedList.filter(s => s.scanStatus === 'UNEXPECTED').length,
+        lost: missingSerials.length,
+        action: diff !== 0 ? 'Xử lý chênh lệch' : 'Không xử lý',
+        serials: finalSerials
+      };
+    }));
+
+    setSerialModal({ isOpen: false, lineIndex: null, loading: false, scanInput: '', systemSerials: [], scannedList: [], filterTab: 'ALL' });
+  };
+
   const handleExportExcel = () => {
     if (lines.length === 0) {
       showToast('warning', 'Không có dữ liệu vật tư hàng hóa để xuất');
@@ -284,7 +397,13 @@ function StocktakeDetailPage() {
       goodQty: Number(l.good100 || 0),
       badQty: Number(l.bad || 0),
       lostQty: Number(l.lost || 0),
-      action: l.action
+      action: l.action,
+      serials: l.serials ? l.serials.map(s => ({
+        serialNumberId: s.serialNumberId,
+        serialNumber: s.serialNumber,
+        scanStatus: s.scanStatus,
+        note: s.note
+      })) : []
     })),
     participants: participants.map(p => ({
       fullName: p.name,
@@ -494,9 +613,7 @@ function StocktakeDetailPage() {
   const totalBookQty = lines.reduce((acc, l) => acc + (Number(l.bookQty) || 0), 0);
   const totalCountQty = lines.reduce((acc, l) => acc + (Number(l.countQty) || 0), 0);
   const totalDiffQty = lines.reduce((acc, l) => acc + (Number(l.diffQty) || 0), 0);
-  const totalGood100 = lines.reduce((acc, l) => acc + (Number(l.good100) || 0), 0);
-  const totalBad = lines.reduce((acc, l) => acc + (Number(l.bad) || 0), 0);
-  const totalLost = lines.reduce((acc, l) => acc + (Number(l.lost) || 0), 0);
+
 
   const participantsColumns = [
     { title: 'STT', width: '50px', align: 'center', render: (_, __, idx) => idx + 1 },
@@ -532,11 +649,30 @@ function StocktakeDetailPage() {
   const linesColumns = [
     { title: 'MÃ HÀNG', width: '8%', render: (_, line) => line.itemCode },
     { title: 'SKU', width: '10%', render: (_, line) => <span style={{ fontWeight: 600, color: 'var(--color-info-hover)' }}>{line.sku}</span> },
-    { title: 'TÊN HÀNG HÓA', width: '20%', render: (_, line) => line.itemName },
+    { title: 'TÊN HÀNG HÓA', width: '20%', render: (_, line, idx) => (
+        <span>
+          {line.itemName}
+          {line.trackSerial && (
+            <span 
+              className={styles.serialBadge} 
+              style={{ cursor: 'pointer' }}
+              onClick={() => openSerialModal(idx)}
+              title="Bấm để xem chi tiết Serial"
+            >
+              <i className="bi bi-upc-scan"></i> Serial
+            </span>
+          )}
+        </span>
+      )
+    },
     { title: 'ĐVT', width: '6%', render: (_, line) => line.unit },
     { title: 'SỔ SÁCH', align: 'center', render: (_, line) => <span className={styles.numberCol}>{line.bookQty}</span> },
     { title: 'THỰC TẾ', align: 'center', render: (_, line, idx) => (
-        isSaved ? <span className={styles.numberCol}>{line.countQty}</span> : (
+        isSaved ? <span className={styles.numberCol}>{line.countQty}</span> : line.trackSerial ? (
+          <button type="button" className={styles.btnScanSerial} onClick={() => openSerialModal(idx)}>
+            <i className="bi bi-upc-scan"></i> {line.countQty} Quét Serial
+          </button>
+        ) : (
           <input type="number" style={{ fontWeight: 600, color: 'var(--wms-text-strong)', background: 'var(--wms-bg-soft)', border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '4px 6px', width: '100%', textAlign: 'center' }} value={line.countQty} onChange={(e) => handleCountQtyChange(idx, e.target.value)} />
         )
       )
@@ -547,18 +683,7 @@ function StocktakeDetailPage() {
         </span>
       )
     },
-    { title: 'TỐT 100%', align: 'center', render: (_, line, idx) => (
-        isSaved ? <span className={styles.numberCol}>{line.good100}</span> : <input type="number" style={{ width: '100%', textAlign: 'center' }} value={line.good100} onChange={(e) => handleQualityChange(idx, 'good100', e.target.value)} />
-      )
-    },
-    { title: 'KÉM CẤP', align: 'center', render: (_, line, idx) => (
-        isSaved ? <span className={styles.numberCol}>{line.bad}</span> : <input type="number" style={{ width: '100%', textAlign: 'center' }} value={line.bad} onChange={(e) => handleQualityChange(idx, 'bad', e.target.value)} />
-      )
-    },
-    { title: 'HỎNG/MẤT', align: 'center', render: (_, line, idx) => (
-        isSaved ? <span className={styles.numberCol}>{line.lost}</span> : <input type="number" style={{ width: '100%', textAlign: 'center' }} value={line.lost} onChange={(e) => handleQualityChange(idx, 'lost', e.target.value)} />
-      )
-    },
+
     { title: 'XỬ LÝ', width: '12%', render: (_, line, idx) => (
         isSaved ? line.action : (
           <SearchableSelect value={line.action} onChange={(e) => handleActionChange(idx, e.target.value)} style={{ border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '2px 4px', width: '100%' }}>
@@ -587,9 +712,7 @@ function StocktakeDetailPage() {
       <td className={styles.numberCol} style={{ textAlign: 'center', color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? 'var(--wms-danger)' : 'inherit' }}>
         {totalDiffQty > 0 ? `+${totalDiffQty}` : totalDiffQty}
       </td>
-      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalGood100}</td>
-      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalBad}</td>
-      <td className={styles.numberCol} style={{ textAlign: 'center' }}>{totalLost}</td>
+
       <td colSpan={isSaved ? 1 : 2}></td>
     </tr>
   );
@@ -681,6 +804,24 @@ function StocktakeDetailPage() {
                 columns={participantsColumns}
                 data={participants}
               />
+              {!isSaved && (
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    className={styles.btnOutline}
+                    onClick={() => setParticipants([...participants, { name: '', title: '', represent: '' }])}
+                  >
+                    <i className="bi bi-plus"></i> Thêm thành viên
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btnOutline}
+                    onClick={() => setParticipants([])}
+                  >
+                    Xóa hết thành viên
+                  </button>
+                </div>
+              )}
             </div>
         )}
 
@@ -957,6 +1098,150 @@ function StocktakeDetailPage() {
           </div>
         </Modal>
       )}
+
+      {serialModal.isOpen && (() => {
+        const scannedSet = new Set(serialModal.scannedList.map(s => s.serialNumber.toLowerCase()));
+        const missingList = serialModal.systemSerials
+          .filter(sys => !scannedSet.has(sys.serialNumber.toLowerCase()))
+          .map(sys => ({
+            serialNumberId: sys.id,
+            serialNumber: sys.serialNumber,
+            scanStatus: 'MISSING'
+          }));
+
+        const combinedSerials = [...serialModal.scannedList, ...missingList];
+        const matchedCount = serialModal.scannedList.filter(s => s.scanStatus === 'MATCHED').length;
+        const missingCount = missingList.length;
+        const unexpectedCount = serialModal.scannedList.filter(s => s.scanStatus === 'UNEXPECTED').length;
+
+        const displaySerials = combinedSerials.filter(s => {
+          if (serialModal.filterTab === 'MATCHED') return s.scanStatus === 'MATCHED';
+          if (serialModal.filterTab === 'MISSING') return s.scanStatus === 'MISSING';
+          if (serialModal.filterTab === 'UNEXPECTED') return s.scanStatus === 'UNEXPECTED';
+          return true;
+        });
+
+        return (
+          <div className={styles.modalOverlay}>
+            <div className={styles.serialModalCard}>
+              <div className={styles.modalHeader}>
+                <h3>
+                  <i className="bi bi-upc-scan" style={{ marginRight: '8px', color: 'var(--color-info-hover)' }}></i>
+                  Kiểm kê Serial - {lines[serialModal.lineIndex]?.itemName} (SKU: {lines[serialModal.lineIndex]?.sku})
+                </h3>
+                <button className={styles.modalCloseBtn} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <div className={styles.modalBody}>
+                {!isSaved && (
+                  <form onSubmit={handleScanSerialSubmit} className={styles.scanInputRow}>
+                    <input
+                      type="text"
+                      className={styles.scanInput}
+                      placeholder="Quét mã vạch hoặc nhập mã Serial rồi nhấn Enter..."
+                      value={serialModal.scanInput}
+                      onChange={(e) => setSerialModal({ ...serialModal, scanInput: e.target.value })}
+                      autoFocus
+                    />
+                    <button type="submit" className={styles.btnScanSerial} style={{ padding: '0 20px', fontSize: '14px' }}>
+                      <i className="bi bi-plus-circle"></i> Thêm Serial
+                    </button>
+                  </form>
+                )}
+
+                <div className={styles.badgeRow}>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeBook} ${serialModal.filterTab === 'ALL' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'ALL' }))}
+                    title="Bấm để xem tất cả Serial"
+                  >
+                    Tất cả ({combinedSerials.length})
+                  </div>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeMatch} ${serialModal.filterTab === 'MATCHED' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'MATCHED' }))}
+                    title="Bấm để chỉ xem Serial Khớp"
+                  >
+                    Khớp ({matchedCount})
+                  </div>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeMissing} ${serialModal.filterTab === 'MISSING' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'MISSING' }))}
+                    title="Bấm để chỉ xem Serial Thiếu"
+                  >
+                    Thiếu ({missingCount})
+                  </div>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeUnexpected} ${serialModal.filterTab === 'UNEXPECTED' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'UNEXPECTED' }))}
+                    title="Bấm để chỉ xem Serial Thừa/Lạ"
+                  >
+                    Thừa / Lạ ({unexpectedCount})
+                  </div>
+                </div>
+
+                <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--wms-border-base)', borderRadius: '4px' }}>
+                  <table className={styles.table} style={{ margin: 0 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '10%', textAlign: 'center' }}>STT</th>
+                        <th style={{ width: '50%' }}>MÃ SERIAL</th>
+                        <th style={{ width: '30%', textAlign: 'center' }}>TRẠNG THÁI</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>XÓA</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displaySerials.map((s, sIdx) => (
+                        <tr key={sIdx}>
+                          <td style={{ textAlign: 'center' }}>{sIdx + 1}</td>
+                          <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.serialNumber}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            {s.scanStatus === 'MATCHED' && <span style={{ color: '#16a34a', fontWeight: 600 }}><i className="bi bi-check-circle-fill"></i> Khớp</span>}
+                            {s.scanStatus === 'MISSING' && <span style={{ color: 'var(--wms-danger)', fontWeight: 600 }}><i className="bi bi-x-circle-fill"></i> Thiếu (Chưa quét)</span>}
+                            {s.scanStatus === 'UNEXPECTED' && <span style={{ color: '#d97706', fontWeight: 600 }}><i className="bi bi-exclamation-triangle-fill"></i> Thừa / Lạ</span>}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {s.scanStatus !== 'MISSING' && !isSaved && (
+                              <button
+                                type="button"
+                                style={{ border: 'none', background: 'none', color: 'var(--wms-danger)', cursor: 'pointer' }}
+                                onClick={() => handleRemoveScannedSerial(s.serialNumber)}
+                                title="Hủy quét Serial này"
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {displaySerials.length === 0 && (
+                        <tr>
+                          <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: 'var(--wms-text-muted)' }}>
+                            Không có Serial nào thuộc mục đã chọn.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.btnOutline} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
+                  {isSaved ? 'Đóng' : 'Hủy'}
+                </button>
+                {!isSaved && (
+                  <button type="button" className={styles.btnScanSerial} onClick={handleSaveSerialModal}>
+                    Xác nhận kết quả đếm ({serialModal.scannedList.length})
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <Toast
         isVisible={toast.isVisible}

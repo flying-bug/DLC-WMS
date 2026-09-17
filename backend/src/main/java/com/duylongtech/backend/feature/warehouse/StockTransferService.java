@@ -214,6 +214,23 @@ public class StockTransferService {
         StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
 
+        if (dispatchDTO != null && dispatchDTO.getLines() != null) {
+            for (StockTransferProcessLineDTO processLine : dispatchDTO.getLines()) {
+                StockTransferLine line = stockTransfer.getLines().stream()
+                        .filter(l -> l.getId().equals(processLine.getLineId()))
+                        .findFirst().orElse(null);
+                if (line != null && processLine.getSerialNumbers() != null) {
+                    try {
+                        String serialsJson = objectMapper.writeValueAsString(processLine.getSerialNumbers());
+                        line.setSerialNumbersText(serialsJson);
+                        stockTransferLineRepository.save(line);
+                    } catch (JsonProcessingException e) {
+                        throw new BusinessException(SystemMessage.ST_ERR_001.getMessage());
+                    }
+                }
+            }
+        }
+
         createAndPostExport(stockTransfer, userId);
 
         stockTransfer.dispatch();
@@ -228,6 +245,23 @@ public class StockTransferService {
 
         if (!DocumentStatus.IN_TRANSIT.name().equals(stockTransfer.getStatus())) {
             throw new BusinessException(SystemMessage.INV_INVALID_STATE);
+        }
+
+        if (receiptDTO != null && receiptDTO.getLines() != null) {
+            for (StockTransferProcessLineDTO processLine : receiptDTO.getLines()) {
+                StockTransferLine line = stockTransfer.getLines().stream()
+                        .filter(l -> l.getId().equals(processLine.getLineId()))
+                        .findFirst().orElse(null);
+                if (line != null && processLine.getSerialNumbers() != null) {
+                    try {
+                        String serialsJson = objectMapper.writeValueAsString(processLine.getSerialNumbers());
+                        line.setSerialNumbersText(serialsJson);
+                        stockTransferLineRepository.save(line);
+                    } catch (JsonProcessingException e) {
+                        throw new BusinessException(SystemMessage.ST_ERR_001.getMessage());
+                    }
+                }
+            }
         }
 
         java.util.Map<Long, BigDecimal> exportedCosts = new java.util.HashMap<>();

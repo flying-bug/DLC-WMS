@@ -5,6 +5,8 @@ import Toast from '../../components/ui/Toast/Toast';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import CancelInvoiceModal from './components/CancelInvoiceModal';
+import ReplaceInvoiceModal from './components/ReplaceInvoiceModal';
+import AdjustInvoiceModal from './components/AdjustInvoiceModal';
 import EInvoicePreviewModal from './components/EInvoicePreviewModal';
 import * as einvoiceApi from '../../api/einvoiceApi';
 import styles from './EInvoiceListPage.module.css';
@@ -30,6 +32,8 @@ export default function EInvoiceListPage() {
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('');
   const [selectedInvoiceForCancel, setSelectedInvoiceForCancel] = useState(null);
+  const [selectedInvoiceForReplace, setSelectedInvoiceForReplace] = useState(null);
+  const [selectedInvoiceForAdjust, setSelectedInvoiceForAdjust] = useState(null);
   const [selectedInvoiceForPreview, setSelectedInvoiceForPreview] = useState(null);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
@@ -206,6 +210,11 @@ export default function EInvoiceListPage() {
                 {inv.canceledByName && <div style={{ color: 'var(--wms-text-muted)', fontSize: '10px' }}>Bởi: {inv.canceledByName}</div>}
               </div>
             )}
+            {inv.originalInvoiceNumber && (
+              <div style={{ fontSize: '10px', color: 'var(--wms-text-muted)', marginTop: '2px' }}>
+                ← HĐ gốc: {inv.originalInvoiceNumber}
+              </div>
+            )}
           </>
         )
       }
@@ -221,15 +230,33 @@ export default function EInvoiceListPage() {
       >
         <i className="bi bi-eye" /> Xem
       </button>
+      {/* TẠM ẨN CÁC NÚT THAY THẾ, ĐIỀU CHỈNH, HỦY THEO YÊU CẦU
       {inv.status === 'ISSUED' && (
-        <button
-          className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-          title="Hủy hóa đơn"
-          onClick={() => setSelectedInvoiceForCancel(inv)}
-        >
-          <i className="bi bi-x-circle" /> Hủy
-        </button>
+        <>
+          <button
+            className={styles.actionBtn}
+            title="Thay thế hóa đơn"
+            onClick={() => setSelectedInvoiceForReplace(inv)}
+          >
+            <i className="bi bi-arrow-repeat" /> Thay thế
+          </button>
+          <button
+            className={styles.actionBtn}
+            title="Điều chỉnh hóa đơn"
+            onClick={() => setSelectedInvoiceForAdjust(inv)}
+          >
+            <i className="bi bi-pencil-square" /> Điều chỉnh
+          </button>
+          <button
+            className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+            title="Hủy hóa đơn"
+            onClick={() => setSelectedInvoiceForCancel(inv)}
+          >
+            <i className="bi bi-x-circle" /> Hủy
+          </button>
+        </>
       )}
+      */}
     </div>
   );
 
@@ -376,6 +403,28 @@ export default function EInvoiceListPage() {
           onClose={() => setSelectedInvoiceForCancel(null)}
           onSuccess={() => {
             showToast('success', 'Hủy hóa đơn điện tử thành công');
+            loadData();
+          }}
+        />
+
+        {/* Modal Thay thế HĐĐT */}
+        <ReplaceInvoiceModal
+          invoice={selectedInvoiceForReplace}
+          isOpen={Boolean(selectedInvoiceForReplace)}
+          onClose={() => setSelectedInvoiceForReplace(null)}
+          onSuccess={() => {
+            showToast('success', 'Thay thế hóa đơn điện tử thành công');
+            loadData();
+          }}
+        />
+
+        {/* Modal Điều chỉnh HĐĐT */}
+        <AdjustInvoiceModal
+          invoice={selectedInvoiceForAdjust}
+          isOpen={Boolean(selectedInvoiceForAdjust)}
+          onClose={() => setSelectedInvoiceForAdjust(null)}
+          onSuccess={() => {
+            showToast('success', 'Điều chỉnh hóa đơn điện tử thành công');
             loadData();
           }}
         />

@@ -10,5 +10,5 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class StockTransferDispatchDTO {
-    private List<String> serialNumbers; // Serials to dispatch
+    private List<StockTransferProcessLineDTO> lines;
 }

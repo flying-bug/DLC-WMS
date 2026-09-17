@@ -50,4 +50,8 @@ public class StockTransferLine {
             this.unitCost = unitCost;
         }
     }
+
+    public void setSerialNumbersText(String text) {
+        this.serialNumbersText = text;
+    }
 }

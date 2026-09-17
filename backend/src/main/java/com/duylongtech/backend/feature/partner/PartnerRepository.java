@@ -78,7 +78,7 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
 
     boolean existsByPhoneAndIsCustomerTrueAndIdNot(String phone, Long id);
 
-    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true " +
+    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true AND p.code != 'KH-0000' " +
            "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', TRIM(:keyword), '%') " +
            "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))) " +
            "AND (:status IS NULL OR p.status = :status) " +
@@ -92,7 +92,7 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     @Query("SELECT p FROM Partner p WHERE p.isCustomer = true AND p.id IN :ids")
     List<Partner> findCustomersByIds(@Param("ids") List<Long> ids);
 
-    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true " +
+    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true AND p.code != 'KH-0000' " +
            "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', TRIM(:keyword), '%') " +
            "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))) " +
            "AND (:status IS NULL OR p.status = :status) " +

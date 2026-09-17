@@ -237,6 +237,10 @@ export default function WarehouseWorkspacePage() {
       navigate(`/stocktakes/${slip.id}`);
       return;
     }
+    if (activeTab === 'transfers') {
+      navigate(`/warehouse-workspace/transfers/${slip.id}`);
+      return;
+    }
     navigate(`/warehouse-workspace/${activeTab === 'imports' ? 'imports' : 'exports'}/${slip.id}`);
   };
 

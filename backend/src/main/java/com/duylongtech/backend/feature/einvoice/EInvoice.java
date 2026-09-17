@@ -152,6 +152,16 @@ public class EInvoice {
     @JoinColumn(name = "canceled_by", insertable = false, updatable = false)
     private User canceledByUser;
 
+    @Column(name = "original_invoice_id")
+    private Long originalInvoiceId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "original_invoice_id", insertable = false, updatable = false)
+    private EInvoice originalInvoice;
+
+    @Column(name = "adjustment_type", length = 20)
+    private String adjustmentType; // INFO, INCREASE, DECREASE (chỉ áp dụng cho hóa đơn điều chỉnh)
+
     // Audit Info
     @Column(name = "created_by", nullable = false)
     private Long createdBy;

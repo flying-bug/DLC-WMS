@@ -104,6 +104,28 @@ public class EInvoiceController {
         return ApiResponse.success(response);
     }
 
+    @PostMapping("/{id}/replace")
+    @Operation(summary = "Thay thế hóa đơn điện tử")
+    @PreAuthorize("hasAuthority('einvoice:edit')")
+    public ApiResponse<EInvoiceResponse> replaceInvoice(
+            @PathVariable Long id,
+            @Valid @RequestBody EInvoiceReplaceRequest request
+    ) {
+        EInvoiceResponse response = einvoiceService.replaceInvoice(id, request, getCurrentUserId());
+        return ApiResponse.success(response);
+    }
+
+    @PostMapping("/{id}/adjust")
+    @Operation(summary = "Điều chỉnh hóa đơn điện tử")
+    @PreAuthorize("hasAuthority('einvoice:edit')")
+    public ApiResponse<EInvoiceResponse> adjustInvoice(
+            @PathVariable Long id,
+            @Valid @RequestBody EInvoiceAdjustRequest request
+    ) {
+        EInvoiceResponse response = einvoiceService.adjustInvoice(id, request, getCurrentUserId());
+        return ApiResponse.success(response);
+    }
+
     @GetMapping(value = "/preview/{transactionUuid}", produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8")
     @Operation(summary = "Xem trực tuyến mẫu hóa đơn điện tử (HTML)")
     public ResponseEntity<String> previewHtml(@PathVariable String transactionUuid) {

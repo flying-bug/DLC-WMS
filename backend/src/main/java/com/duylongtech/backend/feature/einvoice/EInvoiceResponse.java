@@ -63,6 +63,12 @@ public class EInvoiceResponse {
     private Long canceledBy;
     private String canceledByName;
 
+    // Replace & Adjust
+    private Long originalInvoiceId;
+    private String originalInvoiceNumber;
+    private String originalInvoiceSeries;
+    private String adjustmentType; // INFO, INCREASE, DECREASE
+
     // Audit
     private Long createdBy;
     private String createdByName;

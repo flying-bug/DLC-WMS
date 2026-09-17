@@ -45,6 +45,20 @@ export const cancelEInvoice = (id, payload) => {
 };
 
 /**
+ * Thay thế hóa đơn điện tử
+ */
+export const replaceEInvoice = (id, payload) => {
+  return axiosClient.post(`${BASE_URL}/${id}/replace`, payload);
+};
+
+/**
+ * Điều chỉnh hóa đơn điện tử
+ */
+export const adjustEInvoice = (id, payload) => {
+  return axiosClient.post(`${BASE_URL}/${id}/adjust`, payload);
+};
+
+/**
  * Lấy nội dung HTML mẫu hóa đơn điện tử để hiển thị trực tiếp
  */
 export const getEInvoicePreviewHtml = (uuid) => {

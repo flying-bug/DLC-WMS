@@ -91,9 +91,6 @@ export function printStocktakeReport(options = {}) {
         <td style="text-align: center;">${escapeHtml(line.unit || line.unitName || 'Chiếc')}</td>
         <td style="text-align: right;">${bookQty.toLocaleString('vi-VN')}</td>
         <td style="text-align: right; font-weight: 600;">${countQty.toLocaleString('vi-VN')}</td>
-        <td style="text-align: right;">${goodQty.toLocaleString('vi-VN')}</td>
-        <td style="text-align: right;">${badQty.toLocaleString('vi-VN')}</td>
-        <td style="text-align: right;">${lostQty.toLocaleString('vi-VN')}</td>
         <td style="text-align: right; font-weight: 600; color: ${diffColor};">${diffText}</td>
         <td>${escapeHtml(line.action || line.note || '')}</td>
       </tr>
@@ -247,33 +244,24 @@ export function printStocktakeReport(options = {}) {
       <table class="report-table">
         <thead>
           <tr>
-            <th rowspan="2" style="width: 30px; text-align: center;">STT</th>
-            <th rowspan="2" style="width: 90px;">Mã hàng</th>
-            <th rowspan="2">Tên vật tư, hàng hóa</th>
-            <th rowspan="2" style="width: 50px; text-align: center;">ĐVT</th>
-            <th rowspan="2" style="width: 70px; text-align: right;">Sổ sách</th>
-            <th colspan="4" style="text-align: center;">Kiểm kê thực tế</th>
-            <th rowspan="2" style="width: 70px; text-align: right;">Chênh lệch</th>
-            <th rowspan="2" style="width: 120px;">Hướng xử lý / Ghi chú</th>
-          </tr>
-          <tr>
-            <th style="width: 60px; text-align: right;">Tổng số</th>
-            <th style="width: 55px; text-align: right;">Tốt 100%</th>
-            <th style="width: 55px; text-align: right;">Kém Cấp</th>
-            <th style="width: 55px; text-align: right;">Hỏng/Mất</th>
+            <th style="width: 30px; text-align: center;">STT</th>
+            <th style="width: 90px;">Mã hàng</th>
+            <th>Tên vật tư, hàng hóa</th>
+            <th style="width: 50px; text-align: center;">ĐVT</th>
+            <th style="width: 70px; text-align: right;">Sổ sách</th>
+            <th style="width: 70px; text-align: right;">Kiểm kê thực tế</th>
+            <th style="width: 70px; text-align: right;">Chênh lệch</th>
+            <th style="width: 120px;">Hướng xử lý / Ghi chú</th>
           </tr>
         </thead>
         <tbody>
-          ${rowsHtml || '<tr><td colspan="11" style="text-align: center; color: var(--wms-text-muted);">Không có dữ liệu hàng hóa</td></tr>'}
+          ${rowsHtml || '<tr><td colspan="8" style="text-align: center; color: var(--wms-text-muted);">Không có dữ liệu hàng hóa</td></tr>'}
         </tbody>
         <tfoot>
           <tr style="font-weight: bold; background-color: var(--wms-border-base);">
             <td colspan="4" style="text-align: right;">TỔNG CỘNG:</td>
             <td style="text-align: right;">${totalBook.toLocaleString('vi-VN')}</td>
             <td style="text-align: right;">${totalCount.toLocaleString('vi-VN')}</td>
-            <td style="text-align: right;">${totalGood.toLocaleString('vi-VN')}</td>
-            <td style="text-align: right;">${totalBad.toLocaleString('vi-VN')}</td>
-            <td style="text-align: right;">${totalLost.toLocaleString('vi-VN')}</td>
             <td style="text-align: right;">${totalDiffText}</td>
             <td></td>
           </tr>

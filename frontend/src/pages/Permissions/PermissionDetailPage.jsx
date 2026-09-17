@@ -349,16 +349,17 @@ function PermissionDetailPage() {
                                             columns={[
                                                 {
                                                     title: 'CHỨC NĂNG',
+                                                    width: 280,
                                                     render: (_, mod) => (
                                                         <div>
-                                                            <div style={{ fontSize: 11, color: 'var(--wms-primary)', fontWeight: 600, marginBottom: 4 }}>
+                                                            <div style={{ fontSize: 11, color: 'var(--wms-primary)', fontWeight: 600, marginBottom: 4, whiteSpace: 'nowrap' }}>
                                                                 <i className={`bi ${mod.categoryIcon} me-1`} /> {mod.categoryName}
                                                             </div>
                                                             <div className={styles.featureName}>
                                                                 <div className={styles.featureIcon}>
                                                                     <i className={`bi ${mod.icon}`} />
                                                                 </div>
-                                                                <span style={{ fontWeight: 500 }}>{mod.name}</span>
+                                                                <span style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{mod.name}</span>
                                                             </div>
                                                         </div>
                                                     )
@@ -366,6 +367,7 @@ function PermissionDetailPage() {
                                                 ...PERMISSION_ACTIONS.map(action => ({
                                                     title: action.label.toUpperCase(),
                                                     align: 'center',
+                                                    width: 100,
                                                     render: (_, mod) => renderCheckbox(mod.key, action.key, mod.name)
                                                 }))
                                             ]}
