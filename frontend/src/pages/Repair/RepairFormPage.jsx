@@ -8,6 +8,7 @@ import * as customerApi from '../../api/customerApi';
 import * as inventoryImportApi from '../../api/inventoryImportApi';
 import * as warrantyApi from '../../api/warrantyApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
+import * as einvoiceApi from '../../api/einvoiceApi';
 import axiosClient from '../../api/axiosClient';
 import CustomerModal from '../Customer/components/CustomerModal';
 import QuickProductModal from './components/QuickProductModal';
@@ -21,6 +22,9 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import styles from './RepairFormPage.module.css';
 import { formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import RepairQcModal from './RepairQcModal';
+import RepairCloseModal from './RepairCloseModal';
+import RepairPhotoGallery from './components/RepairPhotoGallery';
 
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
@@ -108,6 +112,29 @@ function RepairFormPage() {
     documentTitle: `Bao-Gia-SC-${repair?.repairCode || 'REP'}`,
   });
 
+  const handleShareQuotation = async () => {
+    try {
+      const res = await repairApi.generateShareToken(id);
+      const token = res.data.token;
+      const shareUrl = `${window.location.origin}/p/repair/${token}`;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `B├ío gi├í sß╗¡a chß╗»a - ${formData.repairCode}`,
+          text: `Gß╗¡i bß║ín link x├íc nhß║¡n b├ío gi├í sß╗¡a chß╗»a tß╗½ DuyLongTech:`,
+          url: shareUrl
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('success', '─É├ú copy link b├ío gi├í v├áo clipboard');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        showToast('error', 'Kh├┤ng thß╗â tß║ío link b├ío gi├í');
+      }
+    }
+  };
+
   const handleGoBack = () => {
     if (location.key !== 'default') {
       navigate(-1);
@@ -154,13 +181,13 @@ function RepairFormPage() {
         setRepair({ ...repair, lines: updatedLines });
         const payload = serialModalData.serialRole === 'replacement'
           ? {
-              replacementSerialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
-              replacementSerialNumber: serialObj === null ? '' : serialObj.serialNumber
-            }
+            replacementSerialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
+            replacementSerialNumber: serialObj === null ? '' : serialObj.serialNumber
+          }
           : {
-              serialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
-              serialNumber: serialObj === null ? '' : serialObj.serialNumber
-            };
+            serialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
+            serialNumber: serialObj === null ? '' : serialObj.serialNumber
+          };
         repairApi.updateRepairLine(id, line.id, payload)
           .then(res => mergeUpdatedLine(unwrap(res)))
           .catch(() => loadData());
@@ -189,7 +216,7 @@ function RepairFormPage() {
     invoiceMethod: 'none',
     receivedDate: today(),
     expectedDate: '',
-    responsiblePerson: '',
+    assignedTechnicianId: '',
     attachedDoc: '',
     referenceId: '',
     referenceCode: '',
@@ -213,7 +240,13 @@ function RepairFormPage() {
   const [componentSerialLoading, setComponentSerialLoading] = useState(false);
   const [componentSerialError, setComponentSerialError] = useState('');
   const [codeError, setCodeError] = useState('');
+
+  const [qcModalData, setQcModalData] = useState({ isOpen: false });
+  const [closeModalData, setCloseModalData] = useState({ isOpen: false });
+
   const [inventoryBalances, setInventoryBalances] = useState([]);
+  const [linkedDocuments, setLinkedDocuments] = useState({ exportCount: 0, importCount: 0 });
+  const [draftInvoice, setDraftInvoice] = useState(null);
   const codeCheckTimer = useRef(null);
 
   useEffect(() => {
@@ -225,7 +258,7 @@ function RepairFormPage() {
           const data = Array.isArray(payload) ? payload : (payload?.content || []);
           setInventoryBalances(data);
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [repair?.warehouseId, formData.warehouseId]);
 
@@ -360,15 +393,16 @@ function RepairFormPage() {
     setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
   };
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (isRefresh = false) => {
     setLoading(true);
     try {
-      const [cusRes, prodRes, whRes, varRes, userRes] = await Promise.allSettled([
+      const [cusRes, prodRes, whRes, varRes, userRes, techRes] = await Promise.allSettled([
         customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         axiosClient.get('/products', { params: { size: 1000 } }),
         inventoryImportApi.getWarehouses({ size: 100 }),
         axiosClient.get('/products/variants', { params: { size: 1000 } }),
-        axiosClient.get('/users', { params: { size: 1000 } })
+        axiosClient.get('/users', { params: { size: 1000 } }),
+        repairApi.getTechnicians()
       ]);
 
       const extractContent = (res) => {
@@ -385,11 +419,18 @@ function RepairFormPage() {
       setWarehouses(extractContent(whRes));
       setVariants(extractContent(varRes));
       setUsers(extractContent(userRes));
+      setTechnicians(extractContent(techRes));
 
       if (isNew) {
         const searchParams = new URLSearchParams(location.search);
         const warrantyId = searchParams.get('warrantyId');
         let initialData = { repairCode: '' };
+        try {
+          const previewRes = await repairApi.getPreviewCode();
+          if (previewRes.data?.data?.code) {
+            initialData.repairCode = previewRes.data.data.code;
+          }
+        } catch(e) { console.error('Lỗi khi tải mã tự động', e); }
 
         if (warrantyId) {
           try {

@@ -28,6 +28,7 @@ import WarehouseDetailPage from '../pages/Warehouse/WarehouseDetailPage';
 import SupplierListPage from '../pages/Supplier/SupplierListPage';
 import SupplierDetailPage from '../pages/Supplier/SupplierDetailPage';
 import CustomerListPage from '../pages/Customer/CustomerListPage';
+import PublicRepairQuotation from '../pages/PublicRepair/PublicRepairQuotation';
 import CustomerDetailPage from '../pages/Customer/CustomerDetailPage';
 import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
 import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
@@ -144,6 +145,7 @@ function AppRouter() {
                     <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                     <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
                 </Route>
+                <Route path="/p/repair/:token" element={<PublicRepairQuotation />} />
 
                 {/* Protected Routes for All Authenticated Users */}
                 <Route element={<ProtectedRoute />}>

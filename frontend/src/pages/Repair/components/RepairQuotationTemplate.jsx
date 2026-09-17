@@ -128,7 +128,7 @@ const RepairQuotationTemplate = forwardRef(({ repair }, ref) => {
                     <h4>Đại diện Kỹ thuật</h4>
                     <p>(Ký, ghi rõ họ tên)</p>
                     <div style={{ marginTop: '70px', fontWeight: 'bold' }}>
-                        {repair.responsiblePerson || '...........................'}
+                        {repair.assignedTechnicianName || repair.responsiblePerson || '...........................'}
                     </div>
                 </div>
             </div>

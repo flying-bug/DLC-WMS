@@ -18,7 +18,10 @@ const STATUS_LABELS = {
 const REPAIR_STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
   CONFIRMED: { label: 'Xác nhận', code: 'primary' },
-  UNDER_REPAIR: { label: 'Đang sửa', code: 'warning' },
+  WAITING_CONFIRM: { label: 'Chờ KTV', code: 'primary' },
+  WAITING_STOCK: { label: 'Chờ kho', code: 'warning' },
+  IN_REPAIR: { label: 'Đang sửa', code: 'warning' },
+  WAITING_SCRAP_RETURN: { label: 'Chờ phế phẩm', code: 'warning' },
   DONE: { label: 'Hoàn tất', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };

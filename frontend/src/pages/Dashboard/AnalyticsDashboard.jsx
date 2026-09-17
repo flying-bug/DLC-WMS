@@ -72,7 +72,10 @@ const REPAIR_STATUS_LABELS = {
     DRAFT: 'Nháp',
     QUOTATION: 'Báo giá',
     CONFIRMED: 'Đã xác nhận sửa chữa',
-    UNDER_REPAIR: 'Đang sửa chữa',
+    WAITING_CONFIRM: 'Chờ KTV xác nhận',
+    WAITING_STOCK: 'Chờ xuất kho',
+    IN_REPAIR: 'Đang sửa chữa',
+    WAITING_SCRAP_RETURN: 'Chờ nhận phế phẩm',
     DONE: 'Hoàn tất',
     CANCELLED: 'Đã hủy'
 };
@@ -94,7 +97,7 @@ const getTransactionStatusMeta = (status) => {
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' };
         case 'CONFIRMED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary-hover)', borderColor: '#93c5fd' };
-        case 'UNDER_REPAIR':
+        case 'IN_REPAIR':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fef3c7', color: 'var(--wms-warning-hover)', borderColor: '#fcd34d' };
         case 'APPROVED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-success-bg)', color: '#166534', borderColor: '#86efac' };

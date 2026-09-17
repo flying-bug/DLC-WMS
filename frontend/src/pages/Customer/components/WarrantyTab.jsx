@@ -62,7 +62,10 @@ const WarrantyTab = ({ data, loading, error, page, setPage, formatDate, styles }
                                             'DRAFT': 'Nháp',
                                             'QUOTATION': 'Báo giá',
                                             'CONFIRMED': 'Đã xác nhận',
-                                            'UNDER_REPAIR': 'Đang sửa chữa',
+                                            'WAITING_CONFIRM': 'Chờ KTV xác nhận',
+                                            'WAITING_STOCK': 'Chờ xuất kho',
+                                            'IN_REPAIR': 'Đang sửa chữa',
+                                            'WAITING_SCRAP_RETURN': 'Chờ nhận phế phẩm',
                                             'DONE': 'Đã hoàn thành',
                                             'CANCELLED': 'Đã hủy'
                                         };

@@ -56,3 +56,7 @@ export const getEInvoicePreviewHtml = (uuid) => {
   });
 };
 
+export const getEInvoiceByRepairId = (repairId) => {
+  return axiosClient.get(`${BASE_URL}/repair/${repairId}/draft`);
+};
+

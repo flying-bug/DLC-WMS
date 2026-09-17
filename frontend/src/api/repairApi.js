@@ -50,8 +50,21 @@ export const checkRepairCode = (code) => {
     return axiosClient.get(`${REPAIR_BASE}/check-code`, { params: { code } });
 };
 
+export const getPreviewCode = () => {
+    return axiosClient.get(`${REPAIR_BASE}/preview-code`);
+};
+
 export const getNextRepairCode = () => {
-    // Lấy mã tiếp theo từ backend (backend sẽ trả về mã SC-XXXXX phù hợp khi create)
-    // Dùng timestamp tạm thời ở frontend để hiển thị placeholder, backend sẽ override nếu cần
     return axiosClient.get(`${REPAIR_BASE}`, { params: { page: 0, size: 1, keyword: 'SC-' } });
 };
+
+export const assignRepair = (id) => axiosClient.post(`${REPAIR_BASE}/${id}/assign`);
+export const submitQuotation = (id) => axiosClient.post(`${REPAIR_BASE}/${id}/submit-quotation`);
+export const approveRepair = (id) => axiosClient.post(`${REPAIR_BASE}/${id}/approve`);
+export const declineRepair = (id, reason) => axiosClient.post(`${REPAIR_BASE}/${id}/decline`, { reason });
+export const completeRepair = (id, data) => axiosClient.post(`${REPAIR_BASE}/${id}/complete-repair`, data);
+export const closeRepair = (id, data) => axiosClient.post(`${REPAIR_BASE}/${id}/close`, data);
+export const cancelRepair = (id, reason) => axiosClient.post(`${REPAIR_BASE}/${id}/cancel`, { reason });
+export const getTechnicians = () => axiosClient.get(`${REPAIR_BASE}/technicians`);
+export const generateShareToken = (id) => axiosClient.post(`${REPAIR_BASE}/${id}/share-token`);
+export const getLinkedDocumentsCount = (id) => axiosClient.get(`${REPAIR_BASE}/${id}/linked-documents`);

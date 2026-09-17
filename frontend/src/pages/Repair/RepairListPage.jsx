@@ -11,14 +11,15 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 
-
 const STATUS_LABELS = {
-  DRAFT: { label: 'Nháp', code: 'info' },
-  QUOTATION: { label: 'Báo giá', code: 'primary' },
-  CONFIRMED: { label: 'Đã xác nhận', code: 'success' },
-  UNDER_REPAIR: { label: 'Đang sửa chữa', code: 'warning' },
-  DONE: { label: 'Hoàn tất', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' }
+  DRAFT: { label: 'Bản nháp', code: 'default' },
+  ASSIGNED: { label: 'Đã phân công', code: 'primary' },
+  QUOTATION_PENDING: { label: 'Chờ duyệt báo giá', code: 'warning' },
+  APPROVED: { label: 'Đã duyệt', code: 'success' },
+  UNDER_REPAIR: { label: 'Đang sửa chữa', code: 'processing' },
+  READY_FOR_DELIVERY: { label: 'Chờ bàn giao', code: 'success' },
+  CLOSED: { label: 'Đã đóng', code: 'success' },
+  CANCELLED: { label: 'Đã hủy', code: 'error' }
 };
 
 const DEFAULT_FILTERS = {

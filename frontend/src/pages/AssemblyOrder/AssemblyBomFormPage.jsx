@@ -252,7 +252,7 @@ function AssemblyBomFormPage() {
         if (!cleanedLines.length) return 'Cấu hình phải có ít nhất một linh kiện.';
         for (let index = 0; index < cleanedLines.length; index += 1) {
             const line = cleanedLines[index];
-            if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
+            if (!line.componentVariantId) return `Vui lòng chọn linh kiện dòng ${index + 1}.`;
             if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
         }
         return '';
@@ -792,11 +792,11 @@ function AssemblyBomFormPage() {
                     <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="Từ chối cấu hình">
                         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '14px' }}>Vui lòng nhập lý do từ chối để người lập cấu hình có thể điều chỉnh.</p>
-                            <textarea 
-                                className="misa-input" 
-                                rows={4} 
-                                value={rejectReason} 
-                                onChange={(e) => setRejectReason(e.target.value)} 
+                            <textarea
+                                className="misa-input"
+                                rows={4}
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
                                 placeholder="Nhập lý do từ chối..."
                                 autoFocus
                             />

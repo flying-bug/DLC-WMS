@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import styles from './WarehouseFormModal.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { getWarehouses } from '../../api/inventoryImportApi';
 
 
 /**
@@ -16,7 +17,9 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
         address: '',
         type: 'STANDARD',
         status: 'APPROVED',
+        scrapWarehouseId: '',
     });
+    const [scrapWarehouses, setScrapWarehouses] = useState([]);
     const [errorMsg, setErrorMsg] = useState('');
     const [saving, setSaving] = useState(false);
     const [addressSuggestions, setAddressSuggestions] = useState([]);
@@ -32,15 +35,25 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                     address: initialData.address || '',
                     type: initialData.type || 'STANDARD',
                     status: initialData.status || 'APPROVED',
+                    scrapWarehouseId: initialData.scrapWarehouseId || '',
                     version: initialData.version,
                 });
             } else {
-                setFormData({ code: '', name: '', address: '', type: 'STANDARD', status: 'APPROVED', version: null });
+                setFormData({ code: '', name: '', address: '', type: 'STANDARD', status: 'APPROVED', scrapWarehouseId: '', version: null });
             }
             setErrorMsg('');
             setAddressSuggestions([]);
         }
     }, [isOpen, isEdit, initialData]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        getWarehouses({ size: 1000, status: 'APPROVED' }).then(response => {
+            const payload = response?.data?.data ?? response?.data;
+            const items = payload?.content ?? payload ?? [];
+            setScrapWarehouses((Array.isArray(items) ? items : []).filter(item => item.type === 'SCRAP'));
+        }).catch(() => setScrapWarehouses([]));
+    }, [isOpen]);
 
     // Handle clicking outside suggestions
     useEffect(() => {
@@ -54,7 +67,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
     }, []);
 
     const handleChange = (field, value) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
+        setFormData((prev) => ({ ...prev, [field]: value, ...(field === 'type' && value === 'SCRAP' ? { scrapWarehouseId: '' } : {}) }));
         if (field === 'address' && value.trim().length < 3) {
             setAddressSuggestions([]);
         }
@@ -132,11 +145,12 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                 code: formData.code.trim() || undefined,
                 name: formData.name.trim(),
                 address: formData.address.trim(),
+                scrapWarehouseId: formData.scrapWarehouseId ? Number(formData.scrapWarehouseId) : null,
             };
             await onSave(dataToSave);
             
             if (!closeAfterSave) {
-                setFormData({ code: '', name: '', address: '', type: 'STANDARD', status: 'APPROVED', version: null });
+                setFormData({ code: '', name: '', address: '', type: 'STANDARD', status: 'APPROVED', scrapWarehouseId: '', version: null });
                 setErrorMsg('');
             }
         } catch (error) {
@@ -245,6 +259,22 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                                 <option value="INACTIVE">Ngừng sử dụng</option>
                             </SearchableSelect>
                         </div>
+                        {formData.type === 'STANDARD' && (
+                            <div className={styles.formGroup}>
+                                <label>Kho phế phẩm dùng cho sửa chữa</label>
+                                <SearchableSelect
+                                    className={styles.selectField}
+                                    value={formData.scrapWarehouseId}
+                                    onChange={(e) => handleChange('scrapWarehouseId', e.target.value)}
+                                    disabled={saving}
+                                >
+                                    <option value="">Chọn kho phế phẩm</option>
+                                    {scrapWarehouses.filter(item => String(item.id) !== String(initialData?.id)).map(item => (
+                                        <option key={item.id} value={item.id}>{item.code} - {item.name}</option>
+                                    ))}
+                                </SearchableSelect>
+                            </div>
+                        )}
                     </div>
 
                     <div className={styles.modalFooter}>

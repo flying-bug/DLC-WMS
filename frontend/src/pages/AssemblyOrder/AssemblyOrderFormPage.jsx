@@ -454,7 +454,7 @@ function AssemblyOrderFormPage() {
             showToast('error', 'Vui lòng nhập lý do!');
             return;
         }
-        
+
         setActionModal({ visible: false, type: '', reason: '' });
         setSaving(true);
         try {
@@ -575,7 +575,7 @@ function AssemblyOrderFormPage() {
         if (!cleanedLines.length) return 'Cấu hình phải có ít nhất một linh kiện.';
         for (let index = 0; index < cleanedLines.length; index += 1) {
             const line = cleanedLines[index];
-            if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
+            if (!line.componentVariantId) return `Vui lòng chọn linh kiện dòng ${index + 1}.`;
             if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
             if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
         }
