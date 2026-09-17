@@ -22,6 +22,7 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
+import Badge from '../../components/ui/Badge/Badge';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -159,6 +160,7 @@ function UpdateExportSlipPage() {
     referenceType: '',
     referenceId: '',
     referenceCode: '',
+    references: [],
   });
   const [items, setItems] = useState([emptyLine()]);
   const [inventoryBalances, setInventoryBalances] = useState([]);
@@ -274,6 +276,7 @@ function UpdateExportSlipPage() {
             referenceType: detail.referenceType || '',
             referenceId: detail.referenceId || '',
             referenceCode: detail.referenceCode || (detail.referenceId ? `Tham chiếu #${detail.referenceId}` : ''),
+            references: detail.references || [],
           });
           setItems((detail.lines || []).map(line => ({
             localId: crypto.randomUUID(),
@@ -1295,6 +1298,27 @@ function UpdateExportSlipPage() {
                       <input type="text" className="misa-input" style={{ marginTop: '8px' }} placeholder="Số chứng từ đính kèm..." />
                     )}
                   </div>
+
+                  {form.references?.length > 0 && (
+                    <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                      <label className="misa-label">Chứng từ liên quan</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                        {form.references.map((ref) => (
+                          <Badge
+                            key={ref.id}
+                            variant="neutral"
+                            type="outline"
+                            style={{ cursor: 'pointer' }}
+                            title={ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc trước khi bỏ ghi sổ (đã hủy)' : ref.referenceType}
+                            onClick={() => navigate(`/export-slips/${ref.referenceDocId}/edit`)}
+                          >
+                            <i className="bi bi-arrow-90deg-up" style={{ marginRight: '4px' }}></i>
+                            {ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc: ' : ''}{ref.referenceDocCode || `#${ref.referenceDocId}`}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                 </div>
               </div>

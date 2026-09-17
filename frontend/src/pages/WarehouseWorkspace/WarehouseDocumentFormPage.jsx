@@ -257,17 +257,22 @@ export default function WarehouseDocumentFormPage() {
     }
   };
 
-  // Handle Unpost
+  // Handle Unpost: the old document is cancelled for good and the backend
+  // returns a brand-new DRAFT document (fresh id/docCode) copying its lines,
+  // so redirect to that new document instead of just going back to the list.
   const handleConfirmUnpost = async (reason) => {
     try {
-      if (isImport) {
-        await importApi.unpostImportSlip(doc.id, reason);
-      } else {
-        await exportApi.unpostExportSlip(doc.id, reason);
-      }
-      showToast('success', 'Đã bỏ ghi sổ kho thành công! Phiếu chuyển về trạng thái Chưa ghi sổ.');
+      const res = isImport
+        ? await importApi.unpostImportSlip(doc.id, reason)
+        : await exportApi.unpostExportSlip(doc.id, reason);
+      const newDoc = res.data?.data;
+      showToast('success', `Đã bỏ ghi sổ. Đã tạo phiếu mới ${newDoc?.docCode || ''} để tiếp tục chỉnh sửa.`);
       setTimeout(() => {
-        navigate('/warehouse-workspace');
+        if (newDoc?.id) {
+          navigate(`/warehouse-workspace/${isImport ? 'imports' : 'exports'}/${newDoc.id}`);
+        } else {
+          navigate('/warehouse-workspace');
+        }
       }, 800);
     } catch (err) {
       showToast('error', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));

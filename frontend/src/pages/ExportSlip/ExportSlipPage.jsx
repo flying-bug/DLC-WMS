@@ -932,9 +932,16 @@ function ExportSlipPage() {
         docCode={unpostTarget?.docCode}
         onCheckDependency={() => exportApi.checkExportUnpost(unpostTarget?.id)}
         onConfirmUnpost={async (reason) => {
-          await exportApi.unpostExportSlip(unpostTarget?.id, reason);
-          showToast('success', 'Bỏ ghi sổ phiếu xuất kho thành công!');
-          loadSlips();
+          // Unpost cancels the old slip and creates a new DRAFT slip (fresh
+          // id/docCode) that copies its lines - go straight to editing it.
+          const res = await exportApi.unpostExportSlip(unpostTarget?.id, reason);
+          const newDoc = res.data?.data;
+          showToast('success', `Đã bỏ ghi sổ. Đã tạo phiếu mới ${newDoc?.docCode || ''}.`);
+          if (newDoc?.id) {
+            navigate(`/export-slips/${newDoc.id}/edit`);
+          } else {
+            loadSlips();
+          }
         }}
         docType="xuất kho"
       />

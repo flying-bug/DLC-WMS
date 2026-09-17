@@ -42,5 +42,6 @@ public class InventoryDocumentResponse {
     private LocalDateTime unpostedAt;
     private String unpostReason;
     private List<InventoryDocumentLineResponse> lines;
+    private List<InventoryDocumentReferenceResponse> references;
 }
 

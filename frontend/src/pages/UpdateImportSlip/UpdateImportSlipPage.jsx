@@ -23,6 +23,7 @@ import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
+import Badge from '../../components/ui/Badge/Badge';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -151,6 +152,7 @@ function UpdateImportSlipPage() {
     docDate: getTodayIsoDate(),
     note: '',
     status: 'DRAFT',
+    references: [],
   });
   const [importType, setImportType] = useState('PURCHASE');
   const [customers, setCustomers] = useState([]);
@@ -307,6 +309,7 @@ function UpdateImportSlipPage() {
           status: detail.status || 'DRAFT',
           hasDiscrepancy: detail.hasDiscrepancy || false,
           discrepancyNote: detail.discrepancyNote || '',
+          references: detail.references || [],
         });
         setItems((detail.lines || []).map(line => ({
           localId: crypto.randomUUID(),
@@ -1276,6 +1279,27 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                     </div>
                   )}
                 </div>
+
+                {form.references?.length > 0 && (
+                  <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                    <label className="misa-label">Chứng từ liên quan</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                      {form.references.map((ref) => (
+                        <Badge
+                          key={ref.id}
+                          variant="neutral"
+                          type="outline"
+                          style={{ cursor: 'pointer' }}
+                          title={ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc trước khi bỏ ghi sổ (đã hủy)' : ref.referenceType}
+                          onClick={() => navigate(`/import-slips/${ref.referenceDocId}/edit`)}
+                        >
+                          <i className="bi bi-arrow-90deg-up" style={{ marginRight: '4px' }}></i>
+                          {ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc: ' : ''}{ref.referenceDocCode || `#${ref.referenceDocId}`}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

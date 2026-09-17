@@ -196,6 +196,7 @@ public class InventoryDocumentService {
     private final AppNotificationService appNotificationService;
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
+    private final InventoryDocumentReferenceRepository inventoryDocumentReferenceRepository;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -779,6 +780,16 @@ public class InventoryDocumentService {
             throw new BusinessException("Vui lòng chọn kho xuất cho từng dòng sản phẩm");
         }
 
+        // Mirrors toImportLineEntity() below - without this, expectedQuantity/
+        // rejectedQuantity/discrepancyReason from the request were silently
+        // dropped, so detectAndRecordDiscrepancy() never had anything to compare
+        // quantityOut against for manually created/edited export slips.
+        BigDecimal expectedQty = lr.getExpectedQuantity() != null && lr.getExpectedQuantity().compareTo(ZERO) > 0
+                ? lr.getExpectedQuantity()
+                : quantityOut;
+        BigDecimal rejectedQty = lr.getRejectedQuantity() != null ? lr.getRejectedQuantity() : ZERO;
+        String discrepancyReason = trimToNull(lr.getDiscrepancyReason());
+
         Integer warrantyMonths = lr.getWarrantyMonths();
         if (warrantyMonths == null) {
             ProductVariant variant = productVariantRepository.findById(lr.getVariantId()).orElse(null);
@@ -873,6 +884,9 @@ public class InventoryDocumentService {
         line.setSerialNumbersText(formatSerialNumbers(lr.getSerialNumbers()));
         line.setWarrantyMonths(warrantyMonths);
         line.setNote(lr.getNote());
+        line.setExpectedQuantity(expectedQty);
+        line.setRejectedQuantity(rejectedQty);
+        line.setDiscrepancyReason(discrepancyReason);
         line.setUnitId(lr.getUnitId());
         line.setBaseUnitId(lr.getBaseUnitId());
         line.setConversionOperator(op);
@@ -1037,12 +1051,14 @@ public class InventoryDocumentService {
         return normalized.isEmpty() ? null : String.join("\n", normalized);
     }
 
+    // Kept in sync with InventoryPostingService.parseSerialNumbers() - serials are
+    // commonly comma-separated on one line, not just one per line.
     private List<String> parseSerialNumbers(String serialNumbersText) {
         String normalized = trimToNull(serialNumbersText);
         if (normalized == null) {
             return List.of();
         }
-        return List.of(normalized.split("\\R"))
+        return List.of(normalized.split("[,;\\s\\n]+"))
                 .stream()
                 .map(this::trimToNull)
                 .filter(value -> value != null)
@@ -1393,6 +1409,21 @@ public class InventoryDocumentService {
             }).collect(Collectors.toList());
             r.setLines(lines);
         }
+
+        List<InventoryDocumentReference> refs = inventoryDocumentReferenceRepository.findByInventoryDocumentId(doc.getId());
+        if (!refs.isEmpty()) {
+            List<InventoryDocumentReferenceResponse> refResponses = refs.stream().map(ref -> {
+                InventoryDocumentReferenceResponse rr = new InventoryDocumentReferenceResponse();
+                rr.setId(ref.getId());
+                rr.setReferenceDocId(ref.getReferenceDocId());
+                rr.setReferenceType(ref.getReferenceType());
+                rr.setCreatedAt(ref.getCreatedAt());
+                inventoryDocumentRepository.findById(ref.getReferenceDocId())
+                        .ifPresent(refDoc -> rr.setReferenceDocCode(refDoc.getDocCode()));
+                return rr;
+            }).collect(Collectors.toList());
+            r.setReferences(refResponses);
+        }
         return r;
     }
 
@@ -1406,18 +1437,130 @@ public class InventoryDocumentService {
         return documentDependencyService.checkExportSlipUnpostable(id);
     }
 
+    // Unposting used to just flip the same document back to DRAFT/UNPOSTED and
+    // let the user edit and re-post it in place, losing any record of what the
+    // document looked like before. It now cancels the old document for good and
+    // returns a fresh DRAFT clone referencing it, so the old row stays as history.
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
-        InventoryDocumentResponse response = inventoryPostingService.unpostImport(id, reason, currentUserId);
+        inventoryPostingService.unpostImport(id, reason, currentUserId);
         inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
-        return response;
+
+        InventoryDocument old = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
+        old.cancelAfterUnpost();
+        inventoryDocumentRepository.save(old);
+
+        InventoryDocument reissued = cloneAsDraft(old, IMPORT_DOC_TYPE, currentUserId);
+        reissued = inventoryDocumentRepository.save(reissued);
+        linkReissuedDocument(reissued, old);
+
+        logReissueAudit(currentUserId, reissued, old);
+        return toResponse(reissued, true);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
-        InventoryDocumentResponse response = inventoryPostingService.unpostExport(id, reason, currentUserId);
+        inventoryPostingService.unpostExport(id, reason, currentUserId);
         inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
-        return response;
+
+        InventoryDocument old = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
+        old.cancelAfterUnpost();
+        inventoryDocumentRepository.save(old);
+
+        InventoryDocument reissued = cloneAsDraft(old, EXPORT_DOC_TYPE, currentUserId);
+        reissued = inventoryDocumentRepository.save(reissued);
+        linkReissuedDocument(reissued, old);
+
+        logReissueAudit(currentUserId, reissued, old);
+        return toResponse(reissued, true);
+    }
+
+    // Copies the header fields and every line from `original` into a brand-new
+    // DRAFT document (fresh id/docCode). purchaseOrderId/salesOrderId/referenceId/
+    // referenceType are copied forward on purpose - they describe where the
+    // document originally came from (a 1:1 provenance fact), which unposting and
+    // reissuing doesn't change, unlike the 1:N reference row added separately in
+    // linkReissuedDocument() that records *this specific reissue*.
+    private InventoryDocument cloneAsDraft(InventoryDocument original, String docType, Long currentUserId) {
+        InventoryDocument clone = new InventoryDocument();
+        if (EXPORT_DOC_TYPE.equals(docType)) {
+            clone.initExportDocument(resolveCreateDocCode(null));
+        } else {
+            clone.initImportDocument(resolveCreateImportDocCode(null));
+        }
+        clone.setIssuePurpose(original.getIssuePurpose());
+        clone.setReferenceType(original.getReferenceType());
+        clone.setReferenceId(original.getReferenceId());
+        clone.setWarehouseId(original.getWarehouseId());
+        clone.setSourceWarehouseId(original.getSourceWarehouseId());
+        clone.setPurchaseOrderId(original.getPurchaseOrderId());
+        clone.setSalesOrderId(original.getSalesOrderId());
+        clone.setPartnerId(original.getPartnerId());
+        clone.setDocDate(original.getDocDate());
+        clone.setNote(original.getNote());
+        clone.setRecipientName(original.getRecipientName());
+        clone.setRecipientAddress(original.getRecipientAddress());
+        clone.setSalespersonId(original.getSalespersonId());
+        clone.updateStatus(DocumentStatus.DRAFT.name());
+        clone.assignCreator(currentUserId);
+
+        for (InventoryDocumentLine sourceLine : original.getLines()) {
+            InventoryDocumentLine line = new InventoryDocumentLine();
+            line.setVariantId(sourceLine.getVariantId());
+            line.setQuantityIn(sourceLine.getQuantityIn());
+            line.setQuantityOut(sourceLine.getQuantityOut());
+            line.setUnitCost(sourceLine.getUnitCost());
+            line.setUnitPrice(sourceLine.getUnitPrice());
+            line.setVatRate(sourceLine.getVatRate());
+            line.setVatPercent(sourceLine.getVatPercent());
+            line.setLotBatchId(sourceLine.getLotBatchId());
+            // Not sourceLine.getSerialNumberId(): unpostImport already deletes the
+            // SerialNumber rows generated for import lines, so that FK would dangle.
+            // The raw text is kept as a reference for whoever edits this draft.
+            line.setSerialNumbersText(sourceLine.getSerialNumbersText());
+            line.setNote(sourceLine.getNote());
+            line.setWarrantyMonths(sourceLine.getWarrantyMonths());
+            line.setWarehouseId(sourceLine.getWarehouseId());
+            line.setTargetWarehouseId(sourceLine.getTargetWarehouseId());
+            line.setExpectedQuantity(sourceLine.getExpectedQuantity());
+            line.setRejectedQuantity(sourceLine.getRejectedQuantity());
+            line.setDiscrepancyReason(sourceLine.getDiscrepancyReason());
+            line.setUnitId(sourceLine.getUnitId());
+            line.setBaseUnitId(sourceLine.getBaseUnitId());
+            line.setConversionOperator(sourceLine.getConversionOperator());
+            line.setConversionRatio(sourceLine.getConversionRatio());
+            line.setBaseQuantity(sourceLine.getBaseQuantity());
+
+            if (EXPORT_DOC_TYPE.equals(docType)) {
+                clone.addExportLine(line);
+            } else {
+                clone.addImportLine(line);
+            }
+        }
+        return clone;
+    }
+
+    private void linkReissuedDocument(InventoryDocument reissued, InventoryDocument old) {
+        InventoryDocumentReference ref = new InventoryDocumentReference();
+        ref.setInventoryDocument(reissued);
+        ref.setReferenceDocId(old.getId());
+        ref.setReferenceType("UNPOST_SOURCE");
+        inventoryDocumentReferenceRepository.save(ref);
+    }
+
+    private void logReissueAudit(Long currentUserId, InventoryDocument reissued, InventoryDocument old) {
+        try {
+            String username = currentUserId != null
+                    ? userRepository.findById(currentUserId).map(User::getUsername).orElse(null)
+                    : null;
+            auditLogService.logEvent(username, "REISSUE_AFTER_UNPOST", "InventoryDocument", reissued.getId(),
+                    "SUCCESS",
+                    "Tạo phiếu " + reissued.getDocCode() + " thay thế phiếu " + old.getDocCode() + " sau khi bỏ ghi sổ",
+                    null, null);
+        } catch (Exception ignored) {
+        }
     }
 
     public List<InventoryDocumentResponse> getAssemblyDocuments(Long orderId) {

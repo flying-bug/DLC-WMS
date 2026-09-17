@@ -90,6 +90,9 @@ public class InventoryDocument {
     @OneToMany(mappedBy = "inventoryDocument", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InventoryDocumentLine> lines = new ArrayList<>();
 
+    @OneToMany(mappedBy = "inventoryDocument", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<InventoryDocumentReference> references = new ArrayList<>();
+
     @Column(name = "recipient_name", length = 150)
     private String recipientName;
 
@@ -202,6 +205,16 @@ public class InventoryDocument {
         this.unpostReason = reason;
         this.postedAt = null;
         this.approvedBy = null;
+    }
+
+    // Terminal step right after unpost(): the old document becomes a read-only
+    // history record instead of being edited and re-posted in place. Keeps the
+    // unpostedBy/unpostedAt/unpostReason audit fields set by unpost() as-is.
+    public void cancelAfterUnpost() {
+        if (!DocumentStatus.UNPOSTED.name().equals(this.status)) {
+            throw new com.duylongtech.backend.exception.BusinessException("Chỉ có thể hủy chứng từ vừa bỏ ghi sổ.");
+        }
+        this.status = DocumentStatus.CANCELLED.name();
     }
 }
 

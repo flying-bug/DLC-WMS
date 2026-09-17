@@ -196,17 +196,22 @@ export default function WarehouseWorkspacePage() {
     return exportApi.checkExportUnpost(slipToCheck.id);
   };
 
+  // Unpost cancels the old document and the backend returns the new DRAFT
+  // document it was reissued as, so refresh the list (silently, so it doesn't
+  // reset selection to whatever now sorts first) and select the new document.
   const handleConfirmUnpost = async (reason) => {
     const slipToUnpost = targetSlip || selectedItem;
     if (!slipToUnpost) return;
     try {
-      if (activeTab === 'imports') {
-        await importApi.unpostImportSlip(slipToUnpost.id, reason);
-      } else {
-        await exportApi.unpostExportSlip(slipToUnpost.id, reason);
+      const res = activeTab === 'imports'
+        ? await importApi.unpostImportSlip(slipToUnpost.id, reason)
+        : await exportApi.unpostExportSlip(slipToUnpost.id, reason);
+      const newDoc = res.data?.data;
+      showToast('success', `Đã bỏ ghi sổ. Đã tạo phiếu mới ${newDoc?.docCode || ''} để tiếp tục chỉnh sửa.`);
+      await fetchMasterData(true);
+      if (newDoc?.id) {
+        setSelectedItem({ id: newDoc.id, docCode: newDoc.docCode });
       }
-      showToast('success', `Đã bỏ ghi sổ chứng từ ${slipToUnpost.docCode || slipToUnpost.code}`);
-      fetchMasterData();
     } catch (err) {
       showToast('error', 'Lỗi bỏ ghi sổ: ' + (err.response?.data?.message || err.message));
     }
