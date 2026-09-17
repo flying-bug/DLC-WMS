@@ -140,6 +140,8 @@ public class RoleService {
                         result.add(perm);
                     } else if ("assembly".equals(mod) && Arrays.asList("assembly:view", "assembly:add", "assembly:edit", "assembly:delete", "assembly:export", "assembly:print", "assembly:submit").contains(code)) {
                         result.add(perm);
+                    } else if ("customer".equals(mod) && Arrays.asList("customer:view", "customer:add").contains(code)) {
+                        result.add(perm);
                     } else if (Arrays.asList("product", "product_category", "unit", "export", "warehouse_master", "report_balance", "ai_chat").contains(mod) && code.endsWith(":view")) {
                         result.add(perm);
                     }

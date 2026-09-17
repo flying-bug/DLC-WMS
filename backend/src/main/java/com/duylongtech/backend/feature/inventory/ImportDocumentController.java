@@ -42,7 +42,7 @@ public class ImportDocumentController {
 
     @GetMapping("/history")
     @Operation(summary = "View import slip history")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('assembly:view')")
+    @PreAuthorize("hasAuthority('import:view') or hasAuthority('assembly:view') or hasAuthority('repair:view')")
     public ApiResponse<List<InventoryDocumentResponse>> getImportHistory(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -62,7 +62,7 @@ public class ImportDocumentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "View import slip detail")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('assembly:view')")
+    @PreAuthorize("hasAuthority('import:view') or hasAuthority('assembly:view') or hasAuthority('repair:view')")
     public ApiResponse<InventoryDocumentResponse> getImportDetail(@PathVariable Long id) {
         return ApiResponse.success(inventoryDocumentService.getImportDetail(id));
     }

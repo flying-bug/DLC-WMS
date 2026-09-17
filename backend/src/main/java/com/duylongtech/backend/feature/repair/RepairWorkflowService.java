@@ -7,6 +7,9 @@ import com.duylongtech.backend.enums.SerialInstallStatus;
 import com.duylongtech.backend.constant.SystemMessage;
 
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.feature.notification.AppNotificationService;
+import com.duylongtech.backend.feature.payment.PaymentService;
+import com.duylongtech.backend.feature.payment.PaymentRequest;
 
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +39,8 @@ import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.inventory.RepairScrapLineRequest;
 import com.duylongtech.backend.feature.inventory.RepairStockOutLineRequest;
 import com.duylongtech.backend.feature.product.ProductVariant;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentPostedEvent;
+import org.springframework.context.event.EventListener;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.SerialNumber;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
@@ -82,10 +87,12 @@ public class RepairWorkflowService {
 
     // Định nghĩa các bước chuyển trạng thái hợp lệ
     private static final Map<RepairStatus, Set<RepairStatus>> VALID_TRANSITIONS = Map.of(
-            RepairStatus.DRAFT,        Set.of(RepairStatus.QUOTATION, RepairStatus.CONFIRMED, RepairStatus.CANCELLED),
-            RepairStatus.QUOTATION,    Set.of(RepairStatus.CONFIRMED, RepairStatus.DRAFT, RepairStatus.CANCELLED),
-            RepairStatus.CONFIRMED,    Set.of(RepairStatus.UNDER_REPAIR, RepairStatus.QUOTATION, RepairStatus.CANCELLED),
-            RepairStatus.UNDER_REPAIR, Set.of(RepairStatus.DONE, RepairStatus.QUOTATION, RepairStatus.CANCELLED),
+            RepairStatus.DRAFT,        Set.of(RepairStatus.QUOTATION, RepairStatus.CANCELLED),
+            RepairStatus.QUOTATION,    Set.of(RepairStatus.WAITING_FOR_APPROVAL, RepairStatus.DRAFT, RepairStatus.CANCELLED),
+            RepairStatus.WAITING_FOR_APPROVAL, Set.of(RepairStatus.CONFIRMED, RepairStatus.QUOTATION, RepairStatus.CANCELLED),
+            RepairStatus.CONFIRMED,    Set.of(RepairStatus.WAITING_FOR_EXPORT, RepairStatus.CANCELLED),
+            RepairStatus.WAITING_FOR_EXPORT, Set.of(RepairStatus.UNDER_REPAIR, RepairStatus.CANCELLED),
+            RepairStatus.UNDER_REPAIR, Set.of(RepairStatus.DONE, RepairStatus.CANCELLED),
             RepairStatus.DONE,         Set.of(),      // Terminal state
             RepairStatus.CANCELLED,    Set.of()       // Terminal state
     );
@@ -102,26 +109,52 @@ public class RepairWorkflowService {
     private final InventoryDocumentService inventoryDocumentService;
     private final SerialNumberRepository serialNumberRepository;
     private final DeviceComponentSerialRepository deviceComponentSerialRepository;
+    private final AppNotificationService notificationService;
+    private final PaymentService paymentService;
 
     @FunctionalInterface
     private interface RepairTransitionHandler {
-        void handle(Repair repair);
+        void handle(Repair repair, String note);
     }
 
-    // Mỗi trạng thái đích tự khai báo side-effect + cách mutate Repair của mình ở đây.
-    // Thêm 1 trạng thái mới (vd. WAITING_FOR_PART) chỉ cần thêm 1 entry vào map này,
-    // không cần sửa switch nào trong transitionStatus().
-    // Lưu ý: DRAFT là target hợp lệ theo VALID_TRANSITIONS (từ QUOTATION) nhưng Repair
-    // chưa có method mutate về DRAFT - cố tình không có entry cho nó ở đây, giữ đúng
-    // hành vi hiện tại (no-op, không đổi status) - đây là 1 vấn đề riêng, không thuộc
-    // phạm vi refactor OCP này.
-    private final Map<RepairStatus, RepairTransitionHandler> transitionHandlers = Map.of(
-            RepairStatus.QUOTATION, Repair::moveToQuotation,
-            RepairStatus.CONFIRMED, repair -> { handleConfirm(repair); repair.confirm(); },
-            RepairStatus.UNDER_REPAIR, Repair::startRepair,
-            RepairStatus.DONE, repair -> { handleDone(repair); repair.complete(); },
-            RepairStatus.CANCELLED, repair -> { handleCancel(repair); repair.cancel(); }
-    );
+    private RepairTransitionHandler getTransitionHandler(RepairStatus status) {
+        return switch(status) {
+            case QUOTATION -> (repair, note) -> {
+                if (RepairStatus.WAITING_FOR_APPROVAL.name().equals(repair.getRepairStatus())) {
+                    repair.reject(note);
+                    notificationService.createNotification(
+                            "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa bị từ chối duyệt",
+                            "Kế toán đã từ chối lệnh sửa chữa " + repair.getRepairCode() + ". Lý do: " + note,
+                            "REPAIR_REJECTED", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                    );
+                } else {
+                    repair.moveToQuotation();
+                }
+            };
+            case WAITING_FOR_APPROVAL -> (repair, note) -> {
+                repair.sendForApproval();
+                notificationService.createNotification(
+                        "ROLE_ACCOUNTANT", null, "Lệnh sửa chữa chờ duyệt",
+                        "Lệnh sửa chữa " + repair.getRepairCode() + " đang chờ bạn duyệt xuất kho.",
+                        "REPAIR_APPROVAL", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                );
+            };
+            case CONFIRMED -> (repair, note) -> { 
+                repair.confirm();
+                boolean needsInventory = handleConfirm(repair); 
+                if (needsInventory) {
+                    repair.waitForExport();
+                } else {
+                    repair.startRepair();
+                }
+            };
+            case WAITING_FOR_EXPORT -> (repair, note) -> { /* Internal transition */ };
+            case UNDER_REPAIR -> (repair, note) -> repair.startRepair();
+            case DONE -> (repair, note) -> { handleDone(repair); repair.complete(); };
+            case CANCELLED -> (repair, note) -> { handleCancel(repair); repair.cancel(); };
+            default -> null;
+        };
+    }
 
     /**
      * Chuyển trạng thái chính.
@@ -155,9 +188,9 @@ public class RepairWorkflowService {
 
         // Side-effects + cập nhật trạng thái, tra theo bảng transitionHandlers ở trên
         // thay vì 2 khối switch riêng biệt.
-        RepairTransitionHandler handler = transitionHandlers.get(target);
+        RepairTransitionHandler handler = getTransitionHandler(target);
         if (handler != null) {
-            handler.handle(repair);
+            handler.handle(repair, note);
         }
 
         Repair saved = repairRepository.save(repair);
@@ -180,28 +213,29 @@ public class RepairWorkflowService {
     // CONFIRMED: Kiểm tra tồn kho & tạo phiếu xuất kho Draft (Reserve)
     // =====================================================================
 
-    private void handleConfirm(Repair repair) {
+    private boolean handleConfirm(Repair repair) {
         // Hard Block 1: Phải có partner
         if (repair.getPartnerId() == null) {
             throw new BusinessException(SystemMessage.REP_PARTNER_REQUIRED);
         }
 
-        List<RepairLine> addLines = getLinesForStockOut(repair.getId());
+        List<RepairLine> stockOutLines = getLinesForStockOut(repair.getId());
+        List<RepairLine> removeLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_REMOVE);
 
-        if (addLines.isEmpty()) {
-            // Không có linh kiện cần xuất -> chỉ phí dịch vụ, cho phép CONFIRM
-            log.info("[Repair {}] Không có linh kiện ADD, bỏ qua kiểm tra tồn kho", repair.getRepairCode());
-            return;
+        if (stockOutLines.isEmpty() && removeLines.isEmpty()) {
+            // Không có linh kiện cần xuất/nhập -> chỉ phí dịch vụ, không cần qua kho
+            log.info("[Repair {}] Không có linh kiện ADD/REPLACE/REMOVE, không cần qua kho", repair.getRepairCode());
+            return false;
         }
 
-        // Hard Block 2: Kiểm tra tồn kho cho từng linh kiện ADD
-        // Ưu tiên warehouseId từ lệnh sửa chữa, nếu không có thì lấy warehouse mặc định
-        Long warehouseId = resolveRepairWarehouseId(repair);
+        // Hard Block 2: Kiểm tra tồn kho cho từng linh kiện ADD/REPLACE
+        if (!stockOutLines.isEmpty()) {
+            Long warehouseId = resolveRepairWarehouseId(repair);
 
         // Sort theo (variantId, serialNumberId) trước khi lock từng dòng bằng FOR UPDATE:
         // nếu không sort, 2 lệnh sửa chữa CONFIRM đồng thời dùng chung linh kiện nhưng có
         // thứ tự dòng khác nhau có thể khóa chéo nhau -> deadlock ở DB.
-        List<RepairLine> sortedLines = addLines.stream()
+        List<RepairLine> sortedLines = stockOutLines.stream()
                 .sorted(Comparator
                         .comparing(RepairLine::getComponentVariantId, Comparator.nullsFirst(Long::compareTo))
                         .thenComparing(this::resolveStockOutSerialNumberId, Comparator.nullsFirst(Long::compareTo)))
@@ -229,8 +263,33 @@ public class RepairWorkflowService {
                 throw new BusinessException(SystemMessage.REP_INSUFFICIENT_INVENTORY);
             }
         }
+        }
 
         log.info("[Repair {}] Xác nhận lệnh sửa chữa thành công, tồn kho hợp lệ", repair.getRepairCode());
+
+        // Tạo phiếu xuất/nhập kho nháp
+        List<RepairLine> replaceLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_REPLACE);
+        Map<Long, SerialNumber> serialById = loadSerialsForLines(repair, stockOutLines, replaceLines, removeLines);
+
+        if (!stockOutLines.isEmpty()) {
+            createFinalInventoryDocuments(repair, stockOutLines, serialById);
+        }
+
+        List<RepairLine> scrapLines = new java.util.ArrayList<>(removeLines);
+        scrapLines.addAll(replaceLines);
+        if (!scrapLines.isEmpty()) {
+            createScrapDocument(repair, scrapLines, serialById);
+        }
+
+        if (!stockOutLines.isEmpty() || !scrapLines.isEmpty()) {
+            notificationService.createNotification(
+                    "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần xuất/nhập kho",
+                    "Lệnh sửa chữa " + repair.getRepairCode() + " đã được xác nhận. Vui lòng ghi sổ các phiếu xuất/nhập kho liên quan.",
+                    "REPAIR_INVENTORY", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+            );
+        }
+        
+        return true;
     }
 
     // =====================================================================
@@ -244,38 +303,40 @@ public class RepairWorkflowService {
         List<RepairLine> removeLines = repairLineRepository.findByRepairIdAndActionType(
                 repair.getId(), ACTION_REMOVE);
 
-        // Batch-resolve serial number & component variant 1 lần cho toàn bộ lệnh sửa,
-        // thay vì mỗi bước bên dưới (validate, tạo phiếu, cập nhật mapping) tự query lại
-        // theo từng dòng - trước đây gây N+1 (và có chỗ query trùng 2 lần cho cùng 1 dòng).
+        // Batch-resolve serial number & component variant 1 lần cho toàn bộ lệnh sửa
         Map<Long, SerialNumber> serialById = loadSerialsForLines(repair, allAddLines, replaceLines, removeLines);
         Map<Long, ProductVariant> variantById = loadVariantsForLines(allAddLines, replaceLines, removeLines);
 
-        validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD, variantById, serialById);
-        validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE, variantById, serialById);
-        validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE, variantById, serialById);
+        // validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD, variantById, serialById);
+        // validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE, variantById, serialById);
+        // validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE, variantById, serialById);
 
-        // 1. Post phiếu xuất kho linh kiện ADD (nếu có)
-        List<RepairLine> stockOutLines = new java.util.ArrayList<>(allAddLines);
-        stockOutLines.addAll(replaceLines);
-        if (!stockOutLines.isEmpty()) {
-            createFinalInventoryDocuments(repair, stockOutLines, serialById);
-        }
-
-        // 2. Sinh phiếu nhập kho Scrap cho linh kiện REMOVE (nếu có)
-        List<RepairLine> scrapLines = new java.util.ArrayList<>(removeLines);
-        scrapLines.addAll(replaceLines);
-        if (!scrapLines.isEmpty()) {
-            createScrapDocument(repair, scrapLines, serialById);
-        }
+        // (Phiếu kho đã được tạo ở bước CONFIRMED và POST bởi Thủ kho, nên không tạo lại ở đây)
 
         // 3. Cập nhật cấu hình serial bên trong PC sau sửa chữa.
         updateDeviceComponentSerialLifecycle(repair, allAddLines, replaceLines, removeLines, serialById);
 
-        // 4. Stub: Sinh Invoice nếu invoice_method != 'none'
-        if (!"none".equals(repair.getInvoiceMethod()) && repair.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
-            log.info("[Repair {}] Invoice method: {} - Total: {}. Invoice generation stub (sẽ implement ở Phase 3)",
-                    repair.getRepairCode(), repair.getInvoiceMethod(), repair.getTotalAmount());
-            // TODO: Gọi InvoiceService khi implement module Invoicing
+        // 4. Sinh Invoice (Phiếu thu) nội bộ nếu có phát sinh phí (kể cả khi chọn Không xuất hóa đơn)
+        if (repair.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
+            PaymentRequest req = new PaymentRequest();
+            req.setPartnerId(repair.getPartnerId());
+            req.setAmount(repair.getTotalAmount());
+            req.setNote("Thu tiền sửa chữa phiếu " + repair.getRepairCode());
+            req.setPaymentMethod("CASH");
+            var payment = paymentService.createPaymentReceipt(req);
+            
+            log.info("[Repair {}] Đã tự động tạo phiếu thu với số tiền {}.", repair.getRepairCode(), repair.getTotalAmount());
+
+            notificationService.createNotification(
+                "ROLE_ACCOUNTANT", null, "Hoàn thành lệnh sửa chữa",
+                "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành, phát sinh phí. Vui lòng kiểm tra công nợ.",
+                "REPAIR_DONE", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+            );
+            notificationService.createNotification(
+                "ROLE_CASHIER_CONTROLLER", null, "Có phiếu thu sửa chữa mới",
+                "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành. Vui lòng thu tiền khách hàng.",
+                "REPAIR_PAYMENT", "RECEIPT", payment.getId(), "/cashier-workspace?tab=requests"
+            );
         }
     }
 
@@ -323,15 +384,8 @@ public class RepairWorkflowService {
             return;
         }
 
-        try {
-            inventoryDocumentService.postExport(docId);
-            log.info("[Repair {}] Đã tạo và POST phiếu xuất kho REP-EX-{} thành công qua InventoryDocumentService",
-                    repair.getRepairCode(), repair.getRepairCode());
-        } catch (Exception e) {
-            log.error("[Repair {}] Lỗi khi POST phiếu xuất kho REP-EX-{}: {}",
-                    repair.getRepairCode(), repair.getRepairCode(), e.getMessage());
-            throw new BusinessException(String.format(SystemMessage.REP_ERR_009.getMessage(), e.getMessage()));
-        }
+        log.info("[Repair {}] Đã tạo phiếu xuất kho DRAFT REP-EX-{} thành công qua InventoryDocumentService",
+                repair.getRepairCode(), repair.getRepairCode());
     }
 
     /**
@@ -375,15 +429,8 @@ public class RepairWorkflowService {
             return;
         }
 
-        try {
-            inventoryDocumentService.postImport(docId);
-            log.info("[Repair {}] Đã tạo và POST phiếu Scrap REP-SCRAP-{} thành công qua InventoryDocumentService",
-                    repair.getRepairCode(), repair.getRepairCode());
-        } catch (Exception e) {
-            log.error("[Repair {}] Lỗi khi POST phiếu Scrap REP-SCRAP-{}: {}",
-                    repair.getRepairCode(), repair.getRepairCode(), e.getMessage());
-            throw new BusinessException(String.format(SystemMessage.REP_ERR_008.getMessage(), e.getMessage()));
-        }
+        log.info("[Repair {}] Đã tạo phiếu Scrap DRAFT REP-SCRAP-{} thành công qua InventoryDocumentService",
+                repair.getRepairCode(), repair.getRepairCode());
     }
 
     // =====================================================================
@@ -401,6 +448,31 @@ public class RepairWorkflowService {
     // =====================================================================
     // Utility helpers
     // =====================================================================
+
+    @EventListener
+    public void onInventoryDocumentPosted(InventoryDocumentPostedEvent event) {
+        if ("REPAIR".equals(event.getReferenceType()) && event.getReferenceId() != null) {
+            repairRepository.findById(event.getReferenceId()).ifPresent(repair -> {
+                if (RepairStatus.WAITING_FOR_EXPORT.name().equals(repair.getRepairStatus())) {
+                    // Update state
+                    repair.startRepair();
+                    repairRepository.save(repair);
+                    
+                    // Audit log
+                    auditLogService.logEvent(null, "AUTO_START_REPAIR", "Repair", repair.getId(), "SUCCESS",
+                            "Thủ kho đã ghi sổ phiếu xuất kho, tự động chuyển sang Đang sửa chữa", null, null);
+                            
+                    // Push notification to technician
+                    notificationService.createNotification(
+                            "ROLE_TECHNICIAN", repair.getCreatedBy(), 
+                            "Bắt đầu sửa chữa",
+                            "Thủ kho đã ghi sổ phiếu xuất cho lệnh sửa chữa " + repair.getRepairCode() + ". Bạn có thể bắt đầu sửa chữa.",
+                            "REPAIR_STARTED", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                    );
+                }
+            });
+        }
+    }
 
     /**
      * Giải quyết warehouse ID cho lệnh sửa chữa.

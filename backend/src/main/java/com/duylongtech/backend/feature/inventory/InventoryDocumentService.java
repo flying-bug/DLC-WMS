@@ -147,6 +147,7 @@ public class InventoryDocumentService {
     public static final String ISSUE_PURPOSE_SALES = "SALES"; // Xuất kho bán hàng — tự sinh bảo hành
     public static final String ISSUE_PURPOSE_USAGE = "USAGE"; // Xuất kho sử dụng nội bộ — không sinh bảo hành
     public static final String ISSUE_PURPOSE_ASSEMBLY = "ASSEMBLY"; // Xuất kho lắp ráp/tháo dỡ
+    public static final String ISSUE_PURPOSE_REPAIR = "REPAIR"; // Xuất kho sửa chữa
 
     // Phân loại phiếu xuất/nhập kho tự động từ module Chuyển kho
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
@@ -159,12 +160,12 @@ public class InventoryDocumentService {
 
     // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
     private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE,
-            ISSUE_PURPOSE_ASSEMBLY);
+            ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_REPAIR);
 
     // Tập hợp các mục đích hợp lệ toàn bộ (bắt cả nội bộ và người dùng)
     private static final Set<String> VALID_ALL_EXPORT_PURPOSES = Set.of(
             ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_TRANSFER_OUT,
-            ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
+            ISSUE_PURPOSE_INVENTORY_ADJUSTMENT, ISSUE_PURPOSE_REPAIR);
 
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
@@ -1195,13 +1196,12 @@ public class InventoryDocumentService {
     @Transactional
     public Long createExportForRepair(Long repairId, String repairCode, Long warehouseId, Long partnerId,
             Long createdBy, Long salespersonId, String recipientName, List<RepairStockOutLineRequest> lines) {
-        String docCode = "REP-EX-" + repairCode;
-        if (inventoryDocumentRepository.existsByDocCode(docCode)) {
+        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, "EXPORT")) {
             return null;
         }
 
         InventoryDocument exportDoc = new InventoryDocument();
-        exportDoc.initExportDocument(docCode);
+        exportDoc.initExportDocument(resolveCreateDocCode(null));
         exportDoc.setIssuePurpose("REPAIR");
         exportDoc.setReferenceType("REPAIR");
         exportDoc.setReferenceId(repairId);
@@ -1246,13 +1246,12 @@ public class InventoryDocumentService {
     @Transactional
     public Long createScrapImportForRepair(Long repairId, String repairCode, Long scrapWarehouseId, Long partnerId,
             Long createdBy, Long salespersonId, String recipientName, List<RepairScrapLineRequest> lines) {
-        String scrapDocCode = "REP-SCRAP-" + repairCode;
-        if (inventoryDocumentRepository.existsByDocCode(scrapDocCode)) {
+        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceIdAndDocType("REPAIR", repairId, "IMPORT")) {
             return null;
         }
 
         InventoryDocument scrapDoc = new InventoryDocument();
-        scrapDoc.initImportDocument(scrapDocCode);
+        scrapDoc.initImportDocument(resolveCreateImportDocCode(null));
         scrapDoc.setIssuePurpose("SCRAP");
         scrapDoc.setReferenceType("REPAIR");
         scrapDoc.setReferenceId(repairId);

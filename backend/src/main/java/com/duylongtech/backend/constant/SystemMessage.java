@@ -283,7 +283,7 @@ public enum SystemMessage {
     INV_ERR_036("INV_036", "Serial %s đang nằm trong cấu hình PC, không thể xuất như linh kiện rời."),
     INV_ERR_037("INV_037", "Serial không nằm trong kho đang chọn"),
     INV_ERR_038("INV_038", "Serial không khả dụng để xuất kho: %s"),
-    INV_ERR_039("INV_039", "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng), USAGE (Xuất sử dụng) hoặc ASSEMBLY (Xuất lắp ráp)"),
+    INV_ERR_039("INV_039", "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng), USAGE (Xuất sử dụng), ASSEMBLY (Xuất lắp ráp) hoặc REPAIR (Xuất sửa chữa)"),
     INV_ERR_040("INV_040", "Chỉ phiếu nhập kho lưu tạm mới có thể ghi sổ"),
     INV_ERR_041("INV_041", "Số lượng xuất lớn hơn số lượng tồn kho cho sản phẩm %s, vui lòng điều chỉnh"),
     INV_ERR_042("INV_042", "Sản phẩm SKU: %s có quản lý Serial. Vui lòng quét/nhập đúng %s mã serial trước khi ghi sổ."),

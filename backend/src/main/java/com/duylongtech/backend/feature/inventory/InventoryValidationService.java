@@ -142,6 +142,7 @@ public class InventoryValidationService {
     public static final String ISSUE_PURPOSE_SALES = "SALES"; // Xuất kho bán hàng – tự sinh bảo hành
     public static final String ISSUE_PURPOSE_USAGE = "USAGE"; // Xuất kho sử dụng nội bộ – không sinh bảo hành
     public static final String ISSUE_PURPOSE_ASSEMBLY = "ASSEMBLY"; // Xuất kho lắp ráp/tháo dỡ
+    public static final String ISSUE_PURPOSE_REPAIR = "REPAIR"; // Xuất kho sửa chữa
 
     // Phân loại phiếu xuất/nhập kho tự động từ module Chuyển kho
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
@@ -150,12 +151,12 @@ public class InventoryValidationService {
 
     // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
     private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE,
-            ISSUE_PURPOSE_ASSEMBLY);
+            ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_REPAIR);
 
     // Tập hợp các mục đích hợp lệ toàn bộ (bắt cả nội bộ và người dùng)
     private static final Set<String> VALID_ALL_EXPORT_PURPOSES = Set.of(
             ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_TRANSFER_OUT,
-            ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
+            ISSUE_PURPOSE_INVENTORY_ADJUSTMENT, ISSUE_PURPOSE_REPAIR);
 
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
