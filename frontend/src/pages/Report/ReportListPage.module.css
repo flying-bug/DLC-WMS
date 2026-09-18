@@ -315,10 +315,6 @@
 /* Report Table styling */
 .reportTableContainer {
     overflow-x: auto;
-    border: 1px solid var(--color-border-strong);
-    border-radius: 4px;
-    box-shadow: var(--shadow-card-subtle);
-    background-color: var(--color-white);
 }
 
 .reportTable {
@@ -330,7 +326,7 @@
 
 .reportTable th {
     background-color: var(--color-bg-muted);
-    border: 1px solid var(--color-border-strong);
+    border: 1px solid #a0aab8; /* Darker bolder border */
     padding: 10px 12px;
     font-weight: 600;
     color: var(--color-text-heading);
@@ -340,7 +336,7 @@
 
 .reportTable td {
     padding: 10px 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid #b2b9c5; /* Darker border for rows */
     vertical-align: middle;
 }
 
@@ -380,11 +376,27 @@
     border: 1px solid var(--wms-text-subtle) !important;
 }
 
+.boldTable {
+    border: 2px solid var(--wms-text-muted) !important;
+}
+
+.boldTable th, .boldTable td {
+    border: 2px solid var(--wms-text-muted) !important;
+}
+
+.boldTable .lightBorderRight {
+    border-right: 1px solid var(--color-border) !important;
+}
+
+.boldTable .lightBorderLeft {
+    border-left: 1px solid var(--color-border) !important;
+}
+
 /* Column Specific Sizing & Wrapping */
 .colWarehouse {
-    width: 140px;
-    min-width: 130px;
-    max-width: 160px;
+    width: 90px;
+    min-width: 90px;
+    max-width: 110px;
     white-space: normal !important;
     word-break: break-word;
 }
@@ -493,17 +505,84 @@
     background-color: var(--color-primary-soft);
 }
 
-.filterBar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 16px;
+.filterSection {
     background: var(--color-surface);
     padding: 16px 20px;
     border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card-subtle);
-    border: 1px solid var(--color-border-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
     margin-bottom: 20px;
+    border: 1px solid var(--color-border-soft);
+    box-shadow: var(--shadow-card-subtle);
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.searchAndFilters {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.searchBox {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 240px;
+    max-width: 380px;
+}
+
+.searchBox > i:first-child {
+    position: absolute;
+    left: 12px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 8px 36px;
+    border: 1px solid var(--color-border-field);
+    border-radius: var(--radius-control);
+    font-size: 13.5px;
+    outline: none;
+    background-color: var(--color-white);
+    height: 38px;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.searchInput:focus {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus-primary);
+}
+
+.clearSearchBtn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    z-index: 2;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+}
+
+.clearSearchBtn:hover {
+    background-color: var(--color-bg-soft);
+    color: var(--color-danger);
 }
 
 .filterGroup {
@@ -525,7 +604,7 @@
     font-size: 13.5px;
     outline: none;
     background-color: var(--color-white);
-    min-width: 150px;
+    min-width: 130px;
     height: 38px;
     box-sizing: border-box;
 }
@@ -533,6 +612,34 @@
 .filterInput:focus, .filterSelect:focus {
     border-color: var(--color-primary);
     box-shadow: var(--shadow-focus-primary);
+}
+
+.filterActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.iconBtn {
+    border: 1px solid var(--color-border-field);
+    background: var(--color-white);
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--color-text-secondary);
+    transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+    background-color: var(--color-bg-soft);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
 }
 
 .btnView, .btnExport, .btnPrint {

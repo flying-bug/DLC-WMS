@@ -145,7 +145,6 @@ public class InventoryPostingService {
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
     private final com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard warehouseAccessGuard;
-    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
@@ -398,8 +397,6 @@ public class InventoryPostingService {
                     null, null);
         } catch (Exception ignored) {
         }
-        
-        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, saved.getId(), saved.getReferenceType(), saved.getReferenceId()));
 
         return toResponse(saved);
     }
@@ -606,8 +603,6 @@ public class InventoryPostingService {
                     null, null);
         } catch (Exception ignored) {
         }
-        
-        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, savedImport.getId(), savedImport.getReferenceType(), savedImport.getReferenceId()));
 
         return toResponse(savedImport);
     }
@@ -1151,7 +1146,7 @@ public class InventoryPostingService {
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
-    
+
     public boolean isAssemblyDocument(com.duylongtech.backend.feature.inventory.InventoryDocument doc) {
         if (doc == null) {
             return false;

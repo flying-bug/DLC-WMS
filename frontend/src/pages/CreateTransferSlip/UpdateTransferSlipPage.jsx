@@ -553,17 +553,17 @@ function UpdateTransferSlipPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Mã hàng</th>
-                    <th>Tên hàng</th>
-                    <th>ĐVT</th>
-                    <th style={{ textAlign: 'right' }}>Tồn khả dụng</th>
-                    <th style={{ textAlign: 'right' }}>Số lượng</th>
-                    <th style={{ textAlign: 'center' }}>Serial</th>
-                    {canViewPricing() && <th style={{ textAlign: 'right' }}>Đơn giá</th>}
-                    {canViewPricing() && <th style={{ textAlign: 'right' }}>Thành tiền</th>}
-                    <th>Ghi chú</th>
-                    <th></th>
+                    <th style={{ width: '40px' }}>#</th>
+                    <th style={{ width: '130px' }}>Mã hàng</th>
+                    <th style={{ minWidth: '220px' }}>Tên hàng</th>
+                    <th style={{ width: '80px' }}>ĐVT</th>
+                    <th style={{ width: '110px', textAlign: 'right' }}>Tồn khả dụng</th>
+                    <th style={{ width: '100px', textAlign: 'right' }}>Số lượng</th>
+                    <th style={{ width: '100px', textAlign: 'center' }}>Serial</th>
+                    {canViewPricing() && <th style={{ width: '120px', textAlign: 'right' }}>Đơn giá</th>}
+                    {canViewPricing() && <th style={{ width: '130px', textAlign: 'right' }}>Thành tiền</th>}
+                    <th style={{ width: '150px' }}>Ghi chú</th>
+                    <th style={{ width: '50px' }}></th>
                   </tr>
                 </thead>
                 <tbody>

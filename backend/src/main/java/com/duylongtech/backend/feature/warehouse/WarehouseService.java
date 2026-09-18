@@ -140,7 +140,8 @@ public class WarehouseService {
         boolean isAdminOrManager = user != null && user.getRoles() != null && user.getRoles().stream()
                 .anyMatch(r -> r.getCode() != null && (
                         r.getCode().toUpperCase().contains("ADMIN") ||
-                        r.getCode().toUpperCase().contains("MANAGER")
+                        r.getCode().toUpperCase().equals("MANAGER") ||
+                        r.getCode().toUpperCase().equals("ROLE_MANAGER")
                 ));
 
         if (isAdminOrManager) {

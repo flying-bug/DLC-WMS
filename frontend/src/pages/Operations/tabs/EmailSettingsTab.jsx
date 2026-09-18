@@ -60,7 +60,7 @@ function EmailSettingsTab() {
         }
 
         fetchStatus();
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleConnect = async () => {
         try {

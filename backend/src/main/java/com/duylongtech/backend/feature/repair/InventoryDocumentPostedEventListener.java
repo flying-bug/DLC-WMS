@@ -29,7 +29,7 @@ public class InventoryDocumentPostedEventListener {
     // transaction has already committed, so a failure here (e.g. the
     // notification call) can never roll back the stock posting itself.
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void handleInventoryDocumentPosted(InventoryDocumentPostedEvent event) {
         if (!"REPAIR".equalsIgnoreCase(event.getReferenceType()) || event.getReferenceId() == null) {
             return;

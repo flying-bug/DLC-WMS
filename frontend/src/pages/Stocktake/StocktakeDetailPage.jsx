@@ -26,6 +26,7 @@ function StocktakeDetailPage() {
   const isStorekeeper = userRoles.some(r => r.includes('STOREKEEPER'));
   const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('ADMIN') || r.includes('MANAGER'));
 
+
   const [warehouses, setWarehouses] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
   const fileInputRef = useRef(null);

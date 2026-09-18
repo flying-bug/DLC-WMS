@@ -125,8 +125,9 @@ const FilterPopover = ({
 
   // Count active filter criteria
   const activeCount = Object.entries(filters).filter(([key, val]) => {
-    if (key === 'preset') return false;
-    return val !== '' && val !== undefined && val !== null;
+    if (['preset', 'fromDate', 'toDate'].includes(key)) return false;
+    if (key === 'warehouseId' && warehouses.length <= 1) return false;
+    return val !== '' && val !== undefined && val !== null && val !== 'ALL';
   }).length;
 
   return (
@@ -225,7 +226,7 @@ const FilterPopover = ({
             )}
 
             {/* Warehouse */}
-            {warehouses.length > 0 && (
+            {warehouses.length > 1 && (
               <div className={styles.formGroup}>
                 <label className={styles.label}>KHO HÀNG</label>
                 <SearchableSelect
