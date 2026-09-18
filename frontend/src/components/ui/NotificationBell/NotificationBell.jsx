@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../../contexts/WorkspaceModeContext';
 import { hasPermission, NOTIFICATION_EVENT } from '../../../auth/session';
 import * as notificationApi from '../../../api/notificationApi';
+import { playNotificationSound } from '../../../utils/notificationSound';
 import styles from './NotificationBell.module.css';
 
 export default function NotificationBell() {
@@ -45,6 +46,7 @@ export default function NotificationBell() {
         const handleRealtimeNotification = (event) => {
             const notif = event.detail;
             if (!notif) return;
+            playNotificationSound();
             setUnreadCount(prev => prev + 1);
             setNotifications(prev => {
                 if (prev.some(n => n.id === notif.id)) return prev;
