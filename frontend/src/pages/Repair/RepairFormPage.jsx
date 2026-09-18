@@ -22,7 +22,7 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import styles from './RepairFormPage.module.css';
 import { formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-import { getAuthFullName, getAuthRoles } from '../../auth/session';
+import { getAuthFullName, getAuthRoles, NOTIFICATION_EVENT } from '../../auth/session';
 
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
@@ -523,6 +523,24 @@ function RepairFormPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Kho ghi sổ phiếu xuất -> backend tự chuyển trạng thái lệnh sang UNDER_REPAIR
+  // và bắn thông báo realtime (SSE). Lắng nghe ở đây để màn hình KTV đang mở tự
+  // cập nhật trạng thái mà không cần F5.
+  useEffect(() => {
+    if (isNew) return;
+    const handleRealtimeNotification = (event) => {
+      const notif = event.detail;
+      if (!notif || notif.referenceType !== 'REPAIR' || String(notif.referenceId) !== String(id)) return;
+      repairApi.getRepairById(id).then((res) => {
+        const data = res.data?.data;
+        if (data) setRepair(data);
+      }).catch(() => {});
+      showToast('info', notif.message || 'Trạng thái lệnh sửa chữa vừa được cập nhật.');
+    };
+    window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+    return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+  }, [id, isNew]);
 
   const handleFormChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -1517,10 +1535,10 @@ function RepairFormPage() {
 
                 {/* HÀNG THÊM MỚI (INLINE ROW) */}
                 {addingType === 'PART' && (
-                  <NewInlineRow repair={repair} type="PART" variants={variants} inventoryMap={inventoryMap} onSave={handleSaveLine} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} vatConfig={vatConfig} />
+                  <NewInlineRow repair={repair} type="PART" variants={variants} inventoryMap={inventoryMap} onSave={handleSaveLine} onCancel={() => setAddingType(null)} visibleColumns={visibleColumns} vatConfig={vatConfig} />
                 )}
                 {addingType === 'FEE' && (
-                  <NewInlineRow repair={repair} type="FEE" variants={products.filter(p => p.productType === 'Dịch vụ')} onSave={handleSaveFee} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} vatConfig={vatConfig} />
+                  <NewInlineRow repair={repair} type="FEE" variants={products.filter(p => p.productType === 'Dịch vụ')} onSave={handleSaveFee} onCancel={() => setAddingType(null)} visibleColumns={visibleColumns} vatConfig={vatConfig} />
                 )}
               </tbody>
             </table>
@@ -1983,12 +2001,12 @@ function FeeNameInput({ value, suggestions = [], onChange, onCommit, disabled = 
   );
 }
 
-function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, underWarranty, visibleColumns = {}, vatConfig = { defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] } }) {
+function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, visibleColumns = {}, vatConfig = { defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] } }) {
   const showRepairCols = repair && !['DRAFT', 'QUOTATION'].includes(repair.repairStatus);
   const [form, setForm] = useState(
     type === 'PART'
-      ? { actionType: 'ADD', componentVariantId: '', quantity: 1, unitPrice: 0, vatPercent: vatConfig.defaultVatRate, isFreeWarranty: underWarranty || false, note: '' }
-      : { feeName: '', feeAmount: 0, vatPercent: vatConfig.defaultVatRate, isFreeWarranty: underWarranty || false, note: '' }
+      ? { actionType: 'ADD', componentVariantId: '', quantity: 1, unitPrice: 0, vatPercent: vatConfig.defaultVatRate, isFreeWarranty: false, note: '' }
+      : { feeName: '', feeAmount: 0, vatPercent: vatConfig.defaultVatRate, isFreeWarranty: false, note: '' }
   );
   const [isSaving, setIsSaving] = useState(false);
   const skipPartCommitRef = useRef(false);

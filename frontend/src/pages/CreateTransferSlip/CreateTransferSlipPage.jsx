@@ -731,8 +731,8 @@ function CreateTransferSlipPage() {
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
               <i className="bi bi-save"></i> Lưu tạm
             </button>
-            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('APPROVED')}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và gửi yêu cầu chuyển kho
             </button>
           </div>
         </div>
@@ -781,8 +781,10 @@ function CreateTransferSlipPage() {
       />
       <SuccessPrintModal
         isOpen={showSuccessModal}
-        title={savedSlip?.status === 'POSTED' ? 'Lưu & ghi sổ phiếu chuyển kho thành công!' : 'Lưu tạm phiếu chuyển kho thành công!'}
-        message="Phiếu chuyển kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu ngay bây giờ."
+        title={savedSlip?.status === 'APPROVED' ? 'Đã gửi yêu cầu chuyển kho thành công!' : 'Lưu tạm phiếu chuyển kho thành công!'}
+        message={savedSlip?.status === 'APPROVED'
+          ? 'Phiếu chuyển kho đã được gửi. Kho nguồn sẽ thấy phiếu xuất kho tương ứng trong danh sách chờ xử lý.'
+          : 'Phiếu chuyển kho đã được lưu nháp. Bạn có thể in phiếu ngay bây giờ.'}
         docCode={savedSlip?.transferCode || form.transferCode}
         printBtnText="In phiếu chuyển kho"
         onPrint={() => {

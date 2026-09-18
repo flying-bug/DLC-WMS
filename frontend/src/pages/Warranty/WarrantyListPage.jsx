@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
 import { exportToExcel } from '../../utils/excelExport';
+import { printWarrantyCard } from '../../utils/printWarrantyCard';
 import styles from './WarrantyListPage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
@@ -257,13 +258,28 @@ function WarrantyListPage() {
     return tableCols;
   };
 
+  const handlePrintWarranty = (e, item) => {
+    e.stopPropagation();
+    printWarrantyCard(item, {
+      onError: (msg) => showToast('error', msg)
+    });
+  };
+
   const renderActions = (item) => (
-    <i
-      className="bi bi-eye"
-      style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
-      title="Xem chi tiết"
-      onClick={(e) => { e.stopPropagation(); navigate(`/warranties/${item.id}`); }}
-    ></i>
+    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+      <i
+        className="bi bi-printer"
+        style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
+        title="In thẻ bảo hành"
+        onClick={(e) => handlePrintWarranty(e, item)}
+      ></i>
+      <i
+        className="bi bi-eye"
+        style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
+        title="Xem chi tiết"
+        onClick={(e) => { e.stopPropagation(); navigate(`/warranties/${item.id}`); }}
+      ></i>
+    </div>
   );
 
   return (

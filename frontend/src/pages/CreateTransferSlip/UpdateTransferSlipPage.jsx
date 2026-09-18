@@ -670,8 +670,8 @@ function UpdateTransferSlipPage() {
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
               <i className="bi bi-save"></i> Lưu tạm
             </button>
-            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('APPROVED')}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và gửi yêu cầu chuyển kho
             </button>
           </div>
         </div>

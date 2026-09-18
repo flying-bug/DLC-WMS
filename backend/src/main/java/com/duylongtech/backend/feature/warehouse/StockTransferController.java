@@ -67,24 +67,4 @@ public class StockTransferController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{id}/dispatch")
-    @PreAuthorize("hasAuthority('transfer:edit')")
-    public ResponseEntity<StockTransferResponseDTO> dispatchTransfer(
-            @PathVariable("id") Long transferId,
-            @RequestBody StockTransferDispatchDTO dispatchDTO,
-            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
-        StockTransferResponseDTO response = stockTransferService.dispatchTransfer(transferId, dispatchDTO, userPrincipal.getId());
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/{id}/receive")
-    @PreAuthorize("hasAuthority('transfer:edit')")
-    public ResponseEntity<StockTransferResponseDTO> receiveTransfer(
-            @PathVariable("id") Long transferId,
-            @RequestBody StockTransferReceiptDTO receiptDTO,
-            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
-        StockTransferResponseDTO response = stockTransferService.receiveTransfer(transferId, receiptDTO, userPrincipal.getId());
-        return ResponseEntity.ok(response);
-    }
-
 }

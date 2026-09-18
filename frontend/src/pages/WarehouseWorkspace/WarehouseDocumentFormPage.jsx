@@ -378,6 +378,30 @@ export default function WarehouseDocumentFormPage() {
 
         {/* MAIN CONTENT AREA */}
         <div className={styles.mainContent}>
+          {/* STOCK TRANSFER ORIGIN BANNER */}
+          {(doc.issuePurpose === 'TRANSFER_EXPORT' || doc.issuePurpose === 'TRANSFER_IMPORT') && (
+            <div style={{
+              background: 'var(--wms-info-soft, #eff6ff)',
+              border: '1px solid var(--wms-info-border, #bfdbfe)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <i className="bi bi-arrow-left-right" style={{ color: '#2563eb', fontSize: '18px', marginTop: '2px' }}></i>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: '#1e40af', fontSize: '14px', marginBottom: '2px' }}>
+                  Chứng từ tự động sinh từ phiếu chuyển kho{doc.referenceId ? ` #${doc.referenceId}` : ''}
+                </div>
+                <div style={{ color: '#1e3a8a', fontSize: '13px' }}>
+                  Vui lòng quét/kiểm đếm số lượng thực tế trước khi ghi sổ - số liệu bạn ghi sổ ở đây sẽ là số liệu chính thức.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* UNPOST HISTORY ALERT BANNER */}
           {doc.unpostReason && (
             <div style={{

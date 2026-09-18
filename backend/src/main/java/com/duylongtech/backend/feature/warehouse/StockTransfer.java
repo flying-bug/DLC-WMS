@@ -142,8 +142,8 @@ public class StockTransfer {
     }
 
     public void cancel() {
-        if (DocumentStatus.POSTED.name().equals(this.status)) {
-            throw new IllegalStateException("Không thể hủy phiếu chuyển kho đã ghi sổ");
+        if (!DocumentStatus.DRAFT.name().equals(this.status)) {
+            throw new IllegalStateException("Chỉ có thể hủy phiếu chuyển kho khi còn ở trạng thái Lưu tạm");
         }
         this.status = DocumentStatus.CANCELLED.name();
     }

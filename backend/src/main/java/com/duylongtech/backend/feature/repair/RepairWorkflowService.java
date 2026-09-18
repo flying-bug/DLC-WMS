@@ -329,7 +329,7 @@ public class RepairWorkflowService {
             req.setAmount(repair.getTotalAmount());
             req.setNote("Thu tiền sửa chữa phiếu " + repair.getRepairCode());
             req.setPaymentMethod("CASH");
-            var payment = paymentService.createPaymentReceipt(req);
+            paymentService.createPaymentReceipt(req);
             
             log.info("[Repair {}] Đã tự động tạo phiếu thu với số tiền {}.", repair.getRepairCode(), repair.getTotalAmount());
 
@@ -338,11 +338,11 @@ public class RepairWorkflowService {
                 "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành, phát sinh phí. Vui lòng kiểm tra công nợ.",
                 "REPAIR_DONE", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
             );
-            notificationService.createNotification(
-                "ROLE_CASHIER_CONTROLLER", null, "Có phiếu thu sửa chữa mới",
-                "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành. Vui lòng thu tiền khách hàng.",
-                "REPAIR_PAYMENT", "RECEIPT", payment.getId(), "/cashier-workspace?tab=requests"
-            );
+            // Không tự gửi thêm thông báo "phiếu thu mới" cho Thủ quỹ ở đây -
+            // paymentService.createPaymentReceipt(...) ở trên đã tự bắn thông báo
+            // đó rồi (đúng referenceType "PAYMENT_RECEIPT" để CashierWorkspacePage
+            // nhận realtime). Gửi thêm ở đây bị trùng lặp và referenceType "RECEIPT"
+            // không khớp bộ lọc nên không kích hoạt được auto-refresh.
         }
     }
 

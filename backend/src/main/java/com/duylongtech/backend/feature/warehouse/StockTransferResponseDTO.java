@@ -15,7 +15,9 @@ public class StockTransferResponseDTO {
     private Long id;
     private String transferCode;
     private Long fromWarehouseId;
+    private String fromWarehouseName;
     private Long toWarehouseId;
+    private String toWarehouseName;
     private LocalDate transferDate;
     private String status;
     private String note;
@@ -24,6 +26,10 @@ public class StockTransferResponseDTO {
     private Long referenceId;
     private String referenceType;
     private String referenceCode;
+    private Long exportDocumentId;
+    private String exportDocumentCode;
+    private Long importDocumentId;
+    private String importDocumentCode;
     private LocalDateTime createdAt;
     private List<StockTransferLineDTO> lines;
 }

@@ -10,7 +10,7 @@ import axiosClient from '../../api/axiosClient';
 import { exportBomToExcel } from '../../utils/bomExcelExport';
 import styles from './AssemblyOrderPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-import { hasPermission } from '../../auth/session';
+import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -128,6 +128,21 @@ function AssemblyBomFormPage() {
         loadLookups();
         loadBom();
     }, [loadLookups, loadBom]);
+
+    // Kế toán duyệt/từ chối BOM ở màn khác -> backend bắn notification realtime
+    // (SSE). Lắng nghe ở đây để màn hình đang mở BOM này tự cập nhật trạng thái
+    // mà không cần F5.
+    useEffect(() => {
+        if (!editing) return;
+        const handleRealtimeNotification = (event) => {
+            const notif = event.detail;
+            if (!notif || notif.referenceType !== 'ASSEMBLY_BOM' || String(notif.referenceId) !== String(id)) return;
+            loadBom();
+            showToast('info', notif.message || 'Trạng thái cấu hình vừa được cập nhật.');
+        };
+        window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+        return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+    }, [editing, id, loadBom]);
 
     const setField = (field, value) => {
         setForm((current) => ({ ...current, [field]: value }));

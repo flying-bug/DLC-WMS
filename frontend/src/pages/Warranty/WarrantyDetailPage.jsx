@@ -9,6 +9,7 @@ import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { hasPermission } from '../../auth/session';
+import { printWarrantyCard } from '../../utils/printWarrantyCard';
 
 const STATUS_LABELS = {
   ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
@@ -85,6 +86,12 @@ function WarrantyDetailPage() {
   useEffect(() => {
     loadWarranty();
   }, [loadWarranty]);
+
+  const handlePrintWarranty = () => {
+    printWarrantyCard(warranty, {
+      onError: (msg) => showToast('error', msg)
+    });
+  };
 
   const pName = warranty?.partnerName || warranty?.customerName || warranty?.partner?.name || 'Khách lẻ';
   const pPhone = warranty?.partnerPhone || warranty?.customerPhone || warranty?.partner?.phone || 'Chưa có';
@@ -164,7 +171,9 @@ function WarrantyDetailPage() {
             </span>
           </div>
           <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
-
+            <button className={styles.btnEdit} onClick={handlePrintWarranty}>
+              <i className="bi bi-printer"></i> In thẻ bảo hành
+            </button>
             {currentStatus === 'ACTIVE' && canEditWarranty && (
               <button className={styles.btnDelete} onClick={() => setShowVoidModal(true)}>
                 <i className="bi bi-shield-x"></i> Vô hiệu hóa

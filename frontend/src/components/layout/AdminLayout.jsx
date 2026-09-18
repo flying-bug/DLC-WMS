@@ -81,7 +81,6 @@ const AdminLayout = ({ children }) => {
         warehouse_workspace: [
             { path: '/warehouse-workspace?tab=imports', tabId: 'imports', label: 'Đề nghị nhập kho' },
             { path: '/warehouse-workspace?tab=exports', tabId: 'exports', label: 'Đề nghị xuất kho' },
-            { path: '/warehouse-workspace?tab=transfers', tabId: 'transfers', label: 'Đề nghị chuyển kho' },
             { path: '/warehouse-workspace?tab=stocktakes', tabId: 'stocktakes', label: 'Biên bản kiểm kê' },
             { path: '/reports?domain=warehouse', tabId: 'reports', label: 'Báo cáo kho', matches: ['/reports'] }
         ],

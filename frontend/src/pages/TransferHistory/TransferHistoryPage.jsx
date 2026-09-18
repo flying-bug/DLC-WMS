@@ -38,8 +38,10 @@ const COLUMN_OPTIONS = [
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Lưu tạm', code: 'info' }, // Adjust if you have another status
-  POSTED: { label: 'Ghi sổ', code: 'success' },
+  SUBMITTED: { label: 'Lưu tạm', code: 'info' },
+  APPROVED: { label: 'Đã duyệt, chờ xuất kho', code: 'info' },
+  IN_TRANSIT: { label: 'Đang vận chuyển, chờ nhập kho', code: 'warning' },
+  POSTED: { label: 'Hoàn tất', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
@@ -240,7 +242,10 @@ function TransferHistoryPage() {
               onReset={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); setTimeout(loadSlips, 0); }}
               statusOptions={[
                 { value: 'DRAFT', label: 'Lưu tạm' },
-                { value: 'POSTED', label: 'Ghi sổ' },
+                { value: 'APPROVED', label: 'Đã duyệt, chờ xuất kho' },
+                { value: 'IN_TRANSIT', label: 'Đang vận chuyển, chờ nhập kho' },
+                { value: 'POSTED', label: 'Hoàn tất' },
+                { value: 'CANCELLED', label: 'Đã hủy' },
               ]}
             />
             <button
@@ -436,6 +441,22 @@ function TransferHistoryPage() {
                         {warehouseById.get(selectedSlip.toWarehouseId)?.name || `Kho #${selectedSlip.toWarehouseId}`}
                       </span>
                     </div>
+                    {selectedSlip.exportDocumentCode && (
+                      <div className={styles.detailRightRow}>
+                        <span className={styles.detailRightLabel}>
+                          <i className="bi bi-file-earmark-arrow-up"></i> Phiếu xuất kho
+                        </span>
+                        <span className={styles.detailRightValue}>{selectedSlip.exportDocumentCode}</span>
+                      </div>
+                    )}
+                    {selectedSlip.importDocumentCode && (
+                      <div className={styles.detailRightRow}>
+                        <span className={styles.detailRightLabel}>
+                          <i className="bi bi-file-earmark-arrow-down"></i> Phiếu nhập kho
+                        </span>
+                        <span className={styles.detailRightValue}>{selectedSlip.importDocumentCode}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

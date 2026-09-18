@@ -11,7 +11,6 @@ import { getDateRangePreset } from '../../utils/datePresets';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
-import * as stockTransferApi from '../../api/stockTransferApi';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import { getMyWarehouses } from '../../api/warehouseApi';
 import { NOTIFICATION_EVENT } from '../../auth/session';
@@ -106,11 +105,6 @@ export default function WarehouseWorkspacePage() {
         const data = res.data?.data || res.data || [];
         setMasterList(data);
         if (!silent && data.length > 0) setSelectedItem(data[0]);
-      } else if (activeTab === 'transfers') {
-        const res = await stockTransferApi.getTransferHistory(params);
-        const data = res.data?.data || res.data || [];
-        setMasterList(data);
-        if (!silent && data.length > 0) setSelectedItem(data[0]);
       } else if (activeTab === 'stocktakes') {
         const stParams = {
           stocktakeCode: searchTerm || undefined,
@@ -166,10 +160,6 @@ export default function WarehouseWorkspacePage() {
           setDetailLines(data.lines || []);
         } else if (activeTab === 'exports') {
           const res = await exportApi.getExportDetail(selectedItem.id);
-          const data = res.data?.data || res.data;
-          setDetailLines(data.lines || []);
-        } else if (activeTab === 'transfers') {
-          const res = await stockTransferApi.getTransferDetail(selectedItem.id);
           const data = res.data?.data || res.data;
           setDetailLines(data.lines || []);
         } else if (activeTab === 'stocktakes') {
@@ -235,10 +225,6 @@ export default function WarehouseWorkspacePage() {
     if (!slip) return;
     if (activeTab === 'stocktakes') {
       navigate(`/stocktakes/${slip.id}`);
-      return;
-    }
-    if (activeTab === 'transfers') {
-      navigate(`/warehouse-workspace/transfers/${slip.id}`);
       return;
     }
     navigate(`/warehouse-workspace/${activeTab === 'imports' ? 'imports' : 'exports'}/${slip.id}`);
@@ -437,6 +423,7 @@ export default function WarehouseWorkspacePage() {
         label: 'Ghi chú',
         width: '220px',
         render: (v, r) => {
+          const isTransferDoc = r.issuePurpose === 'TRANSFER_EXPORT' || r.issuePurpose === 'TRANSFER_IMPORT';
           const noteText = v || `${activeTab === 'imports' ? 'Nhập hàng từ' : 'Xuất hàng cho'} ${r.partnerName || ''}`;
           return (
             <span
@@ -449,6 +436,11 @@ export default function WarehouseWorkspacePage() {
               }}
               title={noteText}
             >
+              {isTransferDoc && (
+                <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginRight: 6 }}>
+                  Chuyển kho
+                </span>
+              )}
               {noteText}
             </span>
           );

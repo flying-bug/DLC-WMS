@@ -14,7 +14,7 @@ import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-import { hasPermission } from '../../auth/session';
+import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -216,6 +216,23 @@ function AssemblyOrderFormPage() {
         loadBomLookups();
         loadOrder();
     }, [loadBaseData, loadBomLookups, loadOrder]);
+
+    // Kế toán duyệt/từ chối hoặc kho ghi sổ phiếu ở màn khác -> backend bắn
+    // notification realtime (SSE). Lắng nghe ở đây để màn hình đang mở lệnh
+    // này tự cập nhật trạng thái mà không cần F5.
+    useEffect(() => {
+        if (!editing) return;
+        const handleRealtimeNotification = (event) => {
+            const notif = event.detail;
+            if (!notif) return;
+            const isAssemblyOrderEvent = notif.referenceType === 'ASSEMBLY_ORDER' || notif.referenceType === 'ASSEMBLY_ORDER_CANCEL';
+            if (!isAssemblyOrderEvent || String(notif.referenceId) !== String(id)) return;
+            loadOrder();
+            showToast('info', notif.message || 'Trạng thái lệnh vừa được cập nhật.');
+        };
+        window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+        return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+    }, [editing, id, loadOrder]);
 
     const setField = (field, value) => {
         setForm((current) => ({ ...current, [field]: value }));

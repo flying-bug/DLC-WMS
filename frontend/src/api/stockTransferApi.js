@@ -22,14 +22,6 @@ export const updateTransferSlip = (id, data) => {
   return axiosClient.put(`${TRANSFER_BASE}/${id}`, data);
 };
 
-export const dispatchTransferSlip = (id, data) => {
-  return axiosClient.post(`${TRANSFER_BASE}/${id}/dispatch`, data);
-};
-
-export const receiveTransferSlip = (id, data) => {
-  return axiosClient.post(`${TRANSFER_BASE}/${id}/receive`, data);
-};
-
 export const getProducts = (params = {}) => {
   return axiosClient.get('/products/variants', { params });
 };
