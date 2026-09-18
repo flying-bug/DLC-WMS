@@ -368,11 +368,8 @@ public class InventoryValidationService {
         if (lines == null || lines.isEmpty())
             return;
 
-        Long effectiveSalesOrderId = salesOrderId;
-        if (effectiveSalesOrderId == null && (com.duylongtech.backend.enums.ReferenceType.SALES_ORDER.name().equalsIgnoreCase(trimToNull(referenceType))
-                || com.duylongtech.backend.enums.ReferenceType.SALES_ORDER.name().equalsIgnoreCase(trimToNull(referenceType)))) {
-            effectiveSalesOrderId = referenceId;
-        }
+        Long effectiveSalesOrderId = com.duylongtech.backend.enums.ReferenceType.resolveEffectiveSalesOrderId(
+                salesOrderId, referenceType, referenceId);
 
         for (int i = 0; i < lines.size(); i++) {
             InventoryDocumentLineRequest line = lines.get(i);

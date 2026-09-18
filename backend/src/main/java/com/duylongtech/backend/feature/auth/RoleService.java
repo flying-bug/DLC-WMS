@@ -88,117 +88,82 @@ public class RoleService {
         Set<PermissionEntity> result = new HashSet<>();
         if (roleCode == null) return result;
 
-        String codeNormalized = roleCode.toUpperCase();
-        if (!codeNormalized.startsWith("ROLE_")) {
-            codeNormalized = "ROLE_" + codeNormalized;
+        String normalizedRoleCode = normalizeRoleCode(roleCode);
+        for (PermissionEntity perm : allPerms) {
+            if (isDefaultPermission(normalizedRoleCode, perm.getModule(), perm.getCode())) {
+                result.add(perm);
+            }
         }
-
-        switch (codeNormalized) {
-            case "ROLE_SUPER_ADMIN":
-                for (PermissionEntity perm : allPerms) {
-                    if (Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
-                        result.add(perm);
-                    }
-                }
-                break;
-
-            case "ROLE_MANAGER":
-                for (PermissionEntity perm : allPerms) {
-                    if (!Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
-                        result.add(perm);
-                    }
-                }
-                break;
-
-            case "ROLE_WAREHOUSE_CONTROLLER":
-                for (PermissionEntity perm : allPerms) {
-                    String mod = perm.getModule();
-                    String code = perm.getCode();
-                    if (Arrays.asList("transfer", "stocktake").contains(mod)) {
-                        result.add(perm);
-                    } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print", "import:post").contains(code)) {
-                        result.add(perm);
-                    } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print", "export:post").contains(code)) {
-                        result.add(perm);
-                    } else if (Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
-                        result.add(perm);
-                    } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_summary").contains(mod)) {
-                        result.add(perm);
-                    } else if ("assembly_config".equals(mod) && "assembly_config:view".equals(code)) {
-                        result.add(perm);
-                    } else if ("assembly".equals(mod) && Arrays.asList("assembly:view", "assembly:execute", "assembly:complete").contains(code)) {
-                        result.add(perm);
-                    }
-                }
-                break;
-
-            case "ROLE_TECHNICIAN":
-                for (PermissionEntity perm : allPerms) {
-                    String mod = perm.getModule();
-                    String code = perm.getCode();
-                    if ("warranty".equals(mod) && "warranty:view".equals(code)) {
-                        result.add(perm);
-                    } else if ("repair".equals(mod)) {
-                        result.add(perm);
-                    } else if ("assembly_config".equals(mod) && Arrays.asList("assembly_config:view", "assembly_config:add", "assembly_config:edit").contains(code)) {
-                        result.add(perm);
-                    } else if ("assembly".equals(mod) && Arrays.asList("assembly:view", "assembly:add", "assembly:edit", "assembly:delete", "assembly:export", "assembly:print", "assembly:submit").contains(code)) {
-                        result.add(perm);
-                    } else if ("customer".equals(mod) && Arrays.asList("customer:view", "customer:add").contains(code)) {
-                        result.add(perm);
-                    } else if (Arrays.asList("product", "product_category", "unit", "export", "warehouse_master", "report_balance", "ai_chat").contains(mod) && code.endsWith(":view")) {
-                        result.add(perm);
-                    }
-                }
-                break;
-
-            case "ROLE_ACCOUNTANT":
-                for (PermissionEntity perm : allPerms) {
-                    String mod = perm.getModule();
-                    String code = perm.getCode();
-                    if (Arrays.asList("sales_order", "purchase_order", "einvoice", "customer", "supplier").contains(mod)) {
-                        result.add(perm);
-                    } else if ("import".equals(mod) && Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code)) {
-                        result.add(perm);
-                    } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
-                        result.add(perm);
-                    } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_debt", "report_sales", "report_summary").contains(mod)) {
-                        result.add(perm);
-                    } else if ("warranty".equals(mod)) {
-                        result.add(perm);
-                    } else if (Arrays.asList("product", "product_category", "unit", "brand").contains(mod)
-                            && Arrays.asList(mod + ":view", mod + ":add", mod + ":edit").contains(code)) {
-                        result.add(perm);
-                    } else if ("assembly_config".equals(mod) && "assembly_config:view".equals(code)) {
-                        result.add(perm);
-                    } else if ("assembly".equals(mod) && Arrays.asList("assembly:view", "assembly:approve").contains(code)) {
-                        result.add(perm);
-                    } else if ("payment".equals(mod)) {
-                        result.add(perm);
-                    } else if (Arrays.asList("transfer", "stocktake", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
-                        result.add(perm);
-                    }
-                }
-                break;
-
-            case "ROLE_CASHIER_CONTROLLER":
-                for (PermissionEntity perm : allPerms) {
-                    String mod = perm.getModule();
-                    String code = perm.getCode();
-                    if ("payment".equals(mod)) {
-                        result.add(perm);
-                    } else if (Arrays.asList("sales_order", "customer", "ai_chat").contains(mod) && code.endsWith(":view")) {
-                        result.add(perm);
-                    } else if (Arrays.asList("report_debt").contains(mod)) {
-                        result.add(perm);
-                    }
-                }
-                break;
-
-            default:
-                break;
-        }
-
         return result;
+    }
+
+    public static String normalizeRoleCode(String roleCode) {
+        if (roleCode == null) return null;
+        String normalized = roleCode.toUpperCase();
+        return normalized.startsWith("ROLE_") ? normalized : "ROLE_" + normalized;
+    }
+
+    public static boolean isDefaultPermission(String normalizedRoleCode, String module, String code) {
+        if (normalizedRoleCode == null) return false;
+        return switch (normalizedRoleCode) {
+            case "ROLE_SUPER_ADMIN" -> isDefaultPermissionForSuperAdmin(module);
+            case "ROLE_MANAGER" -> isDefaultPermissionForManager(module);
+            case "ROLE_WAREHOUSE_CONTROLLER" -> isDefaultPermissionForWarehouseController(module, code);
+            case "ROLE_TECHNICIAN" -> isDefaultPermissionForTechnician(module, code);
+            case "ROLE_ACCOUNTANT" -> isDefaultPermissionForAccountant(module, code);
+            case "ROLE_CASHIER_CONTROLLER" -> isDefaultPermissionForCashierController(module, code);
+            default -> false;
+        };
+    }
+
+    public static boolean isDefaultPermissionForSuperAdmin(String module) {
+        return Arrays.asList("account", "auth", "audit").contains(module);
+    }
+
+    public static boolean isDefaultPermissionForManager(String module) {
+        return !Arrays.asList("account", "auth", "audit").contains(module);
+    }
+
+    public static boolean isDefaultPermissionForWarehouseController(String module, String code) {
+        if (Arrays.asList("transfer", "stocktake").contains(module)) return true;
+        if ("import".equals(module)) return Arrays.asList("import:view", "import:edit", "import:print", "import:post").contains(code);
+        if ("export".equals(module)) return Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print", "export:post").contains(code);
+        if (Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(module)) return code.endsWith(":view");
+        if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_summary").contains(module)) return true;
+        if ("assembly_config".equals(module)) return "assembly_config:view".equals(code);
+        if ("assembly".equals(module)) return Arrays.asList("assembly:view", "assembly:execute", "assembly:complete").contains(code);
+        return false;
+    }
+
+    public static boolean isDefaultPermissionForTechnician(String module, String code) {
+        if ("warranty".equals(module)) return "warranty:view".equals(code);
+        if ("repair".equals(module)) return true;
+        if ("assembly_config".equals(module)) return Arrays.asList("assembly_config:view", "assembly_config:add", "assembly_config:edit").contains(code);
+        if ("assembly".equals(module)) return Arrays.asList("assembly:view", "assembly:add", "assembly:edit", "assembly:delete", "assembly:export", "assembly:print", "assembly:submit").contains(code);
+        if ("customer".equals(module)) return Arrays.asList("customer:view", "customer:add").contains(code);
+        if (Arrays.asList("product", "product_category", "unit", "export", "warehouse_master", "report_balance", "ai_chat").contains(module)) return code.endsWith(":view");
+        return false;
+    }
+
+    public static boolean isDefaultPermissionForAccountant(String module, String code) {
+        if (Arrays.asList("sales_order", "purchase_order", "einvoice", "customer", "supplier").contains(module)) return true;
+        if ("import".equals(module)) return Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code);
+        if ("export".equals(module)) return Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code);
+        if (Arrays.asList("report_balance", "report_ledger", "report_transfer", "report_debt", "report_sales", "report_summary").contains(module)) return true;
+        if ("warranty".equals(module)) return true;
+        if (Arrays.asList("product", "product_category", "unit", "brand").contains(module)) {
+            return Arrays.asList(module + ":view", module + ":add", module + ":edit").contains(code);
+        }
+        if ("assembly_config".equals(module)) return "assembly_config:view".equals(code);
+        if ("assembly".equals(module)) return Arrays.asList("assembly:view", "assembly:approve").contains(code);
+        if ("payment".equals(module)) return true;
+        if (Arrays.asList("transfer", "stocktake", "warehouse_master", "ai_chat").contains(module)) return code.endsWith(":view");
+        return false;
+    }
+
+    public static boolean isDefaultPermissionForCashierController(String module, String code) {
+        if ("payment".equals(module)) return true;
+        if (Arrays.asList("sales_order", "customer", "ai_chat").contains(module)) return code.endsWith(":view");
+        return "report_debt".equals(module);
     }
 }

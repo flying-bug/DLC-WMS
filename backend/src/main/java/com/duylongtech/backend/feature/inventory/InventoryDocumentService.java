@@ -501,16 +501,10 @@ public class InventoryDocumentService {
             }
         }
 
-        Long soId = req.getSalesOrderId();
-        if (soId == null && ("SALES_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))
-                || "SO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
-            soId = req.getReferenceId();
-        }
-        Long poId = req.getPurchaseOrderId();
-        if (poId == null && ("PURCHASE_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))
-                || "PO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
-            poId = req.getReferenceId();
-        }
+        Long soId = com.duylongtech.backend.enums.ReferenceType.resolveEffectiveSalesOrderId(
+                req.getSalesOrderId(), req.getReferenceType(), req.getReferenceId());
+        Long poId = com.duylongtech.backend.enums.ReferenceType.resolveEffectivePurchaseOrderId(
+                req.getPurchaseOrderId(), req.getReferenceType(), req.getReferenceId());
 
         InventoryDocument doc = new InventoryDocument();
         if (EXPORT_DOC_TYPE.equals(docType)) {
@@ -556,16 +550,10 @@ public class InventoryDocumentService {
             }
             doc.updateCode(requestedCode);
         }
-        Long soId = req.getSalesOrderId();
-        if (soId == null && ("SALES_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))
-                || "SO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
-            soId = req.getReferenceId();
-        }
-        Long poId = req.getPurchaseOrderId();
-        if (poId == null && ("PURCHASE_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))
-                || "PO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
-            poId = req.getReferenceId();
-        }
+        Long soId = com.duylongtech.backend.enums.ReferenceType.resolveEffectiveSalesOrderId(
+                req.getSalesOrderId(), req.getReferenceType(), req.getReferenceId());
+        Long poId = com.duylongtech.backend.enums.ReferenceType.resolveEffectivePurchaseOrderId(
+                req.getPurchaseOrderId(), req.getReferenceType(), req.getReferenceId());
 
         doc.setWarehouseId(req.getWarehouseId());
         doc.setSourceWarehouseId(req.getSourceWarehouseId());

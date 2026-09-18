@@ -150,8 +150,7 @@ public class InventoryPostingService {
     public InventoryDocumentResponse postExport(Long id) {
         InventoryDocument doc = findExportOrThrow(id);
         warehouseAccessGuard.checkAccess(doc.getWarehouseId());
-        if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
-                && !DocumentStatus.UNPOSTED.name().equals(doc.getStatus())) {
+        if (!doc.isPostable()) {
             throw new BusinessException(SystemMessage.INV_ERR_046.getMessage());
         }
 
@@ -307,11 +306,8 @@ public class InventoryPostingService {
                     warrantyLines.add(wl);
             }
 
-            Long soId = doc.getSalesOrderId();
-            if (soId == null && (com.duylongtech.backend.enums.ReferenceType.SALES_ORDER.name().equalsIgnoreCase(doc.getReferenceType())
-                    || com.duylongtech.backend.enums.ReferenceType.SALES_ORDER.name().equalsIgnoreCase(doc.getReferenceType()))) {
-                soId = doc.getReferenceId();
-            }
+            Long soId = com.duylongtech.backend.enums.ReferenceType.resolveEffectiveSalesOrderId(
+                    doc.getSalesOrderId(), doc.getReferenceType(), doc.getReferenceId());
             if (soId != null) {
                 salesOrderService.fulfillReservation(soId, line.getVariantId(), effectiveWarehouseId,
                         qtyToExport, totalCost);
@@ -470,8 +466,7 @@ public class InventoryPostingService {
     public InventoryDocumentResponse postImport(Long id) {
         InventoryDocument doc = findImportOrThrow(id);
         warehouseAccessGuard.checkAccess(doc.getWarehouseId());
-        if (!DocumentStatus.DRAFT.name().equals(doc.getStatus()) && !DocumentStatus.SUBMITTED.name().equals(doc.getStatus())
-                && !DocumentStatus.UNPOSTED.name().equals(doc.getStatus())) {
+        if (!doc.isPostable()) {
             throw new BusinessException(SystemMessage.INV_ERR_040.getMessage());
         }
 

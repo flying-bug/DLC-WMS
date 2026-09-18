@@ -183,6 +183,15 @@ public class InventoryDocument {
                 || DocumentStatus.UNPOSTED.name().equals(this.status) || this.status == null;
     }
 
+    public boolean isPostable() {
+        return isPostableStatus(this.status);
+    }
+
+    public static boolean isPostableStatus(String status) {
+        return DocumentStatus.DRAFT.name().equals(status) || DocumentStatus.SUBMITTED.name().equals(status)
+                || DocumentStatus.UNPOSTED.name().equals(status);
+    }
+
     public void post(Long userId) {
         if (DocumentStatus.POSTED.name().equals(this.status)) {
             throw new com.duylongtech.backend.exception.BusinessException("Chứng từ đã được ghi sổ.");
