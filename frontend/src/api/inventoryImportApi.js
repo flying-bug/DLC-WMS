@@ -78,9 +78,15 @@ export const getOcrSessionState = (sessionId) => {
   return axiosClient.get(`${IMPORT_BASE}/ocr-session/${sessionId}`);
 };
 
-export const uploadOcrForSession = (sessionId, file) => {
+// Điện thoại báo đã mở liên kết QR để máy tính ẩn mã QR.
+export const joinOcrSession = (sessionId) => {
+  return axiosClient.post(`${IMPORT_BASE}/ocr-session/${sessionId}/join`);
+};
+
+export const uploadOcrForSession = (sessionId, file, previewFile) => {
   const formData = new FormData();
   formData.append('file', file);
+  if (previewFile) formData.append('preview', previewFile);
   return axiosClient.post(`${IMPORT_BASE}/ocr-session/${sessionId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });

@@ -1,5 +1,7 @@
 package com.duylongtech.backend.feature.ai.service;
 
+import com.duylongtech.backend.feature.ai.model.AiIntent;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;

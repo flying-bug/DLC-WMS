@@ -1,5 +1,6 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.service;
 
+import com.duylongtech.backend.feature.ai.model.AiIntent;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

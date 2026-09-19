@@ -131,12 +131,20 @@ public class ImportDocumentController {
         return importOcrService.streamSession(sessionId);
     }
 
+    @PostMapping("/ocr-session/{sessionId}/join")
+    @Operation(summary = "Mobile báo đã mở liên kết QR để Desktop ẩn mã QR")
+    public ApiResponse<String> joinOcrSession(@PathVariable String sessionId) {
+        importOcrService.joinSession(sessionId);
+        return ApiResponse.success("OK");
+    }
+
     @PostMapping(value = "/ocr-session/{sessionId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Mobile gửi ảnh lên để OCR cho một session cụ thể")
     public ApiResponse<String> uploadOcrForSession(
             @PathVariable String sessionId,
-            @RequestParam("file") MultipartFile file) {
-        importOcrService.scanDocumentForSession(sessionId, file);
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "preview", required = false) MultipartFile preview) {
+        importOcrService.scanDocumentForSession(sessionId, file, preview);
         return ApiResponse.success("Đang xử lý ảnh trên máy chủ...");
     }
 

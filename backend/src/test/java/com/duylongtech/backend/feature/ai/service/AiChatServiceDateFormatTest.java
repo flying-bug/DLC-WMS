@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.service;
 
 import org.junit.jupiter.api.Test;
 

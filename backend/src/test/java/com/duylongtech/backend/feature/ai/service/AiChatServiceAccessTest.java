@@ -1,5 +1,8 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.service;
 
+import com.duylongtech.backend.feature.ai.client.AiModelClient;
+import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
+import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;

@@ -192,3 +192,138 @@
   border: 1px solid var(--color-border-muted);
   font-size: 11px;
 }
+
+/* ===== Mobile QR: điện thoại đã kết nối + ảnh đã chụp ===== */
+.connectedBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.connectedBanner span {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.pageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 2px;
+  text-align: left;
+}
+
+.pageCard {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pageExcluded {
+  opacity: 0.45;
+}
+
+.pageThumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 130px;
+  padding: 0;
+  border: none;
+  background: #f1f5f9;
+  cursor: zoom-in;
+  font-size: 32px;
+}
+
+.pageThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pageOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pageOverlay .spinner {
+  width: 24px;
+  height: 24px;
+}
+
+.pageMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.pageOk { color: #047857; }
+.pageWait { color: var(--color-text-muted, #64748b); }
+.pageErr {
+  color: #b91c1c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pageRemove,
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary, #2563eb);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.connectedLinks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.linkBtn {
+  font-size: 13px;
+}
+
+.zoomOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  cursor: zoom-out;
+}
+
+.zoomOverlay img {
+  max-width: 92vw;
+  max-height: 92vh;
+  border-radius: 8px;
+  background: #fff;
+}

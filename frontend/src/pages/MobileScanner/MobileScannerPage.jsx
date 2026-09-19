@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { uploadOcrForSession } from '../../api/inventoryImportApi';
+import { joinOcrSession, uploadOcrForSession } from '../../api/inventoryImportApi';
+import { compressImage, compressImageForOcr } from '../../utils/imageCompressor';
 import styles from './MobileScannerPage.module.css';
 
 /**
@@ -9,15 +10,32 @@ import styles from './MobileScannerPage.module.css';
  *
  * Thiết kế Mobile-First, tải nhanh, nút bấm to dễ thao tác 1 tay.
  * Hỗ trợ chụp liên tục nhiều phiếu mà không cần quét lại QR.
+ * Vừa mở trang là báo về máy tính (join) để mã QR trên máy tính tự tắt.
  */
 export default function MobileScannerPage() {
   const [status, setStatus] = useState('idle'); // idle | uploading | success | error
   const [message, setMessage] = useState('');
   const [sentCount, setSentCount] = useState(0);
+  const [lastPhoto, setLastPhoto] = useState(null); // URL ảnh vừa chụp, hiện lại trên điện thoại
+  const [sessionError, setSessionError] = useState('');
   const fileInputRef = useRef(null);
-  
+  const lastPhotoRef = useRef(null);
+
   const searchParams = new URLSearchParams(window.location.search);
   const sessionId = searchParams.get('session');
+
+  useEffect(() => {
+    if (!sessionId) return;
+    joinOcrSession(sessionId).catch((err) => {
+      console.error('Mobile OCR join error:', err);
+      setSessionError('Phiên quét đã hết hạn hoặc không tồn tại. Vui lòng bấm "Quét bằng điện thoại" lại trên máy tính để lấy mã QR mới.');
+    });
+  }, [sessionId]);
+
+  // Giải phóng URL ảnh cũ khi đổi ảnh / rời trang.
+  useEffect(() => () => {
+    if (lastPhotoRef.current) URL.revokeObjectURL(lastPhotoRef.current);
+  }, []);
 
   const handleCapture = useCallback(async (e) => {
     if (!sessionId) return;
@@ -28,17 +46,26 @@ export default function MobileScannerPage() {
     setStatus('uploading');
     setMessage('Đang gửi ảnh lên hệ thống...');
 
+    if (lastPhotoRef.current) URL.revokeObjectURL(lastPhotoRef.current);
+    lastPhotoRef.current = URL.createObjectURL(file);
+    setLastPhoto(lastPhotoRef.current);
+
     try {
-      await uploadOcrForSession(sessionId, file);
+      // Nén trên điện thoại: gửi nhanh hơn qua 4G, và tạo ảnh thu nhỏ (đã xoay đúng chiều) cho máy tính hiển thị.
+      const [photo, thumbnail] = await Promise.all([
+        compressImageForOcr(file),
+        compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.7 }),
+      ]);
+      await uploadOcrForSession(sessionId, photo, thumbnail);
       setSentCount((prev) => prev + 1);
       setStatus('success');
-      setMessage(`✅ Đã gửi ảnh thành công! Vui lòng nhìn lên màn hình máy tính.`);
+      setMessage('Đã gửi ảnh! Vui lòng nhìn lên màn hình máy tính.');
     } catch (err) {
       setStatus('error');
-      setMessage('❌ Gửi thất bại. Vui lòng thử lại.');
+      setMessage('Gửi thất bại. Vui lòng thử lại.');
       console.error('Mobile OCR error:', err);
     }
-  }, [sentCount, sessionId]);
+  }, [sessionId]);
 
   const triggerCamera = useCallback(() => {
     fileInputRef.current?.click();
@@ -53,7 +80,14 @@ export default function MobileScannerPage() {
     );
   }
 
-
+  if (sessionError) {
+    return (
+      <div className={styles.container} style={{ justifyContent: 'center', textAlign: 'center', padding: '20px' }}>
+        <h2 style={{ marginBottom: '16px' }}>⌛ Phiên quét không còn hiệu lực</h2>
+        <p>{sessionError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -65,18 +99,19 @@ export default function MobileScannerPage() {
 
       {/* Status Card */}
       <div className={styles.statusCard}>
-        <div className={styles.statusIcon}>
-          {status === 'idle' && '📷'}
-          {status === 'uploading' && '⏳'}
-          {status === 'success' && '✅'}
-          {status === 'error' && '❌'}
-        </div>
+        {lastPhoto ? (
+          <img src={lastPhoto} alt="Ảnh vừa chụp" className={styles.lastPhoto} />
+        ) : (
+          <div className={styles.statusIcon}>📷</div>
+        )}
         <p className={styles.statusText}>
-          {status === 'idle' && 'Sẵn sàng chụp phiếu giao hàng'}
-          {status !== 'idle' && message}
+          {status === 'idle' && '✅ Đã kết nối với máy tính. Sẵn sàng chụp hóa đơn!'}
+          {status === 'uploading' && `⏳ ${message}`}
+          {status === 'success' && `✅ ${message}`}
+          {status === 'error' && `❌ ${message}`}
         </p>
         {sentCount > 0 && (
-          <p className={styles.counter}>Đã gửi: {sentCount} phiếu</p>
+          <p className={styles.counter}>Đã gửi: {sentCount} trang</p>
         )}
       </div>
 
@@ -91,7 +126,9 @@ export default function MobileScannerPage() {
         ) : (
           '📷'
         )}
-        <span>{status === 'uploading' ? 'Đang gửi...' : 'Chụp / Chọn ảnh hóa đơn'}</span>
+        <span>
+          {status === 'uploading' ? 'Đang gửi...' : sentCount > 0 ? 'Chụp thêm trang khác' : 'Chụp / Chọn ảnh hóa đơn'}
+        </span>
       </button>
 
       {/* Instructions */}
@@ -101,7 +138,7 @@ export default function MobileScannerPage() {
           <li>Nhấn nút <strong>"Chụp"</strong> bên trên</li>
           <li>Chụp ảnh phiếu giao hàng / hóa đơn</li>
           <li>AI sẽ tự động trích xuất và đẩy về màn hình PC</li>
-          <li>Bạn có thể chụp liên tiếp nhiều phiếu</li>
+          <li>Hóa đơn nhiều trang: chụp lần lượt từng trang</li>
         </ol>
       </div>
 

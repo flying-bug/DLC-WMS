@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.ai.service;
 
+import com.duylongtech.backend.feature.ai.model.AiIntent;
 import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
 import com.duylongtech.backend.feature.ai.dto.AiSourceResponse;
 import com.duylongtech.backend.feature.warehouse.WarehouseStockAiRow;

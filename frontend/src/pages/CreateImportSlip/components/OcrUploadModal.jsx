@@ -16,12 +16,14 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
   const [showQR, setShowQR] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [qrLoading, setQrLoading] = useState(false);
-  const [mobileStatus, setMobileStatus] = useState(''); // 'PROCESSING' hoặc 'ERROR'
-  const [batchResults, setBatchResults] = useState([]);
-  
+  const [phoneConnected, setPhoneConnected] = useState(false); // điện thoại đã mở liên kết QR -> ẩn mã QR
+  const [showQrAgain, setShowQrAgain] = useState(false);
+  const [pages, setPages] = useState([]); // các trang điện thoại đã chụp: { index, status, previewImage, result, errorMessage }
+  const [excludedPages, setExcludedPages] = useState([]); // index các trang người dùng bỏ khỏi lần gộp
+  const [zoomedPage, setZoomedPage] = useState(null);
+
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const lastUpdateCountRef = useRef(0);
   const latestOnOcrSuccess = useRef(onOcrSuccess);
 
   useEffect(() => {
@@ -63,9 +65,11 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
       setPreview(null);
       setShowQR(false);
       setSessionId('');
-      setMobileStatus('');
-      setBatchResults([]);
-      lastUpdateCountRef.current = 0;
+      setPhoneConnected(false);
+      setShowQrAgain(false);
+      setPages([]);
+      setExcludedPages([]);
+      setZoomedPage(null);
       return;
     }
     const handlePaste = (e) => {
@@ -90,24 +94,26 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
 
     const eventSource = new EventSource(getOcrSessionStreamUrl(sessionId));
 
+    // Trạng thái phiên: điện thoại đã quét QR chưa.
     eventSource.addEventListener('ocr-status', (event) => {
       try {
         const state = JSON.parse(event.data);
-        if (!state) return;
-        if (state.status === 'PROCESSING') {
-          setMobileStatus('PROCESSING');
-        } else if (state.status === 'SUCCESS' && state.result) {
-          setMobileStatus('');
-          if (state.updateCount > lastUpdateCountRef.current) {
-            setBatchResults(prev => [...prev, state.result]);
-            lastUpdateCountRef.current = state.updateCount;
-          }
-        } else if (state.status === 'ERROR') {
-          setMobileStatus('ERROR');
-          alert('Lỗi xử lý ảnh từ điện thoại: ' + (state.errorMessage || 'Lỗi không xác định'));
-        }
+        if (state?.status === 'CONNECTED') setPhoneConnected(true);
       } catch (err) {
         console.error('Khong the doc trang thai phien OCR:', err);
+      }
+    });
+
+    // Mỗi trang chụp được gửi nhiều lần (đang xử lý -> kết quả; phát lại khi SSE nối lại).
+    // Định danh theo index nên chỉ ghi đè, không bao giờ nhân đôi.
+    eventSource.addEventListener('ocr-page', (event) => {
+      try {
+        const page = JSON.parse(event.data);
+        if (!page?.index) return;
+        setPhoneConnected(true);
+        setPages((prev) => [...prev.filter((p) => p.index !== page.index), page].sort((a, b) => a.index - b.index));
+      } catch (err) {
+        console.error('Khong the doc trang OCR:', err);
       }
     });
 
@@ -118,23 +124,38 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
     return () => eventSource.close();
   }, [open, sessionId]);
 
+  const usablePages = pages.filter((p) => p.status === 'SUCCESS' && p.result && !excludedPages.includes(p.index));
+  const hasProcessingPage = pages.some((p) => p.status === 'PROCESSING' && !excludedPages.includes(p.index));
+  const toggleExcluded = (index) => {
+    setExcludedPages((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
+  };
+
   const handleFinishBatch = () => {
-    if (batchResults.length === 0) {
+    if (usablePages.length === 0) {
       setShowQR(false);
       return;
     }
-    
-    // Extract distinct docCodes
-    const docCodes = [...new Set(batchResults.map(r => r.docCode).filter(c => c && c.trim() !== ''))];
-    if (docCodes.length > 1) {
-      alert(`Phát hiện nhiều số hóa đơn khác nhau (${docCodes.join(', ')}). Vui lòng quét và tạo phiếu nhập riêng biệt cho từng hóa đơn!`);
+    const batchResults = usablePages.map((p) => p.result);
+
+    // Các trang thuộc cùng một hóa đơn thì mới được gộp
+    const invoiceCodes = [...new Set(batchResults.map(r => r.invoiceCode).filter(c => c && c.trim() !== ''))];
+    if (invoiceCodes.length > 1) {
+      alert(`Phát hiện nhiều số hóa đơn khác nhau (${invoiceCodes.join(', ')}). Vui lòng bỏ bớt các trang không cùng hóa đơn, hoặc quét và tạo phiếu nhập riêng cho từng hóa đơn!`);
       return;
     }
-    
-    // Merge
+
+    // Merge: lấy thông tin chung ở trang đầu (bổ sung từ trang sau nếu trang đầu thiếu), gộp toàn bộ dòng hàng
     const mergedResult = { ...batchResults[0] };
-    mergedResult.docCode = docCodes.length === 1 ? docCodes[0] : '';
-    
+    mergedResult.invoiceCode = invoiceCodes.length === 1 ? invoiceCodes[0] : '';
+    batchResults.slice(1).forEach((r) => {
+      if (!mergedResult.matchedSupplierId && r.matchedSupplierId) {
+        mergedResult.matchedSupplierId = r.matchedSupplierId;
+        mergedResult.matchedSupplierName = r.matchedSupplierName;
+        mergedResult.matchedSupplierCode = r.matchedSupplierCode;
+      }
+      if (!mergedResult.invoiceDate && r.invoiceDate) mergedResult.invoiceDate = r.invoiceDate;
+    });
+
     const allItems = [];
     batchResults.forEach(r => {
       if (r.items && Array.isArray(r.items)) {
@@ -153,6 +174,11 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
       const res = await initOcrSession();
       const newSessionId = res?.data?.data || res?.data;
       if (newSessionId) {
+        // Phiên mới: xóa trạng thái của phiên trước (điện thoại chưa kết nối, chưa có trang nào)
+        setPhoneConnected(false);
+        setShowQrAgain(false);
+        setPages([]);
+        setExcludedPages([]);
         setSessionId(newSessionId);
         setShowQR(true);
       }
@@ -243,12 +269,75 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
                     Đã hiểu, quay lại
                   </button>
                 </div>
-              ) : mobileStatus === 'PROCESSING' ? (
-                <div className={styles.loadingWrap}>
-                  <div className={styles.spinner} style={{ margin: '0 auto 16px' }} />
-                  <h4 style={{ color: 'var(--wms-primary)', margin: '10px 0' }}>Đang nhận dữ liệu từ điện thoại...</h4>
-                  <p>AI đang phân tích ảnh hóa đơn, vui lòng chờ trong giây lát.</p>
-                </div>
+              ) : phoneConnected && !showQrAgain ? (
+                <>
+                  {/* Điện thoại đã quét QR: mã QR biến mất, chỉ còn các ảnh đã chụp và kết quả AI */}
+                  <div className={styles.connectedBanner}>
+                    📱 Điện thoại đã kết nối
+                    <span>{pages.length === 0 ? 'Hãy chụp ảnh hóa đơn trên điện thoại...' : `Đã nhận ${pages.length} ảnh`}</span>
+                  </div>
+
+                  {pages.length > 0 && (
+                    <div className={styles.pageGrid}>
+                      {pages.map((page) => {
+                        const excluded = excludedPages.includes(page.index);
+                        return (
+                          <div key={page.index} className={`${styles.pageCard} ${excluded ? styles.pageExcluded : ''}`}>
+                            <button
+                              type="button"
+                              className={styles.pageThumb}
+                              onClick={() => page.previewImage && setZoomedPage(page)}
+                              title={page.previewImage ? 'Bấm để phóng to' : ''}
+                            >
+                              {page.previewImage
+                                ? <img src={page.previewImage} alt={`Trang ${page.index}`} />
+                                : <span>📄</span>}
+                              {page.status === 'PROCESSING' && (
+                                <div className={styles.pageOverlay}>
+                                  <div className={styles.spinner} />
+                                  <span>AI đang đọc...</span>
+                                </div>
+                              )}
+                            </button>
+                            <div className={styles.pageMeta}>
+                              <b>Trang {page.index}</b>
+                              {page.status === 'SUCCESS' && (
+                                <span className={styles.pageOk}>✓ {page.result?.items?.length || 0} dòng hàng</span>
+                              )}
+                              {page.status === 'PROCESSING' && <span className={styles.pageWait}>Đang xử lý</span>}
+                              {page.status === 'ERROR' && (
+                                <span className={styles.pageErr} title={page.errorMessage || ''}>
+                                  ✕ {page.errorMessage || 'Không đọc được ảnh'}
+                                </span>
+                              )}
+                              {page.status !== 'PROCESSING' && (
+                                <button type="button" className={styles.pageRemove} onClick={() => toggleExcluded(page.index)}>
+                                  {excluded ? 'Dùng lại' : 'Bỏ trang này'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {usablePages.length > 0 && (
+                    <button
+                      className={styles.actionBtn}
+                      onClick={handleFinishBatch}
+                      disabled={hasProcessingPage}
+                      style={{ backgroundColor: '#10b981', color: 'white', width: '100%', borderColor: '#10b981', marginTop: '16px' }}
+                    >
+                      {hasProcessingPage ? 'Đang chờ AI đọc xong...' : `Hoàn tất & Gộp dữ liệu (${usablePages.length} trang)`}
+                    </button>
+                  )}
+
+                  <div className={styles.connectedLinks}>
+                    <button type="button" className={styles.linkBtn} onClick={() => setShowQrAgain(true)}>Hiện lại mã QR</button>
+                    <button type="button" className={styles.linkBtn} onClick={() => setShowQR(false)}>Quay lại tải file</button>
+                  </div>
+                </>
               ) : (
                 <>
                   <h4 style={{ color: 'var(--wms-primary)', marginBottom: '16px' }}>Quét mã để chụp ảnh trên điện thoại</h4>
@@ -262,14 +351,11 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
                     2. Chụp ảnh hóa đơn (có thể chụp liên tiếp nhiều trang).<br/>
                     3. Máy tính sẽ tự động nhận dữ liệu!
                   </p>
-                  
-                  {batchResults.length > 0 && (
-                    <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
-                      <h4 style={{ color: '#047857', margin: '0 0 8px 0' }}>✅ Đã nhận {batchResults.length} trang hóa đơn</h4>
-                      <button className={styles.actionBtn} onClick={handleFinishBatch} style={{ backgroundColor: '#10b981', color: 'white', width: '100%', borderColor: '#10b981' }}>
-                        Hoàn tất & Gộp dữ liệu
-                      </button>
-                    </div>
+
+                  {phoneConnected && (
+                    <button className={styles.actionBtn} onClick={() => setShowQrAgain(false)} style={{ marginTop: '16px', backgroundColor: '#10b981', color: 'white', borderColor: '#10b981' }}>
+                      Xem các ảnh đã chụp ({pages.length})
+                    </button>
                   )}
 
                   <button className={styles.actionBtn} onClick={() => setShowQR(false)} style={{ marginTop: '16px', backgroundColor: 'var(--wms-bg-hover)', color: 'var(--wms-text-body)' }}>
@@ -305,6 +391,12 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
             💡 Mẹo: Nhấn <kbd>Ctrl</kbd> + <kbd>V</kbd> để dán ảnh trực tiếp từ Clipboard
           </p>
         </div>
+
+        {zoomedPage && (
+          <div className={styles.zoomOverlay} onClick={() => setZoomedPage(null)}>
+            <img src={zoomedPage.previewImage} alt={`Trang ${zoomedPage.index}`} />
+          </div>
+        )}
 
         {/* Hidden file inputs */}
         <input

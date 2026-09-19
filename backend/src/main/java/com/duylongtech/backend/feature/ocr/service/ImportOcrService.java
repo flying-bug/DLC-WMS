@@ -66,15 +66,33 @@ import com.duylongtech.backend.feature.warranty.Warranty;
 @Slf4j
 public class ImportOcrService {
 
+    /** Một trang chứng từ do điện thoại chụp và gửi lên trong phiên quét. */
+    @lombok.Getter
+    @lombok.Setter
+    public static class OcrPage {
+        private final int index; // 1, 2, 3... theo thứ tự gửi lên
+        private volatile String status; // PROCESSING, SUCCESS, ERROR
+        private volatile String previewImage; // data URL ảnh thu nhỏ để Desktop hiển thị lại
+        private volatile OcrImportResponse result;
+        private volatile String errorMessage;
+
+        OcrPage(int index) {
+            this.index = index;
+        }
+    }
+
     @lombok.Getter
     @lombok.Setter
     public static class OcrSessionData {
-        private volatile String status; // PENDING, PROCESSING, SUCCESS, ERROR
-        private volatile OcrImportResponse result;
-        private volatile String errorMessage;
-        private volatile int updateCount = 0;
+        private volatile String status; // PENDING (chưa ai quét QR), CONNECTED (điện thoại đã mở liên kết)
+        private final List<OcrPage> pages = new java.util.concurrent.CopyOnWriteArrayList<>();
         private final long createdAt = System.currentTimeMillis();
     }
+
+    private static final int MAX_PAGES_PER_SESSION = 20;
+    private static final int PREVIEW_MAX_DIMENSION = 900;
+    private static final int PREVIEW_MAX_BYTES = 400 * 1024;
+    private static final long MAX_UPLOAD_BYTES = 15L * 1024 * 1024;
 
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -210,6 +228,9 @@ public class ImportOcrService {
      * Mở kết nối SSE để Desktop nhận trạng thái phiên quét OCR theo thời gian
      * thực (thay vì polling mỗi 2s). Không yêu cầu đăng nhập vì Mobile quét QR
      * là một trình duyệt ẩn danh - sessionId ngẫu nhiên đóng vai trò capability token.
+     *
+     * Khi (re)connect, server phát lại trạng thái phiên và toàn bộ các trang đã có; Desktop định danh
+     * mỗi trang theo {@code index} nên việc phát lại không bao giờ làm nhân đôi dữ liệu.
      */
     public SseEmitter streamSession(String sessionId) {
         OcrSessionData existing = ocrSessions.get(sessionId);
@@ -223,20 +244,53 @@ public class ImportOcrService {
         emitter.onTimeout(() -> ocrSessionEmitters.remove(sessionId, emitter));
         emitter.onError(ex -> ocrSessionEmitters.remove(sessionId, emitter));
 
-        // Nếu phiên đã có kết quả trước khi Desktop kịp subscribe, đẩy ngay.
-        if (!"PENDING".equals(existing.getStatus())) {
-            pushSessionUpdate(sessionId, existing);
-        }
+        pushSessionStatus(sessionId, existing);
+        existing.getPages().forEach(page -> pushPage(sessionId, page));
         return emitter;
     }
 
-    private void pushSessionUpdate(String sessionId, OcrSessionData data) {
+    /** Điện thoại đã mở liên kết QR: Desktop sẽ ẩn mã QR và chuyển sang chờ ảnh. */
+    public void joinSession(String sessionId) {
+        OcrSessionData session = ocrSessions.get(sessionId);
+        if (session == null) {
+            throw new RuntimeException(SystemMessage.OCR_ERR_003.getMessage());
+        }
+        markConnected(sessionId, session);
+    }
+
+    private void markConnected(String sessionId, OcrSessionData session) {
+        boolean changed;
+        synchronized (session) {
+            changed = "PENDING".equals(session.getStatus());
+            if (changed) {
+                session.setStatus("CONNECTED");
+            }
+        }
+        if (changed) {
+            pushSessionStatus(sessionId, session);
+        }
+    }
+
+    private void pushSessionStatus(String sessionId, OcrSessionData session) {
+        pushEvent(sessionId, "ocr-status", Map.of(
+                "status", session.getStatus(),
+                "pageCount", session.getPages().size()));
+    }
+
+    private void pushPage(String sessionId, OcrPage page) {
+        pushEvent(sessionId, "ocr-page", page);
+    }
+
+    private void pushEvent(String sessionId, String eventName, Object payload) {
         SseEmitter emitter = ocrSessionEmitters.get(sessionId);
         if (emitter == null) {
             return;
         }
         try {
-            emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("ocr-status").data(data));
+            // SseEmitter không an toàn khi nhiều luồng cùng gửi (luồng OCR nền + request upload).
+            synchronized (emitter) {
+                emitter.send(SseEmitter.event().name(eventName).data(payload));
+            }
         } catch (Exception e) {
             emitter.completeWithError(e);
             ocrSessionEmitters.remove(sessionId, emitter);
@@ -244,44 +298,99 @@ public class ImportOcrService {
     }
 
     /**
-     * Xử lý OCR từ điện thoại qua sessionId
+     * Xử lý OCR từ điện thoại qua sessionId. Mỗi lần gọi là một "trang" mới của phiên:
+     * Desktop nhận ngay ảnh thu nhỏ (trạng thái PROCESSING), sau đó nhận kết quả (SUCCESS/ERROR).
+     *
+     * @param preview ảnh thu nhỏ do điện thoại tự tạo (tùy chọn); thiếu thì server tự thu nhỏ.
      */
-    public void scanDocumentForSession(String sessionId, MultipartFile file) {
+    public void scanDocumentForSession(String sessionId, MultipartFile file, MultipartFile preview) {
         OcrSessionData session = ocrSessions.get(sessionId);
         if (session == null) {
             throw new RuntimeException(SystemMessage.OCR_ERR_003.getMessage());
         }
-
-        final byte[] imageBytes;
-        final String mimeType;
-        try {
-            imageBytes = file.getBytes();
-            mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
-        } catch (Exception e) {
-            log.error("Failed to read uploaded file for OCR session", e);
-            session.setStatus("ERROR");
-            session.setErrorMessage("Không thể đọc file ảnh: " + e.getMessage());
-            pushSessionUpdate(sessionId, session);
-            return;
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("Không nhận được ảnh. Vui lòng chụp lại.");
+        }
+        if (file.getSize() > MAX_UPLOAD_BYTES) {
+            throw new BusinessException("Ảnh quá lớn (tối đa 15MB).");
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.startsWith("image/") && !"application/pdf".equals(contentType)) {
+            throw new BusinessException("Chỉ hỗ trợ file ảnh hoặc PDF.");
         }
 
-        session.setStatus("PROCESSING");
-        pushSessionUpdate(sessionId, session);
+        final byte[] imageBytes;
+        final String mimeType = contentType != null ? contentType : "image/jpeg";
+        try {
+            imageBytes = file.getBytes();
+        } catch (Exception e) {
+            log.error("Failed to read uploaded file for OCR session", e);
+            throw new BusinessException("Không thể đọc file ảnh: " + e.getMessage());
+        }
+
+        final OcrPage page;
+        synchronized (session) {
+            if (session.getPages().size() >= MAX_PAGES_PER_SESSION) {
+                throw new BusinessException("Đã đạt tối đa " + MAX_PAGES_PER_SESSION + " trang cho một phiên quét.");
+            }
+            page = new OcrPage(session.getPages().size() + 1);
+            page.setStatus("PROCESSING");
+            session.getPages().add(page);
+        }
+        // Gửi ảnh lên mà chưa "join" (vd. mở link trực tiếp) vẫn được coi là đã kết nối.
+        markConnected(sessionId, session);
+        page.setPreviewImage(resolvePreview(preview, imageBytes, mimeType));
+        pushSessionStatus(sessionId, session);
+        pushPage(sessionId, page);
 
         // Gọi bất đồng bộ (chạy nền) để trả response nhanh cho Mobile
         ocrExecutor.execute(() -> {
             try {
-                OcrImportResponse result = scanDocumentBytes(imageBytes, mimeType);
-                session.setResult(result);
-                session.setStatus("SUCCESS");
+                page.setResult(scanDocumentBytes(imageBytes, mimeType));
+                page.setStatus("SUCCESS");
             } catch (Exception e) {
                 log.error("OCR scan for session failed", e);
-                session.setStatus("ERROR");
-                session.setErrorMessage(e.getMessage());
+                page.setErrorMessage(e.getMessage());
+                page.setStatus("ERROR");
             } finally {
-                pushSessionUpdate(sessionId, session);
+                pushPage(sessionId, page);
             }
         });
+    }
+
+    /** Ưu tiên ảnh thu nhỏ do điện thoại gửi (đã xoay đúng chiều); không có thì tự tạo từ ảnh gốc. */
+    private String resolvePreview(MultipartFile preview, byte[] imageBytes, String mimeType) {
+        try {
+            if (preview != null && !preview.isEmpty() && preview.getSize() <= PREVIEW_MAX_BYTES
+                    && preview.getContentType() != null && preview.getContentType().startsWith("image/")) {
+                return "data:" + preview.getContentType() + ";base64," + Base64.getEncoder().encodeToString(preview.getBytes());
+            }
+        } catch (Exception e) {
+            log.warn("[OCR] Cannot read client preview, falling back to server thumbnail: {}", e.getMessage());
+        }
+        if (!mimeType.startsWith("image/")) {
+            return null; // PDF: không có ảnh để hiển thị
+        }
+        try {
+            BufferedImage original = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (original == null) return null;
+            int width = original.getWidth();
+            int height = original.getHeight();
+            double scale = Math.min(1.0, (double) PREVIEW_MAX_DIMENSION / Math.max(width, height));
+            int targetWidth = Math.max(1, (int) Math.round(width * scale));
+            int targetHeight = Math.max(1, (int) Math.round(height * scale));
+            BufferedImage thumb = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g2d = thumb.createGraphics();
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.drawImage(original, 0, 0, targetWidth, targetHeight, Color.WHITE, null);
+            g2d.dispose();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(thumb, "jpg", baos);
+            return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            log.warn("[OCR] Cannot build preview thumbnail: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
