@@ -1216,7 +1216,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       />
                       {form.warehouseLocked && (
                         <small style={{ color: 'var(--color-text-muted-2)', fontSize: 12 }}>
-                          Đơn mua hàng nhập nhiều kho: kho của phiếu đã được chọn khi tạo, không thể thay đổi.
+                          Kho của phiếu đã được chọn theo chứng từ tham chiếu, không thể thay đổi.
                         </small>
                       )}
                     </div>

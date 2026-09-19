@@ -365,22 +365,8 @@ public class InventoryDocumentService {
         InventoryDocument doc = findImportOrThrow(id);
         assertCanViewDocument(doc);
         InventoryDocumentResponse response = toResponse(doc);
-        response.setWarehouseLocked(isMultiWarehousePurchaseOrder(doc.getPurchaseOrderId()));
+        response.setWarehouseLocked(doc.getPurchaseOrderId() != null);
         return response;
-    }
-
-    /** PO nhập đa kho = các dòng PO chỉ định từ 2 kho khác nhau trở lên. */
-    private boolean isMultiWarehousePurchaseOrder(Long poId) {
-        if (poId == null) {
-            return false;
-        }
-        return purchaseOrderRepository.findByIdWithDetails(poId)
-                .map(po -> po.getLines().stream()
-                        .map(PurchaseOrderLine::getWarehouseId)
-                        .filter(java.util.Objects::nonNull)
-                        .distinct()
-                        .count() > 1)
-                .orElse(false);
     }
 
     @Transactional
@@ -487,8 +473,8 @@ public class InventoryDocumentService {
         InventoryDocument doc = findImportOrThrow(id);
         ensureEditable(doc);
         if (req.getWarehouseId() != null && !req.getWarehouseId().equals(doc.getWarehouseId())
-                && isMultiWarehousePurchaseOrder(doc.getPurchaseOrderId())) {
-            throw new BusinessException("Không thể thay đổi kho nhận hàng của phiếu nhập được tạo từ đơn mua hàng nhiều kho");
+                && doc.getPurchaseOrderId() != null) {
+            throw new BusinessException("Không thể thay đổi kho nhận hàng của phiếu nhập được tạo từ đơn mua hàng");
         }
         updateBaseDocument(id, doc, req, "Mã phiếu nhập kho đã tồn tại", true);
         doc.clearLines();
