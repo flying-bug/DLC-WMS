@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,3 +17,4 @@ public class AiChatResponse {
     private List<AiSourceResponse> sources;
     private List<String> suggestions;
 }
+

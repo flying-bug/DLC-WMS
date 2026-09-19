@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,3 +35,4 @@ public class AiChatLog {
         this.answer = answer;
     }
 }
+

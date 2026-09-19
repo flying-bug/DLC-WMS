@@ -1,6 +1,6 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.service;
 
-import com.duylongtech.backend.feature.system.VoiceCommandResponse;
+import com.duylongtech.backend.feature.ai.dto.VoiceCommandResponse;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,8 +19,8 @@ import java.util.Map;
 import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.feature.brand.Brand;
 import com.duylongtech.backend.feature.repair.Repair;
-import com.duylongtech.backend.feature.system.VoiceCommandResponse;
-import com.duylongtech.backend.feature.system.VoiceCommandService;
+import com.duylongtech.backend.feature.ai.dto.VoiceCommandResponse;
+import com.duylongtech.backend.feature.ai.service.VoiceCommandService;
 import com.duylongtech.backend.feature.warranty.Warranty;
 
 /**
@@ -409,3 +409,5 @@ public class VoiceCommandService {
         return sanitized.length() <= 200 ? sanitized : sanitized.substring(0, 197) + "...";
     }
 }
+
+

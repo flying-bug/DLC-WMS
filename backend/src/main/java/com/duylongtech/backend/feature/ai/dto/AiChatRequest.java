@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -14,3 +14,4 @@ public class AiChatRequest {
 
     private List<AiChatMessageDto> history;
 }
+

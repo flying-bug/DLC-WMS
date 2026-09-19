@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.service;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -137,3 +137,4 @@ public final class AiIntentRouter {
         return false;
     }
 }
+

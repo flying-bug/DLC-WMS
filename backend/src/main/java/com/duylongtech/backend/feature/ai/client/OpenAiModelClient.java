@@ -1,8 +1,8 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.client;
 
-import com.duylongtech.backend.feature.system.AiChatMessageDto;
-import com.duylongtech.backend.feature.system.AiChatResponse;
-import com.duylongtech.backend.feature.system.AiSourceResponse;
+import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
+import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
+import com.duylongtech.backend.feature.ai.dto.AiSourceResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,3 +20,5 @@ public interface OpenAiModelClient {
     AiChatResponse enhanceAnswer(String userQuestion, AiChatResponse groundedResponse);
     AiChatResponse enhanceAnswer(String userQuestion, List<AiChatMessageDto> history, AiChatResponse groundedResponse);
 }
+
+

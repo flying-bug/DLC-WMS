@@ -1,11 +1,11 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.controller;
 
-import com.duylongtech.backend.feature.system.AiChatRequest;
-import com.duylongtech.backend.feature.system.AiChatResponse;
+import com.duylongtech.backend.feature.ai.dto.AiChatRequest;
+import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
 import com.duylongtech.backend.common.ApiResponse;
-import com.duylongtech.backend.feature.system.VoiceCommandResponse;
-import com.duylongtech.backend.feature.system.AiChatService;
-import com.duylongtech.backend.feature.system.VoiceCommandService;
+import com.duylongtech.backend.feature.ai.dto.VoiceCommandResponse;
+import com.duylongtech.backend.feature.ai.service.AiChatService;
+import com.duylongtech.backend.feature.ai.service.VoiceCommandService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.duylongtech.backend.feature.system.AiChatLog;
-import com.duylongtech.backend.feature.system.AiChatLogRepository;
+import com.duylongtech.backend.feature.ai.model.AiChatLog;
+import com.duylongtech.backend.feature.ai.repository.AiChatLogRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -73,3 +73,6 @@ public class AiChatController {
         return ResponseEntity.ok(ApiResponse.success(questions));
     }
 }
+
+
+

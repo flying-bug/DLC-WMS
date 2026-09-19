@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ocr.service;
 
 import com.duylongtech.backend.feature.inventory.OcrImportResponse;
 import com.duylongtech.backend.constant.SystemMessage;
@@ -53,7 +53,7 @@ import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.Unit;
 import com.duylongtech.backend.feature.product.VendorProductMapping;
 import com.duylongtech.backend.feature.product.VendorProductMappingRepository;
-import com.duylongtech.backend.feature.system.ImportOcrService;
+import com.duylongtech.backend.feature.ocr.service.ImportOcrService;
 import com.duylongtech.backend.feature.system.SystemSettingsService;
 import com.duylongtech.backend.feature.warranty.Warranty;
 
@@ -69,15 +69,25 @@ public class ImportOcrService {
     @lombok.Getter
     @lombok.Setter
     public static class OcrSessionData {
-        private String status; // PENDING, PROCESSING, SUCCESS, ERROR
-        private OcrImportResponse result;
-        private String errorMessage;
-        private long createdAt = System.currentTimeMillis();
+        private volatile String status; // PENDING, PROCESSING, SUCCESS, ERROR
+        private volatile OcrImportResponse result;
+        private volatile String errorMessage;
+        private final long createdAt = System.currentTimeMillis();
     }
 
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RestClient restClient = RestClient.builder().build();
+    private final RestClient restClient = createRestClientWithTimeout();
+    private final java.util.concurrent.ExecutorService ocrExecutor = new java.util.concurrent.ThreadPoolExecutor(
+            0, 10, 60L, java.util.concurrent.TimeUnit.SECONDS, new java.util.concurrent.LinkedBlockingQueue<>(100)
+    );
+
+    private static RestClient createRestClientWithTimeout() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);
+        factory.setReadTimeout(60000);
+        return RestClient.builder().requestFactory(factory).build();
+    }
 
     private final PartnerRepository partnerRepository;
     private final ProductVariantRepository productVariantRepository;
@@ -260,7 +270,7 @@ public class ImportOcrService {
         pushSessionUpdate(sessionId, session);
 
         // Gọi bất đồng bộ (chạy nền) để trả response nhanh cho Mobile
-        new Thread(() -> {
+        ocrExecutor.execute(() -> {
             try {
                 OcrImportResponse result = scanDocumentBytes(imageBytes, mimeType);
                 session.setResult(result);
@@ -272,7 +282,7 @@ public class ImportOcrService {
             } finally {
                 pushSessionUpdate(sessionId, session);
             }
-        }).start();
+        });
     }
 
     /**
@@ -293,7 +303,6 @@ public class ImportOcrService {
     /**
      * Xử lý OCR từ mảng byte ảnh: Convert Base64 -> Gọi Vision AI -> Smart Match -> Trả DTO
      */
-    @Transactional(readOnly = true)
     public OcrImportResponse scanDocumentBytes(byte[] imageBytes, String mimeType) {
         if (!systemSettingsService.isAiEnabled()) {
             throw new BusinessException("Tính năng quét AI OCR hiện đang tạm khóa bởi Quản trị viên.");
@@ -598,10 +607,7 @@ public class ImportOcrService {
 
         // Priority 2: Match by Tax Code (exact)
         if (taxCode != null && !taxCode.isBlank()) {
-            List<Partner> allSuppliers = partnerRepository.findAllSuppliers(null);
-            Optional<Partner> match = allSuppliers.stream()
-                    .filter(p -> taxCode.equals(p.getTaxCode()))
-                    .findFirst();
+            Optional<Partner> match = partnerRepository.findByTaxCode(taxCode.trim());
             if (match.isPresent()) {
                 return new SupplierMatch(match.get().getId(), match.get().getCode(), match.get().getName(), 1.0);
             }
@@ -859,3 +865,5 @@ public class ImportOcrService {
         }
     }
 }
+
+

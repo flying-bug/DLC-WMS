@@ -1,8 +1,8 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.client;
 
-import com.duylongtech.backend.feature.system.AiChatMessageDto;
-import com.duylongtech.backend.feature.system.AiChatResponse;
-import com.duylongtech.backend.feature.system.AiSourceResponse;
+import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
+import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
+import com.duylongtech.backend.feature.ai.dto.AiSourceResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -17,11 +17,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import com.duylongtech.backend.feature.auth.User;
-import com.duylongtech.backend.feature.system.AiChatMessageDto;
-import com.duylongtech.backend.feature.system.AiChatResponse;
-import com.duylongtech.backend.feature.system.AiModelClient;
-import com.duylongtech.backend.feature.system.AiSourceResponse;
-import com.duylongtech.backend.feature.system.OpenAiModelClient;
+import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
+import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
+import com.duylongtech.backend.feature.ai.client.AiModelClient;
+import com.duylongtech.backend.feature.ai.dto.AiSourceResponse;
+import com.duylongtech.backend.feature.ai.client.OpenAiModelClient;
 
 @Service
 @RequiredArgsConstructor
@@ -339,3 +339,5 @@ public class OpenAiModelClientImpl implements AiModelClient, OpenAiModelClient {
         );
     }
 }
+
+

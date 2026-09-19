@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,3 +27,4 @@ public class VoiceCommandResponse {
     /** Original transcript that was parsed */
     private String transcript;
 }
+

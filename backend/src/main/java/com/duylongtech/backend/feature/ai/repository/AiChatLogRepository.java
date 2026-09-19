@@ -1,6 +1,6 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.repository;
 
-import com.duylongtech.backend.feature.system.AiChatLog;
+import com.duylongtech.backend.feature.ai.model.AiChatLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -13,3 +13,5 @@ public interface AiChatLogRepository extends JpaRepository<AiChatLog, Long> {
     @Query(value = "SELECT question, COUNT(*) as q_count FROM ai_chat_logs GROUP BY question ORDER BY q_count DESC LIMIT 10", nativeQuery = true)
     List<Object[]> findTopQuestions();
 }
+
+

@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.model;
 
 /** Ý định của câu hỏi gửi cho chatbot (kết quả của {@link AiIntentRouter}). */
 public enum AiIntent {
@@ -22,3 +22,4 @@ public enum AiIntent {
     ASSEMBLY,
     GENERAL
 }
+

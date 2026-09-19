@@ -1,7 +1,7 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.service;
 
-import com.duylongtech.backend.feature.system.AiChatResponse;
-import com.duylongtech.backend.feature.system.AiSourceResponse;
+import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
+import com.duylongtech.backend.feature.ai.dto.AiSourceResponse;
 import com.duylongtech.backend.feature.warehouse.WarehouseStockAiRow;
 import com.duylongtech.backend.feature.assembly.AssemblyOrder;
 import com.duylongtech.backend.feature.partner.Partner;
@@ -43,7 +43,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.duylongtech.backend.feature.system.AiChatMessageDto;
+import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
 import com.duylongtech.backend.feature.assembly.AssemblyOrder;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
 import com.duylongtech.backend.feature.assembly.DeviceComponentSerial;
@@ -63,11 +63,11 @@ import com.duylongtech.backend.feature.repair.Repair;
 import com.duylongtech.backend.feature.repair.RepairRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
-import com.duylongtech.backend.feature.system.AiChatMessageDto;
-import com.duylongtech.backend.feature.system.AiChatResponse;
-import com.duylongtech.backend.feature.system.AiChatService;
-import com.duylongtech.backend.feature.system.AiModelClient;
-import com.duylongtech.backend.feature.system.AiSourceResponse;
+import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
+import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
+import com.duylongtech.backend.feature.ai.service.AiChatService;
+import com.duylongtech.backend.feature.ai.client.AiModelClient;
+import com.duylongtech.backend.feature.ai.dto.AiSourceResponse;
 import com.duylongtech.backend.feature.warehouse.StockTransfer;
 import com.duylongtech.backend.feature.warehouse.StockTransferRepository;
 import com.duylongtech.backend.feature.warehouse.Warehouse;
@@ -1185,3 +1185,5 @@ public class AiChatService {
         return noAccent.toLowerCase(Locale.ROOT).trim();
     }
 }
+
+

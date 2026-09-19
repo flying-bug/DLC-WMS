@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,3 +14,4 @@ public class AiChatMessageDto {
     private String role; // "user" or "assistant"
     private String content;
 }
+

@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.system;
+package com.duylongtech.backend.feature.ai.service;
 
 import com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard;
 import lombok.RequiredArgsConstructor;
@@ -68,3 +68,4 @@ public class AiAccessPolicy {
         return allowed == null || (warehouseId != null && allowed.contains(warehouseId));
     }
 }
+
