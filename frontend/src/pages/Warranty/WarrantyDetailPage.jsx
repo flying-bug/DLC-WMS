@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -50,19 +51,20 @@ function WarrantyDetailPage() {
     setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
   };
 
-  const loadWarranty = useCallback(async () => {
-    setLoading(true);
+  const loadWarranty = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const response = await warrantyApi.getWarrantyById(id);
       setWarranty(unwrap(response));
     } catch (err) {
-      setWarranty(null);
+      if (!silent) setWarranty(null);
       setError(err.response?.data?.userMessage || 'Không tải được chi tiết bảo hành.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id]);
+  useRealtimeRefresh({ WARRANTY: id }, loadWarranty);
 
   const handleVoidWarranty = async () => {
     if (!voidReason.trim()) {

@@ -44,6 +44,7 @@ public class BackupService {
     private final GoogleDriveService driveService;
     private final EmailService emailService;
     private final Environment env;
+    private final com.duylongtech.backend.feature.notification.RealtimeChangePublisher realtimeChangePublisher;
 
     private void ensureNativePasswordAuth(String user, String pass) {
         try {
@@ -445,6 +446,8 @@ public class BackupService {
 
         entityManager.clear();
         syncDiskBackupsWithDb();
+        // Toàn bộ dữ liệu bị thay bằng bản backup (mysql client, không qua Hibernate) -> mọi trang phải tải lại.
+        realtimeChangePublisher.publish(com.duylongtech.backend.feature.notification.DataChangedPayload.TOPIC_ALL);
         log.info("Database restored from: {}", record.getFilename());
     }
 

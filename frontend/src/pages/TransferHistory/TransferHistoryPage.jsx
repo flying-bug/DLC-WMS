@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -111,8 +112,8 @@ function TransferHistoryPage() {
     if (productRes.status === 'fulfilled') setProducts(pageContent(unwrap(productRes.value)));
   }, []);
 
-  const loadSlips = useCallback(async () => {
-    setLoading(true);
+  const loadSlips = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const params = {
@@ -125,13 +126,14 @@ function TransferHistoryPage() {
       const data = unwrap(response) || [];
       setSlips(data);
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       setError(err.response?.data?.userMessage || 'Không tải được danh sách phiếu chuyển kho');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['STOCK_TRANSFER'], loadSlips);
 
   useEffect(() => {
     loadLookups();

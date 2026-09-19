@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
@@ -47,8 +48,8 @@ const WarehouseListPage = () => {
     // State sắp xếp
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
-    const fetchWarehouses = async (pageIndex = 1, currentSize = size) => {
-        setLoading(true);
+    const fetchWarehouses = async (pageIndex = 1, currentSize = size, silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const res = await warehouseApi.getWarehouses({
                 search: searchKeyword || undefined,
@@ -71,9 +72,10 @@ const WarehouseListPage = () => {
             console.error("Lỗi fetch kho:", error);
             showToast('error', 'Không thể tải dữ liệu kho!');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+    useRealtimeRefresh(['WAREHOUSE'], ({ silent } = {}) => fetchWarehouses(page, size, silent));
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {

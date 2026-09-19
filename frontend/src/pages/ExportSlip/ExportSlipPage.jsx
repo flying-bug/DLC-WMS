@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -210,8 +211,8 @@ function ExportSlipPage() {
     }
   }, []);
 
-  const loadSlips = useCallback(async () => {
-    setLoading(true);
+  const loadSlips = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
 
     try {
       const response = await exportApi.getExportHistory({
@@ -229,13 +230,14 @@ function ExportSlipPage() {
       const data = unwrap(response) || [];
       setSlips(data);
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Có lỗi xảy ra khi tải dữ liệu');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['EXPORT_DOCUMENT'], loadSlips);
 
   const handleNavigateReference = (refType, refId) => {
     if (!refType || !refId) return;

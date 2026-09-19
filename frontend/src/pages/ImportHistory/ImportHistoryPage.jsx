@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
@@ -185,8 +186,8 @@ function ImportHistoryPage() {
     if (userRes.status === 'fulfilled') setUsers(pageContent(unwrap(userRes.value)));
   }, []);
 
-  const loadSlips = useCallback(async () => {
-    setLoading(true);
+  const loadSlips = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const params = {
@@ -205,14 +206,15 @@ function ImportHistoryPage() {
       const data = unwrap(response) || [];
       setSlips(data);
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       console.error('Failed to load import slips:', err);
       setError('Khởi tạo danh sách thất bại. Vui lòng thử lại.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['IMPORT_DOCUMENT'], loadSlips);
 
   const handleNavigateReference = (refType, refId) => {
     if (!refType || !refId) return;

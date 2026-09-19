@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
@@ -125,9 +126,9 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   }, []);
 
   // Fetch all payments
-  const fetchPayments = useCallback(async () => {
-    setLoading(true);
-    setSelectedIds([]);
+  const fetchPayments = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
+    if (!silent) setSelectedIds([]);
     try {
       const res = await paymentApi.getAllPayments();
       const list = unwrap(res) || [];
@@ -136,9 +137,10 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       console.error('Error loading payments:', err);
       showToast('error', 'Không thể tải danh sách phiếu thu/chi');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
+  useRealtimeRefresh(['PAYMENT','PARTNER'], fetchPayments);
 
   useEffect(() => {
     fetchPayments();

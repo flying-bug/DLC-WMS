@@ -9,7 +9,7 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { getDateRangePreset } from '../../utils/datePresets';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import * as paymentApi from '../../api/paymentApi';
-import { NOTIFICATION_EVENT } from '../../auth/session';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import styles from './CashierWorkspacePage.module.css';
 
 
@@ -102,20 +102,8 @@ export default function CashierWorkspacePage() {
     fetchMasterData();
   }, [fetchMasterData]);
 
-  // Refresh the list in the background so newly-created payment receipts/
-  // vouchers from the accountant show up here without the treasurer having
-  // to reload manually. Driven by the realtime notification push (see
-  // RealtimeSessionBridge) instead of polling.
-  useEffect(() => {
-    const handleRealtimeNotification = (event) => {
-      const refType = event.detail?.referenceType;
-      if (refType === 'PAYMENT_RECEIPT' || refType === 'PAYMENT_VOUCHER') {
-        fetchMasterData(true);
-      }
-    };
-    window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
-    return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
-  }, [fetchMasterData]);
+  // Tự làm mới danh sách khi phiếu thu/chi đổi ở nơi khác (SSE data-changed), giữ nguyên dòng đang chọn.
+  useRealtimeRefresh(['PAYMENT', 'PARTNER'], ({ silent } = {}) => fetchMasterData(silent));
 
   // Reset page when activeTab changes
   useEffect(() => {

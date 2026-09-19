@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as repairApi from '../../api/repairApi';
@@ -85,8 +86,8 @@ function RepairListPage() {
     setColumns(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const loadRepairs = useCallback(async () => {
-    setLoading(true);
+  const loadRepairs = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const params = {
         keyword: filters.keyword || undefined,
@@ -100,13 +101,14 @@ function RepairListPage() {
       const payload = unwrap(response);
       setRepairs(pageContent(payload));
       setTotalItems(totalFromPayload(payload, 0));
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không tải được danh sách phiếu sửa chữa.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters, currentPage, pageSize]);
+  useRealtimeRefresh(['REPAIR'], loadRepairs);
 
   useEffect(() => {
     loadRepairs();

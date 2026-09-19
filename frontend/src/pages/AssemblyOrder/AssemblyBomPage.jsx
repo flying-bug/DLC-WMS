@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -66,20 +67,21 @@ function AssemblyBomPage() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
-    const loadBoms = useCallback(async () => {
-        setLoading(true);
+    const loadBoms = useCallback(async ({ silent } = {}) => {
+        if (!silent) setLoading(true);
         setError('');
         try {
             const response = await assemblyApi.getAssemblyBoms({});
             setBoms(listFrom(unwrap(response)));
-            setPage(1);
+            if (!silent) setPage(1);
         } catch (err) {
             setBoms([]);
             setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách cấu hình.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
+  useRealtimeRefresh(['ASSEMBLY_BOM'], loadBoms);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {

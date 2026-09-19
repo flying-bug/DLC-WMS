@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -186,8 +187,8 @@ function PurchaseOrderListPage() {
     loadSuppliers();
   }, []);
 
-  const loadOrders = useCallback(async () => {
-    setLoading(true);
+  const loadOrders = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await poApi.getPurchaseOrders(filters);
       const list = unwrap(res);
@@ -195,9 +196,10 @@ function PurchaseOrderListPage() {
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không thể tải danh sách đơn mua hàng');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['PURCHASE_ORDER'], loadOrders);
 
   const handleExport = () => {
     if (!orders || orders.length === 0) {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -121,8 +122,8 @@ function SalesOrderDetailPage() {
     }
   };
 
-  const loadSo = async () => {
-    setLoading(true);
+  const loadSo = async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await soApi.getSalesOrderById(id);
       setSo(unwrap(res));
@@ -131,9 +132,10 @@ function SalesOrderDetailPage() {
     } catch {
       showToast('error', 'Không thể tải thông tin đơn hàng');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+  useRealtimeRefresh({ SALES_ORDER: id, E_INVOICE: null, EXPORT_DOCUMENT: null }, loadSo);
 
   const handleOpenEmailModal = () => {
     setEmailTo(so?.partnerEmail || '');

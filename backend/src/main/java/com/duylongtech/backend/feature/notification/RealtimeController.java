@@ -2,6 +2,7 @@ package com.duylongtech.backend.feature.notification;
 
 import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.feature.notification.RealtimeSessionService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,7 +19,10 @@ public class RealtimeController {
     private final RealtimeSessionService realtimeSessionService;
 
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+    public SseEmitter stream(@AuthenticationPrincipal UserDetailsImpl userDetails, HttpServletResponse response) {
+        // Chặn proxy (nginx...) buffer luồng SSE làm sự kiện đến trễ.
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache, no-transform");
         return realtimeSessionService.subscribe(userDetails);
     }
 }

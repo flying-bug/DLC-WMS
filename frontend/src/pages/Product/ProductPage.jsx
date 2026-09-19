@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -880,9 +881,9 @@ const ProductPage = () => {
         fetchAllVariants();
     }, [fetchAllVariants]);
 
-    const fetchProducts = useCallback(async () => {
+    const fetchProducts = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
             const categoryQuery = categoryFilter ? `&categoryId=${categoryFilter}` : '';
             const typeQuery = typeFilter ? `&productType=${encodeURIComponent(typeFilter)}` : '';
@@ -914,9 +915,10 @@ const ProductPage = () => {
             console.error('Lỗi lấy danh sách hàng hóa:', error);
             showToast('error', 'Không thể tải danh sách sản phẩm.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [page, size, searchTerm, categoryFilter, typeFilter, brandFilter, unitFilter]);
+  useRealtimeRefresh(['PRODUCT','INVENTORY_BALANCE'], fetchProducts);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {

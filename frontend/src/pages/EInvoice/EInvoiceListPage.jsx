@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -39,8 +40,8 @@ export default function EInvoiceListPage() {
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await einvoiceApi.getEInvoices({
         keyword: keyword.trim() || undefined,
@@ -57,9 +58,10 @@ export default function EInvoiceListPage() {
     } catch {
       showToast('error', 'Không thể tải danh sách hóa đơn điện tử');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [keyword, status, page, size]);
+  useRealtimeRefresh(['E_INVOICE'], loadData);
 
   useEffect(() => {
     loadData();

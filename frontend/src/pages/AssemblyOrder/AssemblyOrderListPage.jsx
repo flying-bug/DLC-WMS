@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -129,8 +130,8 @@ function AssemblyOrderListPage() {
         }
     }, []);
 
-    const loadOrders = useCallback(async (currentFilters = filters) => {
-        setLoading(true);
+    const loadOrders = useCallback(async (currentFilters = filters, silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const response = await assemblyApi.getAssemblyOrders({
                 keyword: currentFilters.keyword || undefined,
@@ -141,14 +142,15 @@ function AssemblyOrderListPage() {
                 toDate: currentFilters.toDate || undefined
             });
             setOrders(listFrom(unwrap(response)));
-            setPage(1); // Reset page on new load
+            if (!silent) setPage(1); // Reset page on new load
         } catch (err) {
             setOrders([]);
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách lệnh.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters]);
+    useRealtimeRefresh(['ASSEMBLY_ORDER'], ({ silent } = {}) => loadOrders(undefined, silent));
 
     useEffect(() => {
         loadWarehouses();

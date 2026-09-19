@@ -41,6 +41,8 @@ public class RealtimeSessionService {
     private static final String EVENT_FORCE_LOGOUT = "force-logout";
     private static final String EVENT_NOTIFICATION = "notification";
     private static final String EVENT_SYSTEM_HEALTH = "system-health";
+    private static final String EVENT_DATA_CHANGED = "data-changed";
+    private static final String TOPIC_USER = "USER";
 
     private final SystemHealthService systemHealthService;
 
@@ -107,6 +109,14 @@ public class RealtimeSessionService {
         }
     }
 
+    public void publishDataChanged(DataChangedPayload payload) {
+        if (TOPIC_USER.equals(payload.topic())) {
+            sendToMatching(this::isAdminConnection, EVENT_DATA_CHANGED, payload);
+        } else {
+            sendToMatching(connection -> true, EVENT_DATA_CHANGED, payload);
+        }
+    }
+
     private boolean isAdminConnection(ClientConnection connection) {
         return connection.authorities.contains("ROLE_SUPER_ADMIN")
                 || connection.authorities.contains("ROLE_MANAGER");
@@ -143,10 +153,13 @@ public class RealtimeSessionService {
 
     private void send(ClientConnection connection, String eventName, Object payload) {
         try {
-            connection.emitter.send(SseEmitter.event()
-                    .name(eventName)
-                    .data(payload));
-        } catch (IOException ex) {
+            // SseEmitter không an toàn khi nhiều luồng ghi cùng lúc (heartbeat, thông báo, data-changed).
+            synchronized (connection.emitter) {
+                connection.emitter.send(SseEmitter.event()
+                        .name(eventName)
+                        .data(payload));
+            }
+        } catch (IOException | IllegalStateException ex) {
             log.debug("Closing realtime connection {} after send failure: {}", connection.connectionId, ex.getMessage());
             removeConnection(connection.connectionId);
         }

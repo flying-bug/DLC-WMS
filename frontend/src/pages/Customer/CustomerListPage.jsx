@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import CustomerModal from './components/CustomerModal';
@@ -52,9 +53,9 @@ const CustomerListPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchCustomers = useCallback(async (currentFilters = filters, currentPage = page, currentSize = pageSize) => {
+    const fetchCustomers = useCallback(async (currentFilters = filters, currentPage = page, currentSize = pageSize, silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             // API expects 0-indexed page
             const apiPage = Math.max(0, currentPage - 1);
             const response = await searchCustomers(
@@ -71,14 +72,15 @@ const CustomerListPage = () => {
                 setTotalPages(Math.max(1, Math.ceil(total / currentSize)));
                 setTotalElements(total);
             }
-            setSelectedIds([]);
+            if (!silent) setSelectedIds([]);
         } catch (error) {
             console.error('Lỗi tải danh sách khách hàng:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách khách hàng');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters, page, pageSize]);
+    useRealtimeRefresh(['PARTNER'], ({ silent } = {}) => fetchCustomers(undefined, undefined, undefined, silent));
 
     useEffect(() => {
         fetchCustomers();

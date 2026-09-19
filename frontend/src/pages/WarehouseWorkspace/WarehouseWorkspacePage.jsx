@@ -13,7 +13,7 @@ import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import { getMyWarehouses } from '../../api/warehouseApi';
-import { NOTIFICATION_EVENT } from '../../auth/session';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import styles from './WarehouseWorkspacePage.module.css';
 
 export default function WarehouseWorkspacePage() {
@@ -130,20 +130,11 @@ export default function WarehouseWorkspacePage() {
     fetchMasterData();
   }, [fetchMasterData]);
 
-  // Refresh the list in the background so newly-created import/export documents
-  // from other roles (e.g. Ke toan tao phieu nhap) show up here without the
-  // warehouse worker having to click "Nap lai" themselves. Driven by the
-  // realtime notification push (see RealtimeSessionBridge) instead of polling.
-  useEffect(() => {
-    const handleRealtimeNotification = (event) => {
-      const refType = event.detail?.referenceType;
-      if (refType === 'IMPORT_DOCUMENT' || refType === 'EXPORT_DOCUMENT') {
-        fetchMasterData(true);
-      }
-    };
-    window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
-    return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
-  }, [fetchMasterData]);
+  // Tự làm mới danh sách khi phiếu nhập/xuất/kiểm kê đổi ở nơi khác (SSE data-changed), giữ nguyên dòng đang chọn.
+  useRealtimeRefresh(
+    ['IMPORT_DOCUMENT', 'EXPORT_DOCUMENT', 'STOCKTAKE'],
+    ({ silent } = {}) => fetchMasterData(silent)
+  );
 
   // Fetch Detail when selected item changes
   useEffect(() => {

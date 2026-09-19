@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -277,10 +278,10 @@ const ReportListPage = () => {
     };
 
     // Submit report query
-    const handleViewReport = async () => {
+    const handleViewReport = async ({ silent } = {}) => {
         if (!activeReport) return;
-        setLoading(true);
-        setCurrentPage(0);
+        if (!silent) setLoading(true);
+        if (!silent) setCurrentPage(0);
 
         try {
             // Prepare query parameters (append start/end time if API expects ISO Date Time)
@@ -380,9 +381,10 @@ const ReportListPage = () => {
             showToast('error', err.response?.data?.userMessage || 'Không thể tải dữ liệu báo cáo.');
             setReportData([]);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+  useRealtimeRefresh(['INVENTORY_BALANCE','IMPORT_DOCUMENT','EXPORT_DOCUMENT','STOCK_TRANSFER','PAYMENT','SALES_ORDER','PARTNER'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
 
     // Auto-fetch data on switching to a report or changing filters
     useEffect(() => {

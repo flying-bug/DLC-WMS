@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -99,8 +100,8 @@ function SalesOrderListPage() {
     loadLookups();
   }, []);
 
-  const loadOrders = useCallback(async () => {
-    setLoading(true);
+  const loadOrders = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await soApi.getSalesOrders({
         keyword: filters.keyword || undefined,
@@ -115,9 +116,10 @@ function SalesOrderListPage() {
     } catch {
       showToast('error', 'Không thể tải danh sách đơn bán hàng');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['SALES_ORDER'], loadOrders);
 
   const handleExport = () => {
     if (!orders || orders.length === 0) {

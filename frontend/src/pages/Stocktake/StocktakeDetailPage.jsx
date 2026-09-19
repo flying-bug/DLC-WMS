@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
@@ -56,9 +57,9 @@ function StocktakeDetailPage() {
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
   const [participants, setParticipants] = useState([]);
 
-  const fetchStocktakeData = async () => {
+  const fetchStocktakeData = async ({ silent } = {}) => {
     try {
-      setLoadingStock(true);
+      if (!silent) setLoadingStock(true);
       const res = await stocktakeApi.getStocktakeDetail(id);
       const data = res?.data?.data || res?.data;
       if (data) {
@@ -112,9 +113,11 @@ function StocktakeDetailPage() {
       console.error(err);
       showToast('error', 'Không tải được chi tiết phiếu kiểm kê');
     } finally {
-      setLoadingStock(false);
+      if (!silent) setLoadingStock(false);
     }
   };
+  // Chỉ tự làm mới khi đang xem (isSaved); ở chế độ sửa sẽ ghi đè dữ liệu người dùng đang nhập.
+  useRealtimeRefresh({ STOCKTAKE: id }, fetchStocktakeData, { enabled: isSaved });
 
   useEffect(() => {
     const loadWarehouses = async () => {

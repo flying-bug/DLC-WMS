@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { getCustomerById, deactivateCustomer, activateCustomer, getCustomerSalesHistory, getCustomerWarranties, getCustomerReceipts } from '../../api/customerApi';
@@ -62,9 +63,9 @@ const CustomerDetailPage = () => {
         fetchCustomerInfo();
     }, [fetchCustomerInfo]);
 
-    const fetchTabData = useCallback(async (currentTab, currentPage = 0) => {
+    const fetchTabData = useCallback(async (currentTab, currentPage = 0, silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             setTabError(null);
             if (currentTab === TABS.SALES) {
                 const res = await getCustomerSalesHistory(id, currentPage, 10);
@@ -97,9 +98,13 @@ const CustomerDetailPage = () => {
             console.error('Lỗi tải dữ liệu tab:', err);
             setTabError(err.response?.data?.userMessage || 'Không tải được dữ liệu. Vui lòng thử lại.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [id]);
+    useRealtimeRefresh(
+        { PARTNER: id, SALES_ORDER: null, WARRANTY: null, PAYMENT: null },
+        ({ silent } = {}) => { fetchCustomerInfo(); fetchTabData(activeTab, page, silent); }
+    );
 
     useEffect(() => {
         Promise.resolve().then(() => fetchTabData(activeTab, page));

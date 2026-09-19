@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -80,8 +81,8 @@ function WarrantyListPage() {
     setColumns(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const loadWarranties = useCallback(async () => {
-    setLoading(true);
+  const loadWarranties = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const params = {
         keyword: filters.keyword || undefined,
@@ -95,13 +96,14 @@ function WarrantyListPage() {
       const payload = unwrap(response);
       setWarranties(pageContent(payload));
       setTotalItems(totalFromPayload(payload, 0));
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không tải được danh sách bảo hành.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters, currentPage, pageSize]);
+  useRealtimeRefresh(['WARRANTY'], loadWarranties);
 
   useEffect(() => {
     loadWarranties();

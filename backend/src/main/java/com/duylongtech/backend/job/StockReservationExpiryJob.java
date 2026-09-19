@@ -8,6 +8,7 @@ import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
 import com.duylongtech.backend.feature.inventory.StockReservationRepository;
+import com.duylongtech.backend.feature.notification.RealtimeChangePublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,6 +32,7 @@ public class StockReservationExpiryJob {
     private final StockReservationRepository stockReservationRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final SalesOrderRepository salesOrderRepository;
+    private final RealtimeChangePublisher realtimeChangePublisher;
 
     /**
      * Chạy mỗi giờ để tìm các reservation HOLDING đã hết hạn và release chúng.
@@ -103,6 +105,8 @@ public class StockReservationExpiryJob {
             }
         }
 
+        // UPDATE hàng loạt ở trên không đi qua Hibernate nên phải báo thủ công cho các trang tồn kho.
+        realtimeChangePublisher.publish("INVENTORY_BALANCE");
         log.info("[ReservationExpiryJob] Hoàn thành release {} reservation hết hạn.", expired.size());
     }
 }

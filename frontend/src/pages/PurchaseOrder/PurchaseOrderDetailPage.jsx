@@ -4,6 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SelectReceivingWarehouseModal from './components/SelectReceivingWarehouseModal';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import * as poApi from '../../api/purchaseOrderApi';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -50,15 +51,15 @@ function PurchaseOrderDetailPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
 
-  const loadPo = async () => {
-    setLoading(true);
+  const loadPo = async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await poApi.getPurchaseOrderById(id);
       setPo(unwrap(res));
     } catch {
       showToast('error', 'Không thể tải thông tin đơn mua hàng');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -90,6 +91,10 @@ function PurchaseOrderDetailPage() {
   };
 
   useEffect(() => { loadPo(); loadImportSlips(); loadUsers(); loadWarehouses(); }, [id]);
+  useRealtimeRefresh(
+    { PURCHASE_ORDER: id, IMPORT_DOCUMENT: null },
+    ({ silent } = {}) => { loadPo({ silent }); loadImportSlips(); }
+  );
 
   const handleApprove = async () => {
     setConfirmApprove(false);

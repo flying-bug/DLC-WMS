@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import BrandModal from './components/BrandModal';
@@ -24,9 +25,9 @@ const BrandDetailPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchBrand = useCallback(async () => {
+    const fetchBrand = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const res = await axiosClient.get(`/brands/${id}`);
             if (res.data && res.data.data) {
                 setBrand(res.data.data);
@@ -35,9 +36,10 @@ const BrandDetailPage = () => {
             console.error('Lỗi tải chi tiết thương hiệu:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết thương hiệu');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [id]);
+  useRealtimeRefresh({ BRAND: id }, fetchBrand);
 
     useEffect(() => {
         if (id) {

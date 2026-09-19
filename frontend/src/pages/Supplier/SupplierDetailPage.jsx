@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
@@ -41,16 +42,16 @@ const SupplierDetailPage = () => {
     const formatDate = (value) => value ? formatDateOnly(value) : '-';
     const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
-    const fetchSupplier = async () => {
+    const fetchSupplier = async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const res = await axiosClient.get(`/suppliers/${id}`);
             if (res.data && res.data.data) {
                 const supplierData = res.data.data;
                 setSupplier(supplierData);
                 setDebtBalance(Number(supplierData.currentDebt || 0));
 
-                setHistoryLoading(true);
+                if (!silent) setHistoryLoading(true);
                 setPurchaseError(null);
                 setPaymentError(null);
                 const [ordersRes, paymentRes, balanceRes] = await Promise.allSettled([
@@ -98,16 +99,17 @@ const SupplierDetailPage = () => {
                     console.error('Lỗi tải lịch sử mua hàng:', ordersRes.reason);
                     setPurchaseError('Không tải được lịch sử mua hàng');
                 }
-                setHistoryLoading(false);
+                if (!silent) setHistoryLoading(false);
             }
         } catch (error) {
             console.error('Lỗi tải chi tiết NCC:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết nhà cung cấp');
         } finally {
-            setHistoryLoading(false);
-            setLoading(false);
+            if (!silent) setHistoryLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+  useRealtimeRefresh({ PARTNER: id, PURCHASE_ORDER: null, PAYMENT: null }, fetchSupplier);
 
     useEffect(() => {
         if (id) {

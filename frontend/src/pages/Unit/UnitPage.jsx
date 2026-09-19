@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import AdminLayout from '../../components/layout/AdminLayout';
 import UnitModal from './components/UnitModal';
 import { exportToExcel } from '../../utils/excelExport';
@@ -37,9 +38,9 @@ const UnitPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchUnits = useCallback(async () => {
+    const fetchUnits = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const params = {
                 page: currentPage - 1,
                 size: pageSize
@@ -64,9 +65,10 @@ const UnitPage = () => {
             console.error('Lỗi tải danh sách đơn vị tính:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách đơn vị tính');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters, currentPage, pageSize]);
+  useRealtimeRefresh(['UNIT'], fetchUnits);
 
     useEffect(() => {
         const timer = setTimeout(() => {

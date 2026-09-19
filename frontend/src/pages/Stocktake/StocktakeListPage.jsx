@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
@@ -80,8 +81,8 @@ function StocktakeListPage() {
     }
   }, []);
 
-  const loadStocktakes = useCallback(async () => {
-    setLoading(true);
+  const loadStocktakes = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const params = {
         stocktakeCode: filters.stocktakeCode || undefined,
@@ -93,13 +94,14 @@ function StocktakeListPage() {
       const response = await stocktakeApi.getStocktakes(params);
       const data = pageContent(unwrap(response));
       setStocktakes(data);
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       console.error(err.response?.data?.userMessage || 'Không tải được danh sách bảng kiểm kê');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['STOCKTAKE'], loadStocktakes);
 
   useEffect(() => {
      
