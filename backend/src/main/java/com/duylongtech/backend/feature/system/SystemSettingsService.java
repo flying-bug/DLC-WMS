@@ -144,7 +144,16 @@ public class SystemSettingsService {
     }
 
     public java.util.List<Integer> getAllowedVatRates() {
-        return java.util.List.of(0, 5, 8, 10);
+        try {
+            String rates = getSetting("tax.allowed_vat_rates", "0,5,8,10");
+            return java.util.Arrays.stream(rates.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(Integer::parseInt)
+                    .collect(java.util.stream.Collectors.toList());
+        } catch (Exception e) {
+            return java.util.List.of(0, 5, 8, 10);
+        }
     }
 
     public BusinessSettingsDto getBusinessSettings() {
@@ -164,6 +173,12 @@ public class SystemSettingsService {
     public void saveBusinessSettings(BusinessSettingsDto dto) {
         if (dto.getDefaultVatRate() != null) {
             upsert("tax.default_vat_rate", String.valueOf(dto.getDefaultVatRate()));
+        }
+        if (dto.getAllowedVatRates() != null && !dto.getAllowedVatRates().isEmpty()) {
+            String ratesStr = dto.getAllowedVatRates().stream()
+                .map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+            upsert("tax.allowed_vat_rates", ratesStr);
         }
         if (dto.getCompanyName() != null) {
             upsert("company.name", dto.getCompanyName().trim());

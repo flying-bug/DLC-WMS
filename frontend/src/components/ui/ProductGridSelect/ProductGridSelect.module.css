@@ -41,11 +41,15 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  white-space: normal;
-  word-break: break-word;
 }
 
 .selectedText {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  word-break: break-word;
   color: var(--color-text-strong);
   font-weight: 500;
 }
@@ -202,6 +206,14 @@
 
 .nameCell {
   line-height: 1.3;
+}
+
+.nameCellText {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .stockCell {

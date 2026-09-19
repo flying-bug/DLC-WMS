@@ -15,6 +15,7 @@ import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpl
 import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import styles from './CreateSalesOrderPage.module.css';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
@@ -47,7 +48,7 @@ const customSelectStyles = {
   menu: base => ({ ...base, zIndex: 9999, fontSize: 12.5 }),
 };
 
-const emptyLine = () => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 8, serialNumbers: [], note: '', showNote: false });
+const emptyLine = (defaultVat = 8) => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: defaultVat, serialNumbers: [], note: '', showNote: false });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -69,6 +70,7 @@ function CreateSalesOrderPage() {
   const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
   const [serialModalLineIndex, setSerialModalLineIndex] = useState(null);
   const [attachments, setAttachments] = useState([]);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
 
   const [form, setForm] = useState({
@@ -109,14 +111,19 @@ function CreateSalesOrderPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [warehouseRes, customerRes, variantRes, balanceRes, codeRes] = await Promise.allSettled([
+        const [warehouseRes, customerRes, variantRes, balanceRes, codeRes, vatRes] = await Promise.allSettled([
           soApi.getWarehouses({ size: 100 }),
           soApi.getCustomers({ isCustomer: true, status: 'APPROVED', size: 1000 }),
           soApi.getProducts({ size: 500 }),
           soApi.getInventoryBalance({}),
           !isEdit ? soApi.getNextSoCode() : Promise.resolve(null),
+          businessSettingsApi.getDefaultVat(),
         ]);
         let whList = [];
+        if (vatRes.status === 'fulfilled') {
+          const vConf = vatRes.value?.data?.data || vatRes.value?.data;
+          if (vConf?.allowedVatRates) setVatConfig(vConf);
+        }
         if (warehouseRes.status === 'fulfilled') {
           whList = pageContent(unwrap(warehouseRes.value));
           setWarehouses(whList);
@@ -194,13 +201,13 @@ function CreateSalesOrderPage() {
           unitPrice: price,
           unitName: matchProd.unitName || 'Cái',
           warrantyMonths: Number(matchProd.warrantyMonths || 0),
-          vatRate: Number(matchProd.vatPercent ?? matchProd.vatRate ?? 8),
+          vatRate: Number(matchProd.vatPercent ?? matchProd.vatRate ?? vatConfig.defaultVatRate),
           serialNumbers: [],
           note: '',
         }]);
       }
     }
-  }, [voiceData, isEdit, warehouses, customers, variants]);
+  }, [voiceData, isEdit, warehouses, customers, variants, vatConfig.defaultVatRate]);
 
   // Load SO data if editing
   useEffect(() => {
@@ -228,7 +235,7 @@ function CreateSalesOrderPage() {
           unitPrice: Number(l.unitPrice),
           unitName: l.unitName || '',
           warrantyMonths: l.warrantyMonths || 0,
-          vatRate: l.vatRate !== undefined && l.vatRate !== null ? Number(l.vatRate) : 8,
+          vatRate: l.vatRate !== undefined && l.vatRate !== null ? Number(l.vatRate) : vatConfig.defaultVatRate,
           note: l.note || '',
         })));
       } catch {
@@ -239,7 +246,7 @@ function CreateSalesOrderPage() {
   }, [id, isEdit, warehouses]);
 
   // ── Line management ──
-  const addLine = () => setLines(p => [...p, emptyLine()]);
+  const addLine = () => setLines(p => [...p, emptyLine(vatConfig.defaultVatRate)]);
   const removeLine = (idx) => setLines(p => p.filter((_, i) => i !== idx));
   const updateLine = (idx, field, value) => setLines(p =>
     p.map((l, i) => i === idx ? { ...l, [field]: value } : l)
@@ -298,7 +305,7 @@ function CreateSalesOrderPage() {
       unitPrice: Number(selected.salePrice || 0),
       unitName: selected.unitName || 'Cái',
       warrantyMonths: Number(selected.warrantyMonths || 0),
-      vatRate: Number(selected.vatPercent ?? selected.vatRate ?? 8),
+      vatRate: Number(selected.vatPercent ?? selected.vatRate ?? vatConfig.defaultVatRate),
     });
   };
 
@@ -334,7 +341,7 @@ function CreateSalesOrderPage() {
         if (next.length > 1) {
           return next.filter((_, i) => i !== idx);
         }
-        return [emptyLine()];
+        return [emptyLine(vatConfig.defaultVatRate)];
       });
 
       showToast('info', `Đã dồn vào dòng sản phẩm cùng kho xuất và tăng số lượng (+${addedQty}).`);
@@ -359,7 +366,7 @@ function CreateSalesOrderPage() {
           unitPrice: Number(createdVariant.salePrice || 0),
           unitName: createdVariant.unitName || 'Cái',
           warrantyMonths: Number(createdVariant.warrantyMonths || 0),
-          vatRate: Number(createdVariant.vatPercent ?? createdVariant.vatRate ?? 8),
+          vatRate: Number(createdVariant.vatPercent ?? createdVariant.vatRate ?? vatConfig.defaultVatRate),
         });
         showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
       } else {
@@ -502,8 +509,8 @@ function CreateSalesOrderPage() {
         return false;
       }
       const vat = Number(lines[i].vatRate ?? 0);
-      if (Number.isNaN(vat) || vat < 0 || vat > 10) {
-        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) phải từ 0% đến 10%`);
+      if (Number.isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
+        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) không hợp lệ`);
         focusField(`so-line-vat-${i}`);
         return false;
       }
@@ -560,8 +567,8 @@ function CreateSalesOrderPage() {
         return false;
       }
       const vat = Number(lines[i].vatRate ?? 0);
-      if (Number.isNaN(vat) || vat < 0 || vat > 10) {
-        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) phải từ 0% đến 10%`);
+      if (Number.isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
+        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) không hợp lệ`);
         focusField(`so-line-vat-${i}`);
         return false;
       }
@@ -897,13 +904,12 @@ function CreateSalesOrderPage() {
           id={`so-line-vat-${idx}`}
           className={styles.lineInput}
           style={{ width: '100%', textAlign: 'center', padding: '0 4px', cursor: 'pointer', height: '28px', background: '#fff' }}
-          value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
+          value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : vatConfig.defaultVatRate}
           onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
         >
-          <option value={0}>0%</option>
-          <option value={5}>5%</option>
-          <option value={8}>8%</option>
-          <option value={10}>10%</option>
+          {vatConfig.allowedVatRates.map(rate => (
+            <option key={rate} value={rate}>{rate}%</option>
+          ))}
         </select>
       )
     }

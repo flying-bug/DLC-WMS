@@ -152,7 +152,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>Chứng từ tham chiếu: <strong>{exportDoc ? `PXK: ${exportDoc.docCode}` : `Đơn hàng: ${so?.soCode}`}</strong></div>
               <div>Tiền hàng (chưa thuế): <strong>{Number(calcSubTotal).toLocaleString('vi-VN')} đ</strong></div>
-              <div>Tiền thuế VAT (10%): <strong style={{ color: 'var(--wms-danger)' }}>{Number(calcVat).toLocaleString('vi-VN')} đ</strong></div>
+              <div>Tiền thuế VAT: <strong style={{ color: 'var(--wms-danger)' }}>{Number(calcVat).toLocaleString('vi-VN')} đ</strong></div>
               <div>Tổng cộng thanh toán: <strong style={{ color: 'var(--wms-success)', fontSize: '14px' }}>{Number(calcTotal).toLocaleString('vi-VN')} đ</strong></div>
             </div>
 

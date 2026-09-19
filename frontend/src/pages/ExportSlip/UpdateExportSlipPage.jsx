@@ -4,6 +4,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as einvoiceApi from '../../api/einvoiceApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -164,6 +165,7 @@ function UpdateExportSlipPage() {
   });
   const [items, setItems] = useState([emptyLine()]);
   const [inventoryBalances, setInventoryBalances] = useState([]);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -230,15 +232,21 @@ function UpdateExportSlipPage() {
       setLoading(true);
       setError('');
       try {
-        const [warehouseRes, productRes, customerRes, userRes, slipRes] = await Promise.allSettled([
+        const [warehouseRes, productRes, customerRes, userRes, slipRes, vatRes] = await Promise.allSettled([
           exportApi.getWarehouses({ size: 100 }),
           exportApi.getProducts({ size: 1000 }),
           exportApi.getCustomers({ size: 1000 }),
           exportApi.getUsers({ size: 1000 }).catch(() => null),
           exportApi.getExportDetail(id),
+          businessSettingsApi.getDefaultVat(),
         ]);
 
         const detail = slipRes.status === 'fulfilled' ? unwrap(slipRes.value) : null;
+        if (vatRes.status === 'fulfilled') {
+          const vConf = vatRes.value?.data?.data || vatRes.value?.data;
+          if (vConf?.allowedVatRates) setVatConfig(vConf);
+        }
+
 
         if (warehouseRes.status === 'fulfilled') {
           setWarehouses(pageContent(unwrap(warehouseRes.value)));
@@ -752,7 +760,7 @@ function UpdateExportSlipPage() {
         }
       }
       const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-      if (isNaN(vat) || vat < 0 || vat > 10) {
+      if (isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
         focusField(`export-line-vat-${i}`);
         return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
       }
@@ -1042,13 +1050,12 @@ function UpdateExportSlipPage() {
             id={`export-line-vat-${index}`}
             className="misa-input"
             style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }}
-            value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0}
+            value={item.vatPercent !== undefined ? Number(item.vatPercent) : vatConfig.defaultVatRate}
             onChange={(event) => handleItemChange(item.localId, 'vatPercent', Number(event.target.value))}
           >
-            <option value={0}>0%</option>
-            <option value={5}>5%</option>
-            <option value={8}>8%</option>
-            <option value={10}>10%</option>
+            {vatConfig.allowedVatRates.map(rate => (
+              <option key={rate} value={rate}>{rate}%</option>
+            ))}
           </select>
         )
       }

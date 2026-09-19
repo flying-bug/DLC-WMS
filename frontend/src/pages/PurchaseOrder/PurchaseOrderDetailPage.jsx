@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import SelectReceivingWarehouseModal from './components/SelectReceivingWarehouseModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -38,6 +39,10 @@ function PurchaseOrderDetailPage() {
   const [toast,           setToast]           = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmApprove,  setConfirmApprove]  = useState(false);
   const [confirmCancel,   setConfirmCancel]   = useState(false);
+  const [confirmShortClose,       setConfirmShortClose]       = useState(false);
+  const [confirmRevertShortClose, setConfirmRevertShortClose] = useState(false);
+  const [showWarehousePicker,     setShowWarehousePicker]     = useState(false);
+  const [pickerWarehouses,        setPickerWarehouses]        = useState([]);
 
   const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
@@ -127,6 +132,24 @@ function PurchaseOrderDetailPage() {
       return;
     }
 
+    // Nhập đa kho: PO có dòng thuộc từ 2 kho khác nhau trở lên -> chọn kho, mỗi kho 1 phiếu nhập.
+    const pendingWarehouses = new Map();
+    importableLines.forEach(l => {
+      if (l.warehouseId && !pendingWarehouses.has(l.warehouseId)) {
+        pendingWarehouses.set(l.warehouseId, {
+          id: l.warehouseId,
+          code: l.warehouseCode || warehouseById.get(l.warehouseId)?.code,
+          name: l.warehouseName || warehouseById.get(l.warehouseId)?.name || `Kho #${l.warehouseId}`,
+        });
+      }
+    });
+
+    if (pendingWarehouses.size > 1) {
+      setPickerWarehouses([...pendingWarehouses.values()]);
+      setShowWarehousePicker(true);
+      return;
+    }
+
     navigate('/import-history/create', {
       state: {
         poData: {
@@ -135,6 +158,35 @@ function PurchaseOrderDetailPage() {
         }
       }
     });
+  };
+
+  const handleWarehousePicked = (createdDoc) => {
+    setShowWarehousePicker(false);
+    if (createdDoc?.id) {
+      navigate(`/import-slips/${createdDoc.id}/edit`);
+    }
+  };
+
+  const handleShortClose = async () => {
+    setConfirmShortClose(false);
+    try {
+      await poApi.shortClosePurchaseOrder(id);
+      showToast('success', 'Đã tất toán (đóng hụt) đơn mua hàng.');
+      loadPo();
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || 'Không thể tất toán đơn hàng');
+    }
+  };
+
+  const handleRevertShortClose = async () => {
+    setConfirmRevertShortClose(false);
+    try {
+      await poApi.revertShortClosePurchaseOrder(id);
+      showToast('success', 'Đã hủy tất toán đơn mua hàng.');
+      loadPo();
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || 'Không thể hủy tất toán đơn hàng');
+    }
   };
 
   if (loading) {
@@ -232,9 +284,19 @@ function PurchaseOrderDetailPage() {
                 <i className="bi bi-check2-circle" /> Duyệt đơn
               </button>
             )}
-            {(po.status === 'APPROVED' || po.status === 'POSTED') && !po.isFullyImported && (
+            {(po.status === 'APPROVED' || po.status === 'POSTED') && !po.isFullyImported && !po.isShortClosed && (
               <button className={styles.btnPrimary} onClick={handleCreateImport}>
                 <i className="bi bi-box-seam" /> Tạo phiếu nhập
+              </button>
+            )}
+            {po.status === 'APPROVED' && !po.isFullyImported && !po.isShortClosed && (
+              <button className={styles.btnCancel} onClick={() => setConfirmShortClose(true)}>
+                <i className="bi bi-flag" /> Tất toán / Đóng đơn
+              </button>
+            )}
+            {po.isShortClosed && (
+              <button className={styles.btnEdit} onClick={() => setConfirmRevertShortClose(true)}>
+                <i className="bi bi-arrow-counterclockwise" /> Hủy tất toán
               </button>
             )}
             {po.status === 'DRAFT' && (
@@ -250,6 +312,11 @@ function PurchaseOrderDetailPage() {
           <span className={styles.statusBadge} style={{ background: stCfg.bg, color: stCfg.color }}>
             <i className={`bi ${stCfg.icon}`} /> {stCfg.label}
           </span>
+          {po.isShortClosed && (
+            <span className={styles.statusBadge} style={{ background: '#fff7ed', color: '#c2410c' }}>
+              <i className="bi bi-flag-fill" /> Đã tất toán (đóng hụt)
+            </span>
+          )}
         </div>
 
         {/* ── Info grid ── */}
@@ -289,13 +356,15 @@ function PurchaseOrderDetailPage() {
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Hạn công nợ</span>
               <span className={styles.infoValue}>
-                {fmtDate(po.paymentDueDate)}
+                {fmtDate(po.paymentDueDate) || '—'}
                 {(() => {
-                  if (!po.paymentDueDate) return null;
+                  const isPaid = po.paymentStatus === 'PAID';
+                  if (!po.paymentDueDate) {
+                    return isPaid ? <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check-circle-fill" /> Đã thanh toán</span> : null;
+                  }
                   const today = new Date(); today.setHours(0, 0, 0, 0);
                   const dueDate = new Date(po.paymentDueDate); dueDate.setHours(0, 0, 0, 0);
                   const diffDays = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
-                  const isPaid = po.paymentStatus === 'PAID';
                   if (isPaid) return <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check-circle-fill" /> Đã thanh toán</span>;
                   if (diffDays < 0) return <span className={`${styles.badgePill} ${styles.pillOverdue}`}><i className="bi bi-exclamation-triangle-fill" /> Quá hạn {Math.abs(diffDays)} ngày</span>;
                   if (diffDays === 0) return <span className={`${styles.badgePill} ${styles.pillDueToday}`}><i className="bi bi-clock-fill" /> Hạn hôm nay</span>;
@@ -307,13 +376,15 @@ function PurchaseOrderDetailPage() {
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Ngày giao hàng DK</span>
               <span className={styles.infoValue}>
-                {fmtDate(po.expectedDeliveryDate)}
+                {fmtDate(po.expectedDeliveryDate) || '—'}
                 {(() => {
-                  if (!po.expectedDeliveryDate) return null;
+                  const isDone = po.isFullyImported || po.status === 'POSTED';
+                  if (!po.expectedDeliveryDate) {
+                    return isDone ? <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check2-all" /> Đã nhận đủ</span> : null;
+                  }
                   const today = new Date(); today.setHours(0, 0, 0, 0);
                   const delivDate = new Date(po.expectedDeliveryDate); delivDate.setHours(0, 0, 0, 0);
                   const diffDays = Math.round((delivDate - today) / (1000 * 60 * 60 * 24));
-                  const isDone = po.isFullyImported || po.status === 'POSTED';
                   if (isDone) return <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check2-all" /> Đã nhận đủ</span>;
                   if (diffDays < 0) return <span className={`${styles.badgePill} ${styles.pillDeliveryLate}`}><i className="bi bi-truck" /> Trễ hạn {Math.abs(diffDays)} ngày</span>;
                   if (diffDays === 0) return <span className={`${styles.badgePill} ${styles.pillDeliveryToday}`}><i className="bi bi-box-seam" /> Giao hôm nay</span>;
@@ -435,6 +506,28 @@ function PurchaseOrderDetailPage() {
         onConfirm={handleCancel}
         onCancel={() => setConfirmCancel(false)}
       />
+      <ConfirmModal
+        isOpen={confirmShortClose}
+        title="Tất toán / Đóng đơn"
+        message={`Đơn "${po.poCode}" chưa được nhập đủ số lượng. Xác nhận tất toán để đóng đơn mà không chờ nhận thêm hàng?`}
+        onConfirm={handleShortClose}
+        onCancel={() => setConfirmShortClose(false)}
+      />
+      <ConfirmModal
+        isOpen={confirmRevertShortClose}
+        title="Hủy tất toán"
+        message={`Xác nhận mở lại đơn "${po.poCode}" để tiếp tục nhận hàng còn thiếu?`}
+        onConfirm={handleRevertShortClose}
+        onCancel={() => setConfirmRevertShortClose(false)}
+      />
+      {showWarehousePicker && (
+        <SelectReceivingWarehouseModal
+          po={po}
+          warehouses={pickerWarehouses}
+          onClose={() => setShowWarehousePicker(false)}
+          onCreated={handleWarehousePicked}
+        />
+      )}
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
     </AdminLayout>
   );

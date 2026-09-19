@@ -123,7 +123,7 @@ const emptyLine = (defaultWarehouseId = '') => ({
   scannedCode: '',
   quantity: 1,
   price: 0,
-  vatPercent: 0,
+  vatPercent: defaultVat,
   note: '',
 });
 
@@ -162,6 +162,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
   const [form, setForm] = useState(() => ({
     docCode: '',
@@ -184,7 +185,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     if (soData && soData.lines && soData.lines.length > 0) {
       const soLines = filterWarehouseLines(soData.lines);
       return soLines.length > 0 ? soLines.map(l => ({
-        ...emptyLine(String(soData.warehouseId || '')),
+        ...emptyLine(String(soData.warehouseId || ''), vatConfig.defaultVatRate),
         variantId: String(l.variantId),
         warehouseId: String(l.warehouseId || soData.warehouseId || ''),
         quantity: l.quantity || 1,
@@ -199,7 +200,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
       const assemblyLines = filterWarehouseLines(assemblyData.lines);
       return assemblyLines.length > 0 ? assemblyLines.map(comp => ({
-        ...emptyLine(String(assemblyData.warehouseId || '')),
+        ...emptyLine(String(assemblyData.warehouseId || ''), vatConfig.defaultVatRate),
         variantId: String(comp.variantId || comp.id),
         warehouseId: String(comp.warehouseId || assemblyData.warehouseId || ''),
         quantity: comp.quantity || 1,
@@ -210,7 +211,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
       const stocktakeLines = filterWarehouseLines(stocktakeData.lines);
       return stocktakeLines.length > 0 ? stocktakeLines.map(line => ({
-        ...emptyLine(String(stocktakeData.warehouseId || '')),
+        ...emptyLine(String(stocktakeData.warehouseId || ''), vatConfig.defaultVatRate),
         variantId: String(line.variantId),
         warehouseId: String(line.warehouseId || stocktakeData.warehouseId || ''),
         quantity: line.quantity || 1,
@@ -332,12 +333,18 @@ function CreateExportSlipPage({ mode: propMode }) {
         })
         .catch(err => console.error('Failed to load next export docCode', err));
 
-      const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
+      const [warehouseRes, productRes, customerRes, userRes, vatRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
         exportApi.getProducts({ size: 1000 }),
         exportApi.getCustomers({ status: 'APPROVED', size: 1000 }),
         exportApi.getUsers({ size: 1000 }).catch(() => null),
+        businessSettingsApi.getDefaultVat(),
       ]);
+
+      if (vatRes.status === 'fulfilled') {
+        const vConf = vatRes.value?.data?.data || vatRes.value?.data;
+        if (vConf?.allowedVatRates) setVatConfig(vConf);
+      }
 
       if (warehouseRes.status === 'fulfilled') {
         const data = pageContent(unwrap(warehouseRes.value));
@@ -625,7 +632,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''))]);
+    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate), variantId: filteredProducts[0]?.id || '' }]);
     setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
@@ -716,7 +723,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId), isNew: false }]);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId, vatConfig.defaultVatRate), isNew: false }]);
   };
 
   const buildPayload = (status) => {
@@ -814,7 +821,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         }
       }
       const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-      if (isNaN(vat) || vat < 0 || vat > 10) {
+      if (isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
         focusField(`export-line-vat-${i}`);
         return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
       }
@@ -1348,11 +1355,10 @@ function CreateExportSlipPage({ mode: propMode }) {
                       )}
                       {showPricing && (
                         <td className={styles.textRight}>
-                          <select id={`export-line-vat-${index}`} className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0} onChange={(event) => handleItemChange(item.localId, 'vatPercent', Number(event.target.value))}>
-                            <option value={0}>0%</option>
-                            <option value={5}>5%</option>
-                            <option value={8}>8%</option>
-                            <option value={10}>10%</option>
+                          <select id={`export-line-vat-${index}`} className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} value={item.vatPercent !== undefined ? Number(item.vatPercent) : vatConfig.defaultVatRate} onChange={(event) => handleItemChange(item.localId, 'vatPercent', Number(event.target.value))}>
+                            {vatConfig.allowedVatRates.map(rate => (
+                              <option key={rate} value={rate}>{rate}%</option>
+                            ))}
                           </select>
                         </td>
                       )}
@@ -1372,7 +1378,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                 <div style={{ color: '#4b5563', fontSize: '13px' }}>Tổng số: <span style={{ fontWeight: 'bold', color: 'var(--color-text)' }}>{items.length}</span> bản ghi</div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
-                  <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                  <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId, vatConfig.defaultVatRate), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid var(--color-border-muted)', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
                 </div>
 
                 <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>

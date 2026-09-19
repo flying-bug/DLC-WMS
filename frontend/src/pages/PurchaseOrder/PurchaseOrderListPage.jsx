@@ -36,15 +36,27 @@ const fmtDate  = (v) => (v ? formatDateOnly(v) : '');
 const unwrap   = (res) => res?.data?.data ?? res?.data;
 
 function renderPaymentDueDateBadge(po) {
+  const isPaid = po.paymentStatus === 'PAID';
+
   if (!po.paymentDueDate) {
+    if (isPaid) {
+      return (
+        <div className={styles.dateCell}>
+          <span className={styles.dateMain} style={{ color: 'var(--color-text-muted-2)' }}>—</span>
+          <span className={`${styles.badgePill} ${styles.pillPaid}`} title="Đã thanh toán đủ">
+            <i className="bi bi-check-circle-fill" /> Đã trả
+          </span>
+        </div>
+      );
+    }
     return <span style={{ color: 'var(--color-text-muted-2)' }}>—</span>;
   }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDate = new Date(po.paymentDueDate);
   dueDate.setHours(0, 0, 0, 0);
   const diffDays = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
-  const isPaid = po.paymentStatus === 'PAID';
 
   return (
     <div className={styles.dateCell}>
@@ -71,15 +83,38 @@ function renderPaymentDueDateBadge(po) {
 }
 
 function renderDeliveryDateBadge(po) {
+  const isFullyImported = po.isFullyImported || po.status === 'POSTED';
+  const isShortClosed = Boolean(po.isShortClosed);
+
   if (!po.expectedDeliveryDate) {
+    if (isFullyImported) {
+      return (
+        <div className={styles.dateCell}>
+          <span className={styles.dateMain} style={{ color: 'var(--color-text-muted-2)' }}>—</span>
+          <span className={`${styles.badgePill} ${styles.pillPaid}`} title="Đã nhập kho đủ">
+            <i className="bi bi-check2-all" /> Đã nhập
+          </span>
+        </div>
+      );
+    }
+    if (isShortClosed) {
+      return (
+        <div className={styles.dateCell}>
+          <span className={styles.dateMain} style={{ color: 'var(--color-text-muted-2)' }}>—</span>
+          <span className={`${styles.badgePill}`} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }} title="Đã tất toán / đóng hụt">
+            <i className="bi bi-flag-fill" /> Đã tất toán
+          </span>
+        </div>
+      );
+    }
     return <span style={{ color: 'var(--color-text-muted-2)' }}>—</span>;
   }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const delivDate = new Date(po.expectedDeliveryDate);
   delivDate.setHours(0, 0, 0, 0);
   const diffDays = Math.round((delivDate - today) / (1000 * 60 * 60 * 24));
-  const isFullyImported = po.isFullyImported || po.status === 'POSTED';
 
   return (
     <div className={styles.dateCell}>
@@ -87,6 +122,10 @@ function renderDeliveryDateBadge(po) {
       {isFullyImported ? (
         <span className={`${styles.badgePill} ${styles.pillPaid}`} title="Đã nhập kho đủ">
           <i className="bi bi-check2-all" /> Đã nhập
+        </span>
+      ) : isShortClosed ? (
+        <span className={`${styles.badgePill}`} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }} title="Đã tất toán / đóng hụt">
+          <i className="bi bi-flag-fill" /> Đã tất toán
         </span>
       ) : diffDays < 0 ? (
         <span className={`${styles.badgePill} ${styles.pillDeliveryLate}`} title={`Trễ hạn giao hàng ${Math.abs(diffDays)} ngày`}>

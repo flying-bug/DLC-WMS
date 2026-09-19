@@ -10,6 +10,8 @@ function BusinessSettingsPage() {
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
   const [form, setForm] = useState({
+    defaultVatRate: 8,
+    allowedVatRatesStr: '0, 5, 8, 10',
     companyName: '',
     companyTaxCode: '',
     companyAddress: '',
@@ -27,6 +29,8 @@ function BusinessSettingsPage() {
       const res = await getBusinessSettings();
       const data = res?.data?.data || res?.data || {};
       setForm({
+        defaultVatRate: data.defaultVatRate ?? 8,
+        allowedVatRatesStr: data.allowedVatRates ? data.allowedVatRates.join(', ') : '0, 5, 8, 10',
         companyName: data.companyName || '',
         companyTaxCode: data.companyTaxCode || '',
         companyAddress: data.companyAddress || '',
@@ -49,8 +53,23 @@ function BusinessSettingsPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      await saveBusinessSettings(form);
+      
+      const ratesStr = form.allowedVatRatesStr || '';
+      const allowedVatRates = ratesStr.split(',')
+        .map(s => s.trim())
+        .filter(s => s !== '')
+        .map(s => parseInt(s, 10))
+        .filter(n => !isNaN(n));
+
+      const payload = {
+        ...form,
+        defaultVatRate: Number(form.defaultVatRate),
+        allowedVatRates,
+      };
+
+      await saveBusinessSettings(payload);
       showToast('success', 'Đã lưu thông tin doanh nghiệp thành công!');
+      await fetchSettings();
     } catch (err) {
       showToast('error', err?.response?.data?.userMessage || 'Không thể lưu thông tin doanh nghiệp.');
     } finally {
@@ -85,6 +104,59 @@ function BusinessSettingsPage() {
           </div>
         ) : (
           <form onSubmit={handleSave} className={styles.container}>
+            {/* Thiết lập Thuế (VAT) */}
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <h3 className={styles.cardHeaderTitle}>
+                  <i className="bi bi-percent" style={{ color: '#0075c0', fontSize: 18 }} />
+                  Thiết lập Thuế (VAT)
+                </h3>
+              </div>
+              <div className={styles.cardBody}>
+                <div className={styles.grid2}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Các mức thuế VAT cho phép (%)</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={form.allowedVatRatesStr}
+                      onChange={(e) => setForm(prev => ({ ...prev, allowedVatRatesStr: e.target.value }))}
+                      placeholder="VD: 0, 5, 8, 10"
+                    />
+                    <small style={{ color: 'var(--wms-text-muted)', fontSize: 12, marginTop: 4, display: 'block' }}>
+                      Nhập các mức thuế cách nhau bằng dấu phẩy.
+                    </small>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Mức thuế VAT mặc định (%)</label>
+                    <select
+                      className={styles.input}
+                      value={form.defaultVatRate}
+                      onChange={(e) => setForm(prev => ({ ...prev, defaultVatRate: Number(e.target.value) }))}
+                    >
+                      {(() => {
+                        const parsed = (form.allowedVatRatesStr || '')
+                          .split(',')
+                          .map(s => parseInt(s.trim(), 10))
+                          .filter(n => !isNaN(n));
+                        const rates = parsed.length > 0 ? Array.from(new Set(parsed)) : [0, 5, 8, 10];
+                        if (!rates.includes(Number(form.defaultVatRate)) && form.defaultVatRate !== undefined && form.defaultVatRate !== '') {
+                          rates.push(Number(form.defaultVatRate));
+                          rates.sort((a, b) => a - b);
+                        }
+                        return rates.map(rate => (
+                          <option key={rate} value={rate}>{rate}%</option>
+                        ));
+                      })()}
+                    </select>
+                    <small style={{ color: 'var(--wms-text-muted)', fontSize: 12, marginTop: 4, display: 'block' }}>
+                      Mức thuế tự động chọn khi thêm dòng hàng mới.
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Thông tin doanh nghiệp */}
             <div className={styles.card}>
               <div className={styles.cardHeader}>

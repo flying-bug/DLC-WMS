@@ -32,6 +32,10 @@ export const postImportSlip = (id) => {
   return axiosClient.post(`${IMPORT_BASE}/${id}/post`);
 };
 
+export const createBackorderForPurchaseOrder = (poId, warehouseId) => {
+  return axiosClient.post(`${IMPORT_BASE}/backorder/${poId}`, null, { params: { warehouseId } });
+};
+
 export const getProducts = (params = {}) => {
   return axiosClient.get('/products/variants', { params });
 };

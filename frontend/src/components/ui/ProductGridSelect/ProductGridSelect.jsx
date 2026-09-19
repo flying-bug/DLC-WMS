@@ -249,7 +249,7 @@ const ProductGridSelect = ({
                         onClick={() => handleSelect(p)}
                       >
                         <td className={styles.codeCell}>{code}</td>
-                        <td className={styles.nameCell}>{name}</td>
+                        <td className={styles.nameCell}><span className={styles.nameCellText}>{name}</span></td>
                         {!hideStock && (
                           <td
                             className={styles.stockCell}
