@@ -1,6 +1,7 @@
 package com.duylongtech.backend.job;
 
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
 import com.duylongtech.backend.feature.notification.AppNotificationRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRepository;
@@ -188,18 +189,8 @@ public class PurchaseOrderReminderJob {
         if (po.getLines() == null || po.getLines().isEmpty()) {
             return false;
         }
-
-        for (PurchaseOrderLine line : po.getLines()) {
-            BigDecimal ordered = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ZERO;
-            BigDecimal imported = inventoryDocumentLineRepository
-                    .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), line.getVariantId());
-            if (imported == null) {
-                imported = BigDecimal.ZERO;
-            }
-            if (ordered.subtract(imported).compareTo(BigDecimal.ZERO) > 0) {
-                return false; // Còn mặt hàng chưa nhập đủ
-            }
-        }
-        return true;
+        // Đã nhận đủ = mọi kho đã GHI SỔ đủ số lượng đặt (phiếu nháp chưa nhận hàng thì vẫn phải nhắc giao hàng).
+        return PurchaseOrderReceiving.of(po.getLines(),
+                inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), null)).isFullyPosted();
     }
 }

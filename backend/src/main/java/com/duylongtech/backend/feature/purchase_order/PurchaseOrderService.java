@@ -220,30 +220,23 @@ public class PurchaseOrderService {
     }
 
     private PurchaseOrderResponse toDetailResponse(PurchaseOrder po) {
-        // One aggregate query for the whole PO instead of one per line (was N+1).
-        Map<Long, BigDecimal> importedByVariant = inventoryDocumentLineRepository
-                .sumImportedQuantitiesGroupedByVariant(po.getId())
-                .stream()
-                .collect(Collectors.toMap(row -> (Long) row[0], row -> (BigDecimal) row[1]));
+        // 1 truy vấn tổng hợp cho cả PO (mọi kho) thay vì 1 truy vấn mỗi dòng.
+        PurchaseOrderReceiving receiving = PurchaseOrderReceiving.of(po.getLines(),
+                inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), null));
 
         List<PurchaseOrderResponse.PurchaseOrderLineResponse> lineResponses = po.getLines().stream()
                 .map(line -> {
-                    BigDecimal imported = importedByVariant.getOrDefault(line.getVariantId(), BigDecimal.ZERO);
-                    BigDecimal remaining = line.getQuantity().subtract(imported);
-                    if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
-
+                    PurchaseOrderReceiving.Group progress = receiving.forLine(line);
                     PurchaseOrderResponse.PurchaseOrderLineResponse lineResponse = purchaseOrderMapper.toLineResponse(line);
-                    lineResponse.setImportedQuantity(imported);
-                    lineResponse.setRemainingQuantity(remaining);
+                    // importedQuantity = đã ghi sổ; remainingQuantity = còn có thể đưa vào phiếu mới (trừ cả phiếu nháp)
+                    lineResponse.setImportedQuantity(progress.getPosted());
+                    lineResponse.setRemainingQuantity(progress.remainingToAllocate());
                     return lineResponse;
                 })
                 .collect(Collectors.toList());
 
-        boolean isFullyImported = !lineResponses.isEmpty() && lineResponses.stream()
-                .allMatch(l -> l.getRemainingQuantity().compareTo(BigDecimal.ZERO) <= 0);
-
         PurchaseOrderResponse response = toSummaryResponse(po);
-        response.setIsFullyImported(isFullyImported);
+        response.setIsFullyImported(receiving.isFullyPosted());
         response.setLines(lineResponses);
         return response;
     }

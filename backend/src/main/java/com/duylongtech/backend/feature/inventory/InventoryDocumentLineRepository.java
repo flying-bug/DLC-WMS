@@ -20,16 +20,10 @@ public interface InventoryDocumentLineRepository extends JpaRepository<Inventory
     @Query("SELECT COALESCE(SUM(l.quantityOut), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.salesOrderId = :salesOrderId AND l.variantId = :variantId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED')")
     BigDecimal sumExportedQuantityBySalesOrderIdAndVariantId(@Param("salesOrderId") Long salesOrderId, @Param("variantId") Long variantId);
 
-    @Query("SELECT COALESCE(SUM(l.quantityIn), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.purchaseOrderId = :purchaseOrderId AND l.variantId = :variantId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED') AND (:excludeDocId IS NULL OR l.inventoryDocument.id <> :excludeDocId)")
-    BigDecimal sumImportedQuantityByPurchaseOrderIdAndVariantIdExcludingDoc(@Param("purchaseOrderId") Long purchaseOrderId, @Param("variantId") Long variantId, @Param("excludeDocId") Long excludeDocId);
-
-    @Query("SELECT COALESCE(SUM(l.quantityIn), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.purchaseOrderId = :purchaseOrderId AND l.variantId = :variantId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED')")
-    BigDecimal sumImportedQuantityByPurchaseOrderIdAndVariantId(@Param("purchaseOrderId") Long purchaseOrderId, @Param("variantId") Long variantId);
-
     /**
-     * Batched version of {@link #sumImportedQuantityByPurchaseOrderIdAndVariantId} - one
-     * query for the whole PO instead of one per line. Each row is [variantId, importedQty].
+     * Tổng số lượng nhập của các phiếu chưa hủy thuộc 1 PO, theo (sản phẩm, kho, trạng thái phiếu).
+     * Mỗi dòng là [variantId, warehouseId, docStatus, tổng quantityIn]; excludeDocId để bỏ qua phiếu đang sửa.
      */
-    @Query("SELECT l.variantId, COALESCE(SUM(l.quantityIn), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.purchaseOrderId = :purchaseOrderId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED') GROUP BY l.variantId")
-    List<Object[]> sumImportedQuantitiesGroupedByVariant(@Param("purchaseOrderId") Long purchaseOrderId);
+    @Query("SELECT l.variantId, l.warehouseId, l.inventoryDocument.status, COALESCE(SUM(l.quantityIn), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.purchaseOrderId = :purchaseOrderId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED') AND (:excludeDocId IS NULL OR l.inventoryDocument.id <> :excludeDocId) GROUP BY l.variantId, l.warehouseId, l.inventoryDocument.status")
+    List<Object[]> sumReceivedByPurchaseOrder(@Param("purchaseOrderId") Long purchaseOrderId, @Param("excludeDocId") Long excludeDocId);
 }

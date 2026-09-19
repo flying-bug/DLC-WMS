@@ -41,6 +41,7 @@ import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import java.util.Map;
 import com.duylongtech.backend.feature.product.UnitRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyBomRepository;
@@ -1235,17 +1236,20 @@ public class InventoryDocumentService {
             throw new BusinessException("Đơn mua hàng " + po.getPoCode() + " đã có phiếu nhập kho đang chờ xử lý cho kho này.");
         }
 
+        PurchaseOrderReceiving receiving = PurchaseOrderReceiving.of(po.getLines(),
+                inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(poId, null));
         List<InventoryDocumentLineRequest> lineRequests = new java.util.ArrayList<>();
+        java.util.Set<PurchaseOrderReceiving.Group> handledGroups = new java.util.HashSet<>();
         for (PurchaseOrderLine poLine : po.getLines()) {
             if (poLine.getWarehouseId() != null && !poLine.getWarehouseId().equals(warehouseId)) {
                 continue;
             }
-            BigDecimal imported = inventoryDocumentLineRepository
-                    .sumImportedQuantityByPurchaseOrderIdAndVariantId(poId, poLine.getVariantId());
-            if (imported == null) {
-                imported = ZERO;
+            PurchaseOrderReceiving.Group progress = receiving.forLine(poLine);
+            // Nhiều dòng PO cùng (sản phẩm, kho) dùng chung 1 nhóm: chỉ tạo 1 dòng phiếu cho cả nhóm.
+            if (!handledGroups.add(progress)) {
+                continue;
             }
-            BigDecimal remaining = poLine.getQuantity().subtract(imported);
+            BigDecimal remaining = progress.remainingToAllocate();
             if (remaining.compareTo(ZERO) <= 0) {
                 continue;
             }

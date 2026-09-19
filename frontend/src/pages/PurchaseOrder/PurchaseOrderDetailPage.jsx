@@ -133,7 +133,7 @@ function PurchaseOrderDetailPage() {
       .filter(l => l.remainingQuantity > 0);
 
     if (importableLines.length === 0) {
-      showToast('info', 'Đơn mua hàng này đã nhập kho đủ toàn bộ sản phẩm');
+      showToast('info', 'Toàn bộ số lượng của đơn đã có trong phiếu nhập (kể cả phiếu nháp chưa ghi sổ)');
       return;
     }
 

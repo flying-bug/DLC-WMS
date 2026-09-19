@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.inventory;
 
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.enums.SerialNumberStatus;
@@ -567,13 +568,9 @@ public class InventoryPostingService {
                     .orElse(null);
             if (po != null && !DocumentStatus.POSTED.name().equals(po.getStatus()) && !DocumentStatus.CANCELLED.name().equals(po.getStatus())
                     && !Boolean.TRUE.equals(po.getIsShortClosed())) {
-                boolean fullyImported = !po.getLines().isEmpty() && po.getLines().stream().allMatch(l -> {
-                    BigDecimal imported = inventoryDocumentLineRepository
-                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), l.getVariantId());
-                    if (imported == null)
-                        imported = BigDecimal.ZERO;
-                    return l.getQuantity().subtract(imported).compareTo(BigDecimal.ZERO) <= 0;
-                });
+                // Chỉ tính phiếu ĐÃ GHI SỔ (mọi kho): phiếu nháp của kho khác chưa nhận hàng thì PO chưa hoàn thành.
+                boolean fullyImported = PurchaseOrderReceiving.of(po.getLines(),
+                        inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), null)).isFullyPosted();
                 if (fullyImported) {
                     // Cập nhật trạng thái POSTED
                     po.markAsPosted();
