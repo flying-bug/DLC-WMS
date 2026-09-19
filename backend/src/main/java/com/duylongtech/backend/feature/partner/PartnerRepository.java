@@ -154,4 +154,6 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
            countQuery = "SELECT COUNT(*) FROM payment_transactions WHERE partner_id = :customerId",
            nativeQuery = true)
     Page<Object[]> findPaymentHistoryByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
+    @Query("SELECT p FROM Partner p WHERE p.taxCode = :taxCode")
+    Optional<Partner> findByTaxCode(@Param("taxCode") String taxCode);
 }

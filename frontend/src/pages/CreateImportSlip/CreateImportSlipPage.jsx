@@ -187,6 +187,7 @@ function CreateImportSlipPage() {
 
   const handleOcrSuccess = (data) => {
     setOcrPreviewData(data);
+    setShowOcrModal(false);
   };
 
   const handleOcrFile = async (file) => {

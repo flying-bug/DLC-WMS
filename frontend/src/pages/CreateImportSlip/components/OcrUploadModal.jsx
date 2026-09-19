@@ -17,6 +17,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
   const [sessionId, setSessionId] = useState('');
   const [qrLoading, setQrLoading] = useState(false);
   const [mobileStatus, setMobileStatus] = useState(''); // 'PROCESSING' hoặc 'ERROR'
+  const [batchResults, setBatchResults] = useState([]);
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -57,6 +58,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
       setShowQR(false);
       setSessionId('');
       setMobileStatus('');
+      setBatchResults([]);
       return;
     }
     const handlePaste = (e) => {
@@ -89,12 +91,9 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
           setMobileStatus('PROCESSING');
         } else if (state.status === 'SUCCESS' && state.result) {
           setMobileStatus('');
-          eventSource.close();
-          // Đẩy dữ liệu ra ngoài thông qua prop mới `onOcrSuccess`
-          onOcrSuccess(state.result);
+          setBatchResults(prev => [...prev, state.result]);
         } else if (state.status === 'ERROR') {
           setMobileStatus('ERROR');
-          eventSource.close();
           alert('Lỗi xử lý ảnh từ điện thoại: ' + (state.errorMessage || 'Lỗi không xác định'));
         }
       } catch (err) {
@@ -108,6 +107,35 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
 
     return () => eventSource.close();
   }, [open, sessionId, onOcrSuccess]);
+
+  const handleFinishBatch = () => {
+    if (batchResults.length === 0) {
+      setShowQR(false);
+      return;
+    }
+    
+    // Extract distinct docCodes
+    const docCodes = [...new Set(batchResults.map(r => r.docCode).filter(c => c && c.trim() !== ''))];
+    if (docCodes.length > 1) {
+      alert(`Phát hiện nhiều số hóa đơn khác nhau (${docCodes.join(', ')}). Vui lòng quét và tạo phiếu nhập riêng biệt cho từng hóa đơn!`);
+      return;
+    }
+    
+    // Merge
+    const mergedResult = { ...batchResults[0] };
+    mergedResult.docCode = docCodes.length === 1 ? docCodes[0] : '';
+    
+    const allItems = [];
+    batchResults.forEach(r => {
+      if (r.items && Array.isArray(r.items)) {
+        allItems.push(...r.items);
+      }
+    });
+    mergedResult.items = allItems;
+    
+    setShowQR(false);
+    onOcrSuccess(mergedResult);
+  };
 
   const handleOpenQR = async () => {
     try {
@@ -221,9 +249,19 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
                   />
                   <p style={{ marginTop: '16px', color: 'var(--wms-text-muted)' }}>
                     1. Mở camera điện thoại hoặc Zalo để quét.<br/>
-                    2. Chụp ảnh hóa đơn.<br/>
+                    2. Chụp ảnh hóa đơn (có thể chụp liên tiếp nhiều trang).<br/>
                     3. Máy tính sẽ tự động nhận dữ liệu!
                   </p>
+                  
+                  {batchResults.length > 0 && (
+                    <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#ecfdf5', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
+                      <h4 style={{ color: '#047857', margin: '0 0 8px 0' }}>✅ Đã nhận {batchResults.length} trang hóa đơn</h4>
+                      <button className={styles.actionBtn} onClick={handleFinishBatch} style={{ backgroundColor: '#10b981', color: 'white', width: '100%', borderColor: '#10b981' }}>
+                        Hoàn tất & Gộp dữ liệu
+                      </button>
+                    </div>
+                  )}
+
                   <button className={styles.actionBtn} onClick={() => setShowQR(false)} style={{ marginTop: '16px', backgroundColor: 'var(--wms-bg-hover)', color: 'var(--wms-text-body)' }}>
                     Quay lại tải file
                   </button>

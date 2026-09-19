@@ -77,15 +77,17 @@ public class ImportOcrService {
 
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RestClient restClient = createRestClientWithTimeout();
-    private final java.util.concurrent.ExecutorService ocrExecutor = new java.util.concurrent.ThreadPoolExecutor(
-            0, 10, 60L, java.util.concurrent.TimeUnit.SECONDS, new java.util.concurrent.LinkedBlockingQueue<>(100)
-    );
+    private final RestClient restClient = createRestClient();
 
-    private static RestClient createRestClientWithTimeout() {
+    private final java.util.concurrent.ExecutorService ocrExecutor = new java.util.concurrent.ThreadPoolExecutor(
+            2, 10, 60L, java.util.concurrent.TimeUnit.SECONDS,
+            new java.util.concurrent.LinkedBlockingQueue<>(50),
+            new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+
+    private RestClient createRestClient() {
         org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
-        factory.setReadTimeout(60000);
+        factory.setReadTimeout(90000); // 90 seconds wait for LLM
         return RestClient.builder().requestFactory(factory).build();
     }
 
@@ -233,12 +235,8 @@ public class ImportOcrService {
             return;
         }
         try {
-            emitter.send(SseEmitter.event().name("ocr-status").data(data));
-            if ("SUCCESS".equals(data.getStatus()) || "ERROR".equals(data.getStatus())) {
-                emitter.complete();
-                ocrSessionEmitters.remove(sessionId, emitter);
-            }
-        } catch (IOException e) {
+            emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("ocr-status").data(data));
+        } catch (Exception e) {
             emitter.completeWithError(e);
             ocrSessionEmitters.remove(sessionId, emitter);
         }
@@ -288,7 +286,6 @@ public class ImportOcrService {
     /**
      * Xử lý OCR từ MultipartFile
      */
-    @Transactional(readOnly = true)
     public OcrImportResponse scanDocument(MultipartFile file) {
         try {
             byte[] bytes = file.getBytes();
