@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import MasterDetailLayout from '../../components/ui/MasterDetailLayout/MasterDetailLayout';
@@ -21,6 +21,8 @@ export default function CashierWorkspacePage() {
   // Master State
   const [rawList, setRawList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+  const selectedItemRef = useRef(selectedItem);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
@@ -89,7 +91,14 @@ export default function CashierWorkspacePage() {
 
       const res = await paymentApi.getAllPayments();
       const data = res.data?.data || res.data || [];
-      setRawList(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setRawList(list);
+      if (silent && selectedItemRef.current) {
+        const fresh = list.find((it) => it.id === selectedItemRef.current.id);
+        if (fresh) {
+          setSelectedItem({ ...fresh });
+        }
+      }
     } catch (err) {
       console.error('Error loading payments list:', err);
       if (!silent) showToast('error', 'Không thể tải danh sách phiếu thu/chi');

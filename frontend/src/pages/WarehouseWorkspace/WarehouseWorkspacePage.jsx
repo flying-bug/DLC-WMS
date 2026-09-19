@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import MasterDetailLayout from '../../components/ui/MasterDetailLayout/MasterDetailLayout';
@@ -24,6 +24,8 @@ export default function WarehouseWorkspacePage() {
   // Master Data State
   const [masterList, setMasterList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+  const selectedItemRef = useRef(selectedItem);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [periodPreset, setPeriodPreset] = useState('ALL');
@@ -99,12 +101,22 @@ export default function WarehouseWorkspacePage() {
         const res = await importApi.getImportHistory(params);
         const data = res.data?.data || res.data || [];
         setMasterList(data);
-        if (!silent && data.length > 0) setSelectedItem(data[0]);
+        if (!silent && data.length > 0) {
+          setSelectedItem(data[0]);
+        } else if (silent && selectedItemRef.current) {
+          const fresh = data.find((it) => it.id === selectedItemRef.current.id);
+          if (fresh) setSelectedItem({ ...fresh });
+        }
       } else if (activeTab === 'exports') {
         const res = await exportApi.getExportHistory(params);
         const data = res.data?.data || res.data || [];
         setMasterList(data);
-        if (!silent && data.length > 0) setSelectedItem(data[0]);
+        if (!silent && data.length > 0) {
+          setSelectedItem(data[0]);
+        } else if (silent && selectedItemRef.current) {
+          const fresh = data.find((it) => it.id === selectedItemRef.current.id);
+          if (fresh) setSelectedItem({ ...fresh });
+        }
       } else if (activeTab === 'stocktakes') {
         const stParams = {
           stocktakeCode: searchTerm || undefined,
@@ -116,7 +128,12 @@ export default function WarehouseWorkspacePage() {
         const data = res.data?.data?.content || res.data?.content || res.data?.data || res.data || [];
         const arr = Array.isArray(data) ? data : [];
         setMasterList(arr);
-        if (!silent && arr.length > 0) setSelectedItem(arr[0]);
+        if (!silent && arr.length > 0) {
+          setSelectedItem(arr[0]);
+        } else if (silent && selectedItemRef.current) {
+          const fresh = arr.find((it) => it.id === selectedItemRef.current.id);
+          if (fresh) setSelectedItem({ ...fresh });
+        }
       }
     } catch (err) {
       console.error('Error loading warehouse master list:', err);
