@@ -9,6 +9,7 @@ import * as stocktakeApi from '../../api/stocktakeApi';
 import * as salesOrderApi from '../../api/salesOrderApi';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
@@ -112,7 +113,7 @@ const customSelectStyles = {
   })
 };
 
-const emptyLine = (defaultWarehouseId = '') => ({
+const emptyLine = (defaultWarehouseId = '', defaultVat = 0) => ({
   localId: crypto.randomUUID(),
   variantId: '',
   warehouseId: defaultWarehouseId,
@@ -633,7 +634,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate), variantId: filteredProducts[0]?.id || '' }]);
+    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate), variantId: products[0]?.id || '' }]);
     setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
