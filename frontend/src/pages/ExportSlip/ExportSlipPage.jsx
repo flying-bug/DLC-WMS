@@ -24,6 +24,7 @@ import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import { EXPORT_PURPOSE_OPTIONS, DOCUMENT_STATUS_OPTIONS as STATUS_OPTIONS } from '../../utils/documentFilterOptions';
 
 
 const DEFAULT_COLUMNS = {
@@ -39,19 +40,6 @@ const DEFAULT_COLUMNS = {
   note: true,
   status: true,
 };
-
-const EXPORT_PURPOSE_OPTIONS = [
-  { value: 'SALES', label: 'Bán hàng' },
-  { value: 'USAGE', label: 'Sử dụng nội bộ' },
-  { value: 'ASSEMBLY', label: 'Xuất lắp ráp / tháo dỡ' },
-  { value: 'REPAIR', label: 'Xuất sửa chữa' },
-  { value: 'OTHER', label: 'Khác' },
-];
-
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Lưu tạm' },
-  { value: 'POSTED', label: 'Ghi sổ' },
-];
 
 const COLUMN_OPTIONS = [
   { id: 'date', label: 'Ngày Xuất' },

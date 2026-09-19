@@ -137,14 +137,37 @@ public class WarehouseService {
         }
 
         User user = userRepository.findById(userId).orElse(null);
-        boolean isAdminOrManager = user != null && user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(r -> r.getCode() != null && (
-                        r.getCode().toUpperCase().contains("SUPER_ADMIN") ||
-                        r.getCode().toUpperCase().equals("MANAGER") ||
-                        r.getCode().toUpperCase().equals("ROLE_MANAGER")
-                ));
+        boolean isFullAccess = false;
 
-        if (isAdminOrManager) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities() != null) {
+            isFullAccess = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority() != null && (
+                    a.getAuthority().contains("SUPER_ADMIN") ||
+                    a.getAuthority().contains("MANAGER") ||
+                    a.getAuthority().contains("ACCOUNTANT") ||
+                    a.getAuthority().equalsIgnoreCase("warehouse_master:view") ||
+                    a.getAuthority().equalsIgnoreCase("warehouse:view")
+            ));
+        }
+
+        if (!isFullAccess && user != null) {
+            boolean hasFullRole = user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getCode() != null && (
+                    r.getCode().toUpperCase().contains("SUPER_ADMIN") ||
+                    r.getCode().toUpperCase().contains("MANAGER") ||
+                    r.getCode().toUpperCase().contains("ACCOUNTANT")
+            ));
+            boolean hasWarehousePerm = (user.getPermissions() != null && user.getPermissions().stream().anyMatch(p -> p.getCode() != null && (
+                    p.getCode().equalsIgnoreCase("warehouse_master:view") ||
+                    p.getCode().equalsIgnoreCase("warehouse:view")
+            ))) || (user.getRoles() != null && user.getRoles().stream().anyMatch(r -> r.getPermissions() != null && r.getPermissions().stream().anyMatch(p -> p.getCode() != null && (
+                    p.getCode().equalsIgnoreCase("warehouse_master:view") ||
+                    p.getCode().equalsIgnoreCase("warehouse:view")
+            ))));
+
+            isFullAccess = hasFullRole || hasWarehousePerm;
+        }
+
+        if (isFullAccess) {
             return warehouseRepository.findAll().stream()
                     .filter(w -> DocumentStatus.APPROVED.name().equalsIgnoreCase(w.getStatus()))
                     .map(warehouseMapper::toResponse)

@@ -26,6 +26,7 @@ import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import { canViewPricing, hasPermission } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -1197,7 +1198,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Ngày lập phiếu <span className="required">*</span></label>
-                <input id="export-docDate" type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
+                <DateInput id="export-docDate" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
               </div>
             </div>
           </div>

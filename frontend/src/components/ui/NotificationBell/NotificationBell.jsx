@@ -5,6 +5,7 @@ import { hasPermission, NOTIFICATION_EVENT } from '../../../auth/session';
 import * as notificationApi from '../../../api/notificationApi';
 import { playNotificationSound } from '../../../utils/notificationSound';
 import styles from './NotificationBell.module.css';
+import { formatDateTime } from '../../../utils/dateFormat';
 
 export default function NotificationBell() {
     const navigate = useNavigate();
@@ -133,9 +134,7 @@ export default function NotificationBell() {
     const formatTime = (timeStr) => {
         if (!timeStr) return '';
         try {
-            const date = new Date(timeStr);
-            return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' +
-                date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            return formatDateTime(timeStr, { withSeconds: false });
         } catch {
             return timeStr;
         }

@@ -20,6 +20,7 @@ import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import { canViewPricing } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -540,7 +541,7 @@ function CreateTransferSlipPage() {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Ngày chuyển <span className="required">*</span></label>
-                <input id="transfer-docDate" type="date" className="misa-input" value={form.transferDate} onChange={(e) => handleFormChange('transferDate', e.target.value)} />
+                <DateInput id="transfer-docDate" className="misa-input" value={form.transferDate} onChange={(e) => handleFormChange('transferDate', e.target.value)} />
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>

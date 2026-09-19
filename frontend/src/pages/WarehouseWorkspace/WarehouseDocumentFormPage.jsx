@@ -10,6 +10,7 @@ import { printExportSlip } from '../../utils/printExportSlip';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import styles from './WarehouseDocumentFormPage.module.css';
+import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
 export default function WarehouseDocumentFormPage() {
   const { id } = useParams();
@@ -421,7 +422,7 @@ export default function WarehouseDocumentFormPage() {
                 </div>
                 <div style={{ color: '#78350f', fontSize: '13px' }}>
                   Chứng từ này từng được Bỏ ghi sổ bởi <strong>{doc.unpostedByName || 'Thủ kho'}</strong>
-                  {doc.unpostedAt && ` vào lúc ${new Date(doc.unpostedAt).toLocaleString('vi-VN')}`}
+                  {doc.unpostedAt && ` vào lúc ${formatDateTime(doc.unpostedAt)}`}
                   {doc.unpostReason && ` • Lý do: "${doc.unpostReason}"`}
                 </div>
               </div>
@@ -479,7 +480,7 @@ export default function WarehouseDocumentFormPage() {
             <div className={styles.formRightCol}>
               <div className={styles.formRow}>
                 <span className={styles.fieldLabel}>Ngày chứng từ:</span>
-                <span className={styles.fieldValue}>{doc.docDate || '-'}</span>
+                <span className={styles.fieldValue}>{formatDateOnly(doc.docDate) || '-'}</span>
               </div>
               <div className={styles.formRow}>
                 <span className={styles.fieldLabel}>Số chứng từ:</span>
@@ -488,7 +489,7 @@ export default function WarehouseDocumentFormPage() {
               <div className={styles.formRow}>
                 <span className={styles.fieldLabel}>Ngày ghi sổ:</span>
                 <span className={styles.fieldValue}>
-                  {doc.postedAt ? new Date(doc.postedAt).toLocaleDateString('vi-VN') : isPosted ? doc.docDate || '-' : 'Chưa ghi sổ'}
+                  {doc.postedAt ? formatDateOnly(doc.postedAt) : isPosted ? formatDateOnly(doc.docDate) || '-' : 'Chưa ghi sổ'}
                 </span>
               </div>
             </div>
@@ -726,7 +727,7 @@ export default function WarehouseDocumentFormPage() {
                         </div>
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', whiteSpace: 'nowrap', marginLeft: '12px', marginTop: '2px' }}>
-                        {logItem.timestamp ? new Date(logItem.timestamp).toLocaleString('vi-VN') : ''}
+                        {logItem.timestamp ? formatDateTime(logItem.timestamp) : ''}
                       </div>
                     </div>
                   );
@@ -740,7 +741,7 @@ export default function WarehouseDocumentFormPage() {
                     {doc.createdByName || (doc.createdBy ? `User #${doc.createdBy}` : '-')}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', marginTop: '2px' }}>
-                    {doc.createdAt ? new Date(doc.createdAt).toLocaleString('vi-VN') : '-'}
+                    {doc.createdAt ? formatDateTime(doc.createdAt) : '-'}
                   </div>
                 </div>
 
@@ -751,7 +752,7 @@ export default function WarehouseDocumentFormPage() {
                       {isPosted ? 'Đã ghi sổ thành công' : 'Đã từng ghi sổ'}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--color-success-deep)', marginTop: '2px' }}>
-                      {new Date(doc.postedAt).toLocaleString('vi-VN')}
+                      {formatDateTime(doc.postedAt)}
                     </div>
                   </div>
                 )}
@@ -763,7 +764,7 @@ export default function WarehouseDocumentFormPage() {
                       {doc.unpostedByName || 'Thủ kho'}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--wms-warning-hover)', marginTop: '2px' }}>
-                      {new Date(doc.unpostedAt).toLocaleString('vi-VN')} • Lý do: "{doc.unpostReason}"
+                      {formatDateTime(doc.unpostedAt)} • Lý do: "{doc.unpostReason}"
                     </div>
                   </div>
                 )}
@@ -771,7 +772,7 @@ export default function WarehouseDocumentFormPage() {
                 <div style={{ background: 'var(--wms-bg-soft)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--wms-bg-hover)' }}>
                   <div style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>Cập nhật lần cuối:</div>
                   <div style={{ fontWeight: 600, color: 'var(--wms-text-title)', fontSize: '13px', marginTop: '2px' }}>
-                    {doc.updatedAt ? new Date(doc.updatedAt).toLocaleString('vi-VN') : '-'}
+                    {doc.updatedAt ? formatDateTime(doc.updatedAt) : '-'}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', marginTop: '2px' }}>
                     Trạng thái hiện tại: {doc.status === 'POSTED' ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : doc.status === 'CANCELLED' ? 'Đã hủy' : 'Lưu tạm'}

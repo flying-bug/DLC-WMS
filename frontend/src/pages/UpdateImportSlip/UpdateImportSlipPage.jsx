@@ -25,6 +25,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
 import Badge from '../../components/ui/Badge/Badge';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -1338,7 +1339,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
 
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Ngày nhập kho <span className="required">*</span></label>
-                  <input id="import-docDate" type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
+                  <DateInput id="import-docDate" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
                 </div>
               </div>
             </div>

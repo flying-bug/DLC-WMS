@@ -14,6 +14,7 @@ import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const STATUS_LABELS = {
@@ -257,8 +258,7 @@ function StocktakeListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input
-                type="date"
+              <DateInput
                 className={styles.filterInput}
                 value={filters.fromDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value, preset: 'CUSTOM' }))}
@@ -266,8 +266,7 @@ function StocktakeListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>ĐẾN NGÀY</span>
-              <input
-                type="date"
+              <DateInput
                 className={styles.filterInput}
                 value={filters.toDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, toDate: e.target.value, preset: 'CUSTOM' }))}

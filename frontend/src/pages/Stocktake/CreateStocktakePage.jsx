@@ -12,6 +12,7 @@ import { getTodayIsoDate, getCurrentDateTimeInput } from '../../utils/dateFormat
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 function CreateStocktakePage() {
   const navigate = useNavigate();
@@ -840,7 +841,7 @@ function CreateStocktakePage() {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Đến ngày</label>
-                <input type="date" className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled={isSaved} />
+                <DateInput className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled={isSaved} />
               </div>
             </div>
           </div>

@@ -471,9 +471,9 @@ public class AiChatService {
                 .append(": trạng thái ")
                 .append(warranty.getWarrantyStatus())
                 .append(", từ ")
-                .append(warranty.getStartDate())
-                .append(" den ")
-                .append(warranty.getEndDate()));
+                .append(displayDate(warranty.getStartDate()))
+                .append(" đến ")
+                .append(displayDate(warranty.getEndDate())));
 
         return AiChatResponse.builder()
                 .intent("WARRANTY_SEARCH")
@@ -495,7 +495,7 @@ public class AiChatService {
                 .append(": ")
                 .append(repair.getRepairStatus())
                 .append(", ngày nhận ")
-                .append(repair.getReceivedDate())
+                .append(displayDate(repair.getReceivedDate()))
                 .append(", lỗi: ")
                 .append(shortText(repair.getIssueDescription())));
 
@@ -521,7 +521,7 @@ public class AiChatService {
                 .append(": ")
                 .append(transfer.getStatus())
                 .append(", ngày ")
-                .append(transfer.getTransferDate())
+                .append(displayDate(transfer.getTransferDate()))
                 .append(", từ kho ID ")
                 .append(transfer.getFromWarehouseId())
                 .append(" sang kho ID ")
@@ -563,7 +563,7 @@ public class AiChatService {
                 .append(order.getStatus())
                 .append(canSeePrice ? ", Tổng tiền: " + formatMoney(order.getTotalAmount()) : "")
                 .append(", Ngày đặt: ")
-                .append(order.getPoDate()));
+                .append(displayDate(order.getPoDate())));
 
         return AiChatResponse.builder()
                 .intent("PURCHASE_ORDER_SEARCH")
@@ -601,7 +601,7 @@ public class AiChatService {
                 .append(order.getStatus())
                 .append(canSeePrice ? ", Tổng tiền: " + formatMoney(order.getTotalAmount()) : "")
                 .append(", Ngày tạo: ")
-                .append(order.getSoDate()));
+                .append(displayDate(order.getSoDate())));
 
         return AiChatResponse.builder()
                 .intent("SALES_ORDER_SEARCH")
@@ -663,7 +663,7 @@ public class AiChatService {
                 .append(", Số mặt hàng: ")
                 .append(doc.getLines() != null ? doc.getLines().size() : 0)
                 .append(", Ngày nhập: ")
-                .append(doc.getDocDate()));
+                .append(displayDate(doc.getDocDate())));
 
         return AiChatResponse.builder()
                 .intent("IMPORT_SEARCH")
@@ -699,7 +699,7 @@ public class AiChatService {
                 .append(", Số mặt hàng: ")
                 .append(doc.getLines() != null ? doc.getLines().size() : 0)
                 .append(", Ngày xuất: ")
-                .append(doc.getDocDate()));
+                .append(displayDate(doc.getDocDate())));
 
         return AiChatResponse.builder()
                 .intent("EXPORT_SEARCH")
@@ -727,7 +727,7 @@ public class AiChatService {
                 .append(", số lượng ")
                 .append(formatNumber(order.getQuantity()))
                 .append(", ngày ")
-                .append(order.getExecutionDate()));
+                .append(displayDate(order.getExecutionDate())));
 
         return AiChatResponse.builder()
                 .intent("ASSEMBLY_SEARCH")
@@ -856,6 +856,13 @@ public class AiChatService {
         String cleaned = STOPWORDS_REGEX.matcher(normalized).replaceAll(" ");
         String keyword = cleaned.replaceAll("[^a-z0-9_-]+", " ").trim().replaceAll("\\s+", " ");
         return keyword.length() < 2 ? "" : keyword;
+    }
+
+    private static final java.time.format.DateTimeFormatter DISPLAY_DATE = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /** Ngày hiển thị cho người dùng luôn theo dd/mm/yyyy (không dùng dạng ISO yyyy-mm-dd). */
+    static String displayDate(java.time.LocalDate date) {
+        return date == null ? "-" : date.format(DISPLAY_DATE);
     }
 
     private String blankToNull(String value) {

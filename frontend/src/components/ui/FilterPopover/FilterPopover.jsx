@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../../utils/datePresets';
 import styles from './FilterPopover.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import DateInput from '../DateInput/DateInput';
 
 
 const FilterPopover = ({
@@ -172,8 +173,7 @@ const FilterPopover = ({
                 {/* Date Pickers */}
                 <div className={styles.formGroup}>
                   <label className={styles.label}>TỪ NGÀY</label>
-                  <input
-                    type="date"
+                  <DateInput
                     className={styles.input}
                     value={localFilters.fromDate || ''}
                     onChange={(e) => handleDateChange('fromDate', e.target.value)}
@@ -181,8 +181,7 @@ const FilterPopover = ({
                 </div>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>ĐẾN NGÀY</label>
-                  <input
-                    type="date"
+                  <DateInput
                     className={styles.input}
                     value={localFilters.toDate || ''}
                     onChange={(e) => handleDateChange('toDate', e.target.value)}

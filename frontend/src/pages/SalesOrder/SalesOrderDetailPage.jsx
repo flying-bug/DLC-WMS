@@ -459,7 +459,7 @@ function SalesOrderDetailPage() {
     { title: '#', width: '45px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
     { title: 'Số HĐ', width: '110px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => handleOpenEInvoicePreview(inv)} title="Nhấn để xem bản thể hiện HĐĐT">{inv.invoiceNumber || 'Chưa cấp'}</span> },
     { title: 'Ký hiệu', width: '90px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: 'var(--wms-text-muted)' }}>{inv.invoiceSeries}</span> },
-    { title: 'Ngày lập', width: '105px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{inv.invoiceDate}</span> },
+    { title: 'Ngày lập', width: '105px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{formatDateOnly(inv.invoiceDate)}</span> },
     { title: 'Loại hóa đơn', render: (_, inv) => inv.inventoryDocumentId ? <span style={{ fontSize: 12, color: 'var(--wms-success)', background: 'var(--wms-success-soft)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--wms-success-border)' }}>Đợt xuất: {inv.exportDocCode || `PXK #${inv.inventoryDocumentId}`}</span> : <span style={{ fontSize: 12, color: 'var(--color-primary-link)', background: 'var(--color-primary-soft)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--color-info-border-soft)' }}>Toàn bộ đơn hàng</span> },
     { title: 'Người mua / MST', render: (_, inv) => (
         <>
@@ -648,7 +648,7 @@ function SalesOrderDetailPage() {
                               )}
                             </div>
                             <div style={{ fontSize: 11, color: isCanceled ? 'var(--wms-danger)' : 'var(--wms-text-muted)', marginTop: 2 }}>
-                              {isCanceled ? `Đã hủy: ${inv.cancelReason || '—'}` : `${inv.invoiceDate} • ${money(inv.totalAmount)}`}
+                              {isCanceled ? `Đã hủy: ${inv.cancelReason || '—'}` : `${formatDateOnly(inv.invoiceDate)} • ${money(inv.totalAmount)}`}
                             </div>
                           </div>
 

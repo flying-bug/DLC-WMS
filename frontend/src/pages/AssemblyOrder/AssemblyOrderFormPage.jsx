@@ -15,6 +15,7 @@ import bomStyles from './AssemblyOrderPage.module.css';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -834,7 +835,7 @@ function AssemblyOrderFormPage() {
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                         <label className="misa-label">Ngày thực hiện <span className="required">*</span></label>
-                                        <input type="date" className="misa-input" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
+                                        <DateInput className="misa-input" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
                                     </div>
                                 </div>
 

@@ -33,6 +33,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import { canViewPricing, hasPermission } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -1432,9 +1433,8 @@ function CreateImportSlipPage() {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Ngày lập phiếu <span className="required">*</span></label>
-                <input
+                <DateInput
                   id="import-docDate"
-                  type="date"
                   className="misa-input"
                   value={form.docDate}
                   onChange={(e) => handleFormChange('docDate', e.target.value)}

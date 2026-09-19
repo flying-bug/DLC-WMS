@@ -19,6 +19,7 @@ import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { findBestMatch } from '../../utils/fuzzyMatch';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
@@ -780,9 +781,8 @@ function CreatePurchaseOrderPage() {
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Ngày lập <span className={styles.required}>*</span></label>
-                    <input
+                    <DateInput
                       id="po-docDate"
-                      type="date"
                       className={styles.input}
                       value={form.poDate}
                       onChange={e => setForm(p => ({ ...p, poDate: e.target.value }))}
@@ -792,9 +792,8 @@ function CreatePurchaseOrderPage() {
                   <div className={styles.directGrid}>
                     <div className={styles.fieldRow} style={{ marginBottom: 0 }}>
                       <label className={styles.label}>Hạn công nợ</label>
-                      <input
+                      <DateInput
                         id="po-paymentDueDate"
-                        type="date"
                         className={styles.input}
                         min={form.poDate}
                         value={form.paymentDueDate}
@@ -804,8 +803,7 @@ function CreatePurchaseOrderPage() {
 
                     <div className={styles.fieldRow} style={{ marginBottom: 0 }}>
                       <label className={styles.label}>Ngày giao dự kiến</label>
-                      <input
-                        type="date"
+                      <DateInput
                         className={styles.input}
                         min={form.poDate}
                         value={form.expectedDeliveryDate}

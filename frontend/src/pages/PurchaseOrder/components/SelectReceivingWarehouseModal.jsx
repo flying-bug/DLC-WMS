@@ -19,12 +19,20 @@ function SelectReceivingWarehouseModal({ po, warehouses: poWarehouses, onClose, 
     getMyWarehouses()
       .then((res) => {
         if (cancelled) return;
-        const allowedIds = new Set(pageContent(unwrap(res)).map(w => w.id));
-        const list = poWarehouses.filter(w => allowedIds.has(w.id));
+        const allowedList = pageContent(unwrap(res));
+        const allowedIds = new Set(allowedList.map(w => w.id));
+        const list = allowedIds.size > 0
+          ? poWarehouses.filter(w => allowedIds.has(w.id))
+          : poWarehouses;
         setWarehouses(list);
         if (list.length === 1) setWarehouseId(String(list[0].id));
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) {
+          setWarehouses(poWarehouses);
+          if (poWarehouses.length === 1) setWarehouseId(String(poWarehouses[0].id));
+        }
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

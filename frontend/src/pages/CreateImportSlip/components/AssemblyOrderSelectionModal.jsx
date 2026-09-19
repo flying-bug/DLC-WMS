@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import * as assemblyOrderApi from '../../../api/assemblyOrderApi';
 import styles from './AssemblyOrderSelectionModal.module.css';
 import { formatDateOnly } from '../../../utils/dateFormat';
+import DateInput from '../../../components/ui/DateInput/DateInput';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -87,8 +88,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                         </div>
                         <div className={styles.filterGroup}>
                             <label>Từ ngày</label>
-                            <input 
-                                type="date" 
+                            <DateInput 
                                 className={styles.filterInput}
                                 value={filters.fromDate}
                                 onChange={e => setFilters(prev => ({ ...prev, fromDate: e.target.value }))}
@@ -96,8 +96,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                         </div>
                         <div className={styles.filterGroup}>
                             <label>Đến ngày</label>
-                            <input 
-                                type="date" 
+                            <DateInput 
                                 className={styles.filterInput}
                                 value={filters.toDate}
                                 onChange={e => setFilters(prev => ({ ...prev, toDate: e.target.value }))}

@@ -11,6 +11,7 @@ import AdjustInvoiceModal from './components/AdjustInvoiceModal';
 import EInvoicePreviewModal from './components/EInvoicePreviewModal';
 import * as einvoiceApi from '../../api/einvoiceApi';
 import styles from './EInvoiceListPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const STATUS_MAP = {
   ISSUED: { label: 'Đã phát hành', className: styles.statusIssued, icon: 'bi-check-circle-fill' },
@@ -111,7 +112,7 @@ export default function EInvoiceListPage() {
     {
       title: 'Ngày lập',
       width: '105px',
-      render: (_, inv) => <span className={styles.monoText}>{inv.invoiceDate}</span>
+      render: (_, inv) => <span className={styles.monoText}>{formatDateOnly(inv.invoiceDate)}</span>
     },
     {
       title: 'Người mua / Đơn vị',

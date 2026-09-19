@@ -24,6 +24,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
 import Badge from '../../components/ui/Badge/Badge';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -1350,7 +1351,7 @@ function UpdateExportSlipPage() {
                 <div className={styles.cardBody}>
                   <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                     <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
-                    <input id="export-docDate" type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
+                    <DateInput id="export-docDate" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
                   </div>
 
                   <div className="misa-form-group" style={{ marginBottom: '16px' }}>

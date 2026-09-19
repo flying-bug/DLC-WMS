@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDateOnly } from '../../../utils/dateFormat';
 import styles from './EmployeeDrawer.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import DateInput from '../DateInput/DateInput';
 
 function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     const navigate = useNavigate();
@@ -200,7 +201,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Ngày sinh</label>
-                            <input type="date" name="dob" value={formData.dob} onChange={handleChange} className={styles.input} aria-label="Ngày sinh" />
+                            <DateInput name="dob" value={formData.dob} onChange={handleChange} className={styles.input} aria-label="Ngày sinh" />
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Giới tính</label>
@@ -258,7 +259,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Ngày chính thức</label>
-                            <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={styles.input} aria-label="Ngày chính thức" />
+                            <DateInput name="startDate" value={formData.startDate} onChange={handleChange} className={styles.input} aria-label="Ngày chính thức" />
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Loại hợp đồng</label>
@@ -273,7 +274,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.detailItem}>
                             <span className={styles.detailLabel}>Ngày chính thức</span>
-                            <span className={styles.detailValue}>{formData.startDate}</span>
+                            <span className={styles.detailValue}>{formatDateOnly(formData.startDate)}</span>
                         </div>
                         <div className={styles.detailItem}>
                             <span className={styles.detailLabel}>Loại hợp đồng</span>

@@ -25,6 +25,7 @@ import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import { IMPORT_PURPOSE_OPTIONS, DOCUMENT_STATUS_OPTIONS as STATUS_OPTIONS } from '../../utils/documentFilterOptions';
 
 
 const DEFAULT_COLUMNS = {
@@ -40,20 +41,6 @@ const DEFAULT_COLUMNS = {
   note: true,
   status: true,
 };
-
-const IMPORT_PURPOSE_OPTIONS = [
-  { value: 'PURCHASE', label: 'Nhập mua hàng' },
-  { value: 'STOCKTAKE_ADD', label: 'Hàng thừa từ kiểm kê' },
-  { value: 'PRODUCTION', label: 'Lắp ráp / tháo dỡ' },
-  { value: 'RETURN', label: 'Hàng bán bị trả lại' },
-  { value: 'SCRAP', label: 'Nhập phế liệu (Sửa chữa)' },
-  { value: 'OTHER', label: 'Khác' }
-];
-
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Lưu tạm' },
-  { value: 'POSTED', label: 'Ghi sổ' },
-];
 
 const COLUMN_OPTIONS = [
   { id: 'date', label: 'Ngày Nhập' },

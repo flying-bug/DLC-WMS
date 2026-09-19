@@ -23,6 +23,7 @@ import styles from './RepairFormPage.module.css';
 import { formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { getAuthFullName, getAuthRoles, NOTIFICATION_EVENT } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
@@ -1271,11 +1272,11 @@ function RepairFormPage() {
                 </div>
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Ngày tiếp nhận <span style={{ color: 'red' }}>*</span></label>
-                  <input type="date" className="misa-input" disabled={!isEditable} value={formData.receivedDate} onChange={e => handleFormChange('receivedDate', e.target.value)} />
+                  <DateInput className="misa-input" disabled={!isEditable} value={formData.receivedDate} onChange={e => handleFormChange('receivedDate', e.target.value)} />
                 </div>
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Ngày dự kiến hoàn thành</label>
-                  <input type="date" className="misa-input" disabled={!isEditable} value={formData.expectedDate} onChange={e => handleFormChange('expectedDate', e.target.value)} />
+                  <DateInput className="misa-input" disabled={!isEditable} value={formData.expectedDate} onChange={e => handleFormChange('expectedDate', e.target.value)} />
                 </div>
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Người chịu trách nhiệm <span style={{ color: 'red' }}>*</span></label>

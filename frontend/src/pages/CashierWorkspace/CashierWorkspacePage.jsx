@@ -7,6 +7,8 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { getDateRangePreset } from '../../utils/datePresets';
+import { formatDateOnly } from '../../utils/dateFormat';
+import { PAYMENT_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from '../../utils/documentFilterOptions';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import * as paymentApi from '../../api/paymentApi';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
@@ -17,6 +19,9 @@ export default function CashierWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'requests';
   const [requestFilterType, setRequestFilterType] = useState('ALL'); // 'ALL' | 'RECEIPT' | 'VOUCHER'
+  const [statusFilter, setStatusFilter] = useState('');
+  const [methodFilter, setMethodFilter] = useState('');
+  const [partnerFilter, setPartnerFilter] = useState('');
 
   // Master State
   const [rawList, setRawList] = useState([]);
@@ -46,6 +51,9 @@ export default function CashierWorkspacePage() {
   const handleReturnToList = () => {
     setSearchTerm('');
     setRequestFilterType('ALL');
+    setStatusFilter('');
+    setMethodFilter('');
+    setPartnerFilter('');
     setPeriodPreset('ALL');
     setFromDate('');
     setToDate('');
@@ -119,12 +127,36 @@ export default function CashierWorkspacePage() {
     setPage(1);
   }, [activeTab]);
 
+  // Ở tab sổ quỹ tiền mặt / tiền gửi, hình thức thanh toán đã cố định theo tab nên không lọc thêm.
+  const isRequestTab = activeTab === 'requests' || activeTab === 'receipts' || activeTab === 'vouchers';
+
+  // Đối tác lấy từ chính danh sách phiếu (không cần thêm API), để chọn lọc theo người nộp/nhận.
+  const partnerOptions = useMemo(() => {
+    const known = new Map();
+    rawList.forEach((p) => {
+      if (p.partnerId && !known.has(String(p.partnerId))) {
+        known.set(String(p.partnerId), { id: p.partnerId, name: p.partnerName || `#${p.partnerId}` });
+      }
+    });
+    return [...known.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'vi'));
+  }, [rawList]);
+
+  // Tham chiếu ổn định để hộp lọc đang mở không bị reset mỗi lần danh sách tự làm mới.
+  const popoverFilters = useMemo(() => ({
+    preset: periodPreset,
+    fromDate,
+    toDate,
+    status: statusFilter,
+    partnerId: partnerFilter,
+    paymentMethod: isRequestTab ? methodFilter : '',
+  }), [periodPreset, fromDate, toDate, statusFilter, partnerFilter, methodFilter, isRequestTab]);
+
   // Filtered master list based on activeTab, requestFilterType, searchTerm, and date range
   const filteredList = useMemo(() => {
     let list = [...rawList];
 
     // 1. Filter by activeTab and requestFilterType (Thu / Chi / Tất cả)
-    if (activeTab === 'requests' || activeTab === 'receipts' || activeTab === 'vouchers') {
+    if (isRequestTab) {
       if (requestFilterType === 'RECEIPT') {
         list = list.filter((p) => p.type === 'RECEIPT');
       } else if (requestFilterType === 'VOUCHER') {
@@ -146,7 +178,19 @@ export default function CashierWorkspacePage() {
       list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() <= to);
     }
 
-    // 3. Filter by searchTerm
+    // 3. Filter by status / payment method / partner (bộ lọc trong hộp lọc)
+    if (statusFilter) {
+      // Giống renderStatus: mọi trạng thái khác POSTED đều hiển thị là "Chờ ghi sổ".
+      list = list.filter((p) => (String(p.status).toUpperCase() === 'POSTED') === (statusFilter === 'POSTED'));
+    }
+    if (methodFilter && isRequestTab) {
+      list = list.filter((p) => p.paymentMethod === methodFilter);
+    }
+    if (partnerFilter) {
+      list = list.filter((p) => String(p.partnerId) === String(partnerFilter));
+    }
+
+    // 4. Filter by searchTerm
     if (searchTerm.trim()) {
       const term = searchTerm.trim().toLowerCase();
       list = list.filter(
@@ -158,7 +202,7 @@ export default function CashierWorkspacePage() {
     }
 
     return list;
-  }, [rawList, activeTab, requestFilterType, fromDate, toDate, searchTerm]);
+  }, [rawList, activeTab, isRequestTab, requestFilterType, fromDate, toDate, searchTerm, statusFilter, methodFilter, partnerFilter]);
 
   // Keep selectedItem in sync
   useEffect(() => {
@@ -306,7 +350,7 @@ export default function CashierWorkspacePage() {
         key: 'createdAt',
         label: 'Ngày chứng từ',
         width: '120px',
-        render: (v) => (v ? new Date(v).toLocaleDateString('vi-VN') : '-'),
+        render: (v) => (v ? formatDateOnly(v) : '-'),
       },
       {
         key: 'code',
@@ -433,7 +477,7 @@ export default function CashierWorkspacePage() {
         key: 'createdAt',
         label: 'Ngày phát sinh',
         width: '120px',
-        render: (v) => (v ? new Date(v).toLocaleDateString('vi-VN') : '-'),
+        render: (v) => (v ? formatDateOnly(v) : '-'),
       },
       {
         key: 'referenceCode',
@@ -657,17 +701,32 @@ export default function CashierWorkspacePage() {
             )}
 
             <FilterPopover
-              filters={{ preset: periodPreset, fromDate, toDate }}
+              filters={popoverFilters}
               onApply={(newFilters) => {
                 setPeriodPreset(newFilters.preset || 'CUSTOM');
                 setFromDate(newFilters.fromDate || '');
                 setToDate(newFilters.toDate || '');
+                setStatusFilter(newFilters.status || '');
+                setPartnerFilter(newFilters.partnerId || '');
+                if (isRequestTab) setMethodFilter(newFilters.paymentMethod || '');
                 setPage(1);
               }}
               onReset={() => {
                 handlePeriodPresetChange('THIS_MONTH');
+                setStatusFilter('');
+                setMethodFilter('');
+                setPartnerFilter('');
                 setPage(1);
               }}
+              statusOptions={PAYMENT_STATUS_OPTIONS}
+              partners={partnerOptions}
+              partnerLabel="Đối tác"
+              customSelects={isRequestTab ? [{
+                key: 'paymentMethod',
+                label: 'Hình thức thanh toán',
+                options: PAYMENT_METHOD_OPTIONS,
+                defaultOption: 'Tất cả hình thức',
+              }] : []}
             />
 
             <div className={styles.searchBox}>

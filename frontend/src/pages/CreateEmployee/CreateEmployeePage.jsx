@@ -7,6 +7,7 @@ import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { ROLE_OPTIONS } from '../../utils/roleOptions';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 const WAREHOUSE_SCOPED_ROLES = ['ROLE_WAREHOUSE_CONTROLLER', 'ROLE_TECHNICIAN'];
 
@@ -271,8 +272,7 @@ function CreateEmployeePage() {
                             <div className={styles.formGroup}>
                                 <label className={styles.label} htmlFor="dob">Ngày sinh</label>
                                 <div className={styles.inputWrapper}>
-                                    <input
-                                        type="date"
+                                    <DateInput
                                         id="dob"
                                         className={styles.input}
                                         name="dob"
