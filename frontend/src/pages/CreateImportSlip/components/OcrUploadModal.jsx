@@ -21,6 +21,12 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const lastUpdateCountRef = useRef(0);
+  const latestOnOcrSuccess = useRef(onOcrSuccess);
+
+  useEffect(() => {
+    latestOnOcrSuccess.current = onOcrSuccess;
+  }, [onOcrSuccess]);
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
@@ -59,6 +65,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
       setSessionId('');
       setMobileStatus('');
       setBatchResults([]);
+      lastUpdateCountRef.current = 0;
       return;
     }
     const handlePaste = (e) => {
@@ -91,7 +98,10 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
           setMobileStatus('PROCESSING');
         } else if (state.status === 'SUCCESS' && state.result) {
           setMobileStatus('');
-          setBatchResults(prev => [...prev, state.result]);
+          if (state.updateCount > lastUpdateCountRef.current) {
+            setBatchResults(prev => [...prev, state.result]);
+            lastUpdateCountRef.current = state.updateCount;
+          }
         } else if (state.status === 'ERROR') {
           setMobileStatus('ERROR');
           alert('Lỗi xử lý ảnh từ điện thoại: ' + (state.errorMessage || 'Lỗi không xác định'));
@@ -106,7 +116,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
     };
 
     return () => eventSource.close();
-  }, [open, sessionId, onOcrSuccess]);
+  }, [open, sessionId]);
 
   const handleFinishBatch = () => {
     if (batchResults.length === 0) {
@@ -134,7 +144,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
     mergedResult.items = allItems;
     
     setShowQR(false);
-    onOcrSuccess(mergedResult);
+    latestOnOcrSuccess.current(mergedResult);
   };
 
   const handleOpenQR = async () => {

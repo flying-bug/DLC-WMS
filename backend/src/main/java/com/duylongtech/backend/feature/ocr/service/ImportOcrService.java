@@ -72,6 +72,7 @@ public class ImportOcrService {
         private volatile String status; // PENDING, PROCESSING, SUCCESS, ERROR
         private volatile OcrImportResponse result;
         private volatile String errorMessage;
+        private volatile int updateCount = 0;
         private final long createdAt = System.currentTimeMillis();
     }
 
