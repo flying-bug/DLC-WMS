@@ -31,34 +31,39 @@ public class SystemHealthService {
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
+    private long lastDbCheckTime = 0;
+    private long cachedDbSizeBytes = 0;
+    private long cachedTableCount = 0;
+    private String cachedDbVersion = "N/A";
+    private boolean cachedDbOnline = false;
+
     public SystemHealthDto getHealth() {
-        // ── DB health ────────────────────────────────────────────────────────────
-        boolean dbOnline = false;
-        String dbVersion = "N/A";
-        long dbSizeBytes = 0;
-        long tableCount = 0;
+        long now = System.currentTimeMillis();
+        if (now - lastDbCheckTime > 5 * 60 * 1000) { // Cache 5 minutes
+            try {
+                cachedDbVersion = (String) entityManager
+                        .createNativeQuery("SELECT VERSION()").getSingleResult();
+                cachedDbOnline = true;
 
-        try {
-            dbVersion = (String) entityManager
-                    .createNativeQuery("SELECT VERSION()").getSingleResult();
-            dbOnline = true;
+                // DB size in bytes
+                Number sizeResult = (Number) entityManager.createNativeQuery(
+                        "SELECT SUM(data_length + index_length) " +
+                        "FROM information_schema.tables " +
+                        "WHERE table_schema = DATABASE()"
+                ).getSingleResult();
+                if (sizeResult != null) cachedDbSizeBytes = sizeResult.longValue();
 
-            // DB size in bytes
-            Number sizeResult = (Number) entityManager.createNativeQuery(
-                    "SELECT SUM(data_length + index_length) " +
-                    "FROM information_schema.tables " +
-                    "WHERE table_schema = DATABASE()"
-            ).getSingleResult();
-            if (sizeResult != null) dbSizeBytes = sizeResult.longValue();
-
-            // Table count
-            Number tblResult = (Number) entityManager.createNativeQuery(
-                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()"
-            ).getSingleResult();
-            if (tblResult != null) tableCount = tblResult.longValue();
-
-        } catch (Exception e) {
-            log.warn("Cannot query DB health: {}", e.getMessage());
+                // Table count
+                Number tblResult = (Number) entityManager.createNativeQuery(
+                        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()"
+                ).getSingleResult();
+                if (tblResult != null) cachedTableCount = tblResult.longValue();
+                
+                lastDbCheckTime = now;
+            } catch (Exception e) {
+                log.warn("Cannot query DB health: {}", e.getMessage());
+                cachedDbOnline = false;
+            }
         }
 
         // ── JVM Memory ───────────────────────────────────────────────────────────
@@ -96,11 +101,11 @@ public class SystemHealthService {
         }
 
         return SystemHealthDto.builder()
-                .dbOnline(dbOnline)
-                .dbVersion(dbVersion)
-                .dbSizeBytes(dbSizeBytes)
-                .dbSizeFormatted(formatBytes(dbSizeBytes))
-                .tableCount(tableCount)
+                .dbOnline(cachedDbOnline)
+                .dbVersion(cachedDbVersion)
+                .dbSizeBytes(cachedDbSizeBytes)
+                .dbSizeFormatted(formatBytes(cachedDbSizeBytes))
+                .tableCount(cachedTableCount)
                 .jvmTotalMb(jvmTotalMb)
                 .jvmUsedMb(jvmUsedMb)
                 .jvmFreeMb(jvmFreeMb)
