@@ -33,15 +33,14 @@ public class PaymentController {
     }
 
     @PostMapping("/receipts")
-
-    @PreAuthorize("hasAuthority('payment:add')")
+    @PreAuthorize("(hasRole('ACCOUNTANT') or hasRole('MANAGER') or hasRole('SUPER_ADMIN')) and hasAuthority('payment:add')")
     @Operation(summary = "Create customer receipt")
     public ResponseEntity<PaymentResponse> createReceipt(@RequestBody PaymentRequest request) {
         return ResponseEntity.ok(paymentService.createPaymentReceipt(request));
     }
 
     @PostMapping("/vouchers")
-    @PreAuthorize("hasAuthority('payment:add')")
+    @PreAuthorize("(hasRole('ACCOUNTANT') or hasRole('MANAGER') or hasRole('SUPER_ADMIN')) and hasAuthority('payment:add')")
     @Operation(summary = "Create supplier payment voucher")
     public ResponseEntity<PaymentResponse> createVoucher(@RequestBody PaymentRequest request) {
         return ResponseEntity.ok(paymentService.createPaymentVoucher(request));
@@ -64,14 +63,14 @@ public class PaymentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('payment:edit')")
+    @PreAuthorize("(hasRole('ACCOUNTANT') or hasRole('MANAGER') or hasRole('SUPER_ADMIN')) and hasAuthority('payment:edit')")
     @Operation(summary = "Update a DRAFT receipt/voucher")
     public ResponseEntity<PaymentResponse> updatePayment(@PathVariable Long id, @RequestBody PaymentRequest request) {
         return ResponseEntity.ok(paymentService.updatePayment(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('payment:delete')")
+    @PreAuthorize("(hasRole('ACCOUNTANT') or hasRole('MANAGER') or hasRole('SUPER_ADMIN')) and hasAuthority('payment:delete')")
     @Operation(summary = "Delete a DRAFT receipt/voucher")
     public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
         paymentService.deletePayment(id);
