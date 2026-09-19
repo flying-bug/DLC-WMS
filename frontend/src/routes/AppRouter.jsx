@@ -79,7 +79,7 @@ const isValidToken = () => {
 
 const getDefaultAuthenticatedPath = () => {
     const roles = getAuthRoles().map(role => String(role || '').toUpperCase());
-    if (roles.some(role => ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN'].includes(role))) return '/dashboard';
+    if (roles.some(role => ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN'].includes(role))) return '/dashboard';
     // Thủ kho / Thủ quỹ bị khóa cứng vào bàn làm việc riêng - phải xét TRƯỚC nhánh
     // report_summary:view chung, vì 2 role này vẫn được cấp report_balance/report_ledger/
     // report_transfer (thuộc module report_summary), nên trước đây luôn rơi vào nhánh đó
@@ -183,7 +183,7 @@ function AppRoutes() {
                 </Route>
 
                 {/* Business Routes for Staff & Manager only */}
-                <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN']} />}>
+                <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN']} />}>
                     {/* Ban lam viec Thu kho: theo ROLE (Thu kho va Quan ly), khong chi theo permission -
                         Ke toan/Thu quy co the duoc cap import:post nhung khong duoc vao workspace nay. */}
                     <Route element={<ProtectedRoute allowedRoles={['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER', 'MANAGER', 'ROLE_MANAGER']} />}>

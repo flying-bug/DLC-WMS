@@ -294,8 +294,7 @@ public class PaymentService {
             String role = authority.getAuthority();
             if ("ROLE_CASHIER_CONTROLLER".equals(role)
                     || "ROLE_SUPER_ADMIN".equals(role)
-                    || "ROLE_MANAGER".equals(role)
-                    || "ROLE_ADMIN".equals(role)) {
+                    || "ROLE_MANAGER".equals(role)) {
                 return true;
             }
         }

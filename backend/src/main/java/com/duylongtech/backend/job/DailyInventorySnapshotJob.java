@@ -111,11 +111,11 @@ public class DailyInventorySnapshotJob {
                     .orElse(null);
 
             if (emailTo == null || emailTo.isBlank()) {
-                // Lấy email của SUPER_ADMIN hoặc ADMIN đầu tiên
+                // Lấy email của SUPER_ADMIN đầu tiên
                 emailTo = userRepository.findAll().stream()
                         .filter(u -> u.getEmail() != null && !u.getEmail().isBlank())
                         .filter(u -> u.getRoles() != null && u.getRoles().stream().anyMatch(r ->
-                                "SUPER_ADMIN".equalsIgnoreCase(r.getName()) || "ADMIN".equalsIgnoreCase(r.getName())))
+                                "SUPER_ADMIN".equalsIgnoreCase(r.getName())))
                         .map(User::getEmail)
                         .findFirst()
                         .orElse("computerduylong@gmail.com");

@@ -59,7 +59,7 @@ const AdminLayout = ({ children }) => {
 
     const userRoles = getAuthRoles();
     const userPermissions = getAuthPermissions();
-    const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN');
+    const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
     const isManager = userRoles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
     const { aiEnabled } = useAiFeature();
     const { workspaceMode } = useWorkspaceMode();

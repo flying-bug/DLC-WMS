@@ -93,7 +93,7 @@ const MOCK_CATEGORIES = [
 const ReportListPage = () => {
     const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
     const isSuperAdminOrAccountant = roles.some(r =>
-        ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN', 'MANAGER', 'ROLE_MANAGER', 'ACCOUNTANT', 'ROLE_ACCOUNTANT'].includes(r)
+        ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'MANAGER', 'ROLE_MANAGER', 'ACCOUNTANT', 'ROLE_ACCOUNTANT'].includes(r)
     );
 
     const allowedDomains = useMemo(() => {

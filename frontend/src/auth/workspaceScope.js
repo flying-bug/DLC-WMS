@@ -23,7 +23,7 @@ const matches = (pathname, prefixes) =>
 
 export function isPathAllowedForRoles(pathname, roles = []) {
     const roleSet = new Set(roles.map(normalizeRole));
-    if (['SUPER_ADMIN', 'ADMIN', 'MANAGER'].some(role => roleSet.has(role))) return true;
+    if (['SUPER_ADMIN', 'MANAGER'].some(role => roleSet.has(role))) return true;
 
     const scopes = [];
     if (roleSet.has('WAREHOUSE_CONTROLLER')) scopes.push(WAREHOUSE_SCOPE);

@@ -25,7 +25,7 @@ function StocktakeDetailPage() {
 
   const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase());
   const isStorekeeper = userRoles.some(r => r.includes('STOREKEEPER'));
-  const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('ADMIN') || r.includes('MANAGER'));
+  const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('SUPER_ADMIN') || r.includes('MANAGER'));
 
 
   const [warehouses, setWarehouses] = useState([]);

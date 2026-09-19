@@ -51,7 +51,7 @@ export function hasAnyModulePermission(moduleName) {
 
 export function canViewPricing() {
     const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
-    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER' || r === 'ACCOUNTANT' || r === 'ROLE_ACCOUNTANT' || r === 'CASHIER_CONTROLLER' || r === 'ROLE_CASHIER_CONTROLLER')) {
+    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER' || r === 'ACCOUNTANT' || r === 'ROLE_ACCOUNTANT' || r === 'CASHIER_CONTROLLER' || r === 'ROLE_CASHIER_CONTROLLER')) {
         return true;
     }
     return false;
@@ -62,7 +62,6 @@ export function canPostCashBook() {
     return roles.some(r =>
         r.includes('CASHIER') ||
         r.includes('SUPER_ADMIN') ||
-        r.includes('ADMIN') ||
         r.includes('MANAGER')
     );
 }
