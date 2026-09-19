@@ -61,6 +61,7 @@ import WarehouseWorkspacePage from '../pages/WarehouseWorkspace/WarehouseWorkspa
 import WarehouseDocumentFormPage from '../pages/WarehouseWorkspace/WarehouseDocumentFormPage';
 import CashierWorkspacePage from '../pages/CashierWorkspace/CashierWorkspacePage';
 import { getAuthRoles, hasPermission } from '../auth/session';
+import { isPathAllowedForRoles } from '../auth/workspaceScope';
 
 // Chuyển hướng /email-settings sang /operations?tab=email, giữ nguyên query params (nếu có từ OAuth callback)
 const EmailSettingsRedirect = () => {
@@ -92,26 +93,42 @@ const getDefaultAuthenticatedPath = () => {
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles, disallowedRoles, requiredPermission }) => {
     const tokenValid = isValidToken();
-    const userRole = sessionStorage.getItem('role') || '';
+    const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase().replace(/^ROLE_/, ''));
 
     if (!tokenValid) {
         return <Navigate to="/login" replace />;
     }
 
-    const currentRole = userRole.toUpperCase();
+    const normalize = (roles) => (roles || []).map(r => String(r || '').toUpperCase().replace(/^ROLE_/, ''));
 
-    if (allowedRoles && !allowedRoles.includes(currentRole)) {
-        return <Navigate to={getDefaultAuthenticatedPath()} replace />;
+    if (allowedRoles) {
+        const allowed = normalize(allowedRoles);
+        if (!userRoles.some(r => allowed.includes(r))) {
+            return <Navigate to={getDefaultAuthenticatedPath()} replace />;
+        }
     }
 
-    if (disallowedRoles && disallowedRoles.includes(currentRole)) {
-        return <Navigate to={getDefaultAuthenticatedPath()} replace />;
+    if (disallowedRoles) {
+        const disallowed = normalize(disallowedRoles);
+        if (userRoles.some(r => disallowed.includes(r))) {
+            return <Navigate to={getDefaultAuthenticatedPath()} replace />;
+        }
     }
 
     if (requiredPermission && !hasPermission(requiredPermission)) {
         return <Navigate to={getDefaultAuthenticatedPath()} replace />;
     }
 
+    return <Outlet />;
+};
+
+// Mỗi vai trò nghiệp vụ (Thủ kho / Thủ quỹ / Kế toán) chỉ làm việc trong chế độ của mình -
+// gõ thẳng URL của chế độ khác sẽ bị đưa về bàn làm việc của chính họ (xem auth/workspaceScope.js).
+const WorkspaceScopeRoute = () => {
+    const { pathname } = useLocation();
+    if (!isPathAllowedForRoles(pathname, getAuthRoles())) {
+        return <Navigate to={getDefaultAuthenticatedPath()} replace />;
+    }
     return <Outlet />;
 };
 
@@ -153,6 +170,8 @@ function AppRoutes() {
                     <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
                 </Route>
 
+                {/* Mọi route sau đăng nhập đều đi qua WorkspaceScopeRoute: khóa theo chế độ làm việc của vai trò */}
+                <Route element={<WorkspaceScopeRoute />}>
                 {/* Protected Routes for All Authenticated Users */}
                 <Route element={<ProtectedRoute />}>
                     <Route path="/" element={<RootRedirect />} />
@@ -165,14 +184,14 @@ function AppRoutes() {
 
                 {/* Business Routes for Staff & Manager only */}
                 <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN']} />}>
-                    {/* Thủ kho / Thủ quỹ bị khóa vào bàn làm việc riêng, không được vào Tổng quan chung */}
-                    <Route element={<ProtectedRoute disallowedRoles={['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER', 'CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER']} />}>
-                    </Route>
-                    {/* Chi Thu kho (import:post/export:post) va Quan ly moi duoc vao ban lam viec Thu kho */}
-                    <Route element={<ProtectedRoute requiredPermission={['import:post', 'export:post']} />}>
-                        <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
-                        <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
-                        <Route path="/warehouse-workspace/exports/:id" element={<WarehouseDocumentFormPage />} />
+                    {/* Ban lam viec Thu kho: theo ROLE (Thu kho va Quan ly), khong chi theo permission -
+                        Ke toan/Thu quy co the duoc cap import:post nhung khong duoc vao workspace nay. */}
+                    <Route element={<ProtectedRoute allowedRoles={['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER', 'MANAGER', 'ROLE_MANAGER']} />}>
+                        <Route element={<ProtectedRoute requiredPermission={['import:post', 'export:post']} />}>
+                            <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
+                            <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
+                            <Route path="/warehouse-workspace/exports/:id" element={<WarehouseDocumentFormPage />} />
+                        </Route>
                     </Route>
                     {/* Ban lam viec Thu quy: chi Thu quy va Quan ly - giong Thu kho, day la workspace
                         rieng theo ROLE chu khong phai theo permission (Ke toan cung co du quyen
@@ -253,26 +272,26 @@ function AppRoutes() {
                     <Route element={<ProtectedRoute requiredPermission={['report_balance:view', 'report_ledger:view', 'report_transfer:view', 'report_debt:view', 'report_summary:view', 'report_sales:view']} />}>
                         <Route path="/reports" element={<ReportListPage />} />
                     </Route>
-                    <Route element={<ProtectedRoute requiredPermission="payment:view" />}>
+                    <Route element={<ProtectedRoute disallowedRoles={['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER', 'WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER']} requiredPermission="payment:view" />}>
                         <Route path="/payments" element={<Navigate to="/payments/receipt" replace />} />
                         <Route path="/payments/overview" element={<Navigate to="/payments/receipt" replace />} />
                         <Route path="/payments/expense" element={<PaymentManagementPage initialMode="VOUCHER" />} />
                         <Route path="/payments/receipt" element={<PaymentManagementPage initialMode="RECEIPT" />} />
                         <Route path="/payments/history/:partnerId" element={<PaymentHistoryPage />} />
                     </Route>
-                    <Route element={<ProtectedRoute requiredPermission="sales_order:view" />}>
+                    <Route element={<ProtectedRoute disallowedRoles={['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER', 'WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER']} requiredPermission="sales_order:view" />}>
                         <Route path="/sales-orders" element={<SalesOrderListPage />} />
                         <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />
                         <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />
                         <Route path="/sales-orders/:id/edit" element={<CreateSalesOrderPage />} />
                     </Route>
-                    <Route element={<ProtectedRoute requiredPermission="purchase_order:view" />}>
+                    <Route element={<ProtectedRoute disallowedRoles={['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER', 'WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER']} requiredPermission="purchase_order:view" />}>
                         <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
                         <Route path="/purchase-orders/create" element={<CreatePurchaseOrderPage />} />
                         <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
                         <Route path="/purchase-orders/:id/edit" element={<CreatePurchaseOrderPage />} />
                     </Route>
-                    <Route element={<ProtectedRoute requiredPermission="einvoice:view" />}>
+                    <Route element={<ProtectedRoute disallowedRoles={['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER', 'WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER']} requiredPermission="einvoice:view" />}>
                         <Route path="/einvoices" element={<EInvoiceListPage />} />
                     </Route>
                     {/* Backend BusinessSettingsController da khoa ghi cho MANAGER/SUPER_ADMIN,
@@ -280,6 +299,7 @@ function AppRoutes() {
                     <Route element={<ProtectedRoute allowedRoles={['MANAGER', 'ROLE_MANAGER']} />}>
                         <Route path="/business-settings" element={<BusinessSettingsPage />} />
                     </Route>
+                </Route>
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
