@@ -13,6 +13,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const DEFAULT_COLUMNS = {
@@ -47,9 +48,9 @@ const BrandListPage = () => {
     const [loading, setLoading] = useState(false);
     
     // Filters and Pagination
-    const [filters, setFilters] = useState({ search: '', status: '' });
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [filters, setFilters] = useSessionState('filters', { search: '', status: '' });
+    const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
     
     // Selection
     const [selectedIds, setSelectedIds] = useState([]);

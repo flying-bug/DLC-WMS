@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import Modal from '../../components/ui/Modal/Modal';
@@ -70,6 +71,7 @@ function AssemblyOrderFormPage() {
     const { id } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+    const goBack = useGoBack('/assembly-orders');
     const editing = Boolean(id);
     const [boms, setBoms] = useState([]);
     const [warehouses, setWarehouses] = useState([]);
@@ -434,7 +436,7 @@ function AssemblyOrderFormPage() {
                 showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
             }
             if (!editing && orderId) {
-                setTimeout(() => navigate(`/assembly-orders/${orderId}`), 700);
+                setTimeout(() => navigate(`/assembly-orders/${orderId}`, { replace: true }), 700);
             } else {
                 setTimeout(() => loadOrder(), 700);
             }
@@ -791,7 +793,7 @@ function AssemblyOrderFormPage() {
     return (
         <AdminLayout>
             <div className={styles.pageHeader}>
-                <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/assembly-orders'); }}>
+                <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
                     <i className="bi bi-arrow-left"></i> {getPageTitle()}
                 </a>
 
@@ -1015,7 +1017,7 @@ function AssemblyOrderFormPage() {
 
 
             <div className={styles.bottomBar}>
-                <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
+                <button className="btn-misa-cancel" type="button" onClick={goBack}>
                     {canEdit ? 'Hủy bỏ' : 'Đóng'}
                 </button>
                 {['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(orderDetail?.status) && (

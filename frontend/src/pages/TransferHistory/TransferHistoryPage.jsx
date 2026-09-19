@@ -17,6 +17,7 @@ import styles from './TransferHistoryPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const DEFAULT_COLUMNS = {
@@ -62,8 +63,8 @@ function TransferHistoryPage() {
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1, { disableRestore: Boolean(location.state?.filterTransferCode) });
+  const [pageSize, setPageSize] = useSessionState('pageSize', 10, { disableRestore: Boolean(location.state?.filterTransferCode) });
 
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -81,7 +82,7 @@ function TransferHistoryPage() {
     };
   }, [location.state?.filterTransferCode]);
 
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS, { disableRestore: Boolean(location.state?.filterTransferCode) });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

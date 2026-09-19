@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -32,6 +33,7 @@ const createDefaultForm = () => ({
 function AssemblyBomFormPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const goBack = useGoBack('/assembly-boms');
     const editing = Boolean(id);
     const [products, setProducts] = useState([]);
     const [variants, setVariants] = useState([]);
@@ -311,7 +313,7 @@ function AssemblyBomFormPage() {
             }
 
             if (shouldNavigate) {
-                navigate('/assembly-boms');
+                navigate('/assembly-boms', { replace: true });
             } else {
                 if (res && res.data && res.data.data) {
                     setForm(prev => ({ ...prev, id: res.data.data.id, bomCode: res.data.data.bomCode }));
@@ -333,7 +335,7 @@ function AssemblyBomFormPage() {
         try {
             await assemblyApi.submitAssemblyBom(bomId);
             showToast('success', 'Đã gửi cấu hình cho Kế toán duyệt.');
-            setTimeout(() => navigate('/assembly-boms'), 700);
+            setTimeout(() => navigate('/assembly-boms', { replace: true }), 700);
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không gửi duyệt được cấu hình.');
         } finally {
@@ -433,7 +435,7 @@ function AssemblyBomFormPage() {
             <div className={styles.page}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <button className="btn-back" type="button" onClick={() => navigate('/assembly-boms')} style={{ marginBottom: 12, background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
+                        <button className="btn-back" type="button" onClick={goBack} style={{ marginBottom: 12, background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
                             <i className="bi bi-arrow-left"></i> Quay lại
                         </button>
                         <h1 className={styles.pageTitle}>{form.id ? `Cập nhật cấu hình ${displayBomCode ? displayBomCode : ''}`.trim() : `Tạo cấu hình ${displayBomCode ? displayBomCode : ''}`.trim()}</h1>
@@ -674,7 +676,7 @@ function AssemblyBomFormPage() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--color-border)' }}>
-                        <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-boms')}>{canEdit ? 'Hủy bỏ' : 'Đóng'}</button>
+                        <button className="btn-misa-cancel" type="button" onClick={goBack}>{canEdit ? 'Hủy bỏ' : 'Đóng'}</button>
 
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
                             <button className="btn-misa-cancel" style={{ border: '1px solid var(--color-success-alt)', color: 'var(--color-success-alt)' }} type="button" onClick={handleExportExcel}>

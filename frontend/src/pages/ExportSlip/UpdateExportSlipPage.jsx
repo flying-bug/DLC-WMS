@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -121,6 +122,7 @@ const emptyLine = (defaultWarehouseId = '') => ({
 
 function UpdateExportSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/export-slips');
   const location = useLocation();
   const { id } = useParams();
   const showPricing = canViewPricing();
@@ -1116,7 +1118,7 @@ function UpdateExportSlipPage() {
   return (
     <AdminLayout>
       <div className={styles.pageHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/export-slips'); }}>
+        <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
           <i className="bi bi-arrow-left"></i> Cập nhật phiếu xuất kho {form.docCode ? form.docCode : ''}
         </a>
 
@@ -1485,7 +1487,7 @@ function UpdateExportSlipPage() {
         )}</div>
 
       <div className={styles.bottomBar}>
-        <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
+        <button className="btn-misa-cancel" onClick={goBack}>
           <i className="bi bi-x-circle"></i> Hủy bỏ
         </button>
         <div className={styles.actionButtons}>
@@ -1609,8 +1611,8 @@ function UpdateExportSlipPage() {
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
         onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
-        onViewList={() => navigate('/export-slips')}
-        onClose={() => navigate('/export-slips')}
+        onViewList={() => navigate(returnUrl || '/export-slips', { replace: true })}
+        onClose={goBack}
       />
 
       <Toast

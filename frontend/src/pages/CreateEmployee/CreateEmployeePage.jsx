@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import axiosClient from '../../api/axiosClient';
 import * as warehouseApi from '../../api/warehouseApi';
 import styles from './CreateEmployeePage.module.css';
@@ -34,6 +35,7 @@ const parseDisplayDateToIso = (value) => {
 
 function CreateEmployeePage() {
     const navigate = useNavigate();
+    const goBack = useGoBack('/users');
     const { showToast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [selectedRoles, setSelectedRoles] = useState(['ROLE_WAREHOUSE_CONTROLLER']);
@@ -165,7 +167,7 @@ function CreateEmployeePage() {
             await axiosClient.post('/users', payload);
             showToast('success', 'Thêm mới thành công.');
             setTimeout(() => {
-                navigate('/users');
+                navigate('/users', { replace: true });
             }, 1500);
         } catch (error) {
             console.error('Lỗi khi lưu nhân viên:', error);
@@ -433,7 +435,7 @@ function CreateEmployeePage() {
                 {/* Sticky Actions Bar */}
                 <div className={styles.actionsBar}>
                     <div className={styles.actionsContainer}>
-                        <button type="button" className="btnDefault" onClick={() => navigate('/users')}>
+                        <button type="button" className="btnDefault" onClick={goBack}>
                             Hủy bỏ
                         </button>
                         <button type="button" className="btnPrimary" onClick={handleSave} disabled={isSaving}>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
 import { scanImportSlipOcr } from '../../api/inventoryImportApi';
@@ -139,6 +140,7 @@ const emptyLine = (defaultWarehouseId = '', defaultVat = 0) => ({
 
 function CreateImportSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/import-history');
   const showPricing = canViewPricing();
   const location = useLocation();
   const { aiEnabled } = useAiFeature();
@@ -858,7 +860,7 @@ function CreateImportSlipPage() {
       setShowSuccessModal(true);
     } catch (err) {
       if (createdId) {
-        navigate('/import-history', { state: { toastMessage: 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
+        navigate('/import-history', { replace: true, state: { toastMessage: 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
       } else {
         showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu nhập kho');
       }
@@ -1068,7 +1070,7 @@ function CreateImportSlipPage() {
     <AdminLayout>
       <div className={styles.pageHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/import-history'); }}>
+          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
             <i className="bi bi-arrow-left"></i> Quay lại
           </a>
           <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}</span>
@@ -1569,7 +1571,7 @@ function CreateImportSlipPage() {
 
       <div className={styles.fixedFooter}>
         <div className={styles.footerLeft}>
-          <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+          <button className="btn-misa-cancel" onClick={goBack}>
             <i className="bi bi-x-circle"></i> Hủy bỏ
           </button>
         </div>
@@ -1740,9 +1742,9 @@ function CreateImportSlipPage() {
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
         onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
-        onViewList={() => navigate(returnUrl || '/import-history')}
+        onViewList={() => navigate(returnUrl || '/import-history', { replace: true })}
         onCreateNew={() => window.location.reload()}
-        onClose={() => navigate(returnUrl || '/import-history')}
+        onClose={goBack}
       />
 
       <OcrUploadModal

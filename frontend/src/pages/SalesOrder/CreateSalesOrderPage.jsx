@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -52,6 +53,7 @@ const emptyLine = (defaultVat = 8) => ({ variantId: null, warehouseId: null, qua
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/sales-orders');
   const location = useLocation();
   const { id } = useParams(); // nếu có id → chế độ edit
   const isEdit = Boolean(id);
@@ -591,16 +593,19 @@ function CreateSalesOrderPage() {
       if (andApprove && saved?.id) {
         try {
           await soApi.approveSalesOrder(saved.id);
-          navigate('/sales-orders', {
+          navigate(location.state?.returnUrl || '/sales-orders', {
+            replace: true,
             state: { toastMessage: `Tạo và duyệt đơn ${saved.soCode} thành công! Hàng đã được giữ chỗ 72 giờ.`, toastType: 'success' }
           });
         } catch (approveErr) {
-          navigate('/sales-orders', {
+          navigate(location.state?.returnUrl || '/sales-orders', {
+            replace: true,
             state: { toastMessage: `Lưu đơn ${saved.soCode} thành công nhưng duyệt thất bại: ${approveErr.response?.data?.userMessage}`, toastType: 'warning' }
           });
         }
       } else {
-        navigate('/sales-orders', {
+        navigate(location.state?.returnUrl || '/sales-orders', {
+          replace: true,
           state: { toastMessage: `${isEdit ? 'Cập nhật' : 'Tạo'} đơn ${saved.soCode} thành công`, toastType: 'success' }
         });
       }
@@ -617,7 +622,8 @@ function CreateSalesOrderPage() {
     try {
       const res = await soApi.directCheckout(buildDirectPayload());
       const saved = unwrap(res);
-      navigate('/sales-orders', {
+      navigate(location.state?.returnUrl || '/sales-orders', {
+        replace: true,
         state: { toastMessage: `Đã lưu đơn ${saved.soCode}. Chờ Thủ kho ghi sổ phiếu xuất và Thủ quỹ ghi sổ phiếu thu.`, toastType: 'success' }
       });
     } catch (err) {
@@ -1252,7 +1258,7 @@ function CreateSalesOrderPage() {
 
             {/* ── Footer Actions ── */}
             <div className={styles.footerActions}>
-              <button className={styles.btnSecondary} onClick={() => navigate('/sales-orders')} disabled={saving}>
+              <button className={styles.btnSecondary} onClick={goBack} disabled={saving}>
                 <i className="bi bi-arrow-left" /> Quay lại
               </button>
               <div style={{ display: 'flex', gap: 10 }}>

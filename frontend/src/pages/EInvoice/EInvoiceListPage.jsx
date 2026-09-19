@@ -12,6 +12,7 @@ import EInvoicePreviewModal from './components/EInvoicePreviewModal';
 import * as einvoiceApi from '../../api/einvoiceApi';
 import styles from './EInvoiceListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import useSessionState from '../../hooks/useSessionState';
 
 const STATUS_MAP = {
   ISSUED: { label: 'Đã phát hành', className: styles.statusIssued, icon: 'bi-check-circle-fill' },
@@ -27,12 +28,12 @@ export default function EInvoiceListPage() {
   const [loading, setLoading] = useState(false);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useSessionState('page', 0);
   const [size, setSize] = useState(20);
 
   // Filters
-  const [keyword, setKeyword] = useState('');
-  const [status, setStatus] = useState('');
+  const [keyword, setKeyword] = useSessionState('keyword', '');
+  const [status, setStatus] = useSessionState('status', '');
   const [selectedInvoiceForCancel, setSelectedInvoiceForCancel] = useState(null);
   const [selectedInvoiceForReplace, setSelectedInvoiceForReplace] = useState(null);
   const [selectedInvoiceForAdjust, setSelectedInvoiceForAdjust] = useState(null);

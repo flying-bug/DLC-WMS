@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -50,6 +51,7 @@ const RES_STATUS_CONFIG = {
 
 function SalesOrderDetailPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/sales-orders');
   const { id } = useParams();
   const [now] = useState(() => Date.now());
 
@@ -315,7 +317,7 @@ function SalesOrderDetailPage() {
       <AdminLayout>
         <div style={{ padding: 40, textAlign: 'center' }}>
           <p>Không tìm thấy đơn hàng</p>
-          <button onClick={() => navigate('/sales-orders')} className={styles.btnSecondary}>← Quay lại</button>
+          <button onClick={goBack} className={styles.btnSecondary}>← Quay lại</button>
         </div>
       </AdminLayout>
     );
@@ -397,7 +399,7 @@ function SalesOrderDetailPage() {
 
   const exportDocsColumns = [
     { title: '#', width: '40px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
-    { title: 'Mã phiếu xuất', render: (_, doc) => <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/exports/edit/${doc.id}`)}>{doc.docCode}</strong> },
+    { title: 'Mã phiếu xuất', render: (_, doc) => <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/export-slips/${doc.id}/edit`)}>{doc.docCode}</strong> },
     { title: 'Ngày xuất', render: (_, doc) => doc.docDate || fmtDateTime(doc.createdAt) },
     { title: 'Kho xuất', render: (_, doc) => doc.warehouseName || (doc.warehouseId ? `Kho #${doc.warehouseId}` : '—') },
     { title: 'Số lượng', align: 'center', render: (_, doc) => {
@@ -450,7 +452,7 @@ function SalesOrderDetailPage() {
       }
     },
     { title: 'Thao tác', align: 'center', render: (_, doc) => (
-        <button type="button" className={styles.btnSecondary} onClick={() => navigate(`/exports/edit/${doc.id}`)} style={{ fontSize: 12, padding: '3px 8px' }}>Xem phiếu</button>
+        <button type="button" className={styles.btnSecondary} onClick={() => navigate(`/export-slips/${doc.id}/edit`)} style={{ fontSize: 12, padding: '3px 8px' }}>Xem phiếu</button>
       )
     }
   ];
@@ -712,7 +714,7 @@ function SalesOrderDetailPage() {
             )}
             {so.status === 'DRAFT' && (
               <>
-                <button className={styles.btnOutline} onClick={() => navigate(`/sales-orders/${id}/edit`)}>
+                <button className={styles.btnOutline} onClick={() => navigate(`/sales-orders/${id}/edit`, { state: { returnUrl: `/sales-orders/${id}` } })}>
                   <i className="bi bi-pencil" /> Chỉnh sửa
                 </button>
                 <button className={styles.btnSuccess} onClick={() => setConfirmApprove(true)}>

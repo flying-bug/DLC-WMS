@@ -263,16 +263,20 @@ const AdminLayout = ({ children }) => {
         });
     };
 
+    const goTo = (path) => {
+        navigate(path, { replace: path.split('?')[0] === location.pathname });
+    };
+
     const handleNavClick = (path) => {
         if (navMenuRef.current) {
             sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(navMenuRef.current.scrollTop));
         }
         if (path === '/dashboard' && workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
-            navigate('/warehouse-workspace');
+            goTo('/warehouse-workspace');
         } else if (path === '/payments' && workspaceMode === WORKSPACE_MODES.CASHIER) {
-            navigate('/cashier-workspace');
+            goTo('/cashier-workspace');
         } else {
-            navigate(path);
+            goTo(path);
         }
         setMobileMenuOpen(false);
     };
@@ -422,7 +426,7 @@ const AdminLayout = ({ children }) => {
                                 <button
                                     key={tab.path}
                                     className={`${styles.tab} ${isActive ? styles.activeTab : ''}`}
-                                    onClick={() => navigate(tab.path)}
+                                    onClick={() => goTo(tab.path)}
                                     type="button"
                                     style={tab.adminOnly ? { color: 'var(--wms-primary)', fontWeight: 'bold' } : {}}
                                 >

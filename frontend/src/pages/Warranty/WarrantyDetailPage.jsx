@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
@@ -36,6 +37,7 @@ const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 function WarrantyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack('/warranties');
   const [warranty, setWarranty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -160,7 +162,7 @@ function WarrantyDetailPage() {
       <div className={styles.container} style={{ padding: '24px' }}>
         <div className={styles.pageHeader}>
           <div className={styles.headerLeft}>
-            <button className={styles.btnBack} onClick={() => navigate('/warranties')}>
+            <button className={styles.btnBack} onClick={goBack}>
               <i className="bi bi-arrow-left"></i>
             </button>
             <h1 className={styles.pageTitle}>{warranty.warrantyCode || `Bảo hành #${id}`}</h1>

@@ -13,15 +13,16 @@ import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import * as paymentApi from '../../api/paymentApi';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import styles from './CashierWorkspacePage.module.css';
+import useSessionState from '../../hooks/useSessionState';
 
 
 export default function CashierWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'requests';
-  const [requestFilterType, setRequestFilterType] = useState('ALL'); // 'ALL' | 'RECEIPT' | 'VOUCHER'
-  const [statusFilter, setStatusFilter] = useState('');
-  const [methodFilter, setMethodFilter] = useState('');
-  const [partnerFilter, setPartnerFilter] = useState('');
+  const [requestFilterType, setRequestFilterType] = useSessionState('requestFilterType', 'ALL'); // 'ALL' | 'RECEIPT' | 'VOUCHER'
+  const [statusFilter, setStatusFilter] = useSessionState('statusFilter', '');
+  const [methodFilter, setMethodFilter] = useSessionState('methodFilter', '');
+  const [partnerFilter, setPartnerFilter] = useSessionState('partnerFilter', '');
 
   // Master State
   const [rawList, setRawList] = useState([]);
@@ -29,10 +30,10 @@ export default function CashierWorkspacePage() {
   const selectedItemRef = useRef(selectedItem);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
-  const [fromDate, setFromDate] = useState(() => getDateRangePreset('THIS_MONTH')?.fromDate || '');
-  const [toDate, setToDate] = useState(() => getDateRangePreset('THIS_MONTH')?.toDate || '');
+  const [searchTerm, setSearchTerm] = useSessionState('searchTerm', '');
+  const [periodPreset, setPeriodPreset] = useSessionState('periodPreset', 'THIS_MONTH');
+  const [fromDate, setFromDate] = useSessionState('fromDate', () => getDateRangePreset('THIS_MONTH')?.fromDate || '');
+  const [toDate, setToDate] = useSessionState('toDate', () => getDateRangePreset('THIS_MONTH')?.toDate || '');
 
   const handlePeriodPresetChange = (val) => {
     setPeriodPreset(val);

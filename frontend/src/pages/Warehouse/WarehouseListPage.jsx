@@ -12,6 +12,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const WarehouseListPage = () => {
@@ -21,10 +22,10 @@ const WarehouseListPage = () => {
     const [loading, setLoading] = useState(false);
     
     // Các state bộ lọc
-    const [searchKeyword, setSearchKeyword] = useState('');
+    const [searchKeyword, setSearchKeyword] = useSessionState('searchKeyword', '');
 
     // Pagination
-    const [page, setPage] = useState(1); // 1-indexed for UI
+    const [page, setPage] = useSessionState('page', 1); // 1-indexed for UI
     const [size, setSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);

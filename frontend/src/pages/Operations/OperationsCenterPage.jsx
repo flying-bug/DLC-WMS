@@ -46,7 +46,7 @@ function OperationsCenterPage() {
     const activeTab = searchParams.get('tab') || 'dashboard';
 
     const handleTabChange = (tabId) => {
-        setSearchParams({ tab: tabId });
+        setSearchParams({ tab: tabId }, { replace: true });
     };
 
     const renderTab = () => {

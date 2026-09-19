@@ -14,6 +14,7 @@ import styles from './AssemblyOrderListPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_META = {
@@ -74,9 +75,9 @@ function AssemblyOrderListPage() {
     const [loading, setLoading] = useState(false);
 
     // Filters and Pagination
-    const [filters, setFilters] = useState(DEFAULT_FILTERS);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
+    const [page, setPage] = useSessionState('page', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
 
     // Toast
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });

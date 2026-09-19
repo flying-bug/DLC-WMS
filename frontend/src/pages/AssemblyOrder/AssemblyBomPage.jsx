@@ -12,6 +12,7 @@ import * as assemblyApi from '../../api/assemblyOrderApi';
 import styles from './AssemblyOrderPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -43,8 +44,8 @@ const DEFAULT_COLUMNS = {
 function AssemblyBomPage() {
     const navigate = useNavigate();
     const [boms, setBoms] = useState([]);
-    const [statusFilter, setStatusFilter] = useState('');
-    const [keywordFilter, setKeywordFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useSessionState('statusFilter', '');
+    const [keywordFilter, setKeywordFilter] = useSessionState('keywordFilter', '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -64,8 +65,8 @@ function AssemblyBomPage() {
     };
 
     // Pagination states
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [page, setPage] = useSessionState('page', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
 
     const loadBoms = useCallback(async ({ silent } = {}) => {
         if (!silent) setLoading(true);

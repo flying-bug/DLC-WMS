@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -21,6 +22,7 @@ import DateInput from '../../components/ui/DateInput/DateInput';
 
 function StocktakeDetailPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/stocktakes');
   const { id } = useParams();
   const [searchParams] = useSearchParams();
 
@@ -384,7 +386,7 @@ function StocktakeDetailPage() {
   };
 
   const handleCancel = () => {
-    navigate('/stocktakes');
+    goBack();
   };
 
   const buildPayload = () => ({
@@ -464,7 +466,7 @@ function StocktakeDetailPage() {
       if (formData.isProcessed) {
         await stocktakeApi.postStocktake(id);
       }
-      navigate('/stocktakes', { state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
+      navigate('/stocktakes', { replace: true, state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
     } catch (err) {
       console.error(err);
       showToast('error', err.response?.data?.userMessage || 'Cập nhật thất bại');

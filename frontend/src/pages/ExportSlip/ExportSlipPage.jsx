@@ -25,6 +25,7 @@ import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import { EXPORT_PURPOSE_OPTIONS, DOCUMENT_STATUS_OPTIONS as STATUS_OPTIONS } from '../../utils/documentFilterOptions';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const DEFAULT_COLUMNS = {
@@ -134,14 +135,14 @@ function ExportSlipPage() {
     };
   }, [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS, { disableRestore: Boolean(location.state?.filterKeyword || location.state?.filterDocCode || location.state?.referenceId || location.state?.referenceType) });
   const [initialLoading, setInitialLoading] = useState(true);
   const guard = usePermissionGuard();
   const [loading, setLoading] = useState(false);
 
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1, { disableRestore: Boolean(location.state?.filterKeyword || location.state?.filterDocCode || location.state?.referenceId || location.state?.referenceType) });
+  const [pageSize, setPageSize] = useSessionState('pageSize', 10, { disableRestore: Boolean(location.state?.filterKeyword || location.state?.filterDocCode || location.state?.referenceId || location.state?.referenceType) });
   const [unpostTarget, setUnpostTarget] = useState(null);
 
 

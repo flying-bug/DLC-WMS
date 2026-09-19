@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import { useReactToPrint } from 'react-to-print';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -120,13 +121,7 @@ function RepairFormPage() {
     documentTitle: `Bao-Gia-SC-${repair?.repairCode || 'REP'}`,
   });
 
-  const handleGoBack = () => {
-    if (location.key !== 'default') {
-      navigate(-1);
-    } else {
-      navigate('/repairs');
-    }
-  };
+  const handleGoBack = useGoBack('/repairs');
 
   const mergeUpdatedLine = useCallback((updatedLine) => {
     if (!updatedLine?.id) return;

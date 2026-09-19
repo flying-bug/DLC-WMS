@@ -157,6 +157,7 @@ function PurchaseOrderDetailPage() {
 
     navigate('/import-history/create', {
       state: {
+        returnUrl: `/purchase-orders/${id}`,
         poData: {
           ...po,
           lines: importableLines,
@@ -168,7 +169,7 @@ function PurchaseOrderDetailPage() {
   const handleWarehousePicked = (createdDoc) => {
     setShowWarehousePicker(false);
     if (createdDoc?.id) {
-      navigate(`/import-slips/${createdDoc.id}/edit`);
+      navigate(`/import-slips/${createdDoc.id}/edit`, { state: { returnUrl: `/purchase-orders/${id}` } });
     }
   };
 
@@ -249,7 +250,7 @@ function PurchaseOrderDetailPage() {
   );
 
   const importSlipsColumns = [
-    { title: 'Mã phiếu nhập', render: (_, slip) => <span style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }} onClick={() => navigate(`/import-history`)}>{slip.docCode}</span> },
+    { title: 'Mã phiếu nhập', render: (_, slip) => <span style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }} onClick={() => navigate(`/import-slips/${slip.id}/edit`)}>{slip.docCode}</span> },
     { title: 'Ngày nhập', render: (_, slip) => fmtDateTime(slip.createdAt) },
     { title: 'Kho', render: (_, slip) => slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '—' },
     { title: 'Người tạo', render: (_, slip) => slip.createdByName || userById.get(slip.createdBy)?.fullName || userById.get(slip.createdBy)?.username || `#${slip.createdBy}` },
@@ -280,7 +281,7 @@ function PurchaseOrderDetailPage() {
               <i className="bi bi-printer" /> In đơn mua hàng
             </button>
             {po.status === 'DRAFT' && (
-              <button className={styles.btnEdit} onClick={() => navigate(`/purchase-orders/${id}/edit`)}>
+              <button className={styles.btnEdit} onClick={() => navigate(`/purchase-orders/${id}/edit`, { state: { returnUrl: `/purchase-orders/${id}` } })}>
                 <i className="bi bi-pencil" /> Sửa
               </button>
             )}

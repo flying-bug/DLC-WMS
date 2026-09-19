@@ -15,6 +15,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import DateInput from '../../components/ui/DateInput/DateInput';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_LABELS = {
@@ -44,12 +45,12 @@ function StocktakeListPage() {
       status: '',
     };
   }, []);
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
   const [showInitModal, setShowInitModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useSessionState('page', 0);
+  const [pageSize, setPageSize] = useSessionState('pageSize', 10);
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });

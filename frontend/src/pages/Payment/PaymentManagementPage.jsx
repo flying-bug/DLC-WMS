@@ -20,6 +20,7 @@ import { getDateRangePreset } from '../../utils/datePresets';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import { exportToExcel } from '../../utils/excelExport';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -76,11 +77,11 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       paymentMethod: '',
     };
   }, []);
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
 
   // Pagination & selection
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+  const [pageSize, setPageSize] = useSessionState('pageSize', 20);
   const [selectedIds, setSelectedIds] = useState([]);
 
   // Modals state

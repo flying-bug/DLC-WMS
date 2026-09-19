@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import axiosClient from '../../api/axiosClient';
 import { forceLogout, getAuthRole } from '../../auth/session';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -8,6 +9,7 @@ import styles from './ChangePasswordPage.module.css';
 
 function ChangePasswordPage() {
     const navigate = useNavigate();
+    const goBack = useGoBack('/profile');
     
     // Auth context
     const userRole = getAuthRole() || 'STAFF';
@@ -177,7 +179,7 @@ function ChangePasswordPage() {
                                     )}
                                     {loading ? ' Đang cập nhật...' : ' Cập nhật mật khẩu'}
                                 </button>
-                                <button type="button" className={styles.btnSecondary} onClick={() => navigate('/profile')} disabled={loading}>
+                                <button type="button" className={styles.btnSecondary} onClick={goBack} disabled={loading}>
                                     Hủy bỏ
                                 </button>
                             </div>

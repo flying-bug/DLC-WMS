@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -92,6 +93,7 @@ const emptyLine = () => ({
 
 function UpdateTransferSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/transfer-history');
   const { id } = useParams();
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
@@ -423,7 +425,7 @@ function UpdateTransferSlipPage() {
       const payload = buildPayload();
       payload.status = status;
       await transferApi.updateTransferSlip(id, payload);
-      navigate('/transfer-history');
+      navigate('/transfer-history', { replace: true });
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu chuyển kho');
     } finally {
@@ -436,7 +438,7 @@ function UpdateTransferSlipPage() {
       <div className={styles.pageBody} style={{ padding: 0 }}>
         <div className={styles.scrollableContent}>
           <div className={styles.pageHeader}>
-            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/transfer-history'); }}>
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
               <i className="bi bi-arrow-left"></i> Cập nhật phiếu chuyển kho {form.transferCode ? form.transferCode : ''}
             </a>
           </div>
@@ -660,7 +662,7 @@ function UpdateTransferSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>
+            <button className="btn-misa-cancel" onClick={goBack}>
               <i className="bi bi-x-circle"></i> Hủy bỏ
             </button>
           </div>

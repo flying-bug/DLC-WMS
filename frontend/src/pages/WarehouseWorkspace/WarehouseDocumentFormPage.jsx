@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
@@ -15,6 +16,7 @@ import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 export default function WarehouseDocumentFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack('/warehouse-workspace');
   const location = useLocation();
 
   // Xác định là Phiếu Nhập hay Phiếu Xuất
@@ -245,7 +247,7 @@ export default function WarehouseDocumentFormPage() {
 
       showToast('success', 'Ghi sổ kho thành công! Thẻ kho và số lượng tồn đã được cập nhật.');
       setTimeout(() => {
-        navigate('/warehouse-workspace');
+        goBack();
       }, 800);
     } catch (err) {
       console.error('Lỗi khi ghi sổ kho:', err.response?.data || err);
@@ -270,9 +272,9 @@ export default function WarehouseDocumentFormPage() {
       showToast('success', `Đã bỏ ghi sổ. Đã tạo phiếu mới ${newDoc?.docCode || ''} để tiếp tục chỉnh sửa.`);
       setTimeout(() => {
         if (newDoc?.id) {
-          navigate(`/warehouse-workspace/${isImport ? 'imports' : 'exports'}/${newDoc.id}`);
+          navigate(`/warehouse-workspace/${isImport ? 'imports' : 'exports'}/${newDoc.id}`, { replace: true });
         } else {
-          navigate('/warehouse-workspace');
+          goBack();
         }
       }, 800);
     } catch (err) {
@@ -310,7 +312,7 @@ export default function WarehouseDocumentFormPage() {
             </div>
             <h2>Không tìm thấy chứng từ kho</h2>
             <p>Chứng từ không tồn tại hoặc không còn khả dụng. Hãy quay lại danh sách để chọn chứng từ khác.</p>
-            <button type="button" className={styles.emptyStateAction} onClick={() => navigate('/warehouse-workspace')}>
+            <button type="button" className={styles.emptyStateAction} onClick={goBack}>
               <i className="bi bi-arrow-left"></i> Quay lại danh sách
             </button>
           </div>
@@ -337,8 +339,8 @@ export default function WarehouseDocumentFormPage() {
             <button
               type="button"
               className={styles.backBtn}
-              onClick={() => navigate('/warehouse-workspace')}
-              title="Quay lại bàn làm việc thủ kho"
+              onClick={goBack}
+              title="Quay lại"
             >
               <i className="bi bi-arrow-left"></i> Quay lại
             </button>

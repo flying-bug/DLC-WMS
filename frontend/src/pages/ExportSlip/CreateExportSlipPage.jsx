@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -131,6 +132,7 @@ const emptyLine = (defaultWarehouseId = '', defaultVat = 0) => ({
 
 function CreateExportSlipPage({ mode: propMode }) {
   const navigate = useNavigate();
+  const goBack = useGoBack('/export-slips');
   const location = useLocation();
   const showPricing = canViewPricing();
 
@@ -897,7 +899,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     <AdminLayout>
       <div className={styles.pageHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/export-slips'); }}>
+          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
             <i className="bi bi-arrow-left"></i> Quay lại
           </a>
           <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu xuất kho {form.docCode ? form.docCode : ''}</span>
@@ -1479,7 +1481,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
       {/* Fixed Footer Bar (Identical Layout to Nhập Kho) */}
       <div className={styles.bottomBar}>
-        <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
+        <button className="btn-misa-cancel" onClick={goBack}>
           <i className="bi bi-x-circle"></i> Hủy bỏ
         </button>
         <div className={styles.actionButtons}>
@@ -1647,9 +1649,9 @@ function CreateExportSlipPage({ mode: propMode }) {
         docCode={savedSlip?.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
         onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
-        onViewList={() => navigate(returnUrl || '/export-slips')}
+        onViewList={() => navigate(returnUrl || '/export-slips', { replace: true })}
         onCreateNew={() => window.location.reload()}
-        onClose={() => navigate(returnUrl || '/export-slips')}
+        onClose={goBack}
       />
 
       <Toast

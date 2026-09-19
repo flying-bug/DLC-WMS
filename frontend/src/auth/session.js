@@ -1,3 +1,4 @@
+import { clearSessionStates } from '../utils/sessionState';
 export const AUTH_EVENT = 'app:auth-changed';
 export const USER_EVENT = 'app:user-updated';
 export const NOTIFICATION_EVENT = 'app:notification-received';
@@ -138,6 +139,7 @@ export function setAuthSession(session, rememberMe = false) {
 }
 
 export function clearAuthSession() {
+    clearSessionStates(sessionStorage);
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('role');
     sessionStorage.removeItem('roles');

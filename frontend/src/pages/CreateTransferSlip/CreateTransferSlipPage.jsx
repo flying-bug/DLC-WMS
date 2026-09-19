@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -98,6 +99,7 @@ const emptyLine = () => ({
 
 function CreateTransferSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/transfer-history');
   const location = useLocation();
   const voiceData = location.state?.voiceData || null;
   const [warehouses, setWarehouses] = useState([]);
@@ -491,7 +493,7 @@ function CreateTransferSlipPage() {
       <div className={styles.pageBody} style={{ padding: 0 }}>
         <div className={styles.scrollableContent}>
           <div className={styles.pageHeader}>
-            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/transfer-history'); }}>
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
               <i className="bi bi-arrow-left"></i> Tạo phiếu chuyển kho {form.transferCode ? form.transferCode : ''}
             </a>
           </div>
@@ -724,7 +726,7 @@ function CreateTransferSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>
+            <button className="btn-misa-cancel" onClick={goBack}>
               <i className="bi bi-x-circle"></i> Hủy bỏ
             </button>
           </div>
@@ -794,9 +796,9 @@ function CreateTransferSlipPage() {
             productById,
           });
         }}
-        onViewList={() => navigate('/transfer-history')}
+        onViewList={() => navigate('/transfer-history', { replace: true })}
         onCreateNew={() => window.location.reload()}
-        onClose={() => navigate('/transfer-history')}
+        onClose={goBack}
       />
     </AdminLayout>
   );

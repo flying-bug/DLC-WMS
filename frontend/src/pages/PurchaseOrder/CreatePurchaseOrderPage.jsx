@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -51,6 +52,7 @@ const emptyLine = (defaultWh = null, defaultVat = 8) => ({
 
 function CreatePurchaseOrderPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/purchase-orders');
   const location = useLocation();
   const { id }   = useParams();
   const isEdit   = Boolean(id);
@@ -481,16 +483,19 @@ function CreatePurchaseOrderPage() {
       if (andApprove && saved?.id) {
         try {
           await poApi.approvePurchaseOrder(saved.id);
-          navigate('/purchase-orders', {
+          navigate(location.state?.returnUrl || '/purchase-orders', {
+            replace: true,
             state: { toastMessage: `Tạo và duyệt đơn ${saved.poCode} thành công! Công nợ đã được ghi nhận.`, toastType: 'success' }
           });
         } catch (approveErr) {
-          navigate('/purchase-orders', {
+          navigate(location.state?.returnUrl || '/purchase-orders', {
+            replace: true,
             state: { toastMessage: `Lưu đơn ${saved.poCode} thành công nhưng duyệt thất bại: ${approveErr.response?.data?.userMessage}`, toastType: 'warning' }
           });
         }
       } else {
-        navigate('/purchase-orders', {
+        navigate(location.state?.returnUrl || '/purchase-orders', {
+          replace: true,
           state: { toastMessage: `${isEdit ? 'Cập nhật' : 'Tạo'} đơn ${saved.poCode} thành công`, toastType: 'success' }
         });
       }
@@ -892,7 +897,7 @@ function CreatePurchaseOrderPage() {
                 <button
                   type="button"
                   className={styles.btnOutline}
-                  onClick={() => navigate('/purchase-orders')}
+                  onClick={goBack}
                   disabled={saving}
                 >
                   <i className="bi bi-x-lg" /> Hủy

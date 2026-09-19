@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import axiosClient from '../../api/axiosClient';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
@@ -15,6 +16,7 @@ import styles from './RolePermissionsPage.module.css';
 
 function RolePermissionsPage() {
     const navigate = useNavigate();
+    const goBack = useGoBack('/users');
     const { showToast } = useToast();
 
     const [roles, setRoles] = useState([]);
@@ -330,7 +332,7 @@ function RolePermissionsPage() {
                         <button
                             type="button"
                             className="btnDefault"
-                            onClick={() => navigate('/users')}
+                            onClick={goBack}
                         >
                             <i className="bi bi-arrow-left" /> Quay lại danh sách nhân viên
                         </button>

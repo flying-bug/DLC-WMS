@@ -22,6 +22,7 @@ import * as stocktakeApi from '../../api/stocktakeApi';
 import { getMyWarehouses } from '../../api/warehouseApi';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import styles from './WarehouseWorkspacePage.module.css';
+import useSessionState from '../../hooks/useSessionState';
 
 // Gộp các đối tác đã thấy trong danh sách để làm tùy chọn lọc (không cần quyền xem danh mục NCC/khách hàng).
 function mergePartners(previous = [], rows = []) {
@@ -46,14 +47,14 @@ export default function WarehouseWorkspacePage() {
   const selectedItemRef = useRef(selectedItem);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [periodPreset, setPeriodPreset] = useState('ALL');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [searchTerm, setSearchTerm] = useSessionState('searchTerm', '');
+  const [periodPreset, setPeriodPreset] = useSessionState('periodPreset', 'ALL');
+  const [fromDate, setFromDate] = useSessionState('fromDate', '');
+  const [toDate, setToDate] = useSessionState('toDate', '');
   const [warehouses, setWarehouses] = useState([]);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useSessionState('selectedWarehouseId', '');
   // Bộ lọc riêng theo từng tab (trạng thái / loại phiếu / đối tác) - mỗi tab có bộ tùy chọn khác nhau.
-  const [tabFilters, setTabFilters] = useState({});
+  const [tabFilters, setTabFilters] = useSessionState('tabFilters', {});
   const [knownPartners, setKnownPartners] = useState({});
   const { status: statusFilter = '', issuePurpose: purposeFilter = '', partnerId: partnerFilter = '' } = tabFilters[activeTab] || {};
 

@@ -1,6 +1,7 @@
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
 import * as customerApi from '../../api/customerApi';
@@ -128,6 +129,7 @@ const emptyLine = (defaultWarehouseId = '', defaultVat = 0) => ({
 
 function UpdateImportSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/import-history');
   const location = useLocation();
   const { id } = useParams();
   const showPricing = canViewPricing();
@@ -965,7 +967,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       <div className={styles.pageBody}>
         <div className={styles.pageHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/import-history'); }}>
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
               <i className="bi bi-arrow-left"></i> Sửa phiếu nhập kho {form.docCode ? form.docCode : ''}
             </a>
             <span style={{ color: 'var(--color-border-muted)', fontSize: '20px' }}>|</span>
@@ -1460,7 +1462,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
 
         <div className={styles.stickyFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+            <button className="btn-misa-cancel" onClick={goBack}>
               <i className="bi bi-x-circle"></i> Hủy bỏ
             </button>
           </div>
@@ -1539,8 +1541,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
         onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
-        onViewList={() => navigate('/import-history')}
-        onClose={() => navigate('/import-history')}
+        onViewList={() => navigate(returnUrl || '/import-history', { replace: true })}
+        onClose={goBack}
       />
       <Toast
         isVisible={toast.isVisible}

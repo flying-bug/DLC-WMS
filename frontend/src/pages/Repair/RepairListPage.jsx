@@ -13,6 +13,7 @@ import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_LABELS = {
@@ -55,13 +56,13 @@ function RepairListPage() {
   const location = useLocation();
   const guard = usePermissionGuard();
 
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
   const [repairs, setRepairs] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
   
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+  const [pageSize, setPageSize] = useSessionState('pageSize', 20);
   
   const [selectedIds, setSelectedIds] = useState([]);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
