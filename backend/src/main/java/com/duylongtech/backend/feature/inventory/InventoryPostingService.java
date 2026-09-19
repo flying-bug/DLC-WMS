@@ -445,7 +445,7 @@ public class InventoryPostingService {
                             .orElse("");
                 }
                 String docTypeLabel = isImport ? "nhập kho" : "xuất kho";
-                String notifTitle = (isImport ? "⚠️ Cảnh báo nhập kho thiếu: " : "⚠️ Cảnh báo xuất kho thiếu/thừa: ")
+                String notifTitle = (isImport ? "Cảnh báo nhập kho thiếu: " : "Cảnh báo xuất kho thiếu/thừa: ")
                         + savedDoc.getDocCode();
                 String notifMsg = String.format(
                         "Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện chênh lệch %s:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với đối tác.",
@@ -453,12 +453,12 @@ public class InventoryPostingService {
                         docTypeLabel, discrepancyDetails.toString().trim());
 
                 String refType = isImport ? "IMPORT_DOCUMENT" : "EXPORT_DOCUMENT";
-                String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId() + "/edit";
+                String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId();
 
                 appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
                 appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
             } catch (Exception e) {
                 // Log warning but do not fail the transaction
             }

@@ -123,7 +123,7 @@ public class RepairWorkflowService {
                     notificationService.createNotification(
                             "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa bị từ chối duyệt",
                             "Kế toán đã từ chối lệnh sửa chữa " + repair.getRepairCode() + ". Lý do: " + note,
-                            "REPAIR_REJECTED", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                            "REPAIR_REJECTED", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
                     );
                 } else {
                     repair.moveToQuotation();
@@ -134,7 +134,7 @@ public class RepairWorkflowService {
                 notificationService.createNotification(
                         "ROLE_ACCOUNTANT", null, "Lệnh sửa chữa chờ duyệt",
                         "Lệnh sửa chữa " + repair.getRepairCode() + " đang chờ bạn duyệt xuất kho.",
-                        "REPAIR_APPROVAL", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                        "REPAIR_APPROVAL", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
                 );
             };
             case CONFIRMED -> (repair, note) -> { 
@@ -291,7 +291,7 @@ public class RepairWorkflowService {
             notificationService.createNotification(
                     "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần xuất/nhập kho",
                     "Lệnh sửa chữa " + repair.getRepairCode() + " đã được xác nhận. Vui lòng ghi sổ các phiếu xuất/nhập kho liên quan.",
-                    "REPAIR_INVENTORY", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                    "REPAIR_INVENTORY", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
             );
         }
         
@@ -336,7 +336,7 @@ public class RepairWorkflowService {
             notificationService.createNotification(
                 "ROLE_ACCOUNTANT", null, "Hoàn thành lệnh sửa chữa",
                 "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành, phát sinh phí. Vui lòng kiểm tra công nợ.",
-                "REPAIR_DONE", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                "REPAIR_DONE", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
             );
             // Không tự gửi thêm thông báo "phiếu thu mới" cho Thủ quỹ ở đây -
             // paymentService.createPaymentReceipt(...) ở trên đã tự bắn thông báo

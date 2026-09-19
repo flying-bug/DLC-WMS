@@ -411,13 +411,13 @@ public class InventoryDocumentService {
                 partnerName = partnerRepository.findById(doc.getPartnerId()).map(Partner::getName).orElse("");
             }
             String docLabel = isImport ? "nhập kho" : "xuất kho";
-            String title = (isImport ? "📥 Đề nghị nhập kho mới: " : "📤 Đề nghị xuất kho mới: ") + doc.getDocCode();
+            String title = (isImport ? "Đề nghị nhập kho mới: " : "Đề nghị xuất kho mới: ") + doc.getDocCode();
             String message = String.format("Kế toán vừa tạo đề nghị %s %s%s. Vui lòng kiểm tra và xử lý.",
                     docLabel, doc.getDocCode(), partnerName.isBlank() ? "" : " (Đối tác: " + partnerName + ")");
             String refType = isImport ? "IMPORT_DOCUMENT" : "EXPORT_DOCUMENT";
             String link = (isImport ? "/import-slips/" : "/export-slips/") + doc.getId() + "/edit";
             appNotificationService.createNotification("ROLE_WAREHOUSE_CONTROLLER", null, title, message,
-                    "NEW_DOCUMENT", refType, doc.getId(), link);
+                    "INVENTORY", "INVENTORY_SLIP", doc.getId(), link, doc.getWarehouseId());
         } catch (Exception e) {
             // Log warning but do not fail document creation
         }
