@@ -8,7 +8,7 @@ import com.duylongtech.backend.common.ApiResponse;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentResponse;
 import com.duylongtech.backend.feature.inventory.OcrImportResponse;
 import com.duylongtech.backend.feature.audit.AuditLogService;
-import com.duylongtech.backend.feature.system.ImportOcrService;
+import com.duylongtech.backend.feature.ocr.service.ImportOcrService;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -187,5 +187,6 @@ public class ImportDocumentController {
         return ApiResponse.success(logs);
     }
 }
+
 
 

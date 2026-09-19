@@ -6,6 +6,9 @@ import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.feature.auth.PermissionRepository;
 import com.duylongtech.backend.feature.auth.RoleRepository;
 import com.duylongtech.backend.feature.auth.RoleService;
+import com.duylongtech.backend.feature.auth.UserRepository;
+import com.duylongtech.backend.feature.auth.User;
+import com.duylongtech.backend.feature.notification.RealtimeSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,8 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final UserRepository userRepository;
+    private final RealtimeSessionService realtimeSessionService;
     @Transactional(readOnly = true)
     public List<RoleEntity> getAllRoles(String module) {
         List<RoleEntity> roles = roleRepository.findAll();
@@ -67,6 +72,12 @@ public class RoleService {
 
         role.updatePermissions(targetPermissions);
         RoleEntity saved = roleRepository.save(role);
+        
+        List<User> affectedUsers = userRepository.findByRoles_Id(id);
+        for (User u : affectedUsers) {
+            realtimeSessionService.forceLogoutUser(u.getId(), "ROLE_PERMISSIONS_CHANGED", "Quyền của vai trò " + role.getName() + " đã thay đổi. Vui lòng đăng nhập lại.");
+        }
+        
         log.info("Cập nhật phân quyền cho vai trò [{} - {}]: {} quyền", role.getCode(), role.getName(), targetPermissions.size());
         return saved;
     }
@@ -80,6 +91,12 @@ public class RoleService {
 
         role.updatePermissions(defaultPerms);
         RoleEntity saved = roleRepository.save(role);
+        
+        List<User> affectedUsers = userRepository.findByRoles_Id(id);
+        for (User u : affectedUsers) {
+            realtimeSessionService.forceLogoutUser(u.getId(), "ROLE_PERMISSIONS_CHANGED", "Quyền của vai trò " + role.getName() + " đã được khôi phục mặc định. Vui lòng đăng nhập lại.");
+        }
+        
         log.info("Khôi phục quyền mặc định cho vai trò [{} - {}]: {} quyền", role.getCode(), role.getName(), defaultPerms.size());
         return saved;
     }

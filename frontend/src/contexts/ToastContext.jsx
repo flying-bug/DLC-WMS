@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import Toast from '../components/ui/Toast/Toast';
 import styles from '../components/ui/Toast/Toast.module.css';
 
@@ -39,6 +39,17 @@ export const ToastProvider = ({ children }) => {
     const removeToast = useCallback((id) => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
+
+    useEffect(() => {
+        const handlePermissionDenied = (event) => {
+            showToast('danger', event.detail?.message || 'Bạn không có quyền thực hiện thao tác này.', 'Truy cập bị từ chối');
+        };
+
+        window.addEventListener('app:permission-denied', handlePermissionDenied);
+        return () => {
+            window.removeEventListener('app:permission-denied', handlePermissionDenied);
+        };
+    }, [showToast]);
 
     return (
         <ToastContext.Provider value={{ showToast }}>

@@ -64,7 +64,9 @@ function CreateSalesOrderPage() {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [mode, setMode] = useState('direct');
+  // Đơn đã có (mở để sửa) luôn là dạng đơn hàng/báo giá: không có tab chọn chế độ, và nút Lưu của chế độ 'direct'
+  // (bán tại quầy) sẽ tạo đơn MỚI thay vì cập nhật đơn đang sửa.
+  const [mode, setMode] = useState(isEdit ? 'quote' : 'direct');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [inventoryBalances, setInventoryBalances] = useState([]);
