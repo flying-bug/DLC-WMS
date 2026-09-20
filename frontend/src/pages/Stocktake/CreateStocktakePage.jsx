@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import Select from 'react-select';
@@ -12,9 +13,11 @@ import { getTodayIsoDate, getCurrentDateTimeInput } from '../../utils/dateFormat
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 function CreateStocktakePage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/stocktakes');
   const [searchParams] = useSearchParams();
 
   const [warehouses, setWarehouses] = useState([]);
@@ -452,7 +455,7 @@ function CreateStocktakePage() {
   };
 
   const handleCancel = () => {
-    navigate('/stocktakes');
+    goBack();
   };
 
   const buildPayload = () => ({
@@ -523,7 +526,7 @@ function CreateStocktakePage() {
         return;
       }
       const response = await stocktakeApi.createStocktake(payload);
-      navigate(`/stocktakes/${response.data.data.id}`, { state: { toastMessage: 'Lưu nháp thành công!', toastType: 'success' } });
+      navigate(`/stocktakes/${response.data.data.id}`, { replace: true, state: { toastMessage: 'Lưu nháp thành công!', toastType: 'success' } });
     } catch (err) {
       console.error(err);
       showToast('error', err.response?.data?.userMessage || 'Có lỗi xảy ra khi lưu nháp');
@@ -540,7 +543,7 @@ function CreateStocktakePage() {
       if (formData.isProcessed) {
          await stocktakeApi.postStocktake(response.data.data.id);
       }
-      navigate('/stocktakes', { state: { toastMessage: 'Lưu và Đóng thành công!', toastType: 'success' } });
+      navigate('/stocktakes', { replace: true, state: { toastMessage: 'Lưu và Đóng thành công!', toastType: 'success' } });
     } catch (err) {
       console.error(err);
       showToast('error', err.response?.data?.userMessage || 'Có lỗi xảy ra khi lưu');
@@ -840,7 +843,7 @@ function CreateStocktakePage() {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Đến ngày</label>
-                <input type="date" className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled={isSaved} />
+                <DateInput className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled={isSaved} />
               </div>
             </div>
           </div>

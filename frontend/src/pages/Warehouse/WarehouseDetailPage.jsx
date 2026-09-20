@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
@@ -116,6 +117,7 @@ const WarehouseDetailPage = () => {
             setLoading(false);
         }
     };
+    useRealtimeRefresh({ WAREHOUSE: id, INVENTORY_BALANCE: null }, () => fetchDetail());
 
     const fetchLogs = async (page = 0) => {
         setLoadingLogs(true);

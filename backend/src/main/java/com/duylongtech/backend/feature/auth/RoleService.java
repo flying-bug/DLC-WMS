@@ -162,8 +162,8 @@ public class RoleService {
     }
 
     public static boolean isDefaultPermissionForCashierController(String module, String code) {
-        if ("payment".equals(module)) return true;
-        if (Arrays.asList("sales_order", "customer", "ai_chat").contains(module)) return code.endsWith(":view");
+        if ("payment".equals(module)) return "payment:view".equals(code);
+        if (Arrays.asList("customer", "ai_chat").contains(module)) return code.endsWith(":view");
         return "report_debt".equals(module);
     }
 }

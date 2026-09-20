@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
@@ -19,6 +20,7 @@ import { getDateRangePreset } from '../../utils/datePresets';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import { exportToExcel } from '../../utils/excelExport';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -75,11 +77,11 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       paymentMethod: '',
     };
   }, []);
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
 
   // Pagination & selection
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+  const [pageSize, setPageSize] = useSessionState('pageSize', 20);
   const [selectedIds, setSelectedIds] = useState([]);
 
   // Modals state
@@ -125,9 +127,9 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   }, []);
 
   // Fetch all payments
-  const fetchPayments = useCallback(async () => {
-    setLoading(true);
-    setSelectedIds([]);
+  const fetchPayments = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
+    if (!silent) setSelectedIds([]);
     try {
       const res = await paymentApi.getAllPayments();
       const list = unwrap(res) || [];
@@ -136,9 +138,10 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       console.error('Error loading payments:', err);
       showToast('error', 'Không thể tải danh sách phiếu thu/chi');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
+  useRealtimeRefresh(['PAYMENT','PARTNER'], fetchPayments);
 
   useEffect(() => {
     fetchPayments();

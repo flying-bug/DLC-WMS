@@ -368,7 +368,7 @@ public class AssemblyBomService {
 
     private void notifyRole(String role, String title, String message, String type, Long id, String link) {
         try {
-            appNotificationService.createNotification(role, null, title, message, type, type, id, link);
+            appNotificationService.createNotification(role, null, title, message, type, type, id, link, null);
         } catch (RuntimeException ignored) {
             // Notification failure must not roll back the workflow transaction.
         }
@@ -379,7 +379,7 @@ public class AssemblyBomService {
             return;
         }
         try {
-            appNotificationService.createNotification(null, userId, title, message, type, type, id, link);
+            appNotificationService.createNotification(null, userId, title, message, type, type, id, link, null);
         } catch (RuntimeException ignored) {
             // Notification failure must not roll back the workflow transaction.
         }

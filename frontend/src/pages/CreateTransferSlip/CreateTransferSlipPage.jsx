@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -20,6 +21,7 @@ import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import { canViewPricing } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -97,6 +99,7 @@ const emptyLine = () => ({
 
 function CreateTransferSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/transfer-history');
   const location = useLocation();
   const voiceData = location.state?.voiceData || null;
   const [warehouses, setWarehouses] = useState([]);
@@ -490,7 +493,7 @@ function CreateTransferSlipPage() {
       <div className={styles.pageBody} style={{ padding: 0 }}>
         <div className={styles.scrollableContent}>
           <div className={styles.pageHeader}>
-            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/transfer-history'); }}>
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
               <i className="bi bi-arrow-left"></i> Tạo phiếu chuyển kho {form.transferCode ? form.transferCode : ''}
             </a>
           </div>
@@ -540,7 +543,7 @@ function CreateTransferSlipPage() {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Ngày chuyển <span className="required">*</span></label>
-                <input id="transfer-docDate" type="date" className="misa-input" value={form.transferDate} onChange={(e) => handleFormChange('transferDate', e.target.value)} />
+                <DateInput id="transfer-docDate" className="misa-input" value={form.transferDate} onChange={(e) => handleFormChange('transferDate', e.target.value)} />
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
@@ -723,7 +726,7 @@ function CreateTransferSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>
+            <button className="btn-misa-cancel" onClick={goBack}>
               <i className="bi bi-x-circle"></i> Hủy bỏ
             </button>
           </div>
@@ -731,8 +734,8 @@ function CreateTransferSlipPage() {
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
               <i className="bi bi-save"></i> Lưu tạm
             </button>
-            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('APPROVED')}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và gửi yêu cầu chuyển kho
             </button>
           </div>
         </div>
@@ -781,8 +784,10 @@ function CreateTransferSlipPage() {
       />
       <SuccessPrintModal
         isOpen={showSuccessModal}
-        title={savedSlip?.status === 'POSTED' ? 'Lưu & ghi sổ phiếu chuyển kho thành công!' : 'Lưu tạm phiếu chuyển kho thành công!'}
-        message="Phiếu chuyển kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu ngay bây giờ."
+        title={savedSlip?.status === 'APPROVED' ? 'Đã gửi yêu cầu chuyển kho thành công!' : 'Lưu tạm phiếu chuyển kho thành công!'}
+        message={savedSlip?.status === 'APPROVED'
+          ? 'Phiếu chuyển kho đã được gửi. Kho nguồn sẽ thấy phiếu xuất kho tương ứng trong danh sách chờ xử lý.'
+          : 'Phiếu chuyển kho đã được lưu nháp. Bạn có thể in phiếu ngay bây giờ.'}
         docCode={savedSlip?.transferCode || form.transferCode}
         printBtnText="In phiếu chuyển kho"
         onPrint={() => {
@@ -791,9 +796,9 @@ function CreateTransferSlipPage() {
             productById,
           });
         }}
-        onViewList={() => navigate('/transfer-history')}
+        onViewList={() => navigate('/transfer-history', { replace: true })}
         onCreateNew={() => window.location.reload()}
-        onClose={() => navigate('/transfer-history')}
+        onClose={goBack}
       />
     </AdminLayout>
   );

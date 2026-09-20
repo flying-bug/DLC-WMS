@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import AdminLayout from '../../components/layout/AdminLayout';
 import ProductCategoryModal from './components/ProductCategoryModal';
 import { exportToExcel } from '../../utils/excelExport';
@@ -10,6 +11,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_LABELS = {
@@ -24,9 +26,9 @@ const ProductCategoryPage = () => {
     const [loading, setLoading] = useState(false);
 
     // Filters and Pagination
-    const [filters, setFilters] = useState({ search: '', status: '' });
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [filters, setFilters] = useSessionState('filters', { search: '', status: '' });
+    const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
@@ -47,9 +49,9 @@ const ProductCategoryPage = () => {
         }
     }, []);
 
-    const fetchCategories = useCallback(async () => {
+    const fetchCategories = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const params = {
                 page: currentPage - 1,
                 size: pageSize
@@ -74,9 +76,10 @@ const ProductCategoryPage = () => {
             console.error('Lỗi tải danh mục sản phẩm:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh mục sản phẩm');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters, currentPage, pageSize]);
+  useRealtimeRefresh(['CATEGORY'], fetchCategories);
 
     useEffect(() => {
         fetchParentOptions();

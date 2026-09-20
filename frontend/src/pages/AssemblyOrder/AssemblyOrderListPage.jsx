@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -13,6 +14,7 @@ import styles from './AssemblyOrderListPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_META = {
@@ -73,9 +75,9 @@ function AssemblyOrderListPage() {
     const [loading, setLoading] = useState(false);
 
     // Filters and Pagination
-    const [filters, setFilters] = useState(DEFAULT_FILTERS);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
+    const [page, setPage] = useSessionState('page', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
 
     // Toast
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -129,8 +131,8 @@ function AssemblyOrderListPage() {
         }
     }, []);
 
-    const loadOrders = useCallback(async (currentFilters = filters) => {
-        setLoading(true);
+    const loadOrders = useCallback(async (currentFilters = filters, silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const response = await assemblyApi.getAssemblyOrders({
                 keyword: currentFilters.keyword || undefined,
@@ -141,14 +143,15 @@ function AssemblyOrderListPage() {
                 toDate: currentFilters.toDate || undefined
             });
             setOrders(listFrom(unwrap(response)));
-            setPage(1); // Reset page on new load
+            if (!silent) setPage(1); // Reset page on new load
         } catch (err) {
             setOrders([]);
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách lệnh.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters]);
+    useRealtimeRefresh(['ASSEMBLY_ORDER'], ({ silent } = {}) => loadOrders(undefined, silent));
 
     useEffect(() => {
         loadWarehouses();

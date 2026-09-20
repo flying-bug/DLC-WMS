@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -63,9 +64,9 @@ function PaymentHistoryPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async ({ silent } = {}) => {
     if (!partnerId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const partnerRequest = mode === 'RECEIPT'
         ? customerApi.getCustomerById(partnerId)
@@ -94,9 +95,10 @@ function PaymentHistoryPage() {
       console.error(err);
       showToast('error', 'Không thể tải chi tiết công nợ đối tác');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [mode, partnerId]);
+  useRealtimeRefresh(['PAYMENT','PARTNER'], loadData);
 
   useEffect(() => {
     loadData();

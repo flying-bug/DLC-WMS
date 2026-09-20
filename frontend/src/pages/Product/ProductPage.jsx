@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -21,6 +22,7 @@ import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { canViewPricing } from '../../auth/session';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 
 const defaultFormData = {
     id: null,
@@ -298,6 +300,7 @@ const ProductPage = () => {
     const [detailProduct, setDetailProduct] = useState(null);
     const [isEdit, setIsEdit] = useState(false);
     const [printBarcodeProduct, setPrintBarcodeProduct] = useState(null);
+    const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
     const [formData, setFormData] = useState(defaultFormData);
     const [unitConversions, setUnitConversions] = useState([]);
     const [variantDraft, setVariantDraft] = useState(defaultVariantDraft);
@@ -846,6 +849,11 @@ const ProductPage = () => {
             setUnits(getPageContent(unitRes));
             setCategories(getPageContent(categoryRes).filter((item) => item.status !== 'INACTIVE'));
             setBrands(getPageContent(brandRes).filter((item) => item.status !== 'INACTIVE'));
+
+            businessSettingsApi.getDefaultVat().then(res => {
+                const vConf = res.data?.data || res.data;
+                if (vConf?.allowedVatRates) setVatConfig(vConf);
+            }).catch(err => console.error('Lỗi lấy cấu hình VAT:', err));
         } catch (error) {
             const results = await Promise.allSettled(lookupRequests.map((item) => item.request));
             const failedLabels = results
@@ -873,9 +881,9 @@ const ProductPage = () => {
         fetchAllVariants();
     }, [fetchAllVariants]);
 
-    const fetchProducts = useCallback(async () => {
+    const fetchProducts = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
             const categoryQuery = categoryFilter ? `&categoryId=${categoryFilter}` : '';
             const typeQuery = typeFilter ? `&productType=${encodeURIComponent(typeFilter)}` : '';
@@ -907,9 +915,10 @@ const ProductPage = () => {
             console.error('Lỗi lấy danh sách hàng hóa:', error);
             showToast('error', 'Không thể tải danh sách sản phẩm.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [page, size, searchTerm, categoryFilter, typeFilter, brandFilter, unitFilter]);
+  useRealtimeRefresh(['PRODUCT','INVENTORY_BALANCE'], fetchProducts);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -927,6 +936,7 @@ const ProductPage = () => {
 
     const buildInitialFormData = (overrides = {}) => ({
         ...defaultFormData,
+        vatRate: vatConfig.defaultVatRate,
         categoryId: '',
         brandId: '',
         unitId: '',
@@ -972,7 +982,7 @@ const ProductPage = () => {
             brandId: product.brandId || '',
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
-            vatRate: product.vatRate !== undefined && product.vatRate !== null ? Number(product.vatRate) : 8,
+            vatRate: product.vatRate !== undefined && product.vatRate !== null ? Number(product.vatRate) : vatConfig.defaultVatRate,
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
@@ -1023,7 +1033,7 @@ const ProductPage = () => {
             brandId: product.brandId || '',
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
-            vatRate: product.vatRate !== undefined && product.vatRate !== null ? Number(product.vatRate) : 8,
+            vatRate: product.vatRate !== undefined && product.vatRate !== null ? Number(product.vatRate) : vatConfig.defaultVatRate,
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
@@ -1079,7 +1089,7 @@ const ProductPage = () => {
             brandId: isService ? null : finalBrandId,
             unitId: Number(data.unitId),
             salePrice: Number(data.salePrice || 0),
-            vatRate: Number(data.vatRate !== undefined && data.vatRate !== null ? data.vatRate : 8),
+            vatRate: Number(data.vatRate !== undefined && data.vatRate !== null ? data.vatRate : vatConfig.defaultVatRate),
             description: data.description?.trim() || '',
             imageUrl: data.imageUrl || '',
             active: data.active,
@@ -2439,13 +2449,12 @@ const ProductPage = () => {
                                                 <label className={styles.fieldLabel}>Thuế VAT (%)</label>
                                                 <SearchableSelect
                                                     className={styles.fieldInput}
-                                                    value={formData.vatRate !== undefined && formData.vatRate !== null ? formData.vatRate : 8}
+                                                    value={formData.vatRate !== undefined && formData.vatRate !== null ? formData.vatRate : vatConfig.defaultVatRate}
                                                     onChange={(e) => setFormData(fd => ({ ...fd, vatRate: Number(e.target.value) }))}
                                                 >
-                                                    <option value={0}>0%</option>
-                                                    <option value={5}>5%</option>
-                                                    <option value={8}>8%</option>
-                                                    <option value={10}>10%</option>
+                                                    {vatConfig.allowedVatRates.map(rate => (
+                                                        <option key={rate} value={rate}>{rate}%</option>
+                                                    ))}
                                                 </SearchableSelect>
                                             </div>
                                         </div>

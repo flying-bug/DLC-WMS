@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import axiosClient from '../../api/axiosClient';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
@@ -15,6 +16,7 @@ import styles from './RolePermissionsPage.module.css';
 
 function PermissionDetailPage() {
     const navigate = useNavigate();
+    const goBack = useGoBack('/users');
     const { id } = useParams();
     const { showToast } = useToast();
 
@@ -47,7 +49,7 @@ function PermissionDetailPage() {
                 const isSuperAdmin = userData.roles && userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
                 if (isSuperAdmin) {
                     showToast('warning', "Tài khoản Super Admin có toàn quyền hệ thống mặc định.");
-                    setTimeout(() => navigate('/users'), 1500);
+                    setTimeout(() => navigate('/users', { replace: true }), 1500);
                     return;
                 }
 
@@ -387,7 +389,7 @@ function PermissionDetailPage() {
 
                 <footer className={styles.footer}>
                     <div className={styles.footerLeft}>
-                        <button type="button" className="btnDefault" onClick={() => navigate('/users')}>
+                        <button type="button" className="btnDefault" onClick={goBack}>
                             <i className="bi bi-arrow-left" /> Quay lại danh sách
                         </button>
                         {hasAnyUnsavedChanges && (

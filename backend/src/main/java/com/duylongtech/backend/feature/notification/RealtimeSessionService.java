@@ -28,6 +28,9 @@ import com.duylongtech.backend.feature.auth.UserDto;
 import com.duylongtech.backend.feature.notification.RealtimeForceLogoutEvent;
 import com.duylongtech.backend.feature.notification.RealtimeSessionService;
 import com.duylongtech.backend.feature.notification.RealtimeUserEvent;
+import com.duylongtech.backend.feature.warehouse.UserWarehouseRoleRepository;
+import com.duylongtech.backend.feature.warehouse.UserWarehouseRole;
+
 
 @Slf4j
 @Service
@@ -41,8 +44,11 @@ public class RealtimeSessionService {
     private static final String EVENT_FORCE_LOGOUT = "force-logout";
     private static final String EVENT_NOTIFICATION = "notification";
     private static final String EVENT_SYSTEM_HEALTH = "system-health";
+    private static final String EVENT_DATA_CHANGED = "data-changed";
+    private static final String TOPIC_USER = "USER";
 
     private final SystemHealthService systemHealthService;
+    private final UserWarehouseRoleRepository userWarehouseRoleRepository;
 
     private final ConcurrentMap<String, ClientConnection> connections = new ConcurrentHashMap<>();
     private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -63,12 +69,17 @@ public class RealtimeSessionService {
     public SseEmitter subscribe(UserDetailsImpl userDetails) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         String connectionId = UUID.randomUUID().toString();
+        Set<Long> warehouseIds = userWarehouseRoleRepository.findByUserId(userDetails.getId()).stream()
+                .map(UserWarehouseRole::getWarehouseId)
+                .collect(Collectors.toSet());
+
         ClientConnection connection = new ClientConnection(
                 connectionId,
                 userDetails.getId(),
                 userDetails.getAuthorities().stream()
                         .map(authority -> authority.getAuthority())
                         .collect(Collectors.toSet()),
+                warehouseIds,
                 emitter
         );
 
@@ -103,7 +114,17 @@ public class RealtimeSessionService {
         if (notification.getUserId() != null) {
             sendToMatching(connection -> notification.getUserId().equals(connection.userId), EVENT_NOTIFICATION, notification);
         } else if (notification.getRecipientRole() != null) {
-            sendToMatching(connection -> connection.authorities.contains(notification.getRecipientRole()), EVENT_NOTIFICATION, notification);
+            sendToMatching(connection -> connection.authorities.contains(notification.getRecipientRole())
+                    && (notification.getWarehouseId() == null || isAdminConnection(connection) || connection.warehouseIds.contains(notification.getWarehouseId())),
+                    EVENT_NOTIFICATION, notification);
+        }
+    }
+
+    public void publishDataChanged(DataChangedPayload payload) {
+        if (TOPIC_USER.equals(payload.topic())) {
+            sendToMatching(this::isAdminConnection, EVENT_DATA_CHANGED, payload);
+        } else {
+            sendToMatching(connection -> true, EVENT_DATA_CHANGED, payload);
         }
     }
 
@@ -143,10 +164,13 @@ public class RealtimeSessionService {
 
     private void send(ClientConnection connection, String eventName, Object payload) {
         try {
-            connection.emitter.send(SseEmitter.event()
-                    .name(eventName)
-                    .data(payload));
-        } catch (IOException ex) {
+            // SseEmitter không an toàn khi nhiều luồng ghi cùng lúc (heartbeat, thông báo, data-changed).
+            synchronized (connection.emitter) {
+                connection.emitter.send(SseEmitter.event()
+                        .name(eventName)
+                        .data(payload));
+            }
+        } catch (IOException | IllegalStateException ex) {
             log.debug("Closing realtime connection {} after send failure: {}", connection.connectionId, ex.getMessage());
             removeConnection(connection.connectionId);
         }
@@ -159,6 +183,6 @@ public class RealtimeSessionService {
         }
     }
 
-    private record ClientConnection(String connectionId, Long userId, Set<String> authorities, SseEmitter emitter) {
+    private record ClientConnection(String connectionId, Long userId, Set<String> authorities, Set<Long> warehouseIds, SseEmitter emitter) {
     }
 }

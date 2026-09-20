@@ -1,6 +1,7 @@
 package com.duylongtech.backend.job;
 
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
 import com.duylongtech.backend.feature.notification.AppNotificationRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRepository;
@@ -99,14 +100,14 @@ public class PurchaseOrderReminderJob {
         // Trường hợp 1: Đã quá hạn công nợ
         if (dueDate.isBefore(today)) {
             String refType = "PO_PAYMENT_OVERDUE";
-            String title = "⚠️ Đơn mua " + po.getPoCode() + " đã quá hạn công nợ";
+            String title = "Đơn mua " + po.getPoCode() + " đã quá hạn công nợ";
             String message = String.format("Đơn mua %s của NCC \"%s\" đã quá hạn thanh toán từ ngày %s. Số tiền còn nợ: %s.",
                     po.getPoCode(), supplierName, dueDateStr, moneyStr);
 
             for (String role : DEBT_ROLES) {
                 if (!appNotificationRepository.existsRecentNotification(refType, po.getId(), role, todayStart)) {
                     appNotificationService.createNotification(role, null, title, message,
-                            "DISCREPANCY", refType, po.getId(), poLink);
+                            "DISCREPANCY", refType, po.getId(), poLink, null);
                     sent++;
                 }
             }
@@ -115,14 +116,14 @@ public class PurchaseOrderReminderJob {
         else if (!dueDate.isAfter(today.plusDays(3))) {
             String refType = "PO_PAYMENT_UPCOMING";
             String daysNote = dueDate.isEqual(today) ? "hôm nay" : ("ngày " + dueDateStr);
-            String title = "⏰ Đơn mua " + po.getPoCode() + " sắp đến hạn công nợ (" + daysNote + ")";
+            String title = "Đơn mua " + po.getPoCode() + " sắp đến hạn công nợ (" + daysNote + ")";
             String message = String.format("Đơn mua %s của NCC \"%s\" sẽ đến hạn thanh toán vào %s. Số tiền cần chi trả: %s.",
                     po.getPoCode(), supplierName, daysNote, moneyStr);
 
             for (String role : DEBT_ROLES) {
                 if (!appNotificationRepository.existsRecentNotification(refType, po.getId(), role, todayStart)) {
                     appNotificationService.createNotification(role, null, title, message,
-                            "ORDER", refType, po.getId(), poLink);
+                            "ORDER", refType, po.getId(), poLink, null);
                     sent++;
                 }
             }
@@ -152,14 +153,14 @@ public class PurchaseOrderReminderJob {
         // Trường hợp 1: Quá hạn ngày giao dự kiến mà chưa nhập đủ
         if (deliveryDate.isBefore(today)) {
             String refType = "PO_DELIVERY_OVERDUE";
-            String title = "🚚 Đơn mua " + po.getPoCode() + " trễ hạn giao hàng dự kiến";
+            String title = "Đơn mua " + po.getPoCode() + " trễ hạn giao hàng dự kiến";
             String message = String.format("Đơn mua %s từ NCC \"%s\" có ngày giao dự kiến là %s nhưng hiện tại kho vẫn chưa hoàn tất nhập hàng.",
                     po.getPoCode(), supplierName, deliveryDateStr);
 
             for (String role : DELIVERY_ROLES) {
                 if (!appNotificationRepository.existsRecentNotification(refType, po.getId(), role, todayStart)) {
                     appNotificationService.createNotification(role, null, title, message,
-                            "DISCREPANCY", refType, po.getId(), poLink);
+                            "DISCREPANCY", refType, po.getId(), poLink, null);
                     sent++;
                 }
             }
@@ -168,14 +169,14 @@ public class PurchaseOrderReminderJob {
         else if (!deliveryDate.isAfter(today.plusDays(1))) {
             String refType = "PO_DELIVERY_UPCOMING";
             String timeNote = deliveryDate.isEqual(today) ? "hôm nay (" + deliveryDateStr + ")" : "ngày mai (" + deliveryDateStr + ")";
-            String title = "📦 Đơn mua " + po.getPoCode() + " dự kiến giao hàng " + timeNote;
+            String title = "Đơn mua " + po.getPoCode() + " dự kiến giao hàng " + timeNote;
             String message = String.format("Đơn mua %s từ NCC \"%s\" dự kiến sẽ giao đến kho vào %s. Vui lòng bố trí nhân sự và vị trí tiếp nhận hàng.",
                     po.getPoCode(), supplierName, timeNote);
 
             for (String role : DELIVERY_ROLES) {
                 if (!appNotificationRepository.existsRecentNotification(refType, po.getId(), role, todayStart)) {
                     appNotificationService.createNotification(role, null, title, message,
-                            "ORDER", refType, po.getId(), poLink);
+                            "ORDER", refType, po.getId(), poLink, null);
                     sent++;
                 }
             }
@@ -188,18 +189,8 @@ public class PurchaseOrderReminderJob {
         if (po.getLines() == null || po.getLines().isEmpty()) {
             return false;
         }
-
-        for (PurchaseOrderLine line : po.getLines()) {
-            BigDecimal ordered = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ZERO;
-            BigDecimal imported = inventoryDocumentLineRepository
-                    .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), line.getVariantId());
-            if (imported == null) {
-                imported = BigDecimal.ZERO;
-            }
-            if (ordered.subtract(imported).compareTo(BigDecimal.ZERO) > 0) {
-                return false; // Còn mặt hàng chưa nhập đủ
-            }
-        }
-        return true;
+        // Đã nhận đủ = mọi kho đã GHI SỔ đủ số lượng đặt (phiếu nháp chưa nhận hàng thì vẫn phải nhắc giao hàng).
+        return PurchaseOrderReceiving.of(po.getLines(),
+                inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), null)).isFullyPosted();
     }
 }

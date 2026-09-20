@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import MasterDetailLayout from '../../components/ui/MasterDetailLayout/MasterDetailLayout';
@@ -8,14 +8,33 @@ import Toast from '../../components/ui/Toast/Toast';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { getDateRangePreset } from '../../utils/datePresets';
+import { formatDateOnly } from '../../utils/dateFormat';
+import {
+  IMPORT_PURPOSE_OPTIONS,
+  EXPORT_PURPOSE_OPTIONS,
+  DOCUMENT_STATUS_OPTIONS,
+  STOCKTAKE_STATUS_OPTIONS,
+} from '../../utils/documentFilterOptions';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
-import * as stockTransferApi from '../../api/stockTransferApi';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import { getMyWarehouses } from '../../api/warehouseApi';
-import { NOTIFICATION_EVENT } from '../../auth/session';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import styles from './WarehouseWorkspacePage.module.css';
+import useSessionState from '../../hooks/useSessionState';
+
+// Gộp các đối tác đã thấy trong danh sách để làm tùy chọn lọc (không cần quyền xem danh mục NCC/khách hàng).
+function mergePartners(previous = [], rows = []) {
+  const known = new Map(previous.map((partner) => [String(partner.id), partner]));
+  rows.forEach((row) => {
+    if (row.partnerId && !known.has(String(row.partnerId))) {
+      known.set(String(row.partnerId), { id: row.partnerId, name: row.partnerName || `#${row.partnerId}` });
+    }
+  });
+  if (known.size === previous.length) return previous;
+  return [...known.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'vi'));
+}
 
 export default function WarehouseWorkspacePage() {
   const navigate = useNavigate();
@@ -25,13 +44,19 @@ export default function WarehouseWorkspacePage() {
   // Master Data State
   const [masterList, setMasterList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+  const selectedItemRef = useRef(selectedItem);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [periodPreset, setPeriodPreset] = useState('ALL');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [searchTerm, setSearchTerm] = useSessionState('searchTerm', '');
+  const [periodPreset, setPeriodPreset] = useSessionState('periodPreset', 'ALL');
+  const [fromDate, setFromDate] = useSessionState('fromDate', '');
+  const [toDate, setToDate] = useSessionState('toDate', '');
   const [warehouses, setWarehouses] = useState([]);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useSessionState('selectedWarehouseId', '');
+  // Bộ lọc riêng theo từng tab (trạng thái / loại phiếu / đối tác) - mỗi tab có bộ tùy chọn khác nhau.
+  const [tabFilters, setTabFilters] = useSessionState('tabFilters', {});
+  const [knownPartners, setKnownPartners] = useState({});
+  const { status: statusFilter = '', issuePurpose: purposeFilter = '', partnerId: partnerFilter = '' } = tabFilters[activeTab] || {};
 
   // Detail State
   const [detailLines, setDetailLines] = useState([]);
@@ -87,6 +112,11 @@ export default function WarehouseWorkspacePage() {
       if (selectedWarehouseId) {
         params.warehouseId = selectedWarehouseId;
       }
+      if (statusFilter) params.status = statusFilter;
+      if (activeTab !== 'stocktakes') {
+        if (purposeFilter) params.issuePurpose = purposeFilter;
+        if (partnerFilter) params.partnerId = partnerFilter;
+      }
       if (periodPreset === 'CUSTOM') {
         if (fromDate) params.fromDate = fromDate;
         if (toDate) params.toDate = toDate;
@@ -100,21 +130,29 @@ export default function WarehouseWorkspacePage() {
         const res = await importApi.getImportHistory(params);
         const data = res.data?.data || res.data || [];
         setMasterList(data);
-        if (!silent && data.length > 0) setSelectedItem(data[0]);
+        setKnownPartners((prev) => ({ ...prev, imports: mergePartners(prev.imports, data) }));
+        if (!silent && data.length > 0) {
+          setSelectedItem(data[0]);
+        } else if (silent && selectedItemRef.current) {
+          const fresh = data.find((it) => it.id === selectedItemRef.current.id);
+          if (fresh) setSelectedItem({ ...fresh });
+        }
       } else if (activeTab === 'exports') {
         const res = await exportApi.getExportHistory(params);
         const data = res.data?.data || res.data || [];
         setMasterList(data);
-        if (!silent && data.length > 0) setSelectedItem(data[0]);
-      } else if (activeTab === 'transfers') {
-        const res = await stockTransferApi.getTransferHistory(params);
-        const data = res.data?.data || res.data || [];
-        setMasterList(data);
-        if (!silent && data.length > 0) setSelectedItem(data[0]);
+        setKnownPartners((prev) => ({ ...prev, exports: mergePartners(prev.exports, data) }));
+        if (!silent && data.length > 0) {
+          setSelectedItem(data[0]);
+        } else if (silent && selectedItemRef.current) {
+          const fresh = data.find((it) => it.id === selectedItemRef.current.id);
+          if (fresh) setSelectedItem({ ...fresh });
+        }
       } else if (activeTab === 'stocktakes') {
         const stParams = {
           stocktakeCode: searchTerm || undefined,
           warehouseId: selectedWarehouseId || undefined,
+          status: statusFilter || undefined,
           fromDate: params.fromDate,
           toDate: params.toDate,
         };
@@ -122,7 +160,12 @@ export default function WarehouseWorkspacePage() {
         const data = res.data?.data?.content || res.data?.content || res.data?.data || res.data || [];
         const arr = Array.isArray(data) ? data : [];
         setMasterList(arr);
-        if (!silent && arr.length > 0) setSelectedItem(arr[0]);
+        if (!silent && arr.length > 0) {
+          setSelectedItem(arr[0]);
+        } else if (silent && selectedItemRef.current) {
+          const fresh = arr.find((it) => it.id === selectedItemRef.current.id);
+          if (fresh) setSelectedItem({ ...fresh });
+        }
       }
     } catch (err) {
       console.error('Error loading warehouse master list:', err);
@@ -130,26 +173,17 @@ export default function WarehouseWorkspacePage() {
     } finally {
       if (!silent) setLoadingMaster(false);
     }
-  }, [activeTab, searchTerm, periodPreset, fromDate, toDate, selectedWarehouseId]);
+  }, [activeTab, searchTerm, periodPreset, fromDate, toDate, selectedWarehouseId, statusFilter, purposeFilter, partnerFilter]);
 
   useEffect(() => {
     fetchMasterData();
   }, [fetchMasterData]);
 
-  // Refresh the list in the background so newly-created import/export documents
-  // from other roles (e.g. Ke toan tao phieu nhap) show up here without the
-  // warehouse worker having to click "Nap lai" themselves. Driven by the
-  // realtime notification push (see RealtimeSessionBridge) instead of polling.
-  useEffect(() => {
-    const handleRealtimeNotification = (event) => {
-      const refType = event.detail?.referenceType;
-      if (refType === 'IMPORT_DOCUMENT' || refType === 'EXPORT_DOCUMENT') {
-        fetchMasterData(true);
-      }
-    };
-    window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
-    return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
-  }, [fetchMasterData]);
+  // Tự làm mới danh sách khi phiếu nhập/xuất/kiểm kê đổi ở nơi khác (SSE data-changed), giữ nguyên dòng đang chọn.
+  useRealtimeRefresh(
+    ['IMPORT_DOCUMENT', 'EXPORT_DOCUMENT', 'STOCKTAKE'],
+    ({ silent } = {}) => fetchMasterData(silent)
+  );
 
   // Fetch Detail when selected item changes
   useEffect(() => {
@@ -166,10 +200,6 @@ export default function WarehouseWorkspacePage() {
           setDetailLines(data.lines || []);
         } else if (activeTab === 'exports') {
           const res = await exportApi.getExportDetail(selectedItem.id);
-          const data = res.data?.data || res.data;
-          setDetailLines(data.lines || []);
-        } else if (activeTab === 'transfers') {
-          const res = await stockTransferApi.getTransferDetail(selectedItem.id);
           const data = res.data?.data || res.data;
           setDetailLines(data.lines || []);
         } else if (activeTab === 'stocktakes') {
@@ -237,10 +267,6 @@ export default function WarehouseWorkspacePage() {
       navigate(`/stocktakes/${slip.id}`);
       return;
     }
-    if (activeTab === 'transfers') {
-      navigate(`/warehouse-workspace/transfers/${slip.id}`);
-      return;
-    }
     navigate(`/warehouse-workspace/${activeTab === 'imports' ? 'imports' : 'exports'}/${slip.id}`);
   };
 
@@ -290,7 +316,7 @@ export default function WarehouseWorkspacePage() {
           key: 'stocktakeDate',
           label: 'Ngày kiểm kê',
           width: '120px',
-          render: (v) => v ? new Date(v).toLocaleDateString('vi-VN') : '-'
+          render: (v) => v ? formatDateOnly(v) : '-'
         },
         {
           key: 'stocktakeCode',
@@ -382,14 +408,14 @@ export default function WarehouseWorkspacePage() {
         width: '115px',
         render: (_, r) => {
           const isPosted = r.status === 'POSTED' || r.status === 'COMPLETED';
-          return isPosted ? (r.postedAt ? new Date(r.postedAt).toLocaleDateString('vi-VN') : r.docDate || '-') : '-';
+          return isPosted ? (r.postedAt ? formatDateOnly(r.postedAt) : formatDateOnly(r.docDate) || '-') : '-';
         }
       },
       {
         key: 'docDate',
         label: 'Ngày chứng từ',
         width: '110px',
-        render: (v) => v ? new Date(v).toLocaleDateString('vi-VN') : '-'
+        render: (v) => v ? formatDateOnly(v) : '-'
       },
       {
         key: 'docCode',
@@ -437,6 +463,7 @@ export default function WarehouseWorkspacePage() {
         label: 'Ghi chú',
         width: '220px',
         render: (v, r) => {
+          const isTransferDoc = r.issuePurpose === 'TRANSFER_EXPORT' || r.issuePurpose === 'TRANSFER_IMPORT';
           const noteText = v || `${activeTab === 'imports' ? 'Nhập hàng từ' : 'Xuất hàng cho'} ${r.partnerName || ''}`;
           return (
             <span
@@ -449,6 +476,11 @@ export default function WarehouseWorkspacePage() {
               }}
               title={noteText}
             >
+              {isTransferDoc && (
+                <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginRight: 6 }}>
+                  Chuyển kho
+                </span>
+              )}
               {noteText}
             </span>
           );
@@ -661,6 +693,17 @@ export default function WarehouseWorkspacePage() {
     ];
   }, [activeTab]);
 
+  // Giữ tham chiếu ổn định để hộp lọc đang mở không bị reset mỗi lần danh sách tự làm mới.
+  const popoverFilters = useMemo(() => ({
+    preset: periodPreset,
+    fromDate,
+    toDate,
+    warehouseId: selectedWarehouseId,
+    status: statusFilter,
+    issuePurpose: purposeFilter,
+    partnerId: partnerFilter,
+  }), [periodPreset, fromDate, toDate, selectedWarehouseId, statusFilter, purposeFilter, partnerFilter]);
+
   return (
     <AdminLayout>
       <div className={styles.pageContainer} onClick={() => setOpenDropdownId(null)}>
@@ -720,20 +763,34 @@ export default function WarehouseWorkspacePage() {
             </div>
 
             <FilterPopover
-              filters={{ preset: periodPreset, fromDate, toDate, warehouseId: selectedWarehouseId }}
+              filters={popoverFilters}
               onApply={(newFilters) => {
                 setPeriodPreset(newFilters.preset || 'CUSTOM');
                 setFromDate(newFilters.fromDate || '');
                 setToDate(newFilters.toDate || '');
                 setSelectedWarehouseId(newFilters.warehouseId || '');
+                setTabFilters((prev) => ({
+                  ...prev,
+                  [activeTab]: {
+                    status: newFilters.status || '',
+                    issuePurpose: newFilters.issuePurpose || '',
+                    partnerId: newFilters.partnerId || '',
+                  },
+                }));
               }}
               onReset={() => {
                 setPeriodPreset('ALL');
                 setFromDate('');
                 setToDate('');
                 setSelectedWarehouseId(warehouses.length === 1 ? String(warehouses[0].id) : '');
+                setTabFilters((prev) => ({ ...prev, [activeTab]: {} }));
               }}
               warehouses={warehouses}
+              partners={activeTab === 'stocktakes' ? [] : (knownPartners[activeTab] || [])}
+              partnerLabel={activeTab === 'exports' ? 'Khách hàng' : 'Nhà cung cấp / Đối tác'}
+              purposeOptions={activeTab === 'imports' ? IMPORT_PURPOSE_OPTIONS : activeTab === 'exports' ? EXPORT_PURPOSE_OPTIONS : []}
+              purposeLabel={activeTab === 'exports' ? 'Loại phiếu xuất' : 'Loại phiếu nhập'}
+              statusOptions={activeTab === 'stocktakes' ? STOCKTAKE_STATUS_OPTIONS : DOCUMENT_STATUS_OPTIONS}
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
 import { scanImportSlipOcr } from '../../api/inventoryImportApi';
@@ -12,6 +13,7 @@ import SupplierModal from '../Supplier/components/SupplierModal';
 import CustomerModal from '../Customer/components/CustomerModal';
 import AssemblyOrderSelectionModal from './components/AssemblyOrderSelectionModal';
 import * as stocktakeApi from '../../api/stocktakeApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from './ManageSerialModal';
@@ -32,6 +34,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import { canViewPricing, hasPermission } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -119,7 +122,7 @@ const customSelectStyles = {
   })
 };
 
-const emptyLine = (defaultWarehouseId = '') => ({
+const emptyLine = (defaultWarehouseId = '', defaultVat = 0) => ({
   localId: crypto.randomUUID(),
   variantId: '',
   warehouseId: defaultWarehouseId,
@@ -130,13 +133,14 @@ const emptyLine = (defaultWarehouseId = '') => ({
   serialNumbers: [],
   quantity: 1,
   price: 0,
-  vatPercent: 0,
+  vatPercent: defaultVat,
   note: '',
   isNew: true,
 });
 
 function CreateImportSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/import-history');
   const showPricing = canViewPricing();
   const location = useLocation();
   const { aiEnabled } = useAiFeature();
@@ -170,6 +174,7 @@ function CreateImportSlipPage() {
   const [ocrQuickAddCategoryName, setOcrQuickAddCategoryName] = useState('');
   const [ocrQuickAddWarrantyMonths, setOcrQuickAddWarrantyMonths] = useState('');
   const [attachments, setAttachments] = useState([]);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
   const handleOcrPreviewQuickAdd = (index, rawProductName, unit, category, warrantyMonths) => {
     setOcrQuickAddPreviewIndex(index);
@@ -262,7 +267,7 @@ function CreateImportSlipPage() {
     if (poData && poData.lines && poData.lines.length > 0) {
       const poLines = filterWarehouseLines(poData.lines);
       return poLines.length > 0 ? poLines.map(line => ({
-        ...emptyLine(poData.warehouseId ? String(poData.warehouseId) : ''),
+        ...emptyLine(poData.warehouseId ? String(poData.warehouseId) : '', vatConfig.defaultVatRate),
         variantId: String(line.variantId),
         warehouseId: String(line.warehouseId || poData.warehouseId || ''),
         quantity: Number(line.quantity) || 1,
@@ -371,14 +376,19 @@ function CreateImportSlipPage() {
         })
         .catch(err => console.error('Failed to load next import docCode', err));
 
-      const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
+      const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes, vatRes] = await Promise.allSettled([
         importApi.getWarehouses({ size: 100 }),
         importApi.getSuppliers({ status: 'APPROVED' }),
         importApi.getProducts({ size: 1000, excludeServices: true }),
         customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         assemblyOrderApi.getAssemblyOrders({ size: 100 }),
-        exportApi.getUsers({ size: 1000 })
+        exportApi.getUsers({ size: 1000 }),
+        businessSettingsApi.getDefaultVat(),
       ]);
+      if (vatRes.status === 'fulfilled') {
+        const vConf = vatRes.value?.data?.data || vatRes.value?.data;
+        if (vConf?.allowedVatRates) setVatConfig(vConf);
+      }
       if (warehouseRes.status === 'fulfilled') {
         const data = pageContent(unwrap(warehouseRes.value));
         setWarehouses(data);
@@ -621,12 +631,12 @@ function CreateImportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''))]);
-    setItemPage(Math.ceil((items.length + 1) / itemPageSize));
+    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate), variantId: filteredProducts[0]?.id || '' }]);
+    setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId), isNew: false }]);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId, vatConfig.defaultVatRate), isNew: false }]);
   };
 
   const selectedSerialItem = items.find(item => item.localId === serialModalItemId);
@@ -794,9 +804,9 @@ function CreateImportSlipPage() {
         }
       }
       const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-      if (isNaN(vat) || vat < 0 || vat > 10) {
+      if (isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
         focusField(`import-line-vat-${i}`);
-        return showToast('error', `Dòng ${i + 1}: Thuế VAT phải nằm trong khoảng từ 0% đến 10%.`);
+        return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
       }
       if (item.maxQuantity !== undefined && item.maxQuantity !== null && Number(item.quantity) > Number(item.maxQuantity)) {
         focusField(`import-line-qty-${i}`);
@@ -850,7 +860,7 @@ function CreateImportSlipPage() {
       setShowSuccessModal(true);
     } catch (err) {
       if (createdId) {
-        navigate('/import-history', { state: { toastMessage: 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
+        navigate('/import-history', { replace: true, state: { toastMessage: 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
       } else {
         showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu nhập kho');
       }
@@ -1008,13 +1018,12 @@ function CreateImportSlipPage() {
         <select
           className="misa-input"
           style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }}
-          value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0}
+          value={item.vatPercent !== undefined ? Number(item.vatPercent) : vatConfig.defaultVatRate}
           onChange={(e) => handleItemChange(item.localId, 'vatPercent', Number(e.target.value))}
         >
-          <option value={0}>0%</option>
-          <option value={5}>5%</option>
-          <option value={8}>8%</option>
-          <option value={10}>10%</option>
+          {vatConfig.allowedVatRates.map(rate => (
+            <option key={rate} value={rate}>{rate}%</option>
+          ))}
         </select>
       )}
     );
@@ -1061,7 +1070,7 @@ function CreateImportSlipPage() {
     <AdminLayout>
       <div className={styles.pageHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/import-history'); }}>
+          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
             <i className="bi bi-arrow-left"></i> Quay lại
           </a>
           <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}</span>
@@ -1426,9 +1435,8 @@ function CreateImportSlipPage() {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Ngày lập phiếu <span className="required">*</span></label>
-                <input
+                <DateInput
                   id="import-docDate"
-                  type="date"
                   className="misa-input"
                   value={form.docDate}
                   onChange={(e) => handleFormChange('docDate', e.target.value)}
@@ -1563,7 +1571,7 @@ function CreateImportSlipPage() {
 
       <div className={styles.fixedFooter}>
         <div className={styles.footerLeft}>
-          <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+          <button className="btn-misa-cancel" onClick={goBack}>
             <i className="bi bi-x-circle"></i> Hủy bỏ
           </button>
         </div>
@@ -1734,9 +1742,9 @@ function CreateImportSlipPage() {
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
         onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
-        onViewList={() => navigate(returnUrl || '/import-history')}
+        onViewList={() => navigate(returnUrl || '/import-history', { replace: true })}
         onCreateNew={() => window.location.reload()}
-        onClose={() => navigate(returnUrl || '/import-history')}
+        onClose={goBack}
       />
 
       <OcrUploadModal

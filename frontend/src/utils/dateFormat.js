@@ -77,7 +77,8 @@ export const formatDateTime = (value, options = {}) => {
   const localDateTime = text.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
   if (localDateTime && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(text)) {
     const [, year, month, day, hour, minute, second = '00'] = localDateTime;
-    return `${pad(day)}/${pad(month)}/${year} ${pad(hour)}:${pad(minute)}:${pad(second)}`;
+    const seconds = options.withSeconds === false ? '' : `:${pad(second)}`;
+    return `${pad(day)}/${pad(month)}/${year} ${pad(hour)}:${pad(minute)}${seconds}`;
   }
 
   const date = value instanceof Date ? value : new Date(value);
@@ -99,4 +100,26 @@ export const getVietnamTimestamp = (value = new Date()) => {
   const datePart = formatDateOnly(value).split('/').reverse().join('');
   const timePart = formatTime(value, { withSeconds: true }).replace(/:/g, '');
   return `${datePart}_${timePart}`;
+};
+
+// --- Nhập ngày theo dd/mm/yyyy (dùng cho components/ui/DateInput) ---
+
+/** Lọc chỉ giữ chữ số (tối đa 8) rồi chèn "/" theo dd/mm/yyyy; chỉ chèn "/" khi đã có chữ số phía sau để còn xóa lùi được. */
+export const maskDateText = (text) => {
+  const digits = String(text ?? '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+};
+
+/** "dd/mm/yyyy" -> "yyyy-mm-dd" nếu là ngày có thật (kể cả năm nhuận), ngược lại null. */
+export const parseDisplayDate = (text) => {
+  const match = String(text ?? '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const valid = date.getUTCFullYear() === Number(year)
+    && date.getUTCMonth() === Number(month) - 1
+    && date.getUTCDate() === Number(day);
+  return valid && Number(year) >= 1000 ? `${year}-${month}-${day}` : null;
 };

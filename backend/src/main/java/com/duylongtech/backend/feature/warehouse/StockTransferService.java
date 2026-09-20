@@ -3,6 +3,8 @@ package com.duylongtech.backend.feature.warehouse;
 import com.duylongtech.backend.enums.DocumentStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.feature.inventory.InventoryDocument;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRequest;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRequest;
@@ -15,10 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,8 +26,6 @@ import com.duylongtech.backend.feature.inventory.InventoryBalance;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
-import com.duylongtech.backend.feature.product.SerialNumber;
-import com.duylongtech.backend.feature.product.SerialNumberRepository;
 import com.duylongtech.backend.feature.system.CodeGeneratorService;
 
 @Service
@@ -42,7 +39,7 @@ public class StockTransferService {
     private StockTransferLineRepository stockTransferLineRepository;
 
     @Autowired
-    private SerialNumberRepository serialNumberRepository;
+    private InventoryDocumentRepository inventoryDocumentRepository;
 
     @Autowired
     private com.duylongtech.backend.feature.warehouse.StockTransferMapper stockTransferMapper;
@@ -52,6 +49,9 @@ public class StockTransferService {
 
     @Autowired
     private ProductVariantRepository productVariantRepository;
+
+    @Autowired
+    private WarehouseRepository warehouseRepository;
 
     @Autowired
     private InventoryDocumentService inventoryDocumentService;
@@ -146,8 +146,10 @@ public class StockTransferService {
 
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
-        if (DocumentStatus.POSTED.name().equals(stockTransfer.getStatus())) {
-            processInventoryForTransfer(stockTransfer, userId);
+        if (DocumentStatus.APPROVED.name().equals(requestDTO.getStatus())) {
+            stockTransfer.approve(userId);
+            stockTransfer = stockTransferRepository.save(stockTransfer);
+            createExportDraftForTransfer(stockTransfer, userId);
         }
 
         return mapToResponseDTO(stockTransfer);
@@ -170,11 +172,13 @@ public class StockTransferService {
         }
 
         stockTransfer.updateTransferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : stockTransfer.getTransferDate());
+        boolean shouldCreateExportDraft = false;
         if (requestDTO.getStatus() != null && !stockTransfer.getStatus().equals(requestDTO.getStatus())) {
             if (DocumentStatus.CANCELLED.name().equals(requestDTO.getStatus())) {
                 stockTransfer.cancel();
-            } else if (DocumentStatus.APPROVED.name().equals(requestDTO.getStatus()) || DocumentStatus.SUBMITTED.name().equals(requestDTO.getStatus())) {
-                stockTransfer.approve(userId); // Use approve to transition out of DRAFT
+            } else if (DocumentStatus.APPROVED.name().equals(requestDTO.getStatus())) {
+                stockTransfer.approve(userId); // Chuyển khỏi DRAFT, sẽ tự tạo phiếu xuất nháp bên dưới
+                shouldCreateExportDraft = true;
             }
         }
         stockTransfer.setNote(requestDTO.getNote());
@@ -203,94 +207,46 @@ public class StockTransferService {
 
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
-        if (DocumentStatus.POSTED.name().equals(stockTransfer.getStatus())) {
-            processInventoryForTransfer(stockTransfer, userId);
+        if (shouldCreateExportDraft) {
+            createExportDraftForTransfer(stockTransfer, userId);
         }
 
         return mapToResponseDTO(stockTransfer);
     }
+
+    /**
+     * Gọi bởi {@link StockTransferInventoryEventListener} sau khi 1 chứng từ kho liên
+     * kết với phiếu chuyển này (referenceType=STOCK_TRANSFER) được ghi sổ:
+     * - Nếu đó là phiếu xuất (TRANSFER_EXPORT): tạo phiếu nhập kho nháp cho kho đích,
+     *   lấy đúng số lượng/serial ĐÃ THỰC XUẤT (không phải số kế hoạch), rồi chuyển
+     *   phiếu chuyển sang IN_TRANSIT.
+     * - Nếu đó là phiếu nhập (TRANSFER_IMPORT): coi như phiếu chuyển đã hoàn tất.
+     * Idempotent: bỏ qua nếu phiếu chuyển không còn ở trạng thái tương ứng (đã xử lý
+     * rồi, hoặc sự kiện đến trùng lặp).
+     */
     @Transactional
-    public StockTransferResponseDTO dispatchTransfer(Long transferId, StockTransferDispatchDTO dispatchDTO, Long userId) {
-        StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
-                .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
+    public void handleLinkedDocumentPosted(Long transferId, Long documentId) {
+        StockTransfer stockTransfer = stockTransferRepository.findById(transferId).orElse(null);
+        if (stockTransfer == null) {
+            return;
+        }
+        InventoryDocument doc = inventoryDocumentRepository.findById(documentId).orElse(null);
+        if (doc == null) {
+            return;
+        }
 
-        if (dispatchDTO != null && dispatchDTO.getLines() != null) {
-            for (StockTransferProcessLineDTO processLine : dispatchDTO.getLines()) {
-                StockTransferLine line = stockTransfer.getLines().stream()
-                        .filter(l -> l.getId().equals(processLine.getLineId()))
-                        .findFirst().orElse(null);
-                if (line != null && processLine.getSerialNumbers() != null) {
-                    try {
-                        String serialsJson = objectMapper.writeValueAsString(processLine.getSerialNumbers());
-                        line.setSerialNumbersText(serialsJson);
-                        stockTransferLineRepository.save(line);
-                    } catch (JsonProcessingException e) {
-                        throw new BusinessException(SystemMessage.ST_ERR_001.getMessage());
-                    }
-                }
+        if (InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_OUT.equals(doc.getIssuePurpose())) {
+            if (!DocumentStatus.APPROVED.name().equals(stockTransfer.getStatus())) {
+                return; // đã xử lý rồi hoặc chưa ở đúng trạng thái - bỏ qua để tránh tạo trùng
             }
-        }
-
-        createAndPostExport(stockTransfer, userId);
-
-        stockTransfer.dispatch();
-        stockTransfer = stockTransferRepository.save(stockTransfer);
-
-        return mapToResponseDTO(stockTransfer);
-    }
-    @Transactional
-    public StockTransferResponseDTO receiveTransfer(Long transferId, StockTransferReceiptDTO receiptDTO, Long userId) {
-        StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
-                .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
-
-        if (!DocumentStatus.IN_TRANSIT.name().equals(stockTransfer.getStatus())) {
-            throw new BusinessException(SystemMessage.INV_INVALID_STATE);
-        }
-
-        if (receiptDTO != null && receiptDTO.getLines() != null) {
-            for (StockTransferProcessLineDTO processLine : receiptDTO.getLines()) {
-                StockTransferLine line = stockTransfer.getLines().stream()
-                        .filter(l -> l.getId().equals(processLine.getLineId()))
-                        .findFirst().orElse(null);
-                if (line != null && processLine.getSerialNumbers() != null) {
-                    try {
-                        String serialsJson = objectMapper.writeValueAsString(processLine.getSerialNumbers());
-                        line.setSerialNumbersText(serialsJson);
-                        stockTransferLineRepository.save(line);
-                    } catch (JsonProcessingException e) {
-                        throw new BusinessException(SystemMessage.ST_ERR_001.getMessage());
-                    }
-                }
+            createImportDraftFromPostedExport(stockTransfer, documentId);
+        } else if (InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
+            if (!DocumentStatus.IN_TRANSIT.name().equals(stockTransfer.getStatus())) {
+                return;
             }
+            stockTransfer.complete();
+            stockTransferRepository.save(stockTransfer);
         }
-
-        java.util.Map<Long, BigDecimal> exportedCosts = new java.util.HashMap<>();
-        List<InventoryDocumentResponse> exports = inventoryDocumentService.getExportHistory(
-                null, null, null, DocumentStatus.POSTED.name(), stockTransfer.getFromWarehouseId(),
-                InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_OUT, "STOCK_TRANSFER", stockTransfer.getId()
-        );
-        if (exports != null && !exports.isEmpty()) {
-            InventoryDocumentResponse exportDoc = exports.get(0);
-            if (exportDoc.getLines() != null) {
-                for (com.duylongtech.backend.feature.inventory.InventoryDocumentLineResponse l : exportDoc.getLines()) {
-                    if (l.getUnitCost() != null && l.getUnitCost().compareTo(BigDecimal.ZERO) > 0) {
-                        exportedCosts.put(l.getVariantId(), l.getUnitCost());
-                    }
-                }
-            }
-        }
-
-        createAndPostImport(stockTransfer, exportedCosts, userId);
-
-        stockTransfer.complete();
-        stockTransfer = stockTransferRepository.save(stockTransfer);
-
-        return mapToResponseDTO(stockTransfer);
-    }
-
-    private void processInventoryForTransfer(StockTransfer stockTransfer, Long userId) {
-        java.util.Map<Long, BigDecimal> exportedCosts = createAndPostExport(stockTransfer, userId);
-        createAndPostImport(stockTransfer, exportedCosts, userId);
     }
 
     /**
@@ -310,37 +266,12 @@ public class StockTransferService {
         }
     }
 
-    private String serialKey(Long variantId, String serialCode) {
-        return variantId + ":" + (serialCode == null ? "" : serialCode.trim().toUpperCase(Locale.ROOT));
-    }
-
     /**
-     * Batch-resolve toàn bộ cặp (variantId, serial) cần dùng cho các dòng chuyển kho
-     * bằng 1 câu query duy nhất, thay vì query lại serialNumberRepository cho từng
-     * serial trong vòng lặp (N+1 khi phiếu chuyển kho có nhiều dòng theo serial).
+     * Chỉ TẠO phiếu xuất kho ở trạng thái nháp (DRAFT) cho kho nguồn - không ghi sổ.
+     * Thủ kho A sẽ tự quét/kiểm đếm thực tế và ghi sổ chứng từ này qua màn Xuất kho
+     * bình thường, giống hệt mọi phiếu xuất khác.
      */
-    private java.util.Map<String, SerialNumber> loadSerialsByVariantAndCode(
-            java.util.Map<Long, List<String>> serialsByLineId, List<StockTransferLine> lines) {
-        Set<Long> variantIds = new HashSet<>();
-        Set<String> normalizedCodes = new HashSet<>();
-        for (StockTransferLine line : lines) {
-            List<String> serials = serialsByLineId.get(line.getId());
-            if (serials == null || serials.isEmpty()) continue;
-            variantIds.add(line.getVariantId());
-            for (String code : serials) {
-                if (code != null && !code.isBlank()) {
-                    normalizedCodes.add(code.trim().toUpperCase(Locale.ROOT));
-                }
-            }
-        }
-        if (variantIds.isEmpty() || normalizedCodes.isEmpty()) {
-            return java.util.Map.of();
-        }
-        return serialNumberRepository.findByVariantIdInAndNormalizedSerialNumberIn(variantIds, normalizedCodes).stream()
-                .collect(Collectors.toMap(sn -> serialKey(sn.getVariantId(), sn.getNormalizedSerialNumber()), sn -> sn));
-    }
-
-    private java.util.Map<Long, BigDecimal> createAndPostExport(StockTransfer stockTransfer, Long userId) {
+    private void createExportDraftForTransfer(StockTransfer stockTransfer, Long userId) {
         InventoryDocumentRequest exportReq = new InventoryDocumentRequest();
         exportReq.setWarehouseId(stockTransfer.getFromWarehouseId());
         exportReq.setDocDate(java.time.LocalDate.now());
@@ -348,100 +279,79 @@ public class StockTransferService {
         exportReq.setReferenceType("STOCK_TRANSFER");
         exportReq.setReferenceId(stockTransfer.getId());
         exportReq.setCreatedBy(userId);
-        exportReq.setNote("Tự động xuất kho cho phiếu chuyển kho " + stockTransfer.getTransferCode());
-        exportReq.setLines(new ArrayList<>());
-
-        java.util.Map<Long, List<String>> serialsByLineId = new java.util.HashMap<>();
-        for (StockTransferLine line : stockTransfer.getLines()) {
-            serialsByLineId.put(line.getId(), parseSerialNumbers(line.getSerialNumbersText(),
-                    "xuất kho phiếu chuyển " + stockTransfer.getTransferCode()));
-        }
-        java.util.Map<String, SerialNumber> serialByKey = loadSerialsByVariantAndCode(serialsByLineId, stockTransfer.getLines());
+        exportReq.setNote("Chuyển kho " + stockTransfer.getTransferCode() + " - vui lòng quét/kiểm đếm thực tế trước khi ghi sổ.");
+        List<InventoryDocumentLineRequest> lines = new ArrayList<>();
 
         for (StockTransferLine line : stockTransfer.getLines()) {
             BigDecimal qty = line.getQuantity();
             if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            BigDecimal unitCost = resolveTransferUnitCost(stockTransfer.getFromWarehouseId(), line.getVariantId(), line.getUnitCost());
-            List<String> serials = serialsByLineId.get(line.getId());
-
+            InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
+            lineReq.setVariantId(line.getVariantId());
+            lineReq.setQuantityOut(qty);
+            lineReq.setExpectedQuantity(qty);
+            lineReq.setUnitCost(resolveTransferUnitCost(stockTransfer.getFromWarehouseId(), line.getVariantId(), line.getUnitCost()));
+            List<String> serials = parseSerialNumbers(line.getSerialNumbersText(),
+                    "tạo phiếu xuất nháp cho chuyển kho " + stockTransfer.getTransferCode());
             if (!serials.isEmpty()) {
-                for (String sCode : serials) {
-                    SerialNumber serial = serialByKey.get(serialKey(line.getVariantId(), sCode));
-                    if (serial == null) {
-                        throw new BusinessException("Không tìm thấy Serial: " + sCode);
-                    }
-
-                    InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
-                    lineReq.setVariantId(line.getVariantId());
-                    lineReq.setQuantityOut(BigDecimal.ONE);
-                    lineReq.setSerialNumberId(serial.getId());
-                    lineReq.setUnitCost(unitCost);
-                    exportReq.getLines().add(lineReq);
-                }
-            } else {
-                InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
-                lineReq.setVariantId(line.getVariantId());
-                lineReq.setQuantityOut(qty);
-                lineReq.setUnitCost(unitCost);
-                exportReq.getLines().add(lineReq);
+                lineReq.setSerialNumbers(serials);
             }
+            lines.add(lineReq);
         }
+        exportReq.setLines(lines);
 
-        InventoryDocumentResponse created = inventoryDocumentService.createExport(exportReq);
-        InventoryDocumentResponse posted = inventoryDocumentService.postExport(created.getId());
-
-        java.util.Map<Long, BigDecimal> costByVariant = new java.util.HashMap<>();
-        if (posted != null && posted.getLines() != null) {
-            for (com.duylongtech.backend.feature.inventory.InventoryDocumentLineResponse l : posted.getLines()) {
-                if (l.getUnitCost() != null && l.getUnitCost().compareTo(BigDecimal.ZERO) > 0) {
-                    costByVariant.put(l.getVariantId(), l.getUnitCost());
-                }
-            }
-        }
-        return costByVariant;
+        inventoryDocumentService.createExport(exportReq);
     }
 
-    private void createAndPostImport(StockTransfer stockTransfer, java.util.Map<Long, BigDecimal> exportedCosts, Long userId) {
+    /**
+     * Tạo phiếu nhập kho nháp (DRAFT) cho kho đích ngay sau khi phiếu xuất kho tương
+     * ứng được ghi sổ - lấy đúng số lượng/serial/giá vốn ĐÃ THỰC XUẤT (không phải số
+     * kế hoạch ban đầu), để thủ kho B tự quét/kiểm đếm và ghi sổ như 1 phiếu nhập
+     * bình thường. Idempotent: bỏ qua nếu đã có phiếu nhập cho phiếu chuyển này.
+     */
+    private void createImportDraftFromPostedExport(StockTransfer stockTransfer, Long postedExportDocumentId) {
+        boolean alreadyHasImportDraft = !inventoryDocumentService.getImportHistory(
+                null, null, null, null, stockTransfer.getToWarehouseId(),
+                InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_IN, "STOCK_TRANSFER", stockTransfer.getId()
+        ).isEmpty();
+        if (alreadyHasImportDraft) {
+            return;
+        }
+
+        InventoryDocumentResponse exportDoc = inventoryDocumentService.getExportDetail(postedExportDocumentId);
+
         InventoryDocumentRequest importReq = new InventoryDocumentRequest();
         importReq.setWarehouseId(stockTransfer.getToWarehouseId());
         importReq.setDocDate(java.time.LocalDate.now());
         importReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_IN);
         importReq.setReferenceType("STOCK_TRANSFER");
         importReq.setReferenceId(stockTransfer.getId());
-        importReq.setCreatedBy(userId);
-        importReq.setNote("Tự động nhập kho cho phiếu chuyển kho " + stockTransfer.getTransferCode());
-        importReq.setLines(new ArrayList<>());
+        importReq.setCreatedBy(exportDoc.getApprovedBy() != null ? exportDoc.getApprovedBy() : stockTransfer.getCreatedBy());
+        importReq.setNote("Chuyển kho " + stockTransfer.getTransferCode() + " - đã xuất kho phiếu " + exportDoc.getDocCode()
+                + ", vui lòng quét/kiểm đếm thực nhận trước khi ghi sổ.");
 
-        for (StockTransferLine line : stockTransfer.getLines()) {
-            BigDecimal qty = line.getQuantity();
-            if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
+        List<InventoryDocumentLineRequest> lines = new ArrayList<>();
+        if (exportDoc.getLines() != null) {
+            for (com.duylongtech.backend.feature.inventory.InventoryDocumentLineResponse l : exportDoc.getLines()) {
+                BigDecimal qty = l.getQuantityOut();
+                if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            BigDecimal unitCost = exportedCosts != null ? exportedCosts.get(line.getVariantId()) : null;
-            if (unitCost == null || unitCost.compareTo(BigDecimal.ZERO) <= 0) {
-                unitCost = resolveTransferUnitCost(stockTransfer.getFromWarehouseId(), line.getVariantId(), line.getUnitCost());
+                InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
+                lineReq.setVariantId(l.getVariantId());
+                lineReq.setQuantityIn(qty);
+                lineReq.setExpectedQuantity(qty);
+                lineReq.setUnitCost(l.getUnitCost());
+                if (l.getSerialNumbers() != null && !l.getSerialNumbers().isEmpty()) {
+                    lineReq.setSerialNumbers(l.getSerialNumbers());
+                }
+                lines.add(lineReq);
             }
-
-            if (line.getUnitCost() == null || line.getUnitCost().compareTo(BigDecimal.ZERO) <= 0) {
-                line.updateUnitCost(unitCost);
-                stockTransferLineRepository.save(line);
-            }
-
-            List<String> serials = parseSerialNumbers(line.getSerialNumbersText(),
-                    "nhập kho phiếu chuyển " + stockTransfer.getTransferCode());
-
-            InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
-            lineReq.setVariantId(line.getVariantId());
-            lineReq.setQuantityIn(qty);
-            lineReq.setUnitCost(unitCost);
-            if (!serials.isEmpty()) {
-                lineReq.setSerialNumbers(serials);
-            }
-            importReq.getLines().add(lineReq);
         }
-        
-        InventoryDocumentResponse created = inventoryDocumentService.createImport(importReq);
-        inventoryDocumentService.postImport(created.getId());
+        importReq.setLines(lines);
+
+        inventoryDocumentService.createImport(importReq);
+        stockTransfer.dispatch();
+        stockTransferRepository.save(stockTransfer);
     }
     @Transactional(readOnly = true)
     public List<StockTransferResponseDTO> getAllTransfers() {
@@ -459,6 +369,26 @@ public class StockTransferService {
     private StockTransferResponseDTO mapToResponseDTO(StockTransfer transfer) {
         StockTransferResponseDTO response = stockTransferMapper.toResponse(transfer);
 
+        if (transfer.getFromWarehouseId() != null) {
+            warehouseRepository.findById(transfer.getFromWarehouseId())
+                    .ifPresent(w -> response.setFromWarehouseName(w.getName()));
+        }
+        if (transfer.getToWarehouseId() != null) {
+            warehouseRepository.findById(transfer.getToWarehouseId())
+                    .ifPresent(w -> response.setToWarehouseName(w.getName()));
+        }
+
+        List<InventoryDocument> linkedDocs = inventoryDocumentRepository.findByReferenceWithLines("STOCK_TRANSFER", transfer.getId());
+        for (InventoryDocument doc : linkedDocs) {
+            if (InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_OUT.equals(doc.getIssuePurpose())) {
+                response.setExportDocumentId(doc.getId());
+                response.setExportDocumentCode(doc.getDocCode());
+            } else if (InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
+                response.setImportDocumentId(doc.getId());
+                response.setImportDocumentCode(doc.getDocCode());
+            }
+        }
+
         if (transfer.getLines() != null) {
             List<StockTransferLineDTO> lines = transfer.getLines().stream()
                     .map(line -> {
@@ -466,6 +396,13 @@ public class StockTransferService {
                         List<String> serials = parseSerialNumbers(line.getSerialNumbersText(),
                                 "hiển thị dòng #" + line.getId() + " phiếu chuyển " + transfer.getTransferCode());
                         dto.setSerialNumbers(serials);
+                        if (line.getVariantId() != null) {
+                            productVariantRepository.findById(line.getVariantId()).ifPresent(v -> {
+                                dto.setSku(v.getSku());
+                                dto.setVariantName(v.getVariantName());
+                                dto.setProductName(v.getProduct() != null ? v.getProduct().getProductName() : v.getVariantName());
+                            });
+                        }
                         return dto;
                     })
                     .collect(Collectors.toList());

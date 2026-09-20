@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
 import { exportToExcel } from '../../utils/excelExport';
+import { printWarrantyCard } from '../../utils/printWarrantyCard';
 import styles from './WarrantyListPage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
@@ -12,6 +14,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_LABELS = {
@@ -48,13 +51,13 @@ function WarrantyListPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
   const [warranties, setWarranties] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+  const [pageSize, setPageSize] = useSessionState('pageSize', 20);
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -79,8 +82,8 @@ function WarrantyListPage() {
     setColumns(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const loadWarranties = useCallback(async () => {
-    setLoading(true);
+  const loadWarranties = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const params = {
         keyword: filters.keyword || undefined,
@@ -94,13 +97,14 @@ function WarrantyListPage() {
       const payload = unwrap(response);
       setWarranties(pageContent(payload));
       setTotalItems(totalFromPayload(payload, 0));
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không tải được danh sách bảo hành.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters, currentPage, pageSize]);
+  useRealtimeRefresh(['WARRANTY'], loadWarranties);
 
   useEffect(() => {
     loadWarranties();
@@ -257,13 +261,28 @@ function WarrantyListPage() {
     return tableCols;
   };
 
+  const handlePrintWarranty = (e, item) => {
+    e.stopPropagation();
+    printWarrantyCard(item, {
+      onError: (msg) => showToast('error', msg)
+    });
+  };
+
   const renderActions = (item) => (
-    <i
-      className="bi bi-eye"
-      style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
-      title="Xem chi tiết"
-      onClick={(e) => { e.stopPropagation(); navigate(`/warranties/${item.id}`); }}
-    ></i>
+    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+      <i
+        className="bi bi-printer"
+        style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
+        title="In thẻ bảo hành"
+        onClick={(e) => handlePrintWarranty(e, item)}
+      ></i>
+      <i
+        className="bi bi-eye"
+        style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
+        title="Xem chi tiết"
+        onClick={(e) => { e.stopPropagation(); navigate(`/warranties/${item.id}`); }}
+      ></i>
+    </div>
   );
 
   return (

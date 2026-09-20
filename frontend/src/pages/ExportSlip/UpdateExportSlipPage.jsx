@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as einvoiceApi from '../../api/einvoiceApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -23,6 +25,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
 import Badge from '../../components/ui/Badge/Badge';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -119,6 +122,7 @@ const emptyLine = (defaultWarehouseId = '') => ({
 
 function UpdateExportSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/export-slips');
   const location = useLocation();
   const { id } = useParams();
   const showPricing = canViewPricing();
@@ -164,6 +168,7 @@ function UpdateExportSlipPage() {
   });
   const [items, setItems] = useState([emptyLine()]);
   const [inventoryBalances, setInventoryBalances] = useState([]);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -230,15 +235,21 @@ function UpdateExportSlipPage() {
       setLoading(true);
       setError('');
       try {
-        const [warehouseRes, productRes, customerRes, userRes, slipRes] = await Promise.allSettled([
+        const [warehouseRes, productRes, customerRes, userRes, slipRes, vatRes] = await Promise.allSettled([
           exportApi.getWarehouses({ size: 100 }),
           exportApi.getProducts({ size: 1000 }),
           exportApi.getCustomers({ size: 1000 }),
           exportApi.getUsers({ size: 1000 }).catch(() => null),
           exportApi.getExportDetail(id),
+          businessSettingsApi.getDefaultVat(),
         ]);
 
         const detail = slipRes.status === 'fulfilled' ? unwrap(slipRes.value) : null;
+        if (vatRes.status === 'fulfilled') {
+          const vConf = vatRes.value?.data?.data || vatRes.value?.data;
+          if (vConf?.allowedVatRates) setVatConfig(vConf);
+        }
+
 
         if (warehouseRes.status === 'fulfilled') {
           setWarehouses(pageContent(unwrap(warehouseRes.value)));
@@ -752,7 +763,7 @@ function UpdateExportSlipPage() {
         }
       }
       const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-      if (isNaN(vat) || vat < 0 || vat > 10) {
+      if (isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
         focusField(`export-line-vat-${i}`);
         return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
       }
@@ -1042,13 +1053,12 @@ function UpdateExportSlipPage() {
             id={`export-line-vat-${index}`}
             className="misa-input"
             style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }}
-            value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0}
+            value={item.vatPercent !== undefined ? Number(item.vatPercent) : vatConfig.defaultVatRate}
             onChange={(event) => handleItemChange(item.localId, 'vatPercent', Number(event.target.value))}
           >
-            <option value={0}>0%</option>
-            <option value={5}>5%</option>
-            <option value={8}>8%</option>
-            <option value={10}>10%</option>
+            {vatConfig.allowedVatRates.map(rate => (
+              <option key={rate} value={rate}>{rate}%</option>
+            ))}
           </select>
         )
       }
@@ -1108,7 +1118,7 @@ function UpdateExportSlipPage() {
   return (
     <AdminLayout>
       <div className={styles.pageHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/export-slips'); }}>
+        <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
           <i className="bi bi-arrow-left"></i> Cập nhật phiếu xuất kho {form.docCode ? form.docCode : ''}
         </a>
 
@@ -1343,7 +1353,7 @@ function UpdateExportSlipPage() {
                 <div className={styles.cardBody}>
                   <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                     <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
-                    <input id="export-docDate" type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
+                    <DateInput id="export-docDate" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
                   </div>
 
                   <div className="misa-form-group" style={{ marginBottom: '16px' }}>
@@ -1477,7 +1487,7 @@ function UpdateExportSlipPage() {
         )}</div>
 
       <div className={styles.bottomBar}>
-        <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
+        <button className="btn-misa-cancel" onClick={goBack}>
           <i className="bi bi-x-circle"></i> Hủy bỏ
         </button>
         <div className={styles.actionButtons}>
@@ -1601,8 +1611,8 @@ function UpdateExportSlipPage() {
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
         onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
-        onViewList={() => navigate('/export-slips')}
-        onClose={() => navigate('/export-slips')}
+        onViewList={() => navigate(returnUrl || '/export-slips', { replace: true })}
+        onClose={goBack}
       />
 
       <Toast

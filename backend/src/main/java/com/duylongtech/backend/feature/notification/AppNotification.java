@@ -39,6 +39,9 @@ public class AppNotification {
     @Column(name = "link", length = 255)
     private String link;
 
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
     @Column(name = "is_read")
     private Boolean isRead = false;
 
@@ -46,7 +49,7 @@ public class AppNotification {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public void initNotification(String recipientRole, Long userId, String title, String message, String type, String referenceType, Long referenceId, String link) {
+    public void initNotification(String recipientRole, Long userId, String title, String message, String type, String referenceType, Long referenceId, String link, Long warehouseId) {
         this.recipientRole = recipientRole;
         this.userId = userId;
         this.title = title;
@@ -55,6 +58,7 @@ public class AppNotification {
         this.referenceType = referenceType;
         this.referenceId = referenceId;
         this.link = link;
+        this.warehouseId = warehouseId;
         this.isRead = false;
     }
 

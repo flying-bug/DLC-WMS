@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import BrandModal from './components/BrandModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -11,6 +13,7 @@ import usePermissionGuard from '../../hooks/usePermissionGuard';
 
 const BrandDetailPage = () => {
     const navigate = useNavigate();
+    const goBack = useGoBack('/brands');
     const { id } = useParams();
     const guard = usePermissionGuard();
     
@@ -24,9 +27,9 @@ const BrandDetailPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchBrand = useCallback(async () => {
+    const fetchBrand = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const res = await axiosClient.get(`/brands/${id}`);
             if (res.data && res.data.data) {
                 setBrand(res.data.data);
@@ -35,9 +38,10 @@ const BrandDetailPage = () => {
             console.error('Lỗi tải chi tiết thương hiệu:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết thương hiệu');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [id]);
+  useRealtimeRefresh({ BRAND: id }, fetchBrand);
 
     useEffect(() => {
         if (id) {
@@ -49,7 +53,7 @@ const BrandDetailPage = () => {
         try {
             await axiosClient.delete(`/brands/${id}`);
             setIsDeleteModalOpen(false);
-            navigate('/brands', { state: { toastMessage: `Đã xóa thương hiệu ${brand.name}`, toastType: 'success' } });
+            navigate('/brands', { replace: true, state: { toastMessage: `Đã xóa thương hiệu ${brand.name}`, toastType: 'success' } });
         } catch (error) {
             showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa thương hiệu');
             if (error.response?.status === 409) {
@@ -76,7 +80,7 @@ const BrandDetailPage = () => {
                     <div className={styles.emptyState} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px' }}>
                         <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`} style={{ fontSize: '48px', color: 'var(--wms-border-strong)', marginBottom: '16px' }}></i>
                         <div className={styles.emptyText} style={{ color: 'var(--wms-text-muted)', marginBottom: '24px' }}>Không tìm thấy thương hiệu này</div>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/brands')}>Quay lại danh sách</button>
+                        <button className={styles.btnPrimary} onClick={goBack}>Quay lại danh sách</button>
                     </div>
                 </div>
             </AdminLayout>
@@ -91,7 +95,7 @@ const BrandDetailPage = () => {
                         <button 
                             className={styles.iconBtn}
                             style={{ border: 'none', background: 'none' }}
-                            onClick={() => navigate('/brands')}
+                            onClick={goBack}
                         >
                             <i className="bi bi-arrow-left"></i>
                         </button>

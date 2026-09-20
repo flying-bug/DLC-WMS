@@ -3,6 +3,8 @@
 
 Dưới đây là danh sách các Quy tắc Nghiệp vụ (Business Rules) được chọn lọc và chuẩn hóa sát nhất với các Use Case thực tế của dự án DLC-WMS (Bao gồm Quản lý Danh mục, Nhập/Xuất kho, Chuyển/Kiểm kê, Lắp ráp BOM, và Bảo hành).
 
+> 📌 **Tài liệu chuyên sâu:** Xem chi tiết toàn bộ Business Rules, vòng đời trạng thái, ma trận RBAC và mã lỗi hệ thống cho luồng Mua - Nhập - Bán - Xuất tại: [INVENTORY_FLOW_BUSINESS_RULES.md](file:///d:/SEP490_G94/DLC-WMS/docs/INVENTORY_FLOW_BUSINESS_RULES.md)
+
 | ID | Rule Definition |
 | :--- | :--- |
 | **I. Quản lý Hệ thống & Phân quyền (System & Access)** | |

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styles from './StocktakeInitModal.module.css';
 import { getTodayIsoDate } from '../../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import DateInput from '../../../components/ui/DateInput/DateInput';
 
 
 function StocktakeInitModal({ onClose, warehouses = [] }) {
@@ -58,8 +59,7 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
 
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel}>Đến ngày</label>
-            <input
-              type="date"
+            <DateInput
               className={styles.inputControl}
               name="toDate"
               value={formData.toDate}

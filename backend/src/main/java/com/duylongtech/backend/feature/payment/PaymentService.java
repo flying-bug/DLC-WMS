@@ -82,12 +82,12 @@ public class PaymentService {
         try {
             boolean isReceipt = "RECEIPT".equals(payment.getType());
             String docLabel = isReceipt ? "thu" : "chi";
-            String title = (isReceipt ? "🧾 Phiếu thu mới chờ ghi sổ: " : "💵 Phiếu chi mới chờ ghi sổ: ") + payment.getTransactionCode();
+            String title = (isReceipt ? "Phiếu thu mới chờ ghi sổ: " : "Phiếu chi mới chờ ghi sổ: ") + payment.getTransactionCode();
             String message = String.format("Kế toán vừa tạo phiếu %s %s (Đối tác: %s). Vui lòng kiểm tra và ghi sổ.",
                     docLabel, payment.getTransactionCode(), partner.getName());
             String refType = isReceipt ? "PAYMENT_RECEIPT" : "PAYMENT_VOUCHER";
             appNotificationService.createNotification("ROLE_CASHIER_CONTROLLER", null, title, message,
-                    "NEW_DOCUMENT", refType, payment.getId(), "/cashier-workspace?tab=requests");
+                    "NEW_DOCUMENT", refType, payment.getId(), "/cashier-workspace?tab=requests", null);
         } catch (RuntimeException ignored) {
             // Notification failure must not roll back the payment creation.
         }
@@ -294,8 +294,7 @@ public class PaymentService {
             String role = authority.getAuthority();
             if ("ROLE_CASHIER_CONTROLLER".equals(role)
                     || "ROLE_SUPER_ADMIN".equals(role)
-                    || "ROLE_MANAGER".equals(role)
-                    || "ROLE_ADMIN".equals(role)) {
+                    || "ROLE_MANAGER".equals(role)) {
                 return true;
             }
         }

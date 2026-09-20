@@ -12,6 +12,7 @@ import com.duylongtech.backend.feature.warehouse.StockTransfer;
 import com.duylongtech.backend.feature.warranty.Warranty;
 import com.duylongtech.backend.feature.warehouse.Warehouse;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
+import com.duylongtech.backend.feature.inventory.InventoryBalance;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.partner.PartnerRepository;
 import com.duylongtech.backend.feature.product.ProductRepository;
@@ -93,6 +94,7 @@ public class AiChatService {
     private final SalesOrderRepository salesOrderRepository;
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final AiModelClient aiModelClient;
+    private final AiAccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
     public AiChatResponse chat(String rawMessage) {
@@ -104,165 +106,258 @@ public class AiChatService {
         String message = rawMessage == null ? "" : rawMessage.trim();
         String normalized = normalize(message);
 
-        // 1. TƯỜNG LỬA BẢO MẬT & QUYỀN RIÊNG TƯ (Tuyệt đối chặn lộ mật khẩu, OTP, CCCD, token)
-        if (isSecuritySensitiveQuestion(normalized)) {
+        // 1-3. Bảo mật / ngoài phạm vi / chào hỏi: xét trên CÂU HIỆN TẠI, trước mọi truy vấn dữ liệu.
+        AiIntent intent = AiIntentRouter.route(normalized);
+        if (intent == AiIntent.SECURITY) {
             return answerSecurityAlert();
         }
-
-        // 2. BỘ LỌC CÂU HỎI NGOÀI PHẠM VI (Từ chối lịch sự các câu hỏi không liên quan)
-        if (isIrrelevantQuestion(normalized)) {
+        if (intent == AiIntent.OUT_OF_SCOPE) {
             return enhance(message, history, answerIrrelevantQuestion());
         }
-
-        // 3. ĐỒNG HÓA NGỮ CẢNH HỘI THOẠI (Coreference Resolution: giải mã các đại từ "nó", "cái này", "kho đó"...)
-        String contextualMessage = resolveContextualQuery(message, normalized, history);
-        String contextualNormalized = normalize(contextualMessage);
-
-        if (isGreeting(normalized)) {
+        if (intent == AiIntent.GREETING) {
             return enhance(message, history, answerGreeting());
         }
 
-        if (isSystemOverviewQuestion(contextualNormalized)) {
-            return enhance(message, history, answerSystemOverview());
+        // 4. Câu hỏi nối tiếp ("cái này giá bao nhiêu?") mới được ghép với câu hỏi trước của người dùng.
+        String contextualMessage = resolveContextualQuery(message, normalized, history);
+        if (!contextualMessage.equals(message)) {
+            intent = AiIntentRouter.route(normalize(contextualMessage));
         }
+        String contextualNormalized = normalize(contextualMessage);
 
-        if (isLowStockQuestion(contextualNormalized)) {
-            return enhance(message, history, answerLowStock());
-        }
-
-        if (isWarehouseListQuestion(contextualNormalized)) {
-            return enhance(message, history, answerWarehouseList());
-        }
-
-        if (isWarehouseStockQuestion(contextualNormalized)) {
-            return enhance(message, history, answerWarehouseStock(contextualMessage, contextualNormalized));
-        }
-
-        if (isImportQuestion(contextualNormalized)) {
-            return enhance(message, history, answerImportSearch(contextualMessage));
-        }
-
-        if (isExportQuestion(contextualNormalized)) {
-            return enhance(message, history, answerExportSearch(contextualMessage));
-        }
-
-        if (isPurchaseOrderQuestion(contextualNormalized)) {
-            return enhance(message, history, answerPurchaseOrderSearch(contextualMessage));
-        }
-
-        if (isSalesOrderQuestion(contextualNormalized)) {
-            return enhance(message, history, answerSalesOrderSearch(contextualMessage));
-        }
-
-        if (isProductQuestion(contextualNormalized)) {
-            return enhance(message, history, answerProductSearch(contextualMessage));
-        }
-
-        if (isRepairQuestion(contextualNormalized)) {
-            return enhance(message, history, answerRepairSearch(contextualMessage));
-        }
-
-        if (isPartnerQuestion(contextualNormalized)) {
-            return enhance(message, history, answerPartnerSearch(contextualMessage, contextualNormalized));
-        }
-
-        if (isWarrantyQuestion(contextualNormalized)) {
-            return enhance(message, history, answerWarrantySearch(contextualMessage));
-        }
-
-        if (isGuideQuestion(contextualNormalized)) {
-            return enhance(message, history, answerGuideQuestion(contextualNormalized));
-        }
-
-        if (isTransferQuestion(contextualNormalized)) {
-            return enhance(message, history, answerTransferSearch(contextualMessage));
-        }
-
-        if (isAssemblyQuestion(contextualNormalized)) {
-            return enhance(message, history, answerAssemblySearch(contextualMessage));
-        }
-
-        return enhance(message, history, AiChatResponse.builder()
-                .intent("GENERAL_NOT_CONNECTED")
-                .answer("Chào bạn! Mình là Trợ lý AI của hệ thống DLC-WMS. Mình có thể hỗ trợ bạn tra cứu mọi dữ liệu nhập kho, xuất kho, đơn mua hàng (PO), đơn bán hàng (SO), tồn kho, sản phẩm, bảo hành, sửa chữa và lắp ráp/dựng máy. Bạn có thể hỏi ví dụ: \"Phiếu nhập kho gần nhất\", \"Tìm phiếu xuất kho\", \"Đơn mua hàng đang chờ duyệt\".")
-                .sources(allSystemSources())
-                .suggestions(defaultSuggestions())
-                .build());
+        // 5. Mỗi nhóm dữ liệu chỉ trả lời khi người hỏi có quyền xem đúng module đó (xem AiAccessPolicy).
+        return switch (intent) {
+            case SECURITY -> answerSecurityAlert();
+            case OUT_OF_SCOPE -> enhance(message, history, answerIrrelevantQuestion());
+            case GREETING -> enhance(message, history, answerGreeting());
+            case GUIDE -> enhance(message, history, answerGuideQuestion(contextualNormalized));
+            case OVERVIEW -> enhance(message, history, answerSystemOverview());
+            case LOW_STOCK -> gated(message, history, "tồn kho", STOCK_PERMISSIONS, this::answerLowStock);
+            case WAREHOUSE_LIST -> gated(message, history, "kho", STOCK_PERMISSIONS, this::answerWarehouseList);
+            case WAREHOUSE_STOCK -> gated(message, history, "tồn kho", STOCK_PERMISSIONS,
+                    () -> answerWarehouseStock(contextualMessage, contextualNormalized));
+            case IMPORT -> gated(message, history, "phiếu nhập kho", new String[] { "import:view" },
+                    () -> answerImportSearch(contextualMessage));
+            case EXPORT -> gated(message, history, "phiếu xuất kho", new String[] { "export:view" },
+                    () -> answerExportSearch(contextualMessage));
+            case PURCHASE_ORDER -> gated(message, history, "đơn mua hàng", new String[] { "purchase_order:view" },
+                    () -> answerPurchaseOrderSearch(contextualMessage));
+            case SALES_ORDER -> gated(message, history, "đơn bán hàng", new String[] { "sales_order:view" },
+                    () -> answerSalesOrderSearch(contextualMessage));
+            case PRODUCT -> gated(message, history, "sản phẩm", new String[] { "product:view" },
+                    () -> answerProductSearch(contextualMessage));
+            case REPAIR -> gated(message, history, "sửa chữa", new String[] { "repair:view" },
+                    () -> answerRepairSearch(contextualMessage));
+            case WARRANTY -> gated(message, history, "bảo hành", new String[] { "warranty:view" },
+                    () -> answerWarrantySearch(contextualMessage));
+            case TRANSFER -> gated(message, history, "chuyển kho", new String[] { "transfer:view" },
+                    () -> answerTransferSearch(contextualMessage));
+            case ASSEMBLY -> gated(message, history, "lắp ráp", new String[] { "assembly:view", "assembly_config:view" },
+                    () -> answerAssemblySearch(contextualMessage));
+            case PARTNER -> answerPartnerQuestion(message, history, contextualMessage, contextualNormalized);
+            case GENERAL -> enhance(message, history, AiChatResponse.builder()
+                    .intent("GENERAL_NOT_CONNECTED")
+                    .answer("Chào bạn! Mình là Trợ lý AI của hệ thống DLC-WMS. Mình có thể hỗ trợ bạn tra cứu dữ liệu nhập kho, xuất kho, đơn mua hàng (PO), đơn bán hàng (SO), tồn kho, sản phẩm, bảo hành, sửa chữa và lắp ráp/dựng máy trong phạm vi quyền của bạn. Bạn có thể hỏi ví dụ: \"Phiếu nhập kho gần nhất\", \"Tìm phiếu xuất kho\", \"Đơn mua hàng đang chờ duyệt\".")
+                    .sources(allSystemSources())
+                    .suggestions(defaultSuggestions())
+                    .build());
+        };
     }
 
     private AiChatResponse enhance(String userQuestion, List<AiChatMessageDto> history, AiChatResponse groundedResponse) {
         return aiModelClient.enhanceAnswer(userQuestion, history, groundedResponse);
     }
 
+    private AiChatResponse gated(String userQuestion, List<AiChatMessageDto> history, String label,
+                                 String[] requiredPermissions, java.util.function.Supplier<AiChatResponse> answer) {
+        if (!accessPolicy.canViewAny(requiredPermissions)) {
+            return answerAccessDenied(label);
+        }
+        return enhance(userQuestion, history, answer.get());
+    }
+
+    /** Không truy vấn dữ liệu và không gọi mô hình AI: từ chối thẳng, không lộ gì về dữ liệu. */
+    private AiChatResponse answerAccessDenied(String label) {
+        return AiChatResponse.builder()
+                .intent("ACCESS_DENIED")
+                .answer("Tài khoản của bạn chưa được cấp quyền xem dữ liệu " + label + " qua Trợ lý AI. Nếu cần, hãy liên hệ Quản lý để được cấp quyền. Mình vẫn có thể hướng dẫn quy trình nghiệp vụ hoặc tra cứu các dữ liệu thuộc phạm vi quyền của bạn.")
+                .sources(List.of(source("security_policy", "ACCESS_CONTROL", "Chatbot chỉ trả dữ liệu trong phạm vi quyền của người hỏi")))
+                .suggestions(List.of(
+                        "Hướng dẫn tạo phiếu nhập kho",
+                        "Hướng dẫn tạo phiếu xuất kho",
+                        "Hướng dẫn quy trình dựng máy PC"
+                ))
+                .build();
+    }
+
+    private static final String[] STOCK_PERMISSIONS = {
+            "warehouse_master:view", "report_balance:view", "import:view", "export:view", "transfer:view", "stocktake:view"
+    };
+
+    private AiChatResponse answerPartnerQuestion(String message, List<AiChatMessageDto> history,
+                                                 String contextualMessage, String contextualNormalized) {
+        boolean canCustomer = accessPolicy.canView("customer:view");
+        boolean canSupplier = accessPolicy.canView("supplier:view");
+        boolean wantsCustomer = AiIntentRouter.has(contextualNormalized, "khach hang", "customer");
+        boolean wantsSupplier = AiIntentRouter.has(contextualNormalized, "nha cung cap", "supplier");
+
+        if (wantsCustomer && !canCustomer) {
+            return answerAccessDenied("khách hàng");
+        }
+        if (wantsSupplier && !canSupplier) {
+            return answerAccessDenied("nhà cung cấp");
+        }
+        if (!canCustomer && !canSupplier) {
+            return answerAccessDenied("đối tác");
+        }
+
+        // Hỏi chung chung ("đối tác") thì chỉ trả loại mà người hỏi được xem.
+        boolean customerOnly = wantsCustomer || (!wantsSupplier && !canSupplier);
+        boolean supplierOnly = wantsSupplier || (!wantsCustomer && !canCustomer);
+        return enhance(message, history, answerPartnerSearch(contextualMessage, contextualNormalized, customerOnly, supplierOnly));
+    }
+
+    private static final int MAX_CONTEXT_CHARS = 200;
+
+    /**
+     * Ghép câu hỏi nối tiếp với câu hỏi trước ĐÓ CỦA NGƯỜI DÙNG. Không dùng nội dung câu trả lời của trợ lý:
+     * đó là văn bản dài đầy từ khóa ("kho", "hệ thống", "tồn"...) làm phân loại sai ý định.
+     */
     private String resolveContextualQuery(String currentMessage, String normalized, List<AiChatMessageDto> history) {
-        if (history == null || history.isEmpty()) {
+        if (history == null || history.isEmpty() || !hasContextPronoun(normalized)) {
             return currentMessage;
         }
-
-        boolean hasContextPronoun = normalized.contains(" no ")
-                || normalized.startsWith("no ")
-                || normalized.endsWith(" no")
-                || normalized.equals("no")
-                || normalized.contains("cai nay")
-                || normalized.contains("cai do")
-                || normalized.contains("mon nay")
-                || normalized.contains("mon do")
-                || normalized.contains("san pham nay")
-                || normalized.contains("san pham do")
-                || normalized.contains("kho nay")
-                || normalized.contains("kho do")
-                || normalized.contains("chiec nay")
-                || normalized.contains("chiec do")
-                || normalized.contains("gia bao nhieu")
-                || normalized.contains("o dau")
-                || normalized.contains("con khong")
-                || normalized.contains("con o kho nao");
-
-        if (!hasContextPronoun) {
-            return currentMessage;
-        }
-
-        // Lấy từ khóa thực thể từ tin nhắn gần nhất của người dùng hoặc trợ lý
         for (int i = history.size() - 1; i >= 0; i--) {
             AiChatMessageDto msg = history.get(i);
-            if (msg != null && msg.getContent() != null && !msg.getContent().isBlank()) {
-                String extracted = extractSearchKeyword(msg.getContent());
-                if (!extracted.isBlank() && extracted.length() >= 2) {
-                    return extracted + " " + currentMessage;
-                }
+            if (msg == null || !"user".equalsIgnoreCase(msg.getRole()) || msg.getContent() == null || msg.getContent().isBlank()) {
+                continue;
+            }
+            String previous = msg.getContent().trim();
+            if (previous.length() > MAX_CONTEXT_CHARS) {
+                previous = previous.substring(0, MAX_CONTEXT_CHARS);
+            }
+            if (!normalize(previous).equals(normalized)) {
+                return previous + " " + currentMessage;
             }
         }
-
         return currentMessage;
     }
 
-    private AiChatResponse answerSystemOverview() {
-        BigDecimal totalQuantity = inventoryBalanceRepository.findAll().stream()
-                .map(balance -> balance.getQuantityOnHand() == null ? BigDecimal.ZERO : balance.getQuantityOnHand())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private boolean hasContextPronoun(String normalized) {
+        // Câu nối tiếp thường ngắn; "no" (nó) trùng với "nợ" đã bỏ dấu nên chỉ tin khi câu ngắn.
+        if (normalized.split("\\s+").length > 10) {
+            return false;
+        }
+        return AiIntentRouter.has(normalized, "no", "cai nay", "cai do", "mon nay", "mon do", "san pham nay",
+                "san pham do", "kho nay", "kho do", "chiec nay", "chiec do", "don nay", "don do", "phieu nay",
+                "phieu do", "gia bao nhieu", "o dau", "con khong", "con o kho nao");
+    }
 
-        String answer = "Mình đã đọc tổng quan dữ liệu hiện có trong database:\n"
-                + "- Kho: " + warehouseRepository.count() + "\n"
-                + "- Sản phẩm: " + productRepository.count() + "\n"
-                + "- SKU/biến thể: " + productVariantRepository.count() + "\n"
-                + "- Dòng tồn kho: " + inventoryBalanceRepository.count() + "\n"
-                + "- Tổng số lượng tồn ghi nhận: " + formatNumber(totalQuantity) + "\n"
-                + "- Khách hàng: " + partnerRepository.countCustomersForAi() + "\n"
-                + "- Nhà cung cấp: " + partnerRepository.countSuppliersForAi() + "\n"
-                + "- Phiếu bảo hành: " + warrantyRepository.count() + "\n"
-                + "- Phiếu sửa chữa: " + repairRepository.count() + "\n"
-                + "- Phiếu chuyển kho: " + stockTransferRepository.count() + "\n"
-                + "- Lệnh lắp ráp/tháo dỡ: " + assemblyOrderRepository.count() + "\n"
-                + "- Đơn mua hàng (PO): " + purchaseOrderRepository.count() + "\n"
-                + "- Đơn bán hàng (SO): " + salesOrderRepository.count() + "\n\n"
-                + "Bạn có thể hỏi tiếp theo module, ví dụ: \"tìm sản phẩm Dell\", \"bảo hành serial ABC\", \"phiếu sửa chữa đang chờ\", \"Kho A có bao nhiêu hàng\".";
+    private AiChatResponse answerSystemOverview() {
+        List<Long> allowedWarehouseIds = accessPolicy.allowedWarehouseIds();
+        StringBuilder answer = new StringBuilder("Tổng quan dữ liệu trong phạm vi quyền của bạn:\n");
+        boolean any = false;
+
+        if (accessPolicy.canViewAny(STOCK_PERMISSIONS)) {
+            List<InventoryBalance> balances = inventoryBalanceRepository.findAll().stream()
+                    .filter(balance -> allowedWarehouseIds == null || allowedWarehouseIds.contains(balance.getWarehouseId()))
+                    .toList();
+            BigDecimal totalQuantity = balances.stream()
+                    .map(balance -> balance.getQuantityOnHand() == null ? BigDecimal.ZERO : balance.getQuantityOnHand())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            answer.append("- Kho: ").append(scopedWarehouses().size()).append("\n")
+                    .append("- Dòng tồn kho: ").append(balances.size()).append("\n")
+                    .append("- Tổng số lượng tồn ghi nhận: ").append(formatNumber(totalQuantity)).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("product:view")) {
+            answer.append("- Sản phẩm: ").append(productRepository.count()).append("\n")
+                    .append("- SKU/biến thể: ").append(productVariantRepository.count()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("customer:view")) {
+            answer.append("- Khách hàng: ").append(partnerRepository.countCustomersForAi()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("supplier:view")) {
+            answer.append("- Nhà cung cấp: ").append(partnerRepository.countSuppliersForAi()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("warranty:view")) {
+            answer.append("- Phiếu bảo hành: ").append(warrantyRepository.count()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("repair:view")) {
+            answer.append("- Phiếu sửa chữa: ").append(repairRepository.count()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("transfer:view")) {
+            answer.append("- Phiếu chuyển kho: ").append(scopedTransfers(null).size()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canViewAny("assembly:view", "assembly_config:view")) {
+            answer.append("- Lệnh lắp ráp/tháo dỡ: ").append(scopedAssemblyOrders(null).size()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("purchase_order:view")) {
+            answer.append("- Đơn mua hàng (PO): ").append(purchaseOrderRepository.count()).append("\n");
+            any = true;
+        }
+        if (accessPolicy.canView("sales_order:view")) {
+            answer.append("- Đơn bán hàng (SO): ").append(salesOrderRepository.count()).append("\n");
+            any = true;
+        }
+
+        if (!any) {
+            return answerAccessDenied("tổng quan hệ thống");
+        }
+        answer.append("\nBạn có thể hỏi tiếp theo module, ví dụ: \"tìm sản phẩm Dell\", \"bảo hành serial ABC\", \"phiếu sửa chữa đang chờ\", \"Kho A có bao nhiêu hàng\".");
 
         return AiChatResponse.builder()
                 .intent("SYSTEM_OVERVIEW")
-                .answer(answer)
+                .answer(answer.toString())
                 .sources(allSystemSources())
                 .suggestions(defaultSuggestions())
                 .build();
+    }
+
+    /** Kho người hỏi được phép xem (Thủ kho chỉ thấy kho được giao). */
+    private List<Warehouse> scopedWarehouses() {
+        List<Long> allowed = accessPolicy.allowedWarehouseIds();
+        List<Warehouse> all = warehouseRepository.findAll();
+        return allowed == null ? all : all.stream().filter(warehouse -> allowed.contains(warehouse.getId())).toList();
+    }
+
+    private List<StockTransfer> scopedTransfers(String keyword) {
+        List<Long> allowed = accessPolicy.allowedWarehouseIds();
+        return stockTransferRepository.searchTransfers(blankToNull(keyword), null, null, null).stream()
+                .filter(transfer -> allowed == null
+                        || allowed.contains(transfer.getFromWarehouseId())
+                        || allowed.contains(transfer.getToWarehouseId()))
+                .toList();
+    }
+
+    private List<AssemblyOrder> scopedAssemblyOrders(String keyword) {
+        List<Long> allowed = accessPolicy.allowedWarehouseIds();
+        return assemblyOrderRepository.search(blankToNull(keyword), null, null, null, null, null).stream()
+                .filter(order -> allowed == null || allowed.contains(order.getWarehouseId()))
+                .toList();
+    }
+
+    private List<InventoryDocument> scopedImports(String keyword) {
+        List<Long> allowed = accessPolicy.allowedWarehouseIds();
+        if (allowed != null && allowed.isEmpty()) {
+            return List.of();
+        }
+        return inventoryDocumentRepository.searchImports(blankToNull(keyword), null, null, null, null, null, null, null, null, null, allowed);
+    }
+
+    private List<InventoryDocument> scopedExports(String keyword) {
+        List<Long> allowed = accessPolicy.allowedWarehouseIds();
+        if (allowed != null && allowed.isEmpty()) {
+            return List.of();
+        }
+        return inventoryDocumentRepository.searchExports(blankToNull(keyword), null, null, null, null, null, null, null, null, null, allowed);
     }
 
     private AiChatResponse answerGreeting() {
@@ -282,6 +377,7 @@ public class AiChatService {
         String keyword = extractSearchKeyword(message);
         Page<Product> products = productRepository.searchProducts(keyword, null, null, null, null, PageRequest.of(0, 5));
         Page<ProductVariant> variants = productVariantRepository.searchVariants(keyword, false, PageRequest.of(0, 5));
+        boolean canSeePrice = accessPolicy.canViewPricing();
 
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu sản phẩm");
         if (!keyword.isBlank()) {
@@ -303,8 +399,7 @@ public class AiChatService {
                 .append(variant.getSku())
                 .append(": ")
                 .append(variant.getVariantName())
-                .append(", giá bán ")
-                .append(formatMoney(variant.getSalePrice())));
+                .append(canSeePrice ? ", giá bán " + formatMoney(variant.getSalePrice()) : ""));
 
         return AiChatResponse.builder()
                 .intent("PRODUCT_SEARCH")
@@ -314,9 +409,7 @@ public class AiChatService {
                 .build();
     }
 
-    private AiChatResponse answerPartnerSearch(String message, String normalized) {
-        boolean supplierOnly = normalized.contains("nha cung cap") || normalized.contains("supplier");
-        boolean customerOnly = normalized.contains("khach hang") || normalized.contains("customer");
+    private AiChatResponse answerPartnerSearch(String message, String normalized, boolean customerOnly, boolean supplierOnly) {
 
         if (isCountQuestion(normalized)) {
             if (supplierOnly) {
@@ -378,9 +471,9 @@ public class AiChatService {
                 .append(": trạng thái ")
                 .append(warranty.getWarrantyStatus())
                 .append(", từ ")
-                .append(warranty.getStartDate())
-                .append(" den ")
-                .append(warranty.getEndDate()));
+                .append(displayDate(warranty.getStartDate()))
+                .append(" đến ")
+                .append(displayDate(warranty.getEndDate())));
 
         return AiChatResponse.builder()
                 .intent("WARRANTY_SEARCH")
@@ -402,7 +495,7 @@ public class AiChatService {
                 .append(": ")
                 .append(repair.getRepairStatus())
                 .append(", ngày nhận ")
-                .append(repair.getReceivedDate())
+                .append(displayDate(repair.getReceivedDate()))
                 .append(", lỗi: ")
                 .append(shortText(repair.getIssueDescription())));
 
@@ -416,7 +509,7 @@ public class AiChatService {
 
     private AiChatResponse answerTransferSearch(String message) {
         String keyword = extractSearchKeyword(message);
-        List<StockTransfer> transfers = stockTransferRepository.searchTransfers(blankToNull(keyword), null, null, null).stream()
+        List<StockTransfer> transfers = scopedTransfers(keyword).stream()
                 .limit(8)
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu chuyển kho");
@@ -428,7 +521,7 @@ public class AiChatService {
                 .append(": ")
                 .append(transfer.getStatus())
                 .append(", ngày ")
-                .append(transfer.getTransferDate())
+                .append(displayDate(transfer.getTransferDate()))
                 .append(", từ kho ID ")
                 .append(transfer.getFromWarehouseId())
                 .append(" sang kho ID ")
@@ -454,6 +547,7 @@ public class AiChatService {
         }
 
         String keyword = extractSearchKeyword(message);
+        boolean canSeePrice = accessPolicy.canViewPricing();
         List<PurchaseOrder> orders = purchaseOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null).stream()
                 .limit(8)
                 .toList();
@@ -467,10 +561,9 @@ public class AiChatService {
                 .append(order.getPartner() != null ? order.getPartner().getName() : "-")
                 .append(", Trạng thái: ")
                 .append(order.getStatus())
-                .append(", Tổng tiền: ")
-                .append(formatMoney(order.getTotalAmount()))
+                .append(canSeePrice ? ", Tổng tiền: " + formatMoney(order.getTotalAmount()) : "")
                 .append(", Ngày đặt: ")
-                .append(order.getPoDate()));
+                .append(displayDate(order.getPoDate())));
 
         return AiChatResponse.builder()
                 .intent("PURCHASE_ORDER_SEARCH")
@@ -492,6 +585,7 @@ public class AiChatService {
         }
 
         String keyword = extractSearchKeyword(message);
+        boolean canSeePrice = accessPolicy.canViewPricing();
         List<SalesOrder> orders = salesOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null, null, null, null).stream()
                 .limit(8)
                 .toList();
@@ -505,10 +599,9 @@ public class AiChatService {
                 .append(order.getPartner() != null ? order.getPartner().getName() : "Khách lẻ")
                 .append(", Trạng thái: ")
                 .append(order.getStatus())
-                .append(", Tổng tiền: ")
-                .append(formatMoney(order.getTotalAmount()))
+                .append(canSeePrice ? ", Tổng tiền: " + formatMoney(order.getTotalAmount()) : "")
                 .append(", Ngày tạo: ")
-                .append(order.getSoDate()));
+                .append(displayDate(order.getSoDate())));
 
         return AiChatResponse.builder()
                 .intent("SALES_ORDER_SEARCH")
@@ -516,29 +609,6 @@ public class AiChatService {
                 .sources(List.of(source("database", "SALES_ORDERS", "Tra cứu đơn bán hàng và xuất kho")))
                 .suggestions(List.of("Đơn bán hàng chờ xuất kho", "Tìm SO theo mã", "Doanh thu hôm nay"))
                 .build();
-    }
-
-    private boolean isSecuritySensitiveQuestion(String normalized) {
-        return normalized.contains("mat khau")
-                || normalized.contains("password")
-                || normalized.contains("pass hash")
-                || normalized.contains("password_hash")
-                || normalized.contains("ma bam")
-                || normalized.contains("ma otp")
-                || normalized.contains("lay otp")
-                || normalized.contains("xin otp")
-                || (normalized.contains("otp") && (normalized.contains("admin") || normalized.contains("user") || normalized.contains("nguoi dung")))
-                || normalized.contains("token")
-                || normalized.contains("jwt")
-                || normalized.contains("secret key")
-                || normalized.contains("api key")
-                || normalized.contains("cccd")
-                || normalized.contains("cmnd")
-                || normalized.contains("can cuoc")
-                || normalized.contains("tai khoan admin")
-                || normalized.contains("danh sach mat khau")
-                || normalized.contains("dump database")
-                || normalized.contains("sql injection");
     }
 
     private AiChatResponse answerSecurityAlert() {
@@ -554,25 +624,6 @@ public class AiChatService {
                 .build();
     }
 
-    private boolean isIrrelevantQuestion(String normalized) {
-        return normalized.contains("thoi tiet")
-                || normalized.contains("du bao thoi tiet")
-                || normalized.contains("nau an")
-                || normalized.contains("cong thuc")
-                || normalized.contains("bai tho")
-                || normalized.contains("viet tho")
-                || normalized.contains("ke chuyen")
-                || normalized.contains("chuyen cuoi")
-                || normalized.contains("bong da")
-                || normalized.contains("chieu cao")
-                || normalized.contains("can nang")
-                || normalized.contains("tinh yeu")
-                || normalized.contains("boi toan")
-                || normalized.contains("tu vi")
-                || normalized.contains("xem boi")
-                || normalized.contains("dich tieng anh");
-    }
-
     private AiChatResponse answerIrrelevantQuestion() {
         return AiChatResponse.builder()
                 .intent("OUT_OF_SCOPE")
@@ -586,19 +637,9 @@ public class AiChatService {
                 .build();
     }
 
-    private boolean isImportQuestion(String normalized) {
-        return (normalized.contains("nhap kho") || normalized.contains("phieu nhap") || normalized.contains("import") || normalized.contains("nk"))
-                && !normalized.contains("huong dan") && !normalized.contains("cach");
-    }
-
-    private boolean isExportQuestion(String normalized) {
-        return (normalized.contains("xuat kho") || normalized.contains("phieu xuat") || normalized.contains("export") || normalized.contains("xk"))
-                && !normalized.contains("huong dan") && !normalized.contains("cach");
-    }
-
     private AiChatResponse answerImportSearch(String message) {
         if (isCountQuestion(normalize(message))) {
-            List<InventoryDocument> allImports = inventoryDocumentRepository.findAllImports();
+            List<InventoryDocument> allImports = scopedImports(null);
             return AiChatResponse.builder()
                     .intent("IMPORT_COUNT")
                     .answer("Hệ thống hiện tại có tổng cộng " + allImports.size() + " phiếu nhập kho (IN_PO).")
@@ -608,14 +649,7 @@ public class AiChatService {
         }
 
         String keyword = extractSearchKeyword(message);
-        List<InventoryDocument> imports;
-        if (keyword.isBlank()) {
-            imports = inventoryDocumentRepository.findAllImports().stream().limit(8).toList();
-        } else {
-            imports = inventoryDocumentRepository.searchImports(blankToNull(keyword), null, null, null, null, null, null, null, null, null, null).stream()
-                    .limit(8)
-                    .toList();
-        }
+        List<InventoryDocument> imports = scopedImports(keyword).stream().limit(8).toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu nhập kho (IN_PO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
         answer.append(". Tìm thấy ").append(imports.size()).append(" phiếu gần nhất.");
@@ -629,7 +663,7 @@ public class AiChatService {
                 .append(", Số mặt hàng: ")
                 .append(doc.getLines() != null ? doc.getLines().size() : 0)
                 .append(", Ngày nhập: ")
-                .append(doc.getDocDate()));
+                .append(displayDate(doc.getDocDate())));
 
         return AiChatResponse.builder()
                 .intent("IMPORT_SEARCH")
@@ -641,7 +675,7 @@ public class AiChatService {
 
     private AiChatResponse answerExportSearch(String message) {
         if (isCountQuestion(normalize(message))) {
-            List<InventoryDocument> allExports = inventoryDocumentRepository.findAllExports();
+            List<InventoryDocument> allExports = scopedExports(null);
             return AiChatResponse.builder()
                     .intent("EXPORT_COUNT")
                     .answer("Hệ thống hiện tại có tổng cộng " + allExports.size() + " phiếu xuất kho (EX_SO).")
@@ -651,14 +685,7 @@ public class AiChatService {
         }
 
         String keyword = extractSearchKeyword(message);
-        List<InventoryDocument> exports;
-        if (keyword.isBlank()) {
-            exports = inventoryDocumentRepository.findAllExports().stream().limit(8).toList();
-        } else {
-            exports = inventoryDocumentRepository.searchExports(blankToNull(keyword), null, null, null, null, null, null, null, null, null, null).stream()
-                    .limit(8)
-                    .toList();
-        }
+        List<InventoryDocument> exports = scopedExports(keyword).stream().limit(8).toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu xuất kho (EX_SO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
         answer.append(". Tìm thấy ").append(exports.size()).append(" phiếu gần nhất.");
@@ -672,7 +699,7 @@ public class AiChatService {
                 .append(", Số mặt hàng: ")
                 .append(doc.getLines() != null ? doc.getLines().size() : 0)
                 .append(", Ngày xuất: ")
-                .append(doc.getDocDate()));
+                .append(displayDate(doc.getDocDate())));
 
         return AiChatResponse.builder()
                 .intent("EXPORT_SEARCH")
@@ -682,25 +709,9 @@ public class AiChatService {
                 .build();
     }
 
-    private boolean isPurchaseOrderQuestion(String normalized) {
-        return normalized.contains("don mua")
-                || normalized.contains("purchase order")
-                || normalized.contains("po ")
-                || normalized.startsWith("po")
-                || normalized.contains("dat hang ncc");
-    }
-
-    private boolean isSalesOrderQuestion(String normalized) {
-        return normalized.contains("don ban")
-                || normalized.contains("sales order")
-                || normalized.contains("so ")
-                || normalized.startsWith("so")
-                || normalized.contains("don hang khach");
-    }
-
     private AiChatResponse answerAssemblySearch(String message) {
         String keyword = extractSearchKeyword(message);
-        List<AssemblyOrder> orders = assemblyOrderRepository.search(blankToNull(keyword), null, null, null, null, null).stream()
+        List<AssemblyOrder> orders = scopedAssemblyOrders(keyword).stream()
                 .limit(8)
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu lắp ráp/tháo dỡ");
@@ -716,7 +727,7 @@ public class AiChatService {
                 .append(", số lượng ")
                 .append(formatNumber(order.getQuantity()))
                 .append(", ngày ")
-                .append(order.getExecutionDate()));
+                .append(displayDate(order.getExecutionDate())));
 
         return AiChatResponse.builder()
                 .intent("ASSEMBLY_SEARCH")
@@ -727,7 +738,8 @@ public class AiChatService {
     }
 
     private AiChatResponse answerGuideQuestion(String normalized) {
-        if (normalized.contains("nhap kho") || normalized.contains("import")) {
+        AiIntent topic = AiIntentRouter.domainOf(normalized);
+        if (topic == AiIntent.IMPORT || topic == AiIntent.PURCHASE_ORDER) {
             return AiChatResponse.builder()
                     .intent("IMPORT_GUIDE")
                     .answer("""
@@ -743,7 +755,7 @@ public class AiChatService {
                     .build();
         }
 
-        if (normalized.contains("xuat kho") || normalized.contains("export") || normalized.contains("ban hang")) {
+        if (topic == AiIntent.EXPORT || topic == AiIntent.SALES_ORDER || AiIntentRouter.has(normalized, "ban hang")) {
             return AiChatResponse.builder()
                     .intent("EXPORT_GUIDE")
                     .answer("""
@@ -759,7 +771,7 @@ public class AiChatService {
                     .build();
         }
 
-        if (isTransferQuestion(normalized)) {
+        if (topic == AiIntent.TRANSFER) {
             return AiChatResponse.builder()
                     .intent("TRANSFER_GUIDE")
                     .answer("""
@@ -780,7 +792,7 @@ public class AiChatService {
                     .build();
         }
 
-        if (isWarrantyQuestion(normalized)) {
+        if (topic == AiIntent.WARRANTY || topic == AiIntent.REPAIR) {
             return AiChatResponse.builder()
                     .intent("WARRANTY_GUIDE")
                     .answer("""
@@ -796,7 +808,7 @@ public class AiChatService {
                     .build();
         }
 
-        if (isAssemblyQuestion(normalized)) {
+        if (topic == AiIntent.ASSEMBLY) {
             return AiChatResponse.builder()
                     .intent("ASSEMBLY_GUIDE")
                     .answer("""
@@ -823,88 +835,8 @@ public class AiChatService {
                 .build();
     }
 
-    private boolean isSystemOverviewQuestion(String normalized) {
-        return normalized.contains("tong quan")
-                || normalized.contains("toan bo")
-                || normalized.contains("tat ca")
-                || normalized.contains("he thong")
-                || normalized.contains("doc het")
-                || normalized.contains("co nhung gi")
-                || normalized.contains("dashboard");
-    }
-
-    private boolean isProductQuestion(String normalized) {
-        return normalized.contains("san pham")
-                || normalized.contains("hang hoa")
-                || normalized.contains("sku")
-                || normalized.contains("barcode")
-                || normalized.contains("bien the");
-    }
-
-    private boolean isPartnerQuestion(String normalized) {
-        return normalized.contains("khach hang")
-                || normalized.contains("customer")
-                || normalized.contains("nha cung cap")
-                || normalized.contains("supplier")
-                || normalized.contains("doi tac");
-    }
-
-    private boolean isWarrantyQuestion(String normalized) {
-        return normalized.contains("bao hanh")
-                || normalized.contains("warranty")
-                || normalized.contains("serial");
-    }
-
-    private boolean isRepairQuestion(String normalized) {
-        return normalized.contains("sua chua")
-                || normalized.contains("repair")
-                || normalized.contains("phieu sua");
-    }
-
-    private boolean isGuideQuestion(String normalized) {
-        return normalized.contains("huong dan")
-                || normalized.contains("cach ")
-                || normalized.startsWith("cach")
-                || normalized.contains("quy trinh")
-                || normalized.contains("tao phieu")
-                || normalized.contains("lap phieu")
-                || normalized.contains("lam sao")
-                || normalized.contains("nhu the nao")
-                || normalized.contains("thao tac");
-    }
-
-    private boolean isTransferQuestion(String normalized) {
-        return normalized.contains("chuyen kho")
-                || normalized.contains("transfer");
-    }
-
-    private boolean isAssemblyQuestion(String normalized) {
-        return normalized.contains("lap rap")
-                || normalized.contains("thao do")
-                || normalized.contains("dung may")
-                || normalized.contains("dung pc")
-                || normalized.contains("build pc")
-                || normalized.contains("build may")
-                || normalized.contains("rap may")
-                || normalized.contains("cau hinh")
-                || normalized.contains("assembly")
-                || normalized.contains("bom");
-    }
-
-    private boolean isGreeting(String normalized) {
-        String regex = "^(hi|hello|chao|xin chao|helo|alo|ê|hey)(.*)?$";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(normalized);
-        return matcher.matches();
-    }
-
     private boolean isCountQuestion(String normalized) {
-        return normalized.contains("co may")
-                || normalized.contains("bao nhieu")
-                || normalized.contains("so luong")
-                || normalized.contains("tong so")
-                || normalized.contains("dem")
-                || normalized.contains("count");
+        return AiIntentRouter.isCountQuestion(normalized);
     }
 
     // Pattern ranh giới từ nguyên vẹn (\b...\b) chống lỗi cắt nhầm/nuốt chữ con của các sản phẩm như UltraSharp, Xprinter, GTX...
@@ -913,7 +845,8 @@ public class AiChatService {
             + "san pham|hang hoa|sku|barcode|bien the|khach hang|customer|nha cung cap|supplier|doi tac|"
             + "nhap kho|phieu nhap|xuat kho|phieu xuat|don mua|don ban|don hang|phieu|"
             + "bao hanh|warranty|serial|sua chua|repair|phieu sua|chuyen kho|transfer|lap rap|thao do|"
-            + "dung may|dung pc|build pc|build may|rap may|cau hinh|assembly|bom|theo|ma|ten|so dien thoai|hien tai|gan nhat|co|may)\\b",
+            + "dung may|dung pc|build pc|build may|rap may|cau hinh|assembly|bom|theo|ma|ten|so dien thoai|hien tai|gan nhat|co|may|"
+            + "hien thi|danh sach|liet ke|hay|giup|muon|biet|gia|nao|dau|khong|nay|do|cua|va|cac|nhung|moi nhat)\\b",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -923,6 +856,13 @@ public class AiChatService {
         String cleaned = STOPWORDS_REGEX.matcher(normalized).replaceAll(" ");
         String keyword = cleaned.replaceAll("[^a-z0-9_-]+", " ").trim().replaceAll("\\s+", " ");
         return keyword.length() < 2 ? "" : keyword;
+    }
+
+    private static final java.time.format.DateTimeFormatter DISPLAY_DATE = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /** Ngày hiển thị cho người dùng luôn theo dd/mm/yyyy (không dùng dạng ISO yyyy-mm-dd). */
+    static String displayDate(java.time.LocalDate date) {
+        return date == null ? "-" : date.format(DISPLAY_DATE);
     }
 
     private String blankToNull(String value) {
@@ -964,7 +904,17 @@ public class AiChatService {
     }
 
     private AiChatResponse answerLowStock() {
-        List<WarehouseStockAiRow> rows = inventoryBalanceRepository.findLowStockRowsForAi(PageRequest.of(0, MAX_ROWS_IN_ANSWER));
+        List<WarehouseStockAiRow> rows;
+        if (accessPolicy.allowedWarehouseIds() == null) {
+            rows = inventoryBalanceRepository.findLowStockRowsForAi(PageRequest.of(0, MAX_ROWS_IN_ANSWER));
+        } else {
+            // Thủ kho chỉ thấy kho được giao: lấy rộng hơn rồi lọc theo mã kho.
+            java.util.Set<String> allowedCodes = scopedWarehouses().stream().map(Warehouse::getCode).collect(java.util.stream.Collectors.toSet());
+            rows = inventoryBalanceRepository.findLowStockRowsForAi(PageRequest.of(0, 500)).stream()
+                    .filter(row -> allowedCodes.contains(row.getWarehouseCode()))
+                    .limit(MAX_ROWS_IN_ANSWER)
+                    .toList();
+        }
 
         if (rows.isEmpty()) {
             return AiChatResponse.builder()
@@ -1029,6 +979,14 @@ public class AiChatService {
         }
 
         Warehouse selectedWarehouse = warehouse.get();
+        if (!accessPolicy.canAccessWarehouse(selectedWarehouse.getId())) {
+            return AiChatResponse.builder()
+                    .intent("ACCESS_DENIED")
+                    .answer("Bạn chưa được phân công phụ trách kho " + displayWarehouse(selectedWarehouse) + " nên không xem được tồn kho của kho này. Hãy hỏi về kho bạn phụ trách hoặc liên hệ Quản lý.")
+                    .sources(List.of(source("security_policy", "WAREHOUSE_SCOPE", "Chỉ xem dữ liệu kho được phân công")))
+                    .suggestions(defaultSuggestions())
+                    .build();
+        }
         List<WarehouseStockAiRow> rows = inventoryBalanceRepository.findStockRowsForAiByWarehouseId(selectedWarehouse.getId());
 
         if (rows.isEmpty()) {
@@ -1091,9 +1049,10 @@ public class AiChatService {
                     .append(" dòng tồn kho khác.");
         }
 
-        answer.append("\n\nGiá trị tồn kho ước tính: ")
-                .append(formatMoney(totalValue))
-                .append(". Số liệu lấy trực tiếp từ database tại thời điểm truy vấn.");
+        if (accessPolicy.canViewPricing()) {
+            answer.append("\n\nGiá trị tồn kho ước tính: ").append(formatMoney(totalValue)).append(".");
+        }
+        answer.append("\n\nSố liệu lấy trực tiếp từ database tại thời điểm truy vấn.");
 
         return AiChatResponse.builder()
                 .intent("WAREHOUSE_STOCK_QUERY")
@@ -1107,24 +1066,8 @@ public class AiChatService {
                 .build();
     }
 
-    private boolean isWarehouseStockQuestion(String normalized) {
-        boolean mentionsWarehouse = normalized.contains("kho") || normalized.contains("warehouse");
-        boolean mentionsStock = normalized.contains("ton")
-                || normalized.contains("hang")
-                || normalized.contains("san pham")
-                || normalized.contains("sku")
-                || normalized.contains("so luong")
-                || normalized.contains("bao nhieu");
-        return mentionsWarehouse && mentionsStock;
-    }
-
-    private boolean isWarehouseListQuestion(String normalized) {
-        return (normalized.contains("kho") || normalized.contains("warehouse"))
-                && (normalized.contains("nhung") || normalized.contains("danh sach") || normalized.contains("liet ke") || normalized.contains("cac"));
-    }
-
     private AiChatResponse answerWarehouseList() {
-        List<Warehouse> warehouses = warehouseRepository.findAll();
+        List<Warehouse> warehouses = scopedWarehouses();
         StringBuilder answer = new StringBuilder("Hệ thống hiện tại có " + warehouses.size() + " kho:\n");
         for (Warehouse w : warehouses) {
             answer.append("- Kho ").append(w.getName()).append(" (Mã: ").append(w.getCode()).append(")\n");
@@ -1141,19 +1084,6 @@ public class AiChatService {
                         .build()))
                 .suggestions(List.of("Tồn kho kho " + (warehouses.isEmpty() ? "A" : warehouses.get(0).getName()), "Sản phẩm nào sắp hết hàng?"))
                 .build();
-    }
-
-    private boolean isLowStockQuestion(String normalized) {
-        boolean mentionsStock = normalized.contains("ton")
-                || normalized.contains("hang")
-                || normalized.contains("san pham")
-                || normalized.contains("sku");
-        boolean mentionsLow = normalized.contains("thap")
-                || normalized.contains("sap het")
-                || normalized.contains("gan het")
-                || normalized.contains("duoi")
-                || normalized.contains("it nhat");
-        return mentionsStock && mentionsLow;
     }
 
     private Optional<Warehouse> resolveWarehouse(String originalMessage, String normalizedMessage) {
@@ -1247,8 +1177,11 @@ public class AiChatService {
         if (value == null) {
             return "";
         }
+        // "đ" không bị NFD tách dấu nên phải đổi riêng, nếu không "đơn mua", "đối tác", "đếm" không bao giờ khớp.
         String noAccent = Normalizer.normalize(value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D');
         return noAccent.toLowerCase(Locale.ROOT).trim();
     }
 }

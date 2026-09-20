@@ -70,11 +70,12 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
     boolean existsByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
 
     /**
-     * Dùng để chống tạo trùng phiếu nhập bù (backorder): chỉ chặn khi PO đã có 1 phiếu
-     * nhập bù còn đang mở (DRAFT/SUBMITTED), không chặn các phiếu nhập bình thường
-     * khác của cùng PO (phân biệt bằng issuePurpose).
+     * Chống tạo trùng phiếu nhập kho từ PO cho CÙNG kho đích khi phiếu trước còn đang mở
+     * (DRAFT/SUBMITTED); mỗi kho trong luồng nhập đa kho có phiếu riêng
+     * (VD: Kho A đang DRAFT không chặn tạo phiếu cho Kho B).
      */
-    boolean existsByPurchaseOrderIdAndIssuePurposeAndStatusIn(Long purchaseOrderId, String issuePurpose, List<String> statuses);
+    boolean existsByPurchaseOrderIdAndWarehouseIdAndIssuePurposeAndStatusIn(Long purchaseOrderId, Long warehouseId,
+            String issuePurpose, List<String> statuses);
 
     boolean existsByReferenceTypeAndReferenceIdAndDocType(String referenceType, Long referenceId, String docType);
 

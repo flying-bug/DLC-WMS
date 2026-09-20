@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
@@ -11,6 +12,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const WarehouseListPage = () => {
@@ -20,10 +22,10 @@ const WarehouseListPage = () => {
     const [loading, setLoading] = useState(false);
     
     // Các state bộ lọc
-    const [searchKeyword, setSearchKeyword] = useState('');
+    const [searchKeyword, setSearchKeyword] = useSessionState('searchKeyword', '');
 
     // Pagination
-    const [page, setPage] = useState(1); // 1-indexed for UI
+    const [page, setPage] = useSessionState('page', 1); // 1-indexed for UI
     const [size, setSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
@@ -47,8 +49,8 @@ const WarehouseListPage = () => {
     // State sắp xếp
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
-    const fetchWarehouses = async (pageIndex = 1, currentSize = size) => {
-        setLoading(true);
+    const fetchWarehouses = async (pageIndex = 1, currentSize = size, silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const res = await warehouseApi.getWarehouses({
                 search: searchKeyword || undefined,
@@ -71,9 +73,10 @@ const WarehouseListPage = () => {
             console.error("Lỗi fetch kho:", error);
             showToast('error', 'Không thể tải dữ liệu kho!');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+    useRealtimeRefresh(['WAREHOUSE'], ({ silent } = {}) => fetchWarehouses(page, size, silent));
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {

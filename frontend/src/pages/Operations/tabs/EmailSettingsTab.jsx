@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { getGmailStatus, sendTestEmail, disconnectGmail, getGmailConnectUrl } from '../../../api/emailSettingsApi';
 import { useToast } from '../../../contexts/ToastContext';
 import styles from './EmailSettingsTab.module.css';
+import { formatDateTime } from '../../../utils/dateFormat';
 
 function EmailSettingsTab() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -111,14 +112,7 @@ function EmailSettingsTab() {
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
         try {
-            const d = new Date(dateStr);
-            return d.toLocaleDateString('vi-VN', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            });
+            return formatDateTime(dateStr, { withSeconds: false });
         } catch {
             return dateStr;
         }

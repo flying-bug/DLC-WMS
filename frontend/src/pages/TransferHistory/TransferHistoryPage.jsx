@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -16,6 +17,7 @@ import styles from './TransferHistoryPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const DEFAULT_COLUMNS = {
@@ -38,8 +40,10 @@ const COLUMN_OPTIONS = [
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Lưu tạm', code: 'info' }, // Adjust if you have another status
-  POSTED: { label: 'Ghi sổ', code: 'success' },
+  SUBMITTED: { label: 'Lưu tạm', code: 'info' },
+  APPROVED: { label: 'Đã duyệt, chờ xuất kho', code: 'info' },
+  IN_TRANSIT: { label: 'Đang vận chuyển, chờ nhập kho', code: 'warning' },
+  POSTED: { label: 'Hoàn tất', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
@@ -59,8 +63,8 @@ function TransferHistoryPage() {
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1, { disableRestore: Boolean(location.state?.filterTransferCode) });
+  const [pageSize, setPageSize] = useSessionState('pageSize', 10, { disableRestore: Boolean(location.state?.filterTransferCode) });
 
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -78,7 +82,7 @@ function TransferHistoryPage() {
     };
   }, [location.state?.filterTransferCode]);
 
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS, { disableRestore: Boolean(location.state?.filterTransferCode) });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -109,8 +113,8 @@ function TransferHistoryPage() {
     if (productRes.status === 'fulfilled') setProducts(pageContent(unwrap(productRes.value)));
   }, []);
 
-  const loadSlips = useCallback(async () => {
-    setLoading(true);
+  const loadSlips = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const params = {
@@ -123,13 +127,14 @@ function TransferHistoryPage() {
       const data = unwrap(response) || [];
       setSlips(data);
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       setError(err.response?.data?.userMessage || 'Không tải được danh sách phiếu chuyển kho');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['STOCK_TRANSFER'], loadSlips);
 
   useEffect(() => {
     loadLookups();
@@ -240,7 +245,10 @@ function TransferHistoryPage() {
               onReset={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); setTimeout(loadSlips, 0); }}
               statusOptions={[
                 { value: 'DRAFT', label: 'Lưu tạm' },
-                { value: 'POSTED', label: 'Ghi sổ' },
+                { value: 'APPROVED', label: 'Đã duyệt, chờ xuất kho' },
+                { value: 'IN_TRANSIT', label: 'Đang vận chuyển, chờ nhập kho' },
+                { value: 'POSTED', label: 'Hoàn tất' },
+                { value: 'CANCELLED', label: 'Đã hủy' },
               ]}
             />
             <button
@@ -436,6 +444,22 @@ function TransferHistoryPage() {
                         {warehouseById.get(selectedSlip.toWarehouseId)?.name || `Kho #${selectedSlip.toWarehouseId}`}
                       </span>
                     </div>
+                    {selectedSlip.exportDocumentCode && (
+                      <div className={styles.detailRightRow}>
+                        <span className={styles.detailRightLabel}>
+                          <i className="bi bi-file-earmark-arrow-up"></i> Phiếu xuất kho
+                        </span>
+                        <span className={styles.detailRightValue}>{selectedSlip.exportDocumentCode}</span>
+                      </div>
+                    )}
+                    {selectedSlip.importDocumentCode && (
+                      <div className={styles.detailRightRow}>
+                        <span className={styles.detailRightLabel}>
+                          <i className="bi bi-file-earmark-arrow-down"></i> Phiếu nhập kho
+                        </span>
+                        <span className={styles.detailRightValue}>{selectedSlip.importDocumentCode}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

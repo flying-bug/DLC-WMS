@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
@@ -10,10 +11,12 @@ import { printExportSlip } from '../../utils/printExportSlip';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import styles from './WarehouseDocumentFormPage.module.css';
+import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
 export default function WarehouseDocumentFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack('/warehouse-workspace');
   const location = useLocation();
 
   // Xác định là Phiếu Nhập hay Phiếu Xuất
@@ -244,7 +247,7 @@ export default function WarehouseDocumentFormPage() {
 
       showToast('success', 'Ghi sổ kho thành công! Thẻ kho và số lượng tồn đã được cập nhật.');
       setTimeout(() => {
-        navigate('/warehouse-workspace');
+        goBack();
       }, 800);
     } catch (err) {
       console.error('Lỗi khi ghi sổ kho:', err.response?.data || err);
@@ -269,9 +272,9 @@ export default function WarehouseDocumentFormPage() {
       showToast('success', `Đã bỏ ghi sổ. Đã tạo phiếu mới ${newDoc?.docCode || ''} để tiếp tục chỉnh sửa.`);
       setTimeout(() => {
         if (newDoc?.id) {
-          navigate(`/warehouse-workspace/${isImport ? 'imports' : 'exports'}/${newDoc.id}`);
+          navigate(`/warehouse-workspace/${isImport ? 'imports' : 'exports'}/${newDoc.id}`, { replace: true });
         } else {
-          navigate('/warehouse-workspace');
+          goBack();
         }
       }, 800);
     } catch (err) {
@@ -309,7 +312,7 @@ export default function WarehouseDocumentFormPage() {
             </div>
             <h2>Không tìm thấy chứng từ kho</h2>
             <p>Chứng từ không tồn tại hoặc không còn khả dụng. Hãy quay lại danh sách để chọn chứng từ khác.</p>
-            <button type="button" className={styles.emptyStateAction} onClick={() => navigate('/warehouse-workspace')}>
+            <button type="button" className={styles.emptyStateAction} onClick={goBack}>
               <i className="bi bi-arrow-left"></i> Quay lại danh sách
             </button>
           </div>
@@ -336,8 +339,8 @@ export default function WarehouseDocumentFormPage() {
             <button
               type="button"
               className={styles.backBtn}
-              onClick={() => navigate('/warehouse-workspace')}
-              title="Quay lại bàn làm việc thủ kho"
+              onClick={goBack}
+              title="Quay lại"
             >
               <i className="bi bi-arrow-left"></i> Quay lại
             </button>
@@ -378,6 +381,30 @@ export default function WarehouseDocumentFormPage() {
 
         {/* MAIN CONTENT AREA */}
         <div className={styles.mainContent}>
+          {/* STOCK TRANSFER ORIGIN BANNER */}
+          {(doc.issuePurpose === 'TRANSFER_EXPORT' || doc.issuePurpose === 'TRANSFER_IMPORT') && (
+            <div style={{
+              background: 'var(--wms-info-soft, #eff6ff)',
+              border: '1px solid var(--wms-info-border, #bfdbfe)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <i className="bi bi-arrow-left-right" style={{ color: '#2563eb', fontSize: '18px', marginTop: '2px' }}></i>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: '#1e40af', fontSize: '14px', marginBottom: '2px' }}>
+                  Chứng từ tự động sinh từ phiếu chuyển kho{doc.referenceId ? ` #${doc.referenceId}` : ''}
+                </div>
+                <div style={{ color: '#1e3a8a', fontSize: '13px' }}>
+                  Vui lòng quét/kiểm đếm số lượng thực tế trước khi ghi sổ - số liệu bạn ghi sổ ở đây sẽ là số liệu chính thức.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* UNPOST HISTORY ALERT BANNER */}
           {doc.unpostReason && (
             <div style={{
@@ -397,7 +424,7 @@ export default function WarehouseDocumentFormPage() {
                 </div>
                 <div style={{ color: '#78350f', fontSize: '13px' }}>
                   Chứng từ này từng được Bỏ ghi sổ bởi <strong>{doc.unpostedByName || 'Thủ kho'}</strong>
-                  {doc.unpostedAt && ` vào lúc ${new Date(doc.unpostedAt).toLocaleString('vi-VN')}`}
+                  {doc.unpostedAt && ` vào lúc ${formatDateTime(doc.unpostedAt)}`}
                   {doc.unpostReason && ` • Lý do: "${doc.unpostReason}"`}
                 </div>
               </div>
@@ -455,7 +482,7 @@ export default function WarehouseDocumentFormPage() {
             <div className={styles.formRightCol}>
               <div className={styles.formRow}>
                 <span className={styles.fieldLabel}>Ngày chứng từ:</span>
-                <span className={styles.fieldValue}>{doc.docDate || '-'}</span>
+                <span className={styles.fieldValue}>{formatDateOnly(doc.docDate) || '-'}</span>
               </div>
               <div className={styles.formRow}>
                 <span className={styles.fieldLabel}>Số chứng từ:</span>
@@ -464,7 +491,7 @@ export default function WarehouseDocumentFormPage() {
               <div className={styles.formRow}>
                 <span className={styles.fieldLabel}>Ngày ghi sổ:</span>
                 <span className={styles.fieldValue}>
-                  {doc.postedAt ? new Date(doc.postedAt).toLocaleDateString('vi-VN') : isPosted ? doc.docDate || '-' : 'Chưa ghi sổ'}
+                  {doc.postedAt ? formatDateOnly(doc.postedAt) : isPosted ? formatDateOnly(doc.docDate) || '-' : 'Chưa ghi sổ'}
                 </span>
               </div>
             </div>
@@ -702,7 +729,7 @@ export default function WarehouseDocumentFormPage() {
                         </div>
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', whiteSpace: 'nowrap', marginLeft: '12px', marginTop: '2px' }}>
-                        {logItem.timestamp ? new Date(logItem.timestamp).toLocaleString('vi-VN') : ''}
+                        {logItem.timestamp ? formatDateTime(logItem.timestamp) : ''}
                       </div>
                     </div>
                   );
@@ -716,7 +743,7 @@ export default function WarehouseDocumentFormPage() {
                     {doc.createdByName || (doc.createdBy ? `User #${doc.createdBy}` : '-')}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', marginTop: '2px' }}>
-                    {doc.createdAt ? new Date(doc.createdAt).toLocaleString('vi-VN') : '-'}
+                    {doc.createdAt ? formatDateTime(doc.createdAt) : '-'}
                   </div>
                 </div>
 
@@ -727,7 +754,7 @@ export default function WarehouseDocumentFormPage() {
                       {isPosted ? 'Đã ghi sổ thành công' : 'Đã từng ghi sổ'}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--color-success-deep)', marginTop: '2px' }}>
-                      {new Date(doc.postedAt).toLocaleString('vi-VN')}
+                      {formatDateTime(doc.postedAt)}
                     </div>
                   </div>
                 )}
@@ -739,7 +766,7 @@ export default function WarehouseDocumentFormPage() {
                       {doc.unpostedByName || 'Thủ kho'}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--wms-warning-hover)', marginTop: '2px' }}>
-                      {new Date(doc.unpostedAt).toLocaleString('vi-VN')} • Lý do: "{doc.unpostReason}"
+                      {formatDateTime(doc.unpostedAt)} • Lý do: "{doc.unpostReason}"
                     </div>
                   </div>
                 )}
@@ -747,7 +774,7 @@ export default function WarehouseDocumentFormPage() {
                 <div style={{ background: 'var(--wms-bg-soft)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--wms-bg-hover)' }}>
                   <div style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>Cập nhật lần cuối:</div>
                   <div style={{ fontWeight: 600, color: 'var(--wms-text-title)', fontSize: '13px', marginTop: '2px' }}>
-                    {doc.updatedAt ? new Date(doc.updatedAt).toLocaleString('vi-VN') : '-'}
+                    {doc.updatedAt ? formatDateTime(doc.updatedAt) : '-'}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--wms-text-subtle)', marginTop: '2px' }}>
                     Trạng thái hiện tại: {doc.status === 'POSTED' ? 'Đã ghi sổ' : doc.status === 'UNPOSTED' ? 'Đã bỏ ghi sổ' : doc.status === 'CANCELLED' ? 'Đã hủy' : 'Lưu tạm'}

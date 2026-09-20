@@ -12,6 +12,9 @@ import java.util.List;
 @Builder
 public class StockTransferLineDTO {
     private Long variantId;
+    private String sku;
+    private String variantName;
+    private String productName;
     private BigDecimal quantity;
     private BigDecimal unitCost;
     private String note;

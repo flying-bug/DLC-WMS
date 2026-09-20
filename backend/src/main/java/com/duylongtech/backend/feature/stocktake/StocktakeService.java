@@ -92,7 +92,7 @@ public class StocktakeService {
         if (userPrincipal != null && userWarehouseRoleRepository != null) {
             boolean isAdminOrManager = userPrincipal.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority() != null && (
-                            a.getAuthority().contains("ADMIN") ||
+                            a.getAuthority().contains("SUPER_ADMIN") ||
                             a.getAuthority().contains("MANAGER")
                     ));
 
@@ -136,7 +136,7 @@ public class StocktakeService {
         if (userPrincipal != null && userWarehouseRoleRepository != null) {
             boolean isAdminOrManager = userPrincipal.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority() != null && (
-                            a.getAuthority().contains("ADMIN") ||
+                            a.getAuthority().contains("SUPER_ADMIN") ||
                             a.getAuthority().contains("MANAGER")
                     ));
 
@@ -358,7 +358,7 @@ public class StocktakeService {
     private void checkStorekeeperRestriction(Stocktake stocktake, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
         if (userPrincipal == null) return;
         boolean isStorekeeper = userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("STOREKEEPER"));
-        boolean isAccountantOrAdmin = userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("ACCOUNTANT") || a.getAuthority().contains("ADMIN") || a.getAuthority().contains("MANAGER"));
+        boolean isAccountantOrAdmin = userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("ACCOUNTANT") || a.getAuthority().contains("SUPER_ADMIN") || a.getAuthority().contains("MANAGER"));
         
         if (isStorekeeper && !isAccountantOrAdmin && stocktake.getCreatedBy() != null) {
             userRepository.findById(stocktake.getCreatedBy()).ifPresent(creator -> {

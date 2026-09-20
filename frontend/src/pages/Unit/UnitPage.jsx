@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import AdminLayout from '../../components/layout/AdminLayout';
 import UnitModal from './components/UnitModal';
 import { exportToExcel } from '../../utils/excelExport';
@@ -10,6 +11,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_LABELS = {
@@ -23,9 +25,9 @@ const UnitPage = () => {
     const [loading, setLoading] = useState(false);
     
     // Filters and Pagination
-    const [filters, setFilters] = useState({ search: '', status: '' });
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [filters, setFilters] = useSessionState('filters', { search: '', status: '' });
+    const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     
@@ -37,9 +39,9 @@ const UnitPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchUnits = useCallback(async () => {
+    const fetchUnits = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const params = {
                 page: currentPage - 1,
                 size: pageSize
@@ -64,9 +66,10 @@ const UnitPage = () => {
             console.error('Lỗi tải danh sách đơn vị tính:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách đơn vị tính');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters, currentPage, pageSize]);
+  useRealtimeRefresh(['UNIT'], fetchUnits);
 
     useEffect(() => {
         const timer = setTimeout(() => {

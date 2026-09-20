@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -11,6 +12,7 @@ import * as assemblyApi from '../../api/assemblyOrderApi';
 import styles from './AssemblyOrderPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -42,8 +44,8 @@ const DEFAULT_COLUMNS = {
 function AssemblyBomPage() {
     const navigate = useNavigate();
     const [boms, setBoms] = useState([]);
-    const [statusFilter, setStatusFilter] = useState('');
-    const [keywordFilter, setKeywordFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useSessionState('statusFilter', '');
+    const [keywordFilter, setKeywordFilter] = useSessionState('keywordFilter', '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -63,23 +65,24 @@ function AssemblyBomPage() {
     };
 
     // Pagination states
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [page, setPage] = useSessionState('page', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
 
-    const loadBoms = useCallback(async () => {
-        setLoading(true);
+    const loadBoms = useCallback(async ({ silent } = {}) => {
+        if (!silent) setLoading(true);
         setError('');
         try {
             const response = await assemblyApi.getAssemblyBoms({});
             setBoms(listFrom(unwrap(response)));
-            setPage(1);
+            if (!silent) setPage(1);
         } catch (err) {
             setBoms([]);
             setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách cấu hình.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
+  useRealtimeRefresh(['ASSEMBLY_BOM'], loadBoms);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {

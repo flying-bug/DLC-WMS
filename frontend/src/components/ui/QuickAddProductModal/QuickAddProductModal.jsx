@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axiosClient from '../../../api/axiosClient';
+import * as businessSettingsApi from '../../../api/businessSettingsApi';
 import styles from './QuickAddProductModal.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
@@ -181,6 +182,7 @@ const QuickAddProductModal = ({
     const [categories, setCategories] = useState([]);
     const [units, setUnits] = useState([]);
     const [selectedProductType, setSelectedProductType] = useState(defaultProductType);
+    const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
     const [formData, setFormData] = useState({
         productName: initialProductName,
         categoryId: '',
@@ -214,6 +216,17 @@ const QuickAddProductModal = ({
             
             const unitsList = getPageContent(unitRes);
             setUnits(unitsList);
+
+            businessSettingsApi.getDefaultVat().then(res => {
+                const vConf = res.data?.data || res.data;
+                if (vConf?.allowedVatRates) {
+                    setVatConfig(vConf);
+                    setFormData(prev => ({
+                        ...prev,
+                        vatRate: prev.vatRate !== undefined ? prev.vatRate : vConf.defaultVatRate
+                    }));
+                }
+            }).catch(err => console.error('Lỗi lấy cấu hình VAT:', err));
             
             setFormData(prev => {
                 let newCatId = prev.categoryId;
@@ -339,7 +352,7 @@ const QuickAddProductModal = ({
                     brandId: formData.brandId ? Number(formData.brandId) : null,
                     warrantyPeriodMonths: formData.warrantyPeriodMonths ? Number(formData.warrantyPeriodMonths) : 0,
                     salePrice: formData.salePrice ? Number(formData.salePrice) : 0,
-                    vatRate: formData.vatRate !== undefined ? Number(formData.vatRate) : 8,
+                    vatRate: formData.vatRate !== undefined ? Number(formData.vatRate) : vatConfig.defaultVatRate,
                     trackSerial: trackSerial,
                     isAssembly: isAssemblyType,
                     active: true,
@@ -473,13 +486,12 @@ const QuickAddProductModal = ({
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Thuế VAT (%)</label>
                                 <SearchableSelect 
-                                    value={formData.vatRate !== undefined ? formData.vatRate : 8} 
+                                    value={formData.vatRate !== undefined ? formData.vatRate : vatConfig.defaultVatRate} 
                                     onChange={e => setFormData(f => ({...f, vatRate: Number(e.target.value)}))}
                                 >
-                                    <option value={0}>0%</option>
-                                    <option value={5}>5%</option>
-                                    <option value={8}>8%</option>
-                                    <option value={10}>10%</option>
+                                    {vatConfig.allowedVatRates.map(rate => (
+                                        <option key={rate} value={rate}>{rate}%</option>
+                                    ))}
                                 </SearchableSelect>
                             </div>
                         </div>}

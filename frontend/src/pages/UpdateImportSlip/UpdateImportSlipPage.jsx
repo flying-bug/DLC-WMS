@@ -1,11 +1,13 @@
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
 import * as customerApi from '../../api/customerApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import SupplierModal from '../Supplier/components/SupplierModal';
 import CustomerModal from '../Customer/components/CustomerModal';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
@@ -24,6 +26,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
 import Badge from '../../components/ui/Badge/Badge';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -104,7 +107,7 @@ const customSelectStyles = {
   })
 };
 
-const emptyLine = (defaultWarehouseId = '') => ({
+const emptyLine = (defaultWarehouseId = '', defaultVat = 0) => ({
   localId: crypto.randomUUID(),
   id: null,
   variantId: '',
@@ -118,7 +121,7 @@ const emptyLine = (defaultWarehouseId = '') => ({
   rejectedQuantity: 0,
   discrepancyReason: '',
   price: 0,
-  vatPercent: 0,
+  vatPercent: defaultVat,
   note: '',
   serialNumbers: [],
   isNew: true,
@@ -126,6 +129,7 @@ const emptyLine = (defaultWarehouseId = '') => ({
 
 function UpdateImportSlipPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/import-history');
   const location = useLocation();
   const { id } = useParams();
   const showPricing = canViewPricing();
@@ -163,6 +167,7 @@ function UpdateImportSlipPage() {
   const [showReferenceModal, setShowReferenceModal] = useState(false);
   const [items, setItems] = useState([emptyLine()]);
   const [inventoryBalances, setInventoryBalances] = useState([]);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -262,15 +267,21 @@ function UpdateImportSlipPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [detailRes, warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
+        const [detailRes, warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes, vatRes] = await Promise.allSettled([
           importApi.getImportDetail(id),
           importApi.getWarehouses({ size: 100 }),
           importApi.getSuppliers(),
           importApi.getProducts({ size: 1000, excludeServices: true }),
           customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
           assemblyOrderApi.getAssemblyOrders({ size: 100 }),
-          exportApi.getUsers({ size: 1000 })
+          exportApi.getUsers({ size: 1000 }),
+          businessSettingsApi.getDefaultVat()
         ]);
+
+        if (vatRes.status === 'fulfilled') {
+          const vConf = vatRes.value?.data?.data || vatRes.value?.data;
+          if (vConf?.allowedVatRates) setVatConfig(vConf);
+        }
 
         if (warehouseRes.status === 'fulfilled') setWarehouses(pageContent(unwrap(warehouseRes.value)));
         if (supplierRes.status === 'fulfilled') setSuppliers(pageContent(unwrap(supplierRes.value)).filter(s => s.status !== 'INACTIVE'));
@@ -293,6 +304,7 @@ function UpdateImportSlipPage() {
         setForm({
           docCode: detail.docCode || '',
           warehouseId: detail.warehouseId || '',
+          warehouseLocked: !!detail.warehouseLocked,
           partnerId: loadedImportType === 'PURCHASE' ? detail.partnerId || '' : '',
           partnerName: detail.partnerName || '',
           customerId: loadedImportType === 'RETURN' ? detail.partnerId || '' : '',
@@ -478,12 +490,12 @@ function UpdateImportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : '')), variantId: filteredProducts[0]?.id || '' }]);
+    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate), variantId: filteredProducts[0]?.id || '' }]);
     setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId), isNew: false }]);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId, vatConfig.defaultVatRate), isNew: false }]);
   };
 
   const handleSerialModalClose = (savedSerials) => {
@@ -585,9 +597,9 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         return showToast('error', `Dòng ${i + 1}: Đơn giá không được âm.`);
       }
       const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-      if (isNaN(vat) || vat < 0 || vat > 10) {
+      if (isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
         focusField(`import-line-vat-${i}`);
-        return showToast('error', `Dòng ${i + 1}: Thuế VAT phải nằm trong khoảng từ 0% đến 10%.`);
+        return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
       }
       const product = productById.get(String(item.variantId));
       if (product?.trackSerial) {
@@ -874,11 +886,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
           const globalIndex = (itemPage - 1) * itemPageSize + index;
           return (
             <div style={{ textAlign: 'right' }}>
-              <select id={`import-line-vat-${globalIndex}`} className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} value={item.vatPercent !== undefined ? Number(item.vatPercent) : 0} onChange={(e) => handleItemChange(item.localId, 'vatPercent', Number(e.target.value))}>
-                <option value={0}>0%</option>
-                <option value={5}>5%</option>
-                <option value={8}>8%</option>
-                <option value={10}>10%</option>
+              <select id={`import-line-vat-${globalIndex}`} className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', textAlign: 'center', fontSize: '13px', cursor: 'pointer' }} value={item.vatPercent !== undefined ? Number(item.vatPercent) : vatConfig.defaultVatRate} onChange={(e) => handleItemChange(item.localId, 'vatPercent', Number(e.target.value))}>
+                {vatConfig.allowedVatRates.map(rate => (
+                  <option key={rate} value={rate}>{rate}%</option>
+                ))}
               </select>
             </div>
           );
@@ -956,7 +967,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       <div className={styles.pageBody}>
         <div className={styles.pageHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/import-history'); }}>
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
               <i className="bi bi-arrow-left"></i> Sửa phiếu nhập kho {form.docCode ? form.docCode : ''}
             </a>
             <span style={{ color: 'var(--color-border-muted)', fontSize: '20px' }}>|</span>
@@ -982,7 +993,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                     customerId: '',
                     assemblyOrderId: ''
                   }));
-                  setItems([{ ...emptyLine(), isNew: false }]);
+                  setItems([{ ...emptyLine(form.warehouseId, vatConfig.defaultVatRate), isNew: false }]);
                 }}
                 styles={{
                   ...customSelectStyles,
@@ -1202,8 +1213,14 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                         }}
                         placeholder="Chọn kho"
                         isClearable
+                        isDisabled={form.warehouseLocked}
                         styles={customSelectStyles}
                       />
+                      {form.warehouseLocked && (
+                        <small style={{ color: 'var(--color-text-muted-2)', fontSize: 12 }}>
+                          Kho của phiếu đã được chọn theo chứng từ tham chiếu, không thể thay đổi.
+                        </small>
+                      )}
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">
@@ -1324,7 +1341,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
 
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Ngày nhập kho <span className="required">*</span></label>
-                  <input id="import-docDate" type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
+                  <DateInput id="import-docDate" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
                 </div>
               </div>
             </div>
@@ -1445,7 +1462,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
 
         <div className={styles.stickyFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+            <button className="btn-misa-cancel" onClick={goBack}>
               <i className="bi bi-x-circle"></i> Hủy bỏ
             </button>
           </div>
@@ -1524,8 +1541,8 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
         onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
-        onViewList={() => navigate('/import-history')}
-        onClose={() => navigate('/import-history')}
+        onViewList={() => navigate(returnUrl || '/import-history', { replace: true })}
+        onClose={goBack}
       />
       <Toast
         isVisible={toast.isVisible}

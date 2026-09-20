@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getBaseURL } from '../../../api/axiosClient';
 import { getEInvoicePreviewHtml } from '../../../api/einvoiceApi';
+import { formatDateTime } from '../../../utils/dateFormat';
 
 export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
   const iframeRef = useRef(null);
@@ -177,7 +178,7 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
                 </div>
               </div>
               <div style={{ fontSize: '12px', color: '#7f1d1d' }}>
-                Người thực hiện: <strong>{invoice.canceledByName || 'Quản trị viên'}</strong> {invoice.canceledAt ? `lúc ${new Date(invoice.canceledAt).toLocaleString('vi-VN')}` : ''}
+                Người thực hiện: <strong>{invoice.canceledByName || 'Quản trị viên'}</strong> {invoice.canceledAt ? `lúc ${formatDateTime(invoice.canceledAt)}` : ''}
               </div>
             </div>
           )}

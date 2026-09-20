@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -16,15 +18,17 @@ import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue, formatD
 import { getAuthRoles } from '../../auth/session';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 function StocktakeDetailPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/stocktakes');
   const { id } = useParams();
   const [searchParams] = useSearchParams();
 
   const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase());
   const isStorekeeper = userRoles.some(r => r.includes('STOREKEEPER'));
-  const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('ADMIN') || r.includes('MANAGER'));
+  const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('SUPER_ADMIN') || r.includes('MANAGER'));
 
 
   const [warehouses, setWarehouses] = useState([]);
@@ -56,9 +60,9 @@ function StocktakeDetailPage() {
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
   const [participants, setParticipants] = useState([]);
 
-  const fetchStocktakeData = async () => {
+  const fetchStocktakeData = async ({ silent } = {}) => {
     try {
-      setLoadingStock(true);
+      if (!silent) setLoadingStock(true);
       const res = await stocktakeApi.getStocktakeDetail(id);
       const data = res?.data?.data || res?.data;
       if (data) {
@@ -112,9 +116,11 @@ function StocktakeDetailPage() {
       console.error(err);
       showToast('error', 'Không tải được chi tiết phiếu kiểm kê');
     } finally {
-      setLoadingStock(false);
+      if (!silent) setLoadingStock(false);
     }
   };
+  // Chỉ tự làm mới khi đang xem (isSaved); ở chế độ sửa sẽ ghi đè dữ liệu người dùng đang nhập.
+  useRealtimeRefresh({ STOCKTAKE: id }, fetchStocktakeData, { enabled: isSaved });
 
   useEffect(() => {
     const loadWarehouses = async () => {
@@ -380,7 +386,7 @@ function StocktakeDetailPage() {
   };
 
   const handleCancel = () => {
-    navigate('/stocktakes');
+    goBack();
   };
 
   const buildPayload = () => ({
@@ -460,7 +466,7 @@ function StocktakeDetailPage() {
       if (formData.isProcessed) {
         await stocktakeApi.postStocktake(id);
       }
-      navigate('/stocktakes', { state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
+      navigate('/stocktakes', { replace: true, state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
     } catch (err) {
       console.error(err);
       showToast('error', err.response?.data?.userMessage || 'Cập nhật thất bại');
@@ -774,7 +780,7 @@ function StocktakeDetailPage() {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Đến ngày</label>
-                <input type="date" className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled={isSaved} />
+                <DateInput className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled={isSaved} />
               </div>
             </div>
           </div>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -17,6 +19,7 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
+    const goBack = useGoBack('/suppliers');
     const { id } = useParams();
     const guard = usePermissionGuard();
     
@@ -41,16 +44,16 @@ const SupplierDetailPage = () => {
     const formatDate = (value) => value ? formatDateOnly(value) : '-';
     const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
-    const fetchSupplier = async () => {
+    const fetchSupplier = async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const res = await axiosClient.get(`/suppliers/${id}`);
             if (res.data && res.data.data) {
                 const supplierData = res.data.data;
                 setSupplier(supplierData);
                 setDebtBalance(Number(supplierData.currentDebt || 0));
 
-                setHistoryLoading(true);
+                if (!silent) setHistoryLoading(true);
                 setPurchaseError(null);
                 setPaymentError(null);
                 const [ordersRes, paymentRes, balanceRes] = await Promise.allSettled([
@@ -98,16 +101,17 @@ const SupplierDetailPage = () => {
                     console.error('Lỗi tải lịch sử mua hàng:', ordersRes.reason);
                     setPurchaseError('Không tải được lịch sử mua hàng');
                 }
-                setHistoryLoading(false);
+                if (!silent) setHistoryLoading(false);
             }
         } catch (error) {
             console.error('Lỗi tải chi tiết NCC:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết nhà cung cấp');
         } finally {
-            setHistoryLoading(false);
-            setLoading(false);
+            if (!silent) setHistoryLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+  useRealtimeRefresh({ PARTNER: id, PURCHASE_ORDER: null, PAYMENT: null }, fetchSupplier);
 
     useEffect(() => {
         if (id) {
@@ -119,7 +123,7 @@ const SupplierDetailPage = () => {
         try {
             await axiosClient.delete(`/suppliers/${id}`);
             setIsDeleteModalOpen(false);
-            navigate('/suppliers', { state: { toastMessage: `Đã xóa nhà cung cấp ${supplier.name}`, toastType: 'success' } });
+            navigate('/suppliers', { replace: true, state: { toastMessage: `Đã xóa nhà cung cấp ${supplier.name}`, toastType: 'success' } });
         } catch (error) {
             showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa nhà cung cấp');
             setIsDeleteModalOpen(false);
@@ -143,7 +147,7 @@ const SupplierDetailPage = () => {
                     <div className={styles.emptyState}>
                         <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`}></i>
                         <div className={styles.emptyText}>Không tìm thấy nhà cung cấp này</div>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/suppliers')}>Quay lại danh sách</button>
+                        <button className={styles.btnPrimary} onClick={goBack}>Quay lại danh sách</button>
                     </div>
                 </div>
             </AdminLayout>
@@ -157,7 +161,7 @@ const SupplierDetailPage = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <button 
                             className={styles.backButton}
-                            onClick={() => navigate('/suppliers')}
+                            onClick={goBack}
                             title="Quay lại danh sách"
                         >
                             <i className="bi bi-arrow-left"></i>

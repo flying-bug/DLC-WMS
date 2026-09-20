@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRealtimeRefresh } from '../../../hooks/useRealtimeRefresh';
 import warehouseStaffApi from '../../../api/warehouseStaffApi';
 import AssignStaffModal from './AssignStaffModal';
 import Toast from '../../../components/ui/Toast/Toast';
@@ -39,8 +40,8 @@ const WarehouseStaffList = ({ warehouseId }) => {
         }
     };
 
-    const fetchStaffs = async (pageIndex = 1, currentSize = pageSize) => {
-        setLoading(true);
+    const fetchStaffs = async (pageIndex = 1, currentSize = pageSize, silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const params = {
                 page: pageIndex - 1,
@@ -61,9 +62,10 @@ const WarehouseStaffList = ({ warehouseId }) => {
             console.error('Lỗi tải danh sách nhân sự:', error);
             showToast('error', 'Không thể tải danh sách nhân sự.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+    useRealtimeRefresh(['WAREHOUSE'], ({ silent } = {}) => fetchStaffs(page, pageSize, silent));
 
     useEffect(() => {
         fetchRoles();

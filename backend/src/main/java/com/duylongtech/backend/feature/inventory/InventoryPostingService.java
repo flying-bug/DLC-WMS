@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.inventory;
 
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.enums.SerialNumberStatus;
@@ -145,6 +146,7 @@ public class InventoryPostingService {
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
     private final com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard warehouseAccessGuard;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
@@ -394,6 +396,8 @@ public class InventoryPostingService {
         } catch (Exception ignored) {
         }
 
+        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, saved.getId(), saved.getReferenceType(), saved.getReferenceId()));
+
         return toResponse(saved);
     }
 
@@ -441,7 +445,7 @@ public class InventoryPostingService {
                             .orElse("");
                 }
                 String docTypeLabel = isImport ? "nhập kho" : "xuất kho";
-                String notifTitle = (isImport ? "⚠️ Cảnh báo nhập kho thiếu: " : "⚠️ Cảnh báo xuất kho thiếu/thừa: ")
+                String notifTitle = (isImport ? "Cảnh báo nhập kho thiếu: " : "Cảnh báo xuất kho thiếu/thừa: ")
                         + savedDoc.getDocCode();
                 String notifMsg = String.format(
                         "Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện chênh lệch %s:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với đối tác.",
@@ -449,12 +453,12 @@ public class InventoryPostingService {
                         docTypeLabel, discrepancyDetails.toString().trim());
 
                 String refType = isImport ? "IMPORT_DOCUMENT" : "EXPORT_DOCUMENT";
-                String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId() + "/edit";
+                String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId();
 
                 appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
                 appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
             } catch (Exception e) {
                 // Log warning but do not fail the transaction
             }
@@ -564,13 +568,9 @@ public class InventoryPostingService {
                     .orElse(null);
             if (po != null && !DocumentStatus.POSTED.name().equals(po.getStatus()) && !DocumentStatus.CANCELLED.name().equals(po.getStatus())
                     && !Boolean.TRUE.equals(po.getIsShortClosed())) {
-                boolean fullyImported = !po.getLines().isEmpty() && po.getLines().stream().allMatch(l -> {
-                    BigDecimal imported = inventoryDocumentLineRepository
-                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), l.getVariantId());
-                    if (imported == null)
-                        imported = BigDecimal.ZERO;
-                    return l.getQuantity().subtract(imported).compareTo(BigDecimal.ZERO) <= 0;
-                });
+                // Chỉ tính phiếu ĐÃ GHI SỔ (mọi kho): phiếu nháp của kho khác chưa nhận hàng thì PO chưa hoàn thành.
+                boolean fullyImported = PurchaseOrderReceiving.of(po.getLines(),
+                        inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), null)).isFullyPosted();
                 if (fullyImported) {
                     // Cập nhật trạng thái POSTED
                     po.markAsPosted();
@@ -598,6 +598,8 @@ public class InventoryPostingService {
                     null, null);
         } catch (Exception ignored) {
         }
+
+        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, savedImport.getId(), savedImport.getReferenceType(), savedImport.getReferenceId()));
 
         return toResponse(savedImport);
     }

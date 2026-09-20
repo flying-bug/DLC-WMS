@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -14,10 +15,12 @@ import OcrResultPreviewModal from '../CreateImportSlip/components/OcrResultPrevi
 import { useAiFeature } from '../../contexts/AiFeatureContext';
 import { confirmOcrMapping, scanImportSlipOcr } from '../../api/inventoryImportApi';
 import * as poApi from '../../api/purchaseOrderApi';
+import * as businessSettingsApi from '../../api/businessSettingsApi';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { findBestMatch } from '../../utils/fuzzyMatch';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
@@ -37,18 +40,19 @@ const customSelectStyles = {
   menuPortal:           (base) => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = (defaultWh = null) => ({
+const emptyLine = (defaultWh = null, defaultVat = 8) => ({
   variantId: null,
   warehouseId: defaultWh,
   quantity: 1,
   unitPrice: 0,
   unitName: '',
-  vatRate: 8,
+  vatRate: defaultVat,
   note: '',
 });
 
 function CreatePurchaseOrderPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/purchase-orders');
   const location = useLocation();
   const { id }   = useParams();
   const isEdit   = Boolean(id);
@@ -65,6 +69,7 @@ function CreatePurchaseOrderPage() {
   const [saving,    setSaving]    = useState(false);
   const [toast,     setToast]     = useState({ isVisible: false, type: 'info', message: '' });
   const [attachments, setAttachments] = useState([]);
+  const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
   // ── AI OCR States ──
   const [showOcrModal, setShowOcrModal] = useState(false);
@@ -174,12 +179,18 @@ function CreatePurchaseOrderPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [supplierRes, variantRes, warehouseRes, codeRes] = await Promise.allSettled([
+        const [supplierRes, variantRes, warehouseRes, codeRes, vatRes] = await Promise.allSettled([
           poApi.getSuppliers({ isSupplier: true, status: 'APPROVED', size: 1000 }),
           poApi.getProducts({ size: 500, excludeServices: true }),
           poApi.getWarehouses({ size: 100 }),
           !isEdit ? poApi.getNextPoCode() : Promise.resolve(null),
+          businessSettingsApi.getDefaultVat(),
         ]);
+
+        if (vatRes.status === 'fulfilled') {
+          const vConf = vatRes.value?.data?.data || vatRes.value?.data;
+          if (vConf?.allowedVatRates) setVatConfig(vConf);
+        }
 
         if (supplierRes.status === 'fulfilled') {
           setSuppliers(pageContent(unwrap(supplierRes.value)));
@@ -235,12 +246,12 @@ function CreatePurchaseOrderPage() {
           quantity: qty,
           unitPrice: price,
           unitName: matchProd.unitName || 'Cái',
-          vatRate: Number(matchProd.vatPercent ?? matchProd.vatRate ?? 8),
+          vatRate: Number(matchProd.vatPercent ?? matchProd.vatRate ?? vatConfig.defaultVatRate),
           note: '',
         }]);
       }
     }
-  }, [voiceData, isEdit, suppliers, variants, warehouses]);
+  }, [voiceData, isEdit, suppliers, variants, warehouses, vatConfig.defaultVatRate]);
 
   // Load PO data if editing
   useEffect(() => {
@@ -266,7 +277,7 @@ function CreatePurchaseOrderPage() {
           quantity:    Number(l.quantity),
           unitPrice:   Number(l.unitPrice),
           unitName:    l.unitName || '',
-          vatRate:     l.vatRate !== undefined && l.vatRate !== null ? Number(l.vatRate) : 8,
+          vatRate:     l.vatRate !== undefined && l.vatRate !== null ? Number(l.vatRate) : vatConfig.defaultVatRate,
           note:        l.note     || '',
         })));
       } catch {
@@ -278,7 +289,7 @@ function CreatePurchaseOrderPage() {
 
   // ── Line management ──
   const defaultWarehouseId = warehouses.length > 0 ? warehouses[0].id : null;
-  const addLine     = ()             => setLines(p => [...p, emptyLine(defaultWarehouseId)]);
+  const addLine     = ()             => setLines(p => [...p, emptyLine(defaultWarehouseId, vatConfig.defaultVatRate)]);
   const removeLine  = (idx)          => setLines(p => p.filter((_, i) => i !== idx));
   const updateLine  = (idx, f, val)  => setLines(p => p.map((l, i) => i === idx ? { ...l, [f]: val } : l));
   const updateLineMultiple = (idx, updates) =>
@@ -308,7 +319,7 @@ function CreatePurchaseOrderPage() {
       variantId: selected.id,
       warehouseId: currentWh,
       unitName: selected.unitName || 'Cái',
-      vatRate: Number(selected.vatPercent ?? selected.vatRate ?? 8),
+      vatRate: Number(selected.vatPercent ?? selected.vatRate ?? vatConfig.defaultVatRate),
     });
   };
 
@@ -326,7 +337,7 @@ function CreatePurchaseOrderPage() {
           variantId: createdVariant.id,
           warehouseId: lines[quickAddLineIndex]?.warehouseId || defaultWarehouseId,
           unitName: createdVariant.unitName || 'Cái',
-          vatRate: Number(createdVariant.vatPercent ?? createdVariant.vatRate ?? 8),
+          vatRate: Number(createdVariant.vatPercent ?? createdVariant.vatRate ?? vatConfig.defaultVatRate),
         });
         showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
       } else if (createdVariant && ocrQuickAddPreviewIndex !== null) {
@@ -439,8 +450,8 @@ function CreatePurchaseOrderPage() {
         return false;
       }
       const vat = Number(lines[i].vatRate ?? 0);
-      if (Number.isNaN(vat) || vat < 0 || vat > 10) {
-        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) phải từ 0% đến 10%`);
+      if (Number.isNaN(vat) || !vatConfig.allowedVatRates.includes(vat)) {
+        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) không hợp lệ`);
         focusField(`po-line-vat-${i}`);
         return false;
       }
@@ -472,16 +483,19 @@ function CreatePurchaseOrderPage() {
       if (andApprove && saved?.id) {
         try {
           await poApi.approvePurchaseOrder(saved.id);
-          navigate('/purchase-orders', {
+          navigate(location.state?.returnUrl || '/purchase-orders', {
+            replace: true,
             state: { toastMessage: `Tạo và duyệt đơn ${saved.poCode} thành công! Công nợ đã được ghi nhận.`, toastType: 'success' }
           });
         } catch (approveErr) {
-          navigate('/purchase-orders', {
+          navigate(location.state?.returnUrl || '/purchase-orders', {
+            replace: true,
             state: { toastMessage: `Lưu đơn ${saved.poCode} thành công nhưng duyệt thất bại: ${approveErr.response?.data?.userMessage}`, toastType: 'warning' }
           });
         }
       } else {
-        navigate('/purchase-orders', {
+        navigate(location.state?.returnUrl || '/purchase-orders', {
+          replace: true,
           state: { toastMessage: `${isEdit ? 'Cập nhật' : 'Tạo'} đơn ${saved.poCode} thành công`, toastType: 'success' }
         });
       }
@@ -593,13 +607,12 @@ function CreatePurchaseOrderPage() {
           id={`po-line-vat-${idx}`}
           className={styles.cellInput}
           style={{ textAlign: 'center', cursor: 'pointer', padding: '0 4px', height: '28px', background: '#fff' }}
-          value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 8}
+          value={line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : vatConfig.defaultVatRate}
           onChange={e => updateLine(idx, 'vatRate', Number(e.target.value))}
         >
-          <option value={0}>0%</option>
-          <option value={5}>5%</option>
-          <option value={8}>8%</option>
-          <option value={10}>10%</option>
+          {vatConfig.allowedVatRates.map(rate => (
+            <option key={rate} value={rate}>{rate}%</option>
+          ))}
         </select>
       )
     },
@@ -773,9 +786,8 @@ function CreatePurchaseOrderPage() {
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Ngày lập <span className={styles.required}>*</span></label>
-                    <input
+                    <DateInput
                       id="po-docDate"
-                      type="date"
                       className={styles.input}
                       value={form.poDate}
                       onChange={e => setForm(p => ({ ...p, poDate: e.target.value }))}
@@ -785,9 +797,8 @@ function CreatePurchaseOrderPage() {
                   <div className={styles.directGrid}>
                     <div className={styles.fieldRow} style={{ marginBottom: 0 }}>
                       <label className={styles.label}>Hạn công nợ</label>
-                      <input
+                      <DateInput
                         id="po-paymentDueDate"
-                        type="date"
                         className={styles.input}
                         min={form.poDate}
                         value={form.paymentDueDate}
@@ -797,8 +808,7 @@ function CreatePurchaseOrderPage() {
 
                     <div className={styles.fieldRow} style={{ marginBottom: 0 }}>
                       <label className={styles.label}>Ngày giao dự kiến</label>
-                      <input
-                        type="date"
+                      <DateInput
                         className={styles.input}
                         min={form.poDate}
                         value={form.expectedDeliveryDate}
@@ -887,7 +897,7 @@ function CreatePurchaseOrderPage() {
                 <button
                   type="button"
                   className={styles.btnOutline}
-                  onClick={() => navigate('/purchase-orders')}
+                  onClick={goBack}
                   disabled={saving}
                 >
                   <i className="bi bi-x-lg" /> Hủy

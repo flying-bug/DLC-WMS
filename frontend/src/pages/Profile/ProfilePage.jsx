@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import axiosClient from '../../api/axiosClient';
 import { emitUserUpdated } from '../../auth/session';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -53,6 +54,7 @@ const toVietnameseLabel = (value, labels) => {
 
 function ProfilePage() {
     const navigate = useNavigate();
+    const goBack = useGoBack('/dashboard');
     const location = useLocation();
     const { showToast } = useToast();
     const isEditing = location.pathname.endsWith('/edit');
@@ -352,7 +354,7 @@ function ProfilePage() {
 
                             {!isEditing && (
                                 <div className={styles.actionsSection}>
-                                    <button className={styles.btnGhost} type="button" onClick={() => navigate('/dashboard')}>
+                                    <button className={styles.btnGhost} type="button" onClick={goBack}>
                                         Quay lại Dashboard
                                     </button>
                                 </div>

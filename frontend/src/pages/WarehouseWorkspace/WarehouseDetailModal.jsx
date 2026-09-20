@@ -2,6 +2,7 @@ import React from 'react';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { printExportSlip } from '../../utils/printExportSlip';
 import styles from './WarehouseFulfillModal.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 export default function WarehouseDetailModal({
   open,
@@ -59,7 +60,7 @@ export default function WarehouseDetailModal({
             </div>
             <div>
               <span style={{ color: 'var(--wms-text-muted)' }}>Ngày lập: </span>
-              <strong>{slip.docDate || '-'}</strong>
+              <strong>{formatDateOnly(slip.docDate) || '-'}</strong>
             </div>
             <div>
               <span style={{ color: 'var(--wms-text-muted)' }}>Loại nghiệp vụ: </span>

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
@@ -9,6 +11,7 @@ import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { hasPermission } from '../../auth/session';
+import { printWarrantyCard } from '../../utils/printWarrantyCard';
 
 const STATUS_LABELS = {
   ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
@@ -34,6 +37,7 @@ const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 function WarrantyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack('/warranties');
   const [warranty, setWarranty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -49,19 +53,20 @@ function WarrantyDetailPage() {
     setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
   };
 
-  const loadWarranty = useCallback(async () => {
-    setLoading(true);
+  const loadWarranty = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const response = await warrantyApi.getWarrantyById(id);
       setWarranty(unwrap(response));
     } catch (err) {
-      setWarranty(null);
+      if (!silent) setWarranty(null);
       setError(err.response?.data?.userMessage || 'Không tải được chi tiết bảo hành.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id]);
+  useRealtimeRefresh({ WARRANTY: id }, loadWarranty);
 
   const handleVoidWarranty = async () => {
     if (!voidReason.trim()) {
@@ -85,6 +90,12 @@ function WarrantyDetailPage() {
   useEffect(() => {
     loadWarranty();
   }, [loadWarranty]);
+
+  const handlePrintWarranty = () => {
+    printWarrantyCard(warranty, {
+      onError: (msg) => showToast('error', msg)
+    });
+  };
 
   const pName = warranty?.partnerName || warranty?.customerName || warranty?.partner?.name || 'Khách lẻ';
   const pPhone = warranty?.partnerPhone || warranty?.customerPhone || warranty?.partner?.phone || 'Chưa có';
@@ -151,7 +162,7 @@ function WarrantyDetailPage() {
       <div className={styles.container} style={{ padding: '24px' }}>
         <div className={styles.pageHeader}>
           <div className={styles.headerLeft}>
-            <button className={styles.btnBack} onClick={() => navigate('/warranties')}>
+            <button className={styles.btnBack} onClick={goBack}>
               <i className="bi bi-arrow-left"></i>
             </button>
             <h1 className={styles.pageTitle}>{warranty.warrantyCode || `Bảo hành #${id}`}</h1>
@@ -164,7 +175,9 @@ function WarrantyDetailPage() {
             </span>
           </div>
           <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
-
+            <button className={styles.btnEdit} onClick={handlePrintWarranty}>
+              <i className="bi bi-printer"></i> In thẻ bảo hành
+            </button>
             {currentStatus === 'ACTIVE' && canEditWarranty && (
               <button className={styles.btnDelete} onClick={() => setShowVoidModal(true)}>
                 <i className="bi bi-shield-x"></i> Vô hiệu hóa

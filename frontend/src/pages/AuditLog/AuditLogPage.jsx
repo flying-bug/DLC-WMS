@@ -9,6 +9,7 @@ import { useToast } from '../../contexts/ToastContext';
 import styles from './AuditLogPage.module.css';
 import { formatDateTime as formatVietnamDateTime } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const formatDateTime = (isoString) => isoString ? formatVietnamDateTime(isoString, { withSeconds: false }) : '';
@@ -259,9 +260,8 @@ function AuditLogPage() {
                     <div className={styles.filterSelectGroup}>
                         <div className={styles.dateFilterField}>
                             <label htmlFor="audit-from-date">Từ:</label>
-                            <input
+                            <DateInput
                                 id="audit-from-date"
-                                type="date"
                                 className={styles.filterSelect}
                                 value={fromDateInput}
                                 onChange={(e) => { setFromDateInput(e.target.value); setPage(0); }}
@@ -269,9 +269,8 @@ function AuditLogPage() {
                         </div>
                         <div className={styles.dateFilterField}>
                             <label htmlFor="audit-to-date">Đến:</label>
-                            <input
+                            <DateInput
                                 id="audit-to-date"
-                                type="date"
                                 className={styles.filterSelect}
                                 value={toDateInput}
                                 onChange={(e) => { setToDateInput(e.target.value); setPage(0); }}

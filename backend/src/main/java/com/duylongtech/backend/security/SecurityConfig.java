@@ -77,6 +77,16 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/webjars/**")
                         .permitAll()
+                        // Phân hệ Kế toán / Mua hàng / Bán hàng / Hóa đơn: Chặn Thủ quỹ và các vai trò không phận sự
+                        .requestMatchers("/api/v1/purchase-orders/**").hasAnyRole("ACCOUNTANT", "MANAGER", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/sales-orders/**").hasAnyRole("ACCOUNTANT", "MANAGER", "SUPER_ADMIN")
+                        .requestMatchers("/api/v1/einvoices/**").hasAnyRole("ACCOUNTANT", "MANAGER", "SUPER_ADMIN")
+                        // Thu chi: Lập, sửa, xóa chứng từ thuộc trách nhiệm Kế toán và Quản trị
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/receipts", "/api/v1/payments/vouchers").hasAnyRole("ACCOUNTANT", "MANAGER", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/payments/**").hasAnyRole("ACCOUNTANT", "MANAGER", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/payments/**").hasAnyRole("ACCOUNTANT", "MANAGER", "SUPER_ADMIN")
+                        // Ghi sổ / Bỏ ghi sổ quỹ: Chỉ Thủ quỹ và Quản trị
+                        .requestMatchers("/api/v1/payments/*/post", "/api/v1/payments/*/unpost").hasAnyRole("CASHIER_CONTROLLER", "MANAGER", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/ai/**").authenticated()
                         .anyRequest().authenticated());
 

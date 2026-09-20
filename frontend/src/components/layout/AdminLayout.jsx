@@ -59,7 +59,7 @@ const AdminLayout = ({ children }) => {
 
     const userRoles = getAuthRoles();
     const userPermissions = getAuthPermissions();
-    const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN');
+    const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
     const isManager = userRoles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
     const { aiEnabled } = useAiFeature();
     const { workspaceMode } = useWorkspaceMode();
@@ -81,7 +81,6 @@ const AdminLayout = ({ children }) => {
         warehouse_workspace: [
             { path: '/warehouse-workspace?tab=imports', tabId: 'imports', label: 'Đề nghị nhập kho' },
             { path: '/warehouse-workspace?tab=exports', tabId: 'exports', label: 'Đề nghị xuất kho' },
-            { path: '/warehouse-workspace?tab=transfers', tabId: 'transfers', label: 'Đề nghị chuyển kho' },
             { path: '/warehouse-workspace?tab=stocktakes', tabId: 'stocktakes', label: 'Biên bản kiểm kê' },
             { path: '/reports?domain=warehouse', tabId: 'reports', label: 'Báo cáo kho', matches: ['/reports'] }
         ],
@@ -264,16 +263,20 @@ const AdminLayout = ({ children }) => {
         });
     };
 
+    const goTo = (path) => {
+        navigate(path, { replace: path.split('?')[0] === location.pathname });
+    };
+
     const handleNavClick = (path) => {
         if (navMenuRef.current) {
             sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(navMenuRef.current.scrollTop));
         }
         if (path === '/dashboard' && workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
-            navigate('/warehouse-workspace');
+            goTo('/warehouse-workspace');
         } else if (path === '/payments' && workspaceMode === WORKSPACE_MODES.CASHIER) {
-            navigate('/cashier-workspace');
+            goTo('/cashier-workspace');
         } else {
-            navigate(path);
+            goTo(path);
         }
         setMobileMenuOpen(false);
     };
@@ -423,7 +426,7 @@ const AdminLayout = ({ children }) => {
                                 <button
                                     key={tab.path}
                                     className={`${styles.tab} ${isActive ? styles.activeTab : ''}`}
-                                    onClick={() => navigate(tab.path)}
+                                    onClick={() => goTo(tab.path)}
                                     type="button"
                                     style={tab.adminOnly ? { color: 'var(--wms-primary)', fontWeight: 'bold' } : {}}
                                 >

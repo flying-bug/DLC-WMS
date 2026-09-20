@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useParams, useNavigate } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { getCustomerById, deactivateCustomer, activateCustomer, getCustomerSalesHistory, getCustomerWarranties, getCustomerReceipts } from '../../api/customerApi';
 import CustomerModal from './components/CustomerModal';
@@ -21,6 +23,7 @@ const TABS = {
 const CustomerDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const goBack = useGoBack('/customers');
     const guard = usePermissionGuard();
 
     const [customer, setCustomer] = useState(null);
@@ -51,7 +54,7 @@ const CustomerDetailPage = () => {
             const errMsg = err.response?.data?.userMessage || '';
             if (errCode === 'CUST04' || errMsg.includes('vãng lai')) {
                 showToast('error', 'Không có quyền', 'Không thể xem chi tiết Khách vãng lai.');
-                setTimeout(() => navigate('/customers'), 1500);
+                setTimeout(() => navigate('/customers', { replace: true }), 1500);
             } else {
                 setError(errMsg || 'Không thể tải thông tin khách hàng.');
             }
@@ -62,9 +65,9 @@ const CustomerDetailPage = () => {
         fetchCustomerInfo();
     }, [fetchCustomerInfo]);
 
-    const fetchTabData = useCallback(async (currentTab, currentPage = 0) => {
+    const fetchTabData = useCallback(async (currentTab, currentPage = 0, silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             setTabError(null);
             if (currentTab === TABS.SALES) {
                 const res = await getCustomerSalesHistory(id, currentPage, 10);
@@ -97,9 +100,13 @@ const CustomerDetailPage = () => {
             console.error('Lỗi tải dữ liệu tab:', err);
             setTabError(err.response?.data?.userMessage || 'Không tải được dữ liệu. Vui lòng thử lại.');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [id]);
+    useRealtimeRefresh(
+        { PARTNER: id, SALES_ORDER: null, WARRANTY: null, PAYMENT: null },
+        ({ silent } = {}) => { fetchCustomerInfo(); fetchTabData(activeTab, page, silent); }
+    );
 
     useEffect(() => {
         Promise.resolve().then(() => fetchTabData(activeTab, page));
@@ -158,7 +165,7 @@ const CustomerDetailPage = () => {
                     <div className={styles.emptyState}>
                         <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`}></i>
                         <div className={styles.emptyText}>{error}</div>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/customers')}>Quay lại danh sách</button>
+                        <button className={styles.btnPrimary} onClick={goBack}>Quay lại danh sách</button>
                     </div>
                 </div>
             </AdminLayout>
@@ -183,7 +190,7 @@ const CustomerDetailPage = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <button 
                             className={styles.iconBtn} 
-                            onClick={() => navigate('/customers')}
+                            onClick={goBack}
                         >
                             <i className="bi bi-arrow-left"></i>
                         </button>

@@ -7,7 +7,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
 import com.duylongtech.backend.feature.auth.RoleService;
@@ -34,13 +33,10 @@ import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.Unit;
 import com.duylongtech.backend.feature.product.UnitRepository;
-import com.duylongtech.backend.feature.repair.Repair;
-import com.duylongtech.backend.feature.stocktake.Stocktake;
 import com.duylongtech.backend.feature.system.SystemSetting;
 import com.duylongtech.backend.feature.system.SystemSettingRepository;
 import com.duylongtech.backend.feature.warehouse.Warehouse;
 import com.duylongtech.backend.feature.warehouse.WarehouseRepository;
-import com.duylongtech.backend.feature.warranty.Warranty;
 
 @Component
 @RequiredArgsConstructor
@@ -123,6 +119,9 @@ public class DatabaseSeeder implements CommandLineRunner {
         // trống nữa nên sẽ không tự nhận được quyền mới đó. Hàm này chỉ merge thêm đúng những
         // quyền còn thiếu của module mới, không đụng tới bất kỳ quyền nào khác của role.
         backfillNewModulePermissions();
+
+        // 3c. Thu hồi các quyền Kế toán bị gán nhầm cho Thủ quỹ
+        sanitizeCashierPermissions();
 
         // 4. Seed Users mẫu cho 6 Roles
         seedUsers(superAdminRole, managerRole, whControllerRole, technicianRole, accountantRole, cashierRole);
@@ -311,6 +310,31 @@ public class DatabaseSeeder implements CommandLineRunner {
                 roleRepository.save(role);
             }
         }
+    }
+
+    private void sanitizeCashierPermissions() {
+        roleRepository.findByCode("ROLE_CASHIER_CONTROLLER").ifPresent(role -> {
+            Set<PermissionEntity> current = role.getPermissions();
+            if (current != null && !current.isEmpty()) {
+                Set<String> disallowedCodes = Set.of(
+                        "payment:add", "payment:edit", "payment:delete",
+                        "sales_order:view", "sales_order:add", "sales_order:edit", "sales_order:export", "sales_order:print",
+                        "purchase_order:view", "purchase_order:add", "purchase_order:edit",
+                        "einvoice:view", "einvoice:add", "einvoice:edit"
+                );
+                Set<PermissionEntity> sanitized = new HashSet<>();
+                for (PermissionEntity p : current) {
+                    if (p.getCode() != null && !disallowedCodes.contains(p.getCode())) {
+                        sanitized.add(p);
+                    }
+                }
+                if (sanitized.size() != current.size()) {
+                    role.updatePermissions(sanitized);
+                    roleRepository.save(role);
+                    System.out.println("✅ Đã dọn dẹp quyền vượt cấp của ROLE_CASHIER_CONTROLLER thành công.");
+                }
+            }
+        });
     }
 
     private void seedUsers(RoleEntity superAdminRole, RoleEntity managerRole, RoleEntity whControllerRole,

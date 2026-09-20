@@ -41,6 +41,7 @@ import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import java.util.Map;
 import com.duylongtech.backend.feature.product.UnitRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyBomRepository;
@@ -232,23 +233,16 @@ public class InventoryValidationService {
         if (poId != null) {
             PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(poId).orElse(null);
             if (po != null && po.getLines() != null && req.getLines() != null) {
-                Map<Long, BigDecimal> orderedMap = po.getLines().stream()
-                        .collect(Collectors.toMap(PurchaseOrderLine::getVariantId, PurchaseOrderLine::getQuantity,
-                                (a, b) -> a));
+                // Đã phân bổ ở các phiếu khác (mọi kho, kể cả nháp), không tính phiếu đang sửa.
+                PurchaseOrderReceiving receiving = PurchaseOrderReceiving.of(po.getLines(),
+                        inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), excludeDocId));
                 for (InventoryDocumentLineRequest lineReq : req.getLines()) {
                     if (lineReq.getVariantId() == null)
                         continue;
-                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
-                    if (orderedQty != null) {
-                        BigDecimal importedAlready = inventoryDocumentLineRepository
-                                .sumImportedQuantityByPurchaseOrderIdAndVariantIdExcludingDoc(po.getId(),
-                                        lineReq.getVariantId(), excludeDocId);
-                        if (importedAlready == null)
-                            importedAlready = ZERO;
-                        BigDecimal remaining = orderedQty.subtract(importedAlready);
-                        if (remaining.compareTo(ZERO) < 0)
-                            remaining = ZERO;
-
+                    Long lineWarehouseId = lineReq.getWarehouseId() != null ? lineReq.getWarehouseId() : req.getWarehouseId();
+                    PurchaseOrderReceiving.Group group = receiving.forVariant(lineReq.getVariantId(), lineWarehouseId);
+                    if (group != null) {
+                        BigDecimal remaining = group.remainingToAllocate();
                         BigDecimal qtyIn = lineReq.getQuantityIn() != null ? lineReq.getQuantityIn() : ZERO;
                         if (qtyIn.compareTo(remaining) > 0) {
                             ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -10,6 +11,8 @@ import AdjustInvoiceModal from './components/AdjustInvoiceModal';
 import EInvoicePreviewModal from './components/EInvoicePreviewModal';
 import * as einvoiceApi from '../../api/einvoiceApi';
 import styles from './EInvoiceListPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
+import useSessionState from '../../hooks/useSessionState';
 
 const STATUS_MAP = {
   ISSUED: { label: 'Đã phát hành', className: styles.statusIssued, icon: 'bi-check-circle-fill' },
@@ -25,12 +28,12 @@ export default function EInvoiceListPage() {
   const [loading, setLoading] = useState(false);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useSessionState('page', 0);
   const [size, setSize] = useState(20);
 
   // Filters
-  const [keyword, setKeyword] = useState('');
-  const [status, setStatus] = useState('');
+  const [keyword, setKeyword] = useSessionState('keyword', '');
+  const [status, setStatus] = useSessionState('status', '');
   const [selectedInvoiceForCancel, setSelectedInvoiceForCancel] = useState(null);
   const [selectedInvoiceForReplace, setSelectedInvoiceForReplace] = useState(null);
   const [selectedInvoiceForAdjust, setSelectedInvoiceForAdjust] = useState(null);
@@ -39,8 +42,8 @@ export default function EInvoiceListPage() {
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await einvoiceApi.getEInvoices({
         keyword: keyword.trim() || undefined,
@@ -57,9 +60,10 @@ export default function EInvoiceListPage() {
     } catch {
       showToast('error', 'Không thể tải danh sách hóa đơn điện tử');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [keyword, status, page, size]);
+  useRealtimeRefresh(['E_INVOICE'], loadData);
 
   useEffect(() => {
     loadData();
@@ -109,7 +113,7 @@ export default function EInvoiceListPage() {
     {
       title: 'Ngày lập',
       width: '105px',
-      render: (_, inv) => <span className={styles.monoText}>{inv.invoiceDate}</span>
+      render: (_, inv) => <span className={styles.monoText}>{formatDateOnly(inv.invoiceDate)}</span>
     },
     {
       title: 'Người mua / Đơn vị',

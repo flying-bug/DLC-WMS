@@ -28,6 +28,12 @@ export const approvePurchaseOrder = (id) =>
 export const cancelPurchaseOrder = (id) =>
   axiosClient.put(`${BASE}/${id}/cancel`);
 
+export const shortClosePurchaseOrder = (id) =>
+  axiosClient.put(`${BASE}/${id}/short-close`);
+
+export const revertShortClosePurchaseOrder = (id) =>
+  axiosClient.put(`${BASE}/${id}/revert-short-close`);
+
 // Shared lookups
 export const getSuppliers = (params = {}) =>
   axiosClient.get('/suppliers', { params });

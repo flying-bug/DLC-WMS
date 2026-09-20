@@ -41,6 +41,7 @@ import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import java.util.Map;
 import com.duylongtech.backend.feature.product.UnitRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyBomRepository;
@@ -153,7 +154,7 @@ public class InventoryDocumentService {
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
     public static final String ISSUE_PURPOSE_TRANSFER_IN = "TRANSFER_IMPORT"; // Nhập kho từ chuyển về
     public static final String ISSUE_PURPOSE_INVENTORY_ADJUSTMENT = "INVENTORY_ADJUSTMENT"; // Xử lý chênh lệch kiểm kê
-    public static final String ISSUE_PURPOSE_PO_BACKORDER = "PO_BACKORDER"; // Phiếu nhập bù cho phần hàng còn thiếu của PO
+    public static final String ISSUE_PURPOSE_PURCHASE = "PURCHASE"; // Nhập hàng từ nhà cung cấp / đơn mua hàng
 
     // Các trạng thái coi là "còn mở" khi chống tạo trùng phiếu nhập bù
     private static final List<String> OPEN_DOCUMENT_STATUSES = List.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name());
@@ -363,7 +364,9 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse getImportDetail(Long id) {
         InventoryDocument doc = findImportOrThrow(id);
         assertCanViewDocument(doc);
-        return toResponse(doc);
+        InventoryDocumentResponse response = toResponse(doc);
+        response.setWarehouseLocked(doc.getPurchaseOrderId() != null);
+        return response;
     }
 
     @Transactional
@@ -408,13 +411,13 @@ public class InventoryDocumentService {
                 partnerName = partnerRepository.findById(doc.getPartnerId()).map(Partner::getName).orElse("");
             }
             String docLabel = isImport ? "nhập kho" : "xuất kho";
-            String title = (isImport ? "📥 Đề nghị nhập kho mới: " : "📤 Đề nghị xuất kho mới: ") + doc.getDocCode();
+            String title = (isImport ? "Đề nghị nhập kho mới: " : "Đề nghị xuất kho mới: ") + doc.getDocCode();
             String message = String.format("Kế toán vừa tạo đề nghị %s %s%s. Vui lòng kiểm tra và xử lý.",
                     docLabel, doc.getDocCode(), partnerName.isBlank() ? "" : " (Đối tác: " + partnerName + ")");
             String refType = isImport ? "IMPORT_DOCUMENT" : "EXPORT_DOCUMENT";
             String link = (isImport ? "/import-slips/" : "/export-slips/") + doc.getId() + "/edit";
             appNotificationService.createNotification("ROLE_WAREHOUSE_CONTROLLER", null, title, message,
-                    "NEW_DOCUMENT", refType, doc.getId(), link);
+                    "INVENTORY", "INVENTORY_SLIP", doc.getId(), link, doc.getWarehouseId());
         } catch (Exception e) {
             // Log warning but do not fail document creation
         }
@@ -469,6 +472,10 @@ public class InventoryDocumentService {
         inventoryValidationService.validateOrderLineQuantities(req, id);
         InventoryDocument doc = findImportOrThrow(id);
         ensureEditable(doc);
+        if (req.getWarehouseId() != null && !req.getWarehouseId().equals(doc.getWarehouseId())
+                && doc.getPurchaseOrderId() != null) {
+            throw new BusinessException("Không thể thay đổi kho nhận hàng của phiếu nhập được tạo từ đơn mua hàng");
+        }
         updateBaseDocument(id, doc, req, "Mã phiếu nhập kho đã tồn tại", true);
         doc.clearLines();
         for (int i = 0; i < req.getLines().size(); i++) {
@@ -1195,33 +1202,40 @@ public class InventoryDocumentService {
     }
 
     /**
-     * Tạo phiếu nhập kho DRAFT "bù" cho phần hàng còn thiếu của 1 đơn mua hàng (PO).
-     * Dùng đúng công thức "PO line qty - sum(đã nhập)" mà postImport() dùng để tính
-     * fullyImported, đảm bảo nhất quán giữa 2 nơi. quantityIn được set bằng luôn
-     * remaining (không để trống) vì createImport() bắt buộc quantityIn > 0 - kế toán/
-     * thủ kho tự điều chỉnh lại khi hàng về thực tế trước khi ghi sổ.
+     * Nhập đa kho từ 1 PO: tạo phiếu nhập kho DRAFT cho ĐÚNG 1 kho đích, chỉ gồm các dòng PO
+     * thuộc kho đó (dòng PO chưa gán kho được tính cho mọi kho). Số lượng gợi ý dùng đúng công
+     * thức "PO line qty - sum(đã nhập ở mọi phiếu/mọi kho)" mà postImport() dùng để tính
+     * fullyImported. quantityIn được set bằng luôn remaining (không để trống) vì createImport()
+     * bắt buộc quantityIn > 0 - thủ kho tự điều chỉnh lại theo hàng thực nhận trước khi ghi sổ.
      */
     @Transactional
     public InventoryDocumentResponse createBackorderForPO(Long poId, Long warehouseId, Long currentUserId) {
         if (currentUserId == null) {
             throw new BusinessException("Không xác định được người tạo phiếu");
         }
+        warehouseAccessGuard.checkAccess(warehouseId);
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(poId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + poId));
 
-        if (inventoryDocumentRepository.existsByPurchaseOrderIdAndIssuePurposeAndStatusIn(
-                poId, ISSUE_PURPOSE_PO_BACKORDER, OPEN_DOCUMENT_STATUSES)) {
-            throw new BusinessException("Đơn mua hàng " + po.getPoCode() + " đã có phiếu nhập bù đang chờ xử lý.");
+        if (inventoryDocumentRepository.existsByPurchaseOrderIdAndWarehouseIdAndIssuePurposeAndStatusIn(
+                poId, warehouseId, ISSUE_PURPOSE_PURCHASE, OPEN_DOCUMENT_STATUSES)) {
+            throw new BusinessException("Đơn mua hàng " + po.getPoCode() + " đã có phiếu nhập kho đang chờ xử lý cho kho này.");
         }
 
+        PurchaseOrderReceiving receiving = PurchaseOrderReceiving.of(po.getLines(),
+                inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(poId, null));
         List<InventoryDocumentLineRequest> lineRequests = new java.util.ArrayList<>();
+        java.util.Set<PurchaseOrderReceiving.Group> handledGroups = new java.util.HashSet<>();
         for (PurchaseOrderLine poLine : po.getLines()) {
-            BigDecimal imported = inventoryDocumentLineRepository
-                    .sumImportedQuantityByPurchaseOrderIdAndVariantId(poId, poLine.getVariantId());
-            if (imported == null) {
-                imported = ZERO;
+            if (poLine.getWarehouseId() != null && !poLine.getWarehouseId().equals(warehouseId)) {
+                continue;
             }
-            BigDecimal remaining = poLine.getQuantity().subtract(imported);
+            PurchaseOrderReceiving.Group progress = receiving.forLine(poLine);
+            // Nhiều dòng PO cùng (sản phẩm, kho) dùng chung 1 nhóm: chỉ tạo 1 dòng phiếu cho cả nhóm.
+            if (!handledGroups.add(progress)) {
+                continue;
+            }
+            BigDecimal remaining = progress.remainingToAllocate();
             if (remaining.compareTo(ZERO) <= 0) {
                 continue;
             }
@@ -1233,28 +1247,28 @@ public class InventoryDocumentService {
             lr.setUnitCost(poLine.getUnitPrice());
             lr.setVatRate(poLine.getVatRate());
             lr.setVatPercent(poLine.getVatRate());
-            lr.setWarehouseId(poLine.getWarehouseId());
+            lr.setWarehouseId(warehouseId);
             lineRequests.add(lr);
         }
 
         if (lineRequests.isEmpty()) {
-            throw new BusinessException("Đơn mua hàng " + po.getPoCode() + " đã được nhập đủ số lượng, không thể tạo phiếu nhập bù.");
+            throw new BusinessException("Đơn mua hàng " + po.getPoCode() + " không còn số lượng cần nhập cho kho này.");
         }
 
         InventoryDocumentRequest req = new InventoryDocumentRequest();
         req.setPurchaseOrderId(poId);
         req.setPartnerId(po.getPartnerId());
         req.setWarehouseId(warehouseId);
-        req.setIssuePurpose(ISSUE_PURPOSE_PO_BACKORDER);
+        req.setIssuePurpose(ISSUE_PURPOSE_PURCHASE);
         req.setReferenceType("PURCHASE_ORDER");
         req.setReferenceId(poId);
         req.setDocDate(LocalDate.now());
         req.setCreatedBy(currentUserId);
-        req.setNote("Phiếu nhập bù cho đơn mua hàng " + po.getPoCode());
+        req.setNote("Nhập hàng cho Đơn mua hàng " + po.getPoCode());
         req.setLines(lineRequests);
 
         InventoryDocumentResponse created = createImport(req);
-        log.info("Đã tạo phiếu nhập bù {} cho đơn mua hàng {}", created.getDocCode(), po.getPoCode());
+        log.info("Đã tạo phiếu nhập kho {} (kho {}) cho đơn mua hàng {}", created.getDocCode(), warehouseId, po.getPoCode());
         return created;
     }
 

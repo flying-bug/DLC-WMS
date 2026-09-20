@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -49,6 +51,7 @@ const RES_STATUS_CONFIG = {
 
 function SalesOrderDetailPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack('/sales-orders');
   const { id } = useParams();
   const [now] = useState(() => Date.now());
 
@@ -121,8 +124,8 @@ function SalesOrderDetailPage() {
     }
   };
 
-  const loadSo = async () => {
-    setLoading(true);
+  const loadSo = async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await soApi.getSalesOrderById(id);
       setSo(unwrap(res));
@@ -131,9 +134,10 @@ function SalesOrderDetailPage() {
     } catch {
       showToast('error', 'Không thể tải thông tin đơn hàng');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+  useRealtimeRefresh({ SALES_ORDER: id, E_INVOICE: null, EXPORT_DOCUMENT: null }, loadSo);
 
   const handleOpenEmailModal = () => {
     setEmailTo(so?.partnerEmail || '');
@@ -313,7 +317,7 @@ function SalesOrderDetailPage() {
       <AdminLayout>
         <div style={{ padding: 40, textAlign: 'center' }}>
           <p>Không tìm thấy đơn hàng</p>
-          <button onClick={() => navigate('/sales-orders')} className={styles.btnSecondary}>← Quay lại</button>
+          <button onClick={goBack} className={styles.btnSecondary}>← Quay lại</button>
         </div>
       </AdminLayout>
     );
@@ -395,7 +399,7 @@ function SalesOrderDetailPage() {
 
   const exportDocsColumns = [
     { title: '#', width: '40px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
-    { title: 'Mã phiếu xuất', render: (_, doc) => <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/exports/edit/${doc.id}`)}>{doc.docCode}</strong> },
+    { title: 'Mã phiếu xuất', render: (_, doc) => <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/export-slips/${doc.id}/edit`)}>{doc.docCode}</strong> },
     { title: 'Ngày xuất', render: (_, doc) => doc.docDate || fmtDateTime(doc.createdAt) },
     { title: 'Kho xuất', render: (_, doc) => doc.warehouseName || (doc.warehouseId ? `Kho #${doc.warehouseId}` : '—') },
     { title: 'Số lượng', align: 'center', render: (_, doc) => {
@@ -448,7 +452,7 @@ function SalesOrderDetailPage() {
       }
     },
     { title: 'Thao tác', align: 'center', render: (_, doc) => (
-        <button type="button" className={styles.btnSecondary} onClick={() => navigate(`/exports/edit/${doc.id}`)} style={{ fontSize: 12, padding: '3px 8px' }}>Xem phiếu</button>
+        <button type="button" className={styles.btnSecondary} onClick={() => navigate(`/export-slips/${doc.id}/edit`)} style={{ fontSize: 12, padding: '3px 8px' }}>Xem phiếu</button>
       )
     }
   ];
@@ -457,7 +461,7 @@ function SalesOrderDetailPage() {
     { title: '#', width: '45px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
     { title: 'Số HĐ', width: '110px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => handleOpenEInvoicePreview(inv)} title="Nhấn để xem bản thể hiện HĐĐT">{inv.invoiceNumber || 'Chưa cấp'}</span> },
     { title: 'Ký hiệu', width: '90px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: 'var(--wms-text-muted)' }}>{inv.invoiceSeries}</span> },
-    { title: 'Ngày lập', width: '105px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{inv.invoiceDate}</span> },
+    { title: 'Ngày lập', width: '105px', render: (_, inv) => <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{formatDateOnly(inv.invoiceDate)}</span> },
     { title: 'Loại hóa đơn', render: (_, inv) => inv.inventoryDocumentId ? <span style={{ fontSize: 12, color: 'var(--wms-success)', background: 'var(--wms-success-soft)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--wms-success-border)' }}>Đợt xuất: {inv.exportDocCode || `PXK #${inv.inventoryDocumentId}`}</span> : <span style={{ fontSize: 12, color: 'var(--color-primary-link)', background: 'var(--color-primary-soft)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--color-info-border-soft)' }}>Toàn bộ đơn hàng</span> },
     { title: 'Người mua / MST', render: (_, inv) => (
         <>
@@ -646,7 +650,7 @@ function SalesOrderDetailPage() {
                               )}
                             </div>
                             <div style={{ fontSize: 11, color: isCanceled ? 'var(--wms-danger)' : 'var(--wms-text-muted)', marginTop: 2 }}>
-                              {isCanceled ? `Đã hủy: ${inv.cancelReason || '—'}` : `${inv.invoiceDate} • ${money(inv.totalAmount)}`}
+                              {isCanceled ? `Đã hủy: ${inv.cancelReason || '—'}` : `${formatDateOnly(inv.invoiceDate)} • ${money(inv.totalAmount)}`}
                             </div>
                           </div>
 
@@ -710,7 +714,7 @@ function SalesOrderDetailPage() {
             )}
             {so.status === 'DRAFT' && (
               <>
-                <button className={styles.btnOutline} onClick={() => navigate(`/sales-orders/${id}/edit`)}>
+                <button className={styles.btnOutline} onClick={() => navigate(`/sales-orders/${id}/edit`, { state: { returnUrl: `/sales-orders/${id}` } })}>
                   <i className="bi bi-pencil" /> Chỉnh sửa
                 </button>
                 <button className={styles.btnSuccess} onClick={() => setConfirmApprove(true)}>

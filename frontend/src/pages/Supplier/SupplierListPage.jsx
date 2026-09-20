@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
@@ -11,6 +12,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_LABELS = {
@@ -27,9 +29,9 @@ const SupplierListPage = () => {
     const [loading, setLoading] = useState(false);
     
     // Filters and Pagination
-    const [filters, setFilters] = useState({ search: '', status: '' });
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [filters, setFilters] = useSessionState('filters', { search: '', status: '' });
+    const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
     
     // Selection
     const [selectedIds, setSelectedIds] = useState([]);
@@ -42,9 +44,9 @@ const SupplierListPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchSuppliers = useCallback(async () => {
+    const fetchSuppliers = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const params = {};
             if (filters.search) params.search = filters.search;
             const res = await axiosClient.get('/suppliers', { params });
@@ -56,14 +58,15 @@ const SupplierListPage = () => {
                 data = data.filter(s => s.status === filters.status);
             }
             setSuppliers(data);
-            setSelectedIds([]);
+            if (!silent) setSelectedIds([]);
         } catch (error) {
             console.error('Lỗi tải danh sách nhà cung cấp:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách nhà cung cấp');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters.search, filters.status]);
+  useRealtimeRefresh(['PARTNER'], fetchSuppliers);
 
     useEffect(() => {
         fetchSuppliers();

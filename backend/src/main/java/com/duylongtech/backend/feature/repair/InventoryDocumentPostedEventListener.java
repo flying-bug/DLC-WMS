@@ -63,7 +63,8 @@ public class InventoryDocumentPostedEventListener {
                 notificationService.createNotification(
                         "ROLE_TECHNICIAN", repair.getCreatedBy(), "Bắt đầu sửa chữa",
                         "Kho đã xuất đủ linh kiện cho lệnh " + repair.getRepairCode() + ". Bạn có thể bắt đầu sửa chữa.",
-                        "REPAIR_READY", "REPAIR", repair.getId(), "/repair/" + repair.getId()
+                        "REPAIR_READY", "REPAIR", repair.getId(), "/repairs/" + repair.getId(),
+                        null
                 );
             } catch (Exception e) {
                 log.error("[Repair {}] Failed to auto-transition to UNDER_REPAIR after inventory posting", repair.getRepairCode(), e);

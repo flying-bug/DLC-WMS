@@ -1,9 +1,11 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { getBaseURL } from '../../api/axiosClient';
-import { AUTH_EVENT, emitNotificationReceived, emitSystemHealthReceived, emitUserUpdated, forceLogout, getAuthToken } from '../../auth/session';
+import { AUTH_EVENT, emitDataChanged, emitNotificationReceived, emitSystemHealthReceived, emitUserUpdated, forceLogout, getAuthToken } from '../../auth/session';
 
 function RealtimeSessionBridge() {
     const eventSourceRef = useRef(null);
+    const hasOpenedRef = useRef(false);
+    const hiddenAtRef = useRef(null);
 
     const closeConnection = useEffectEvent(() => {
         if (eventSourceRef.current) {
@@ -40,6 +42,22 @@ function RealtimeSessionBridge() {
             }
         });
 
+        eventSource.addEventListener('data-changed', (event) => {
+            try {
+                emitDataChanged(JSON.parse(event.data));
+            } catch (error) {
+                console.error('Khong the doc realtime data-changed event:', error);
+            }
+        });
+
+        // SSE khong phat lai su kien bi lo trong luc mat ket noi -> ket noi lai thi tai lai moi thu.
+        eventSource.onopen = () => {
+            if (hasOpenedRef.current) {
+                emitDataChanged({ topic: 'ALL', ids: null });
+            }
+            hasOpenedRef.current = true;
+        };
+
         eventSource.addEventListener('system-health', (event) => {
             try {
                 emitSystemHealthReceived(JSON.parse(event.data));
@@ -74,9 +92,24 @@ function RealtimeSessionBridge() {
             openConnection();
         };
 
+        // Du phong khi proxy lam dut/tre SSE: tab hien lai sau khi an lau thi tai lai du lieu.
+        const handleVisibility = () => {
+            if (document.visibilityState === 'hidden') {
+                hiddenAtRef.current = Date.now();
+                return;
+            }
+            const hiddenAt = hiddenAtRef.current;
+            hiddenAtRef.current = null;
+            if (hiddenAt && Date.now() - hiddenAt >= 30000 && getAuthToken()) {
+                emitDataChanged({ topic: 'ALL', ids: null });
+            }
+        };
+
         window.addEventListener(AUTH_EVENT, handleAuthChanged);
+        document.addEventListener('visibilitychange', handleVisibility);
         return () => {
             window.removeEventListener(AUTH_EVENT, handleAuthChanged);
+            document.removeEventListener('visibilitychange', handleVisibility);
             closeConnection();
         };
     }, []);

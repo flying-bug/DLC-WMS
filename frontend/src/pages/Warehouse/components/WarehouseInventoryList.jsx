@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Fragment } from 'react';
+import { useRealtimeRefresh } from '../../../hooks/useRealtimeRefresh';
 import * as warehouseApi from '../../../api/warehouseApi';
 import Pagination from '../../../components/ui/Pagination/Pagination';
 import styles from './WarehouseInventoryList.module.css';
@@ -25,17 +26,18 @@ const WarehouseInventoryList = ({ warehouseId }) => {
     const [variantTrees, setVariantTrees] = useState({});
     const [expandedSerials, setExpandedSerials] = useState({});
 
-    const fetchInventory = async () => {
-        setLoading(true);
+    const fetchInventory = async ({ silent } = {}) => {
+        if (!silent) setLoading(true);
         try {
             const res = await warehouseApi.getWarehouseInventory(warehouseId);
             setInventory(res.data.data || []);
         } catch (error) {
             console.error('Lỗi tải dữ liệu tồn kho:', error);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+    useRealtimeRefresh(['INVENTORY_BALANCE'], fetchInventory);
 
     useEffect(() => {
         fetchInventory();

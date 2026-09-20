@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import BrandModal from './components/BrandModal';
@@ -12,6 +13,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const DEFAULT_COLUMNS = {
@@ -46,9 +48,9 @@ const BrandListPage = () => {
     const [loading, setLoading] = useState(false);
     
     // Filters and Pagination
-    const [filters, setFilters] = useState({ search: '', status: '' });
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [filters, setFilters] = useSessionState('filters', { search: '', status: '' });
+    const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
+    const [pageSize, setPageSize] = useSessionState('pageSize', 10);
     
     // Selection
     const [selectedIds, setSelectedIds] = useState([]);
@@ -75,9 +77,9 @@ const BrandListPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchBrands = useCallback(async () => {
+    const fetchBrands = useCallback(async ({ silent } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const params = {};
             if (filters.search) params.search = filters.search;
             const res = await axiosClient.get('/brands', { params });
@@ -89,14 +91,15 @@ const BrandListPage = () => {
                 data = data.filter(b => b.status === filters.status);
             }
             setBrands(data);
-            setSelectedIds([]);
+            if (!silent) setSelectedIds([]);
         } catch (error) {
             console.error('Lỗi tải danh sách thương hiệu:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách thương hiệu');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [filters.search, filters.status]);
+  useRealtimeRefresh(['BRAND'], fetchBrands);
 
     useEffect(() => {
         fetchBrands();

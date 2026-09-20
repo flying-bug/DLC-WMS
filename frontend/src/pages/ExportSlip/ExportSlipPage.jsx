@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -23,6 +24,8 @@ import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import { canViewPricing } from '../../auth/session';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import { EXPORT_PURPOSE_OPTIONS, DOCUMENT_STATUS_OPTIONS as STATUS_OPTIONS } from '../../utils/documentFilterOptions';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const DEFAULT_COLUMNS = {
@@ -38,19 +41,6 @@ const DEFAULT_COLUMNS = {
   note: true,
   status: true,
 };
-
-const EXPORT_PURPOSE_OPTIONS = [
-  { value: 'SALES', label: 'Bán hàng' },
-  { value: 'USAGE', label: 'Sử dụng nội bộ' },
-  { value: 'ASSEMBLY', label: 'Xuất lắp ráp / tháo dỡ' },
-  { value: 'REPAIR', label: 'Xuất sửa chữa' },
-  { value: 'OTHER', label: 'Khác' },
-];
-
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Lưu tạm' },
-  { value: 'POSTED', label: 'Ghi sổ' },
-];
 
 const COLUMN_OPTIONS = [
   { id: 'date', label: 'Ngày Xuất' },
@@ -145,14 +135,14 @@ function ExportSlipPage() {
     };
   }, [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS, { disableRestore: Boolean(location.state?.filterKeyword || location.state?.filterDocCode || location.state?.referenceId || location.state?.referenceType) });
   const [initialLoading, setInitialLoading] = useState(true);
   const guard = usePermissionGuard();
   const [loading, setLoading] = useState(false);
 
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useSessionState('currentPage', 1, { disableRestore: Boolean(location.state?.filterKeyword || location.state?.filterDocCode || location.state?.referenceId || location.state?.referenceType) });
+  const [pageSize, setPageSize] = useSessionState('pageSize', 10, { disableRestore: Boolean(location.state?.filterKeyword || location.state?.filterDocCode || location.state?.referenceId || location.state?.referenceType) });
   const [unpostTarget, setUnpostTarget] = useState(null);
 
 
@@ -210,8 +200,8 @@ function ExportSlipPage() {
     }
   }, []);
 
-  const loadSlips = useCallback(async () => {
-    setLoading(true);
+  const loadSlips = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
 
     try {
       const response = await exportApi.getExportHistory({
@@ -229,13 +219,14 @@ function ExportSlipPage() {
       const data = unwrap(response) || [];
       setSlips(data);
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Có lỗi xảy ra khi tải dữ liệu');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['EXPORT_DOCUMENT'], loadSlips);
 
   const handleNavigateReference = (refType, refId) => {
     if (!refType || !refId) return;

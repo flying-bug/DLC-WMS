@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
@@ -13,6 +14,8 @@ import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import DateInput from '../../components/ui/DateInput/DateInput';
+import useSessionState from '../../hooks/useSessionState';
 
 
 const STATUS_LABELS = {
@@ -42,12 +45,12 @@ function StocktakeListPage() {
       status: '',
     };
   }, []);
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useSessionState('filters', DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
   const [showInitModal, setShowInitModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useSessionState('page', 0);
+  const [pageSize, setPageSize] = useSessionState('pageSize', 10);
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });
@@ -80,8 +83,8 @@ function StocktakeListPage() {
     }
   }, []);
 
-  const loadStocktakes = useCallback(async () => {
-    setLoading(true);
+  const loadStocktakes = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const params = {
         stocktakeCode: filters.stocktakeCode || undefined,
@@ -93,13 +96,14 @@ function StocktakeListPage() {
       const response = await stocktakeApi.getStocktakes(params);
       const data = pageContent(unwrap(response));
       setStocktakes(data);
-      setSelectedIds([]);
+      if (!silent) setSelectedIds([]);
     } catch (err) {
       console.error(err.response?.data?.userMessage || 'Không tải được danh sách bảng kiểm kê');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
+  useRealtimeRefresh(['STOCKTAKE'], loadStocktakes);
 
   useEffect(() => {
      
@@ -255,8 +259,7 @@ function StocktakeListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input
-                type="date"
+              <DateInput
                 className={styles.filterInput}
                 value={filters.fromDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value, preset: 'CUSTOM' }))}
@@ -264,8 +267,7 @@ function StocktakeListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>ĐẾN NGÀY</span>
-              <input
-                type="date"
+              <DateInput
                 className={styles.filterInput}
                 value={filters.toDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, toDate: e.target.value, preset: 'CUSTOM' }))}

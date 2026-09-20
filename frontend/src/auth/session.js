@@ -1,7 +1,9 @@
+import { clearSessionStates } from '../utils/sessionState';
 export const AUTH_EVENT = 'app:auth-changed';
 export const USER_EVENT = 'app:user-updated';
 export const NOTIFICATION_EVENT = 'app:notification-received';
 export const SYSTEM_HEALTH_EVENT = 'app:system-health-received';
+export const DATA_CHANGED_EVENT = 'app:data-changed';
 
 export function getAuthToken() {
     return sessionStorage.getItem('token') || localStorage.getItem('token');
@@ -50,7 +52,7 @@ export function hasAnyModulePermission(moduleName) {
 
 export function canViewPricing() {
     const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
-    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER' || r === 'ACCOUNTANT' || r === 'ROLE_ACCOUNTANT' || r === 'CASHIER_CONTROLLER' || r === 'ROLE_CASHIER_CONTROLLER')) {
+    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER' || r === 'ACCOUNTANT' || r === 'ROLE_ACCOUNTANT' || r === 'CASHIER_CONTROLLER' || r === 'ROLE_CASHIER_CONTROLLER')) {
         return true;
     }
     return false;
@@ -61,7 +63,6 @@ export function canPostCashBook() {
     return roles.some(r =>
         r.includes('CASHIER') ||
         r.includes('SUPER_ADMIN') ||
-        r.includes('ADMIN') ||
         r.includes('MANAGER')
     );
 }
@@ -138,6 +139,7 @@ export function setAuthSession(session, rememberMe = false) {
 }
 
 export function clearAuthSession() {
+    clearSessionStates(sessionStorage);
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('role');
     sessionStorage.removeItem('roles');
@@ -194,4 +196,9 @@ export function emitNotificationReceived(detail) {
 
 export function emitSystemHealthReceived(detail) {
     window.dispatchEvent(new CustomEvent(SYSTEM_HEALTH_EVENT, { detail }));
+}
+
+// detail: { topic, ids } - ids null nghĩa là không rõ bản ghi nào; topic 'ALL' = tải lại mọi thứ
+export function emitDataChanged(detail) {
+    window.dispatchEvent(new CustomEvent(DATA_CHANGED_EVENT, { detail }));
 }

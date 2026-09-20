@@ -36,6 +36,7 @@ import com.duylongtech.backend.feature.warehouse.WarehouseRepository;
 import com.duylongtech.backend.feature.warranty.WarrantyLifecycleService;
 import com.duylongtech.backend.feature.warranty.WarrantyRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Method;
@@ -92,7 +93,8 @@ class InventoryPostingServiceExportGuardTest {
                 mock(AppNotificationService.class),
                 mock(DocumentDependencyService.class),
                 mock(AuditLogService.class),
-                mock(WarehouseAccessGuard.class)
+                mock(WarehouseAccessGuard.class),
+                mock(ApplicationEventPublisher.class)
         );
     }
 

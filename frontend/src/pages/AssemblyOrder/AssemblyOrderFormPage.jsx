@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import useGoBack from '../../hooks/useGoBack';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import Modal from '../../components/ui/Modal/Modal';
@@ -14,7 +15,8 @@ import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-import { hasPermission } from '../../auth/session';
+import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
+import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -69,6 +71,7 @@ function AssemblyOrderFormPage() {
     const { id } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+    const goBack = useGoBack('/assembly-orders');
     const editing = Boolean(id);
     const [boms, setBoms] = useState([]);
     const [warehouses, setWarehouses] = useState([]);
@@ -216,6 +219,23 @@ function AssemblyOrderFormPage() {
         loadBomLookups();
         loadOrder();
     }, [loadBaseData, loadBomLookups, loadOrder]);
+
+    // Kế toán duyệt/từ chối hoặc kho ghi sổ phiếu ở màn khác -> backend bắn
+    // notification realtime (SSE). Lắng nghe ở đây để màn hình đang mở lệnh
+    // này tự cập nhật trạng thái mà không cần F5.
+    useEffect(() => {
+        if (!editing) return;
+        const handleRealtimeNotification = (event) => {
+            const notif = event.detail;
+            if (!notif) return;
+            const isAssemblyOrderEvent = notif.referenceType === 'ASSEMBLY_ORDER' || notif.referenceType === 'ASSEMBLY_ORDER_CANCEL';
+            if (!isAssemblyOrderEvent || String(notif.referenceId) !== String(id)) return;
+            loadOrder();
+            showToast('info', notif.message || 'Trạng thái lệnh vừa được cập nhật.');
+        };
+        window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+        return () => window.removeEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
+    }, [editing, id, loadOrder]);
 
     const setField = (field, value) => {
         setForm((current) => ({ ...current, [field]: value }));
@@ -416,7 +436,7 @@ function AssemblyOrderFormPage() {
                 showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
             }
             if (!editing && orderId) {
-                setTimeout(() => navigate(`/assembly-orders/${orderId}`), 700);
+                setTimeout(() => navigate(`/assembly-orders/${orderId}`, { replace: true }), 700);
             } else {
                 setTimeout(() => loadOrder(), 700);
             }
@@ -773,7 +793,7 @@ function AssemblyOrderFormPage() {
     return (
         <AdminLayout>
             <div className={styles.pageHeader}>
-                <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/assembly-orders'); }}>
+                <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); goBack(); }}>
                     <i className="bi bi-arrow-left"></i> {getPageTitle()}
                 </a>
 
@@ -817,7 +837,7 @@ function AssemblyOrderFormPage() {
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                         <label className="misa-label">Ngày thực hiện <span className="required">*</span></label>
-                                        <input type="date" className="misa-input" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
+                                        <DateInput className="misa-input" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
                                     </div>
                                 </div>
 
@@ -997,7 +1017,7 @@ function AssemblyOrderFormPage() {
 
 
             <div className={styles.bottomBar}>
-                <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
+                <button className="btn-misa-cancel" type="button" onClick={goBack}>
                     {canEdit ? 'Hủy bỏ' : 'Đóng'}
                 </button>
                 {['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(orderDetail?.status) && (

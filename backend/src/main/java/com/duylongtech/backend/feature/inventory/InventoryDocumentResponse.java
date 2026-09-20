@@ -17,6 +17,8 @@ public class InventoryDocumentResponse {
     private Long warehouseId;
     private Long sourceWarehouseId;
     private Long purchaseOrderId;
+    // true khi phiếu thuộc PO nhập đa kho: kho đích cố định, không cho đổi
+    private Boolean warehouseLocked;
     private Long salesOrderId;
     private Long partnerId;
     private String partnerCode;

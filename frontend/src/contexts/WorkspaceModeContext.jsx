@@ -80,7 +80,6 @@ function resolveInitialMode(roles, allowedModes, storageKey) {
 export const WorkspaceModeProvider = ({ children }) => {
   const [authSnapshot, setAuthSnapshot] = useState(readAuthSnapshot);
   const { roles, permissions, userId } = authSnapshot;
-  const manager = isManager(roles);
 
   useEffect(() => {
     const syncAuth = () => setAuthSnapshot(readAuthSnapshot());
@@ -122,15 +121,7 @@ export const WorkspaceModeProvider = ({ children }) => {
   const isWarehouseMode = workspaceMode === WORKSPACE_MODES.WAREHOUSE;
   const isCashierMode = workspaceMode === WORKSPACE_MODES.CASHIER;
 
-  const modeConfigs = useMemo(() => manager ? {
-    ...BASE_MODE_CONFIGS,
-    ACCOUNTANT: {
-      ...BASE_MODE_CONFIGS.ACCOUNTANT,
-      label: 'Chế độ Điều hành',
-      shortLabel: 'Điều hành',
-      icon: 'fas fa-chart-line'
-    }
-  } : BASE_MODE_CONFIGS, [manager]);
+  const modeConfigs = BASE_MODE_CONFIGS;
 
   const currentModeConfig = workspaceMode ? modeConfigs[workspaceMode] : null;
 
