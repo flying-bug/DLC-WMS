@@ -277,11 +277,14 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                 <th>Mã SKU</th>
                                 <th>Phiên bản</th>
                                 <th style={{ textAlign: 'right' }}>Tồn kho thực tế</th>
+                                <th style={{ textAlign: 'right' }}>Đang giữ hàng</th>
+                                <th style={{ textAlign: 'right' }}>Khả dụng</th>
                             </tr>
                         </thead>
                         <tbody>
                             {currentItems.map((item, idx) => {
                                 const isExpanded = !!expandedVariants[item.variantId];
+                                const isLowStock = item.availableQuantity <= 5;
 
                                 return (
                                     <Fragment key={`${item.sku}-${idx}`}>
@@ -308,10 +311,18 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                             <td style={{ textAlign: 'right', fontWeight: '500' }}>
                                                 {formatNumber(item.quantityOnHand)}
                                             </td>
+                                            <td style={{ textAlign: 'right', color: 'var(--wms-text-muted)' }}>
+                                                {formatNumber(item.quantityReserved)}
+                                            </td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                <span className={`${styles.qtyBadge} ${isLowStock ? styles.lowStock : styles.normalStock}`}>
+                                                    {formatNumber(item.availableQuantity)}
+                                                </span>
+                                            </td>
                                         </tr>
                                         {isExpanded && (
                                             <tr className={styles.subRowWrapper}>
-                                                <td colSpan="6" className={styles.subRowCell}>
+                                                <td colSpan="8" className={styles.subRowCell}>
                                                     {renderVariantTree(item.variantId)}
                                                 </td>
                                             </tr>

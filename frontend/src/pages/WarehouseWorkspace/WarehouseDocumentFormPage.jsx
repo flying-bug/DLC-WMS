@@ -45,6 +45,7 @@ export default function WarehouseDocumentFormPage() {
   const hideToast = () => setToast((prev) => ({ ...prev, isVisible: false }));
 
   const scanInputRef = useRef(null);
+  const documentChangedRef = useRef(false);
 
   // Fetch document details
   useEffect(() => {
@@ -92,6 +93,7 @@ export default function WarehouseDocumentFormPage() {
         });
 
         setLines(initialLines);
+        documentChangedRef.current = false;
       } catch (err) {
         console.error('Error loading warehouse document:', err);
         showToast('error', 'Không thể tải chi tiết chứng từ');
@@ -105,6 +107,7 @@ export default function WarehouseDocumentFormPage() {
 
   // Handle actual quantity change
   const handleQtyChange = (idx, value) => {
+    documentChangedRef.current = true;
     setLines((prev) => {
       const next = [...prev];
       const parsedVal = value === '' ? '' : (Number.isNaN(Number(value)) ? 0 : Math.max(0, Number(value)));
@@ -153,6 +156,7 @@ export default function WarehouseDocumentFormPage() {
     });
 
     if (found) {
+      documentChangedRef.current = true;
       setLines(nextLines);
     } else {
       setScannerFeedback(`❌ Không tìm thấy mã ${code} trong chứng từ này`);
@@ -238,10 +242,14 @@ export default function WarehouseDocumentFormPage() {
       setSaving(true);
       const payload = buildPayload();
       if (isImport) {
-        await importApi.updateImportSlip(doc.id, payload);
+        if (documentChangedRef.current) {
+          await importApi.updateImportSlip(doc.id, payload);
+        }
         await importApi.postImportSlip(doc.id);
       } else {
-        await exportApi.updateExportSlip(doc.id, payload);
+        if (documentChangedRef.current) {
+          await exportApi.updateExportSlip(doc.id, payload);
+        }
         await exportApi.postExportSlip(doc.id);
       }
 
@@ -813,6 +821,7 @@ export default function WarehouseDocumentFormPage() {
             isOpen={serialModalOpen}
             onClose={(savedSerials) => {
               if (Array.isArray(savedSerials)) {
+                documentChangedRef.current = true;
                 setLines((prev) => {
                   const next = [...prev];
                   next[selectedLineIdx].serialList = savedSerials;

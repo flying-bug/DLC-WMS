@@ -28,6 +28,7 @@ import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
+const formatQuantity = (value) => Number(value || 0).toLocaleString('vi-VN', { maximumFractionDigits: 4 });
 const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const customSelectStyles = {
@@ -1097,9 +1098,10 @@ function RepairFormPage() {
   const currentStatus = repair?.repairStatus || 'DRAFT';
   const isEditable = isNew || EDITABLE_STATUSES.includes(currentStatus);
   const showRepairCols = ['UNDER_REPAIR', 'DONE'].includes(currentStatus);
+  const isFifoCostFinalized = ['CONFIRMED', 'WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'].includes(currentStatus);
   const lines = isNew ? pendingLines : (repair?.lines || []);
   const fees = isNew ? pendingFees : (repair?.fees || []);
-  const detailTableColSpan = 10
+  const detailTableColSpan = 11
     + (visibleColumns.description ? 1 : 0)
     + (showRepairCols && visibleColumns.serialNumber ? 1 : 0);
 
@@ -1348,6 +1350,7 @@ function RepairFormPage() {
                   <th style={{ whiteSpace: 'nowrap' }}>Hạng mục (Linh kiện / Dịch vụ)</th>
                   <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Số lượng</th>
                   <th style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{isFifoCostFinalized ? 'Giá vốn FIFO' : 'Tồn khả dụng'}</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá / Phí</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '80px' }}>% VAT</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
@@ -1412,6 +1415,15 @@ function RepairFormPage() {
                       ) : Number(line.quantity || 0)}
                     </td>
                     <td>{variants.find(v => String(v.id) === String(line.componentVariantId))?.unitName || line.componentVariant?.unitName || line._unitName || '-'}</td>
+                    <td align="right" style={{ whiteSpace: 'nowrap' }}>
+                      {['ADD', 'REPLACE'].includes(line.actionType)
+                        ? (isFifoCostFinalized
+                          ? (line.fifoUnitCost != null
+                            ? <span title={`Tổng giá vốn: ${money(line.fifoCostAmount)} đ`}>{money(line.fifoUnitCost)} đ</span>
+                            : 'Chưa chốt')
+                          : formatQuantity(line.availableQuantity || 0))
+                        : '-'}
+                    </td>
                     <td align="right">
                       {isEditable ? (
                         <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} placeholder="0" value={line.isFreeWarranty ? 0 : (line.unitPrice ? money(line.unitPrice) : '')} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', Number(e.target.value.replace(/\D/g, '')))} />
@@ -1525,6 +1537,7 @@ function RepairFormPage() {
                       ) : (fee.quantity || 1)}
                     </td>
                     <td>{fee.unitName}</td>
+                    <td align="right">-</td>
                     <td align="right">
                       {isEditable ? (
                         <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} placeholder="0" value={fee.isFreeWarranty ? 0 : (fee.feeAmount ? money(fee.feeAmount) : '')} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'feeAmount', Number(e.target.value.replace(/\D/g, '')))} />
@@ -2159,6 +2172,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       </td>
       {/* 5. ĐVT */}
       <td>{form._unitName || '-'}</td>
+      <td align="right">{form.componentVariantId ? formatQuantity(inventoryMap.get(String(form.componentVariantId)) || 0) : '-'}</td>
       {/* 6. Đơn giá */}
       <td align="right">
         <input
@@ -2293,6 +2307,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           placeholder="ĐVT"
         />
       </td>
+      <td align="right">-</td>
       {/* 6. Phí dịch vụ */}
       <td align="right">
         <input
