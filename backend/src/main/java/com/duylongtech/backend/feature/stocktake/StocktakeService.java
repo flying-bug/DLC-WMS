@@ -353,6 +353,9 @@ public class StocktakeService {
         validateSkippedLines(stocktake);
         if (!signatureBefore.equals(countSignature(stocktake))) {
             stocktake.clearWaiverConfirmation();
+            if (userPrincipal != null) {
+                stocktake.setLastCountedBy(userPrincipal.getId());
+            }
         }
 
         return toResponse(stocktakeRepository.save(stocktake));
@@ -470,6 +473,10 @@ public class StocktakeService {
         if (response != null && entity.getLines() != null) {
             response.setSkippedDiffCount(entity.skippedDiffLines().size());
             response.setWaiverConfirmed(entity.getWaiverConfirmedAt() != null && !entity.skippedDiffLines().isEmpty());
+            response.setNeedsImportAdjustment(entity.requiresImportAdjustment());
+            response.setNeedsExportAdjustment(entity.requiresExportAdjustment());
+            response.setImportAdjustmentPosted(isPostedDocument(entity.getReferenceImportId()));
+            response.setExportAdjustmentPosted(isPostedDocument(entity.getReferenceExportId()));
         }
         
         if (entity.getCreatedBy() != null) {
@@ -684,6 +691,13 @@ public class StocktakeService {
             throw new BusinessException("Không có dòng chênh lệch nào chọn \"Không xử lý\" để xác nhận");
         }
         validateSkippedLines(stocktake);
+
+        // Người vừa nhập số đếm / chọn "Không xử lý" không được tự xác nhận (Super Admin là ngoại lệ để gỡ kẹt).
+        boolean superAdmin = principal.getAuthorities().stream().anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+        if (!superAdmin && principal.getId() != null && principal.getId().equals(stocktake.getLastCountedBy())) {
+            throw new BusinessException("Bạn là người vừa nhập số đếm / chọn \"Không xử lý\" nên không thể tự xác nhận. "
+                    + "Cần Manager hoặc Kế toán khác xác nhận.");
+        }
 
         stocktake.confirmWaivers(principal.getId());
         if (readinessProblem(stocktake) == null) {

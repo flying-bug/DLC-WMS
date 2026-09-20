@@ -404,6 +404,47 @@ class StocktakeApprovalFlowTest {
     }
 
     @Test
+    void theSamePersonWhoChoseSkipCannotConfirmItThemselves() {
+        Stocktake st = countingWithSkippedLine("Hao hụt trong định mức");
+        StocktakeLine shortage = new StocktakeLine();
+        shortage.initLine(12L, new BigDecimal("5"), new BigDecimal("3"), new BigDecimal("3"), null, null, "Xử lý chênh lệch");
+        st.addLine(shortage); // còn phiếu điều chỉnh chờ -> xác nhận không tự hoàn thành phiếu
+        st.setLastCountedBy(accountant.getId());
+
+        assertThrows(BusinessException.class, () -> service.confirmWaivers(100L, accountant), "kế toán vừa nhập số đếm không tự xác nhận");
+        assertEquals(null, st.getWaiverConfirmedAt());
+
+        service.confirmWaivers(100L, manager);
+        assertTrue(st.getWaiverConfirmedAt() != null, "người khác xác nhận được");
+    }
+
+    @Test
+    void superAdminMayConfirmEvenIfTheyEnteredTheCounts() {
+        Stocktake st = countingWithSkippedLine("Hao hụt trong định mức");
+        UserDetailsImpl superAdmin = user(9, "ROLE_SUPER_ADMIN");
+        st.setLastCountedBy(9L);
+
+        service.confirmWaivers(100L, superAdmin);
+
+        assertEquals("POSTED", st.getStatus());
+    }
+
+    @Test
+    void savingChangedCountsRecordsWhoCountedLast() {
+        Stocktake st = countingWithSkippedLine("Hao hụt trong định mức");
+        StocktakeRequest req = request();
+        req.getLines().get(0).setCountQty(new BigDecimal("10"));
+        req.getLines().get(0).setAction("Không xử lý");
+        req.getLines().get(0).setSkipReason("Hao hụt trong định mức");
+
+        service.updateStocktake(100L, req, keeper);
+        assertEquals(keeper.getId(), st.getLastCountedBy());
+
+        service.updateStocktake(100L, req, accountant); // lưu y nguyên: không đổi người nhập số đếm
+        assertEquals(keeper.getId(), st.getLastCountedBy());
+    }
+
+    @Test
     void requestingConfirmationNotifiesManagersAndAccountants() {
         countingWithSkippedLine("Hao hụt trong định mức");
 

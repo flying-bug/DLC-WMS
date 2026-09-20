@@ -9,7 +9,6 @@ import * as importApi from '../../api/inventoryImportApi';
 import * as XLSX from 'xlsx';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
-import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { printExportSlip } from '../../utils/printExportSlip';
@@ -61,7 +60,7 @@ function StocktakeDetailPage() {
   const canCancelStocktake = (isPendingApproval || isCounting) && (isApprover || (isPendingApproval && formData.createdByCurrentUser));
 
   const [isSaved, setIsSaved] = useState(true);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
   const showToast = (type, message) => {
@@ -94,6 +93,11 @@ function StocktakeDetailPage() {
           rejectReason: data.rejectReason,
           skippedDiffCount: data.skippedDiffCount || 0,
           waiverConfirmed: Boolean(data.waiverConfirmed),
+          lastCountedBy: data.lastCountedBy,
+          needsImportAdjustment: Boolean(data.needsImportAdjustment),
+          needsExportAdjustment: Boolean(data.needsExportAdjustment),
+          importAdjustmentPosted: Boolean(data.importAdjustmentPosted),
+          exportAdjustmentPosted: Boolean(data.exportAdjustmentPosted),
           createdByCurrentUser: Boolean(data.createdBy) && String(data.createdBy) === String(getAuthUserId())
         });
 
@@ -498,10 +502,6 @@ function StocktakeDetailPage() {
     }
   };
 
-  const handleComplete = () => {
-    setShowConfirmModal(true);
-  };
-
   const runStocktakeAction = async (action, successMessage) => {
     try {
       await action();
@@ -535,35 +535,33 @@ function StocktakeDetailPage() {
     runStocktakeAction(() => stocktakeApi.cancelStocktake(id), 'Đã hủy phiếu kiểm kê');
   };
 
+  // "Hoàn thành kiểm kê": mọi trường hợp (khớp / lệch cần phiếu / lệch không xử lý) đều đi qua một hộp thoại tổng kết.
+  const handleFinishClick = async () => {
+    if (!isSaved) {
+      const payload = buildPayload();
+      if (!validateForm(payload)) return;
+      try {
+        await stocktakeApi.updateStocktake(id, payload);
+        setIsSaved(true);
+        await fetchStocktakeData({ silent: true });
+      } catch (err) {
+        console.error(err);
+        showToast('error', err.response?.data?.userMessage || 'Lưu thất bại');
+        return;
+      }
+    }
+    setShowFinishModal(true);
+  };
+
+  const finishWith = async (action, successMessage) => {
+    setShowFinishModal(false);
+    await runStocktakeAction(action, successMessage);
+  };
+
   const handleSubmitStocktake = () => runStocktakeAction(
     () => stocktakeApi.submitStocktake(id),
     isApprover ? 'Đã bắt đầu kiểm kê, kho đang bị khóa' : 'Đã gửi yêu cầu kiểm kê, chờ Manager duyệt');
 
-  const handleConfirmWaivers = () => runStocktakeAction(
-    () => stocktakeApi.confirmWaivers(id), 'Đã xác nhận bỏ qua chênh lệch');
-
-  const handleRequestWaiverConfirmation = () => runStocktakeAction(
-    () => stocktakeApi.requestWaiverConfirmation(id), 'Đã gửi yêu cầu xác nhận tới Manager và Kế toán');
-
-  const confirmComplete = async () => {
-    setShowConfirmModal(false);
-    try {
-      const payload = buildPayload();
-      if (!validateForm(payload)) return;
-      // Lưu lại thay đổi trước khi xử lý (không lưu lại khi chỉ đang xem: lưu lại sẽ làm mất xác nhận bỏ qua chênh lệch)
-      if (!isSaved) {
-        await stocktakeApi.updateStocktake(id, payload);
-      }
-      // Gọi API xử lý đổi trạng thái
-      await stocktakeApi.postStocktake(id);
-      showToast('success', 'Xử lý phiếu kiểm kê thành công!');
-      // Tải lại dữ liệu (chuyển sang chế độ view)
-      fetchStocktakeData();
-    } catch (err) {
-      console.error(err);
-      showToast('error', err.response?.data?.userMessage || 'Xử lý thất bại');
-    }
-  };
 
   const handleCreateExportSlip = () => {
     const diffLackLines = lines.filter(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) < 0
@@ -1051,16 +1049,10 @@ function StocktakeDetailPage() {
                     <i className="bi bi-slash-circle"></i> {isCounting ? 'Hủy kiểm kê (mở khóa kho)' : 'Hủy yêu cầu'}
                   </button>
                 )}
-                {isCounting && formData.skippedDiffCount > 0 && !formData.waiverConfirmed && (
-                  isAccountantOrAdmin ? (
-                    <button className={styles.btnViewPrimary} style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }} onClick={handleConfirmWaivers}>
-                      <i className="bi bi-check2-square"></i> Xác nhận bỏ qua chênh lệch
-                    </button>
-                  ) : (
-                    <button className={styles.btnViewOutline} onClick={handleRequestWaiverConfirmation}>
-                      <i className="bi bi-send"></i> Gửi yêu cầu xác nhận
-                    </button>
-                  )
+                {isCounting && !canWorkOnCounts && isAccountantOrAdmin && (
+                  <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleFinishClick}>
+                    <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
+                  </button>
                 )}
                 {canWorkOnCounts && !isReadOnlyForStorekeeper && (
                   <>
@@ -1079,9 +1071,8 @@ function StocktakeDetailPage() {
                         <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
                       </button>
                     )}
-                    {!lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) !== 0
-                      || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED'))) && (
-                      <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+                    {(
+                      <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleFinishClick}>
                         <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
                       </button>
                     )}
@@ -1108,9 +1099,8 @@ function StocktakeDetailPage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>
               <i className="bi bi-box-arrow-right"></i> Lưu và Đóng
             </button>
-            {!lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) !== 0
-              || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED'))) && (
-              <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+            {(
+              <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleFinishClick}>
                 <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
               </button>
             )}
@@ -1411,15 +1401,142 @@ function StocktakeDetailPage() {
         message={toast.message}
         onClose={() => setToast({ ...toast, isVisible: false })}
       />
-      <ConfirmModal
-        isOpen={showConfirmModal}
-        title="Xác nhận xử lý phiếu kiểm kê"
-        message="Bạn có chắc chắn muốn xử lý phiếu kiểm kê này? Số liệu kiểm kê sẽ được chốt và bạn có thể tạo phiếu Nhập/Xuất kho để điều chỉnh chênh lệch."
-        confirmText="Xử lý"
-        cancelText="Hủy bỏ"
-        onConfirm={confirmComplete}
-        onCancel={() => setShowConfirmModal(false)}
-      />
+      {showFinishModal && (() => {
+        const diffLines = lines.filter(l => Number(l.diffQty || 0) !== 0);
+        const skippedLines = diffLines.filter(isSkippedDiff);
+        const adjustLines = diffLines.filter(l => !isSkippedDiff(l));
+        const matchedCount = lines.length - diffLines.length;
+        const importPending = formData.needsImportAdjustment && !formData.importAdjustmentPosted;
+        const exportPending = formData.needsExportAdjustment && !formData.exportAdjustmentPosted;
+        const isSuperAdminUser = userRoles.some(r => r.includes('SUPER_ADMIN'));
+        const iCountedLast = !isSuperAdminUser && String(formData.lastCountedBy || '') === String(getAuthUserId() || '');
+        const canConfirmNow = isAccountantOrAdmin && !iCountedLast;
+        const waitingConfirm = skippedLines.length > 0 && !formData.waiverConfirmed;
+        const box = (bg, border, color) => ({ margin: '14px 0 0', padding: '10px 14px', borderRadius: 8, background: bg, border: `1px solid ${border}`, color, fontSize: 13, lineHeight: 1.5 });
+        const primary = { padding: '8px 16px', borderRadius: 6, border: '1px solid #10b981', background: '#10b981', color: '#fff', fontWeight: 600, cursor: 'pointer' };
+        const outline = { padding: '8px 16px', borderRadius: 6, border: '1px solid var(--wms-border-strong)', background: '#fff', color: 'var(--wms-text-body)', fontWeight: 600, cursor: 'pointer' };
+
+        let body;
+        if (diffLines.length === 0) {
+          body = (
+            <>
+              <div style={box('#f0fdf4', '#86efac', '#166534')}>Tất cả {lines.length} dòng đều khớp sổ sách. Không cần phiếu điều chỉnh.</div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
+                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.postStocktake(id), 'Đã hoàn thành kiểm kê, kho được mở khóa')}>Hoàn thành kiểm kê</button>
+              </div>
+            </>
+          );
+        } else if (importPending || exportPending) {
+          body = (
+            <>
+              <div style={box('#fef2f2', '#fca5a5', '#991b1b')}>
+                <b>Chưa thể hoàn thành:</b> còn {adjustLines.length} dòng lệch cần xử lý. Chọn một trong hai cách cho từng dòng:
+                <ul style={{ margin: '6px 0 0 18px' }}>
+                  <li>Lập phiếu {importPending && exportPending ? 'nhập/xuất' : importPending ? 'nhập' : 'xuất'} điều chỉnh và <b>ghi sổ</b> phiếu đó, hoặc</li>
+                  <li>Bấm Đóng → Sửa → đổi cột "Xử lý" sang <b>"Không xử lý"</b> và nhập lý do (cần Manager/Kế toán khác xác nhận).</li>
+                </ul>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
+                {importPending && <button type="button" style={outline} onClick={() => { setShowFinishModal(false); handleCreateImportSlip(); }}>Lập phiếu nhập</button>}
+                {exportPending && <button type="button" style={outline} onClick={() => { setShowFinishModal(false); handleCreateExportSlip(); }}>Lập phiếu xuất</button>}
+              </div>
+            </>
+          );
+        } else if (waitingConfirm && stocktakeStatus !== 'COUNTING') {
+          body = (
+            <>
+              <div style={box('#fffbeb', '#fcd34d', '#92400e')}>Phiếu chưa được duyệt kiểm kê. Hãy bấm "Gửi Manager duyệt" trước khi hoàn thành.</div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
+              </div>
+            </>
+          );
+        } else if (waitingConfirm && canConfirmNow) {
+          body = (
+            <>
+              <div style={box('#eff6ff', '#93c5fd', '#1e40af')}>
+                Bạn đang <b>xác nhận bỏ qua {skippedLines.length} dòng chênh lệch</b> ở trên (không lập phiếu điều chỉnh, số sổ sách giữ nguyên). Lý do đã được ghi lại kèm tên bạn.
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
+                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.confirmWaivers(id), 'Đã xác nhận bỏ qua chênh lệch')}>Xác nhận bỏ qua &amp; Hoàn thành</button>
+              </div>
+            </>
+          );
+        } else if (waitingConfirm) {
+          body = (
+            <>
+              <div style={box('#fffbeb', '#fcd34d', '#92400e')}>
+                {iCountedLast
+                  ? 'Bạn là người vừa nhập số đếm / chọn "Không xử lý" nên không tự xác nhận được. '
+                  : 'Cần người có thẩm quyền xác nhận. '}
+                Gửi yêu cầu để <b>Manager hoặc Kế toán khác</b> xem lý do và xác nhận.
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
+                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.requestWaiverConfirmation(id), 'Đã gửi yêu cầu xác nhận tới Manager và Kế toán')}>Gửi yêu cầu xác nhận</button>
+              </div>
+            </>
+          );
+        } else {
+          body = (
+            <>
+              <div style={box('#f0fdf4', '#86efac', '#166534')}>Mọi dòng lệch đã được xử lý{skippedLines.length > 0 ? ' (các dòng bỏ qua đã được xác nhận)' : ''}. Sẵn sàng hoàn thành.</div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
+                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.postStocktake(id), 'Đã hoàn thành kiểm kê, kho được mở khóa')}>Hoàn thành kiểm kê</button>
+              </div>
+            </>
+          );
+        }
+
+        return (
+          <Modal
+            isOpen
+            onClose={() => setShowFinishModal(false)}
+            dialogStyle={{ maxWidth: '760px', width: '95%', padding: '20px 24px', borderRadius: '8px' }}
+          >
+            <h3 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 600 }}>Kết thúc kiểm kê {formData.code}</h3>
+            <div style={{ fontSize: 13, color: 'var(--wms-text-muted)', marginBottom: 12 }}>
+              {lines.length} dòng: {matchedCount} khớp, {diffLines.length} lệch
+              {skippedLines.length > 0 ? ` (${skippedLines.length} dòng chọn "Không xử lý")` : ''}
+            </div>
+            {diffLines.length > 0 && (
+              <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--wms-border-base)', borderRadius: 6 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--wms-bg-subtle)', textAlign: 'left' }}>
+                      <th style={{ padding: '6px 10px' }}>Hàng hóa</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Sổ</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Thực tế</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Lệch</th>
+                      <th style={{ padding: '6px 10px' }}>Cách xử lý</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diffLines.map(l => (
+                      <tr key={l.id || l.variantId} style={{ borderTop: '1px solid var(--wms-border-base)' }}>
+                        <td style={{ padding: '6px 10px' }}>{l.sku} - {l.itemName}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>{l.bookQty}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>{l.countQty}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 700, color: Number(l.diffQty) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Number(l.diffQty) > 0 ? `+${l.diffQty}` : l.diffQty}</td>
+                        <td style={{ padding: '6px 10px' }}>
+                          {isSkippedDiff(l)
+                            ? <span><b>Không xử lý</b> - lý do: {l.skipReason || '(chưa nhập)'}{formData.waiverConfirmed ? ' ✓ đã xác nhận' : ''}</span>
+                            : <span>Lập phiếu {Number(l.diffQty) > 0 ? 'nhập' : 'xuất'} điều chỉnh</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {body}
+          </Modal>
+        );
+      })()}
     </AdminLayout>
   );
 }

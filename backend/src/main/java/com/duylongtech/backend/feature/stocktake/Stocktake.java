@@ -68,6 +68,10 @@ public class Stocktake {
     @Column(name = "waiver_confirmed_by")
     private Long waiverConfirmedBy;
 
+    /** Người lưu số đếm/lựa chọn xử lý gần nhất (chỉ đổi khi số đếm, lựa chọn hoặc lý do thật sự thay đổi). */
+    @Column(name = "last_counted_by")
+    private Long lastCountedBy;
+
     @Column(name = "waiver_confirmed_at")
     private LocalDateTime waiverConfirmedAt;
 
