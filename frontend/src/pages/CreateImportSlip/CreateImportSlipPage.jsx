@@ -168,6 +168,9 @@ function CreateImportSlipPage() {
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrPreviewData, setOcrPreviewData] = useState(null);
+  // Quét bằng điện thoại: huỷ bảng xem trước thì quay lại đúng màn hình các ảnh đã chụp (không bắt quét lại)
+  const [ocrReturnToScan, setOcrReturnToScan] = useState(false);
+  const [ocrModalKey, setOcrModalKey] = useState(0); // đổi key = làm mới hoàn toàn phiên quét
   const [ocrQuickAddPreviewIndex, setOcrQuickAddPreviewIndex] = useState(null);
   const [ocrQuickAddProductName, setOcrQuickAddProductName] = useState('');
   const [ocrQuickAddUnitName, setOcrQuickAddUnitName] = useState('');
@@ -185,7 +188,8 @@ function CreateImportSlipPage() {
     setShowQuickAddProduct(true);
   };
 
-  const handleOcrSuccess = (data) => {
+  const handleOcrSuccess = (data, meta) => {
+    setOcrReturnToScan(Boolean(meta?.fromPhone));
     setOcrPreviewData(data);
     setShowOcrModal(false);
   };
@@ -244,6 +248,8 @@ function CreateImportSlipPage() {
     }
 
     setOcrPreviewData(null);
+    setOcrReturnToScan(false);
+    setOcrModalKey((k) => k + 1);
     showToast('success', 'Đã điền thông tin hóa đơn nhận diện thành công!');
   };
 
@@ -1749,8 +1755,9 @@ function CreateImportSlipPage() {
       />
 
       <OcrUploadModal
+        key={ocrModalKey}
         open={showOcrModal}
-        onClose={() => setShowOcrModal(false)}
+        onClose={() => { setShowOcrModal(false); setOcrModalKey((k) => k + 1); }}
         onFileSelected={handleOcrFile}
         onOcrSuccess={handleOcrSuccess}
         loading={ocrLoading}
@@ -1759,7 +1766,10 @@ function CreateImportSlipPage() {
         open={!!ocrPreviewData}
         data={ocrPreviewData}
         onConfirm={confirmOcrPreview}
-        onCancel={() => setOcrPreviewData(null)}
+        onCancel={() => {
+          setOcrPreviewData(null);
+          if (ocrReturnToScan) setShowOcrModal(true);
+        }}
         onQuickAdd={handleOcrPreviewQuickAdd}
       />
       <Toast

@@ -284,9 +284,10 @@
 .pageWait { color: var(--color-text-muted, #64748b); }
 .pageErr {
   color: #b91c1c;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .pageRemove,

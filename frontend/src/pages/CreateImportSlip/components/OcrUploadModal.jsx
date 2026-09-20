@@ -21,6 +21,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
   const [pages, setPages] = useState([]); // các trang điện thoại đã chụp: { index, status, previewImage, result, errorMessage }
   const [excludedPages, setExcludedPages] = useState([]); // index các trang người dùng bỏ khỏi lần gộp
   const [zoomedPage, setZoomedPage] = useState(null);
+  const [now, setNow] = useState(() => Date.now()); // đồng hồ đếm giây AI đã đọc một trang
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -62,13 +63,9 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
   // Ctrl + V Paste Listener
   useEffect(() => {
     if (!open) {
+      // Không xoá phiên quét điện thoại ở đây: người dùng có thể huỷ bảng xem trước rồi quay lại đúng các ảnh đã chụp.
+      // Parent đổi `key` của modal khi cần làm mới hoàn toàn.
       setPreview(null);
-      setShowQR(false);
-      setSessionId('');
-      setPhoneConnected(false);
-      setShowQrAgain(false);
-      setPages([]);
-      setExcludedPages([]);
       setZoomedPage(null);
       return;
     }
@@ -111,7 +108,10 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
         const page = JSON.parse(event.data);
         if (!page?.index) return;
         setPhoneConnected(true);
-        setPages((prev) => [...prev.filter((p) => p.index !== page.index), page].sort((a, b) => a.index - b.index));
+        setPages((prev) => {
+          const seenAt = prev.find((p) => p.index === page.index)?.seenAt || Date.now();
+          return [...prev.filter((p) => p.index !== page.index), { ...page, seenAt }].sort((a, b) => a.index - b.index);
+        });
       } catch (err) {
         console.error('Khong the doc trang OCR:', err);
       }
@@ -126,6 +126,12 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
 
   const usablePages = pages.filter((p) => p.status === 'SUCCESS' && p.result && !excludedPages.includes(p.index));
   const hasProcessingPage = pages.some((p) => p.status === 'PROCESSING' && !excludedPages.includes(p.index));
+  useEffect(() => {
+    if (!hasProcessingPage) return undefined;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hasProcessingPage]);
+
   const toggleExcluded = (index) => {
     setExcludedPages((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
   };
@@ -164,8 +170,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
     });
     mergedResult.items = allItems;
     
-    setShowQR(false);
-    latestOnOcrSuccess.current(mergedResult);
+    latestOnOcrSuccess.current(mergedResult, { fromPhone: true });
   };
 
   const handleOpenQR = async () => {
@@ -304,17 +309,17 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
                               {page.status === 'SUCCESS' && (
                                 <span className={styles.pageOk}>✓ {page.result?.items?.length || 0} dòng hàng</span>
                               )}
-                              {page.status === 'PROCESSING' && <span className={styles.pageWait}>Đang xử lý</span>}
+                              {page.status === 'PROCESSING' && (
+                                <span className={styles.pageWait}>Đang xử lý... {Math.max(0, Math.floor((now - (page.seenAt || now)) / 1000))}s</span>
+                              )}
                               {page.status === 'ERROR' && (
                                 <span className={styles.pageErr} title={page.errorMessage || ''}>
                                   ✕ {page.errorMessage || 'Không đọc được ảnh'}
                                 </span>
                               )}
-                              {page.status !== 'PROCESSING' && (
-                                <button type="button" className={styles.pageRemove} onClick={() => toggleExcluded(page.index)}>
-                                  {excluded ? 'Dùng lại' : 'Bỏ trang này'}
-                                </button>
-                              )}
+                              <button type="button" className={styles.pageRemove} onClick={() => toggleExcluded(page.index)}>
+                                {excluded ? 'Dùng lại' : page.status === 'PROCESSING' ? 'Bỏ qua trang này' : 'Bỏ trang này'}
+                              </button>
                             </div>
                           </div>
                         );

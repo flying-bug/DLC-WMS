@@ -140,3 +140,108 @@
   background: rgba(0, 0, 0, 0.25);
   margin: 0 auto 12px;
 }
+
+.cameraError {
+  max-width: 400px;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #fecaca;
+  text-align: center;
+}
+
+.secondaryRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 14px;
+}
+
+.secondaryBtn {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cameraOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.cameraVideo {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.cameraTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 14px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent);
+}
+
+.cameraBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.cameraThumbWrap,
+.cameraDone {
+  width: 72px;
+  height: 56px;
+}
+
+.cameraThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #fff;
+}
+
+.shutterBtn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 5px solid #fff;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shutterBtn:active {
+  background: #fff;
+}
+
+.cameraDone {
+  border: none;
+  border-radius: 10px;
+  background: #10b981;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}

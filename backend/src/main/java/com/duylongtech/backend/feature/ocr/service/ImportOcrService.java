@@ -98,15 +98,23 @@ public class ImportOcrService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestClient restClient = createRestClient();
 
-    private final java.util.concurrent.ExecutorService ocrExecutor = new java.util.concurrent.ThreadPoolExecutor(
-            2, 10, 60L, java.util.concurrent.TimeUnit.SECONDS,
-            new java.util.concurrent.LinkedBlockingQueue<>(50),
-            new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+    // Với hàng đợi có đệm, ThreadPoolExecutor không bao giờ tăng quá corePoolSize (maximumPoolSize vô nghĩa),
+    // nên phải đặt core = số luồng thật sự cần; nếu không, nhiều trang gửi cùng lúc sẽ xếp hàng sau 2 luồng.
+    private final java.util.concurrent.ExecutorService ocrExecutor = createOcrExecutor();
+
+    private static java.util.concurrent.ExecutorService createOcrExecutor() {
+        java.util.concurrent.ThreadPoolExecutor executor = new java.util.concurrent.ThreadPoolExecutor(
+                6, 6, 60L, java.util.concurrent.TimeUnit.SECONDS,
+                new java.util.concurrent.LinkedBlockingQueue<>(50),
+                new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        executor.allowCoreThreadTimeOut(true);
+        return executor;
+    }
 
     private RestClient createRestClient() {
         org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
-        factory.setReadTimeout(90000); // 90 seconds wait for LLM
+        factory.setReadTimeout(45000); // Vision AI thường trả lời trong vài giây; treo quá 45s thì báo lỗi để chụp lại
         return RestClient.builder().requestFactory(factory).build();
     }
 
@@ -150,6 +158,7 @@ public class ImportOcrService {
             Hãy đọc ảnh phiếu giao hàng/hóa đơn này và trích xuất dữ liệu dưới dạng JSON chính xác theo cấu trúc sau.
             QUAN TRỌNG: Không trích xuất bất kỳ thông tin cá nhân nào (tên người giao/nhận, số CMND/CCCD, chữ ký).
             Chỉ trích xuất thông tin doanh nghiệp và sản phẩm.
+            - Nếu ảnh KHÔNG phải hóa đơn / phiếu giao hàng / phiếu nhập-xuất kho (ví dụ ảnh chụp màn hình, tin nhắn, chữ bài hát, ảnh phong cảnh...), KHÔNG đọc nội dung ảnh, trả về NGAY {"items": []}.
             - Tên sản phẩm (raw_product_name): Gộp thông tin ở cột "Mã hàng" (Loại hàng) và "Diễn giải" (Tên hàng) một cách THÔNG MINH. TUYỆT ĐỐI KHÔNG lặp từ nếu thông tin đã trùng lặp. Ví dụ: Nếu "Mã hàng" là "VGA" và "Diễn giải" là "VGA M200" thì kết quả chỉ là "VGA M200" chứ KHÔNG được ghép thành "VGA VGA M200". Nếu "Mã hàng" là "VGA" và "Diễn giải" là "M200" thì kết quả là "VGA M200".
             - Số Serial/IMEI thường nằm ở cột diễn giải hoặc ngay dưới tên sản phẩm, có thể viết liền nhau phân cách bởi dấu phẩy, dấu chấm (.) hoặc khoảng trắng (VD: 1877.3227.3588...). Hãy phân tách chúng thành mảng. Tên sản phẩm KHÔNG bao gồm các chuỗi serial này.
 
@@ -346,8 +355,14 @@ public class ImportOcrService {
         // Gọi bất đồng bộ (chạy nền) để trả response nhanh cho Mobile
         ocrExecutor.execute(() -> {
             try {
-                page.setResult(scanDocumentBytes(imageBytes, mimeType));
-                page.setStatus("SUCCESS");
+                OcrImportResponse result = scanDocumentBytes(imageBytes, mimeType);
+                if (isEmptyScan(result)) {
+                    page.setErrorMessage("Không nhận diện được hóa đơn / phiếu giao hàng trong ảnh này. Vui lòng chụp lại.");
+                    page.setStatus("ERROR");
+                } else {
+                    page.setResult(result);
+                    page.setStatus("SUCCESS");
+                }
             } catch (Exception e) {
                 log.error("OCR scan for session failed", e);
                 page.setErrorMessage(e.getMessage());
@@ -356,6 +371,16 @@ public class ImportOcrService {
                 pushPage(sessionId, page);
             }
         });
+    }
+
+    /** Ảnh không phải chứng từ: AI không tìm thấy dòng hàng, số chứng từ hay nhà cung cấp nào. */
+    static boolean isEmptyScan(OcrImportResponse result) {
+        if (result == null) return true;
+        boolean noItems = result.getItems() == null || result.getItems().isEmpty();
+        boolean noInvoice = result.getInvoiceCode() == null || result.getInvoiceCode().isBlank();
+        boolean noSupplier = (result.getRawSupplierName() == null || result.getRawSupplierName().isBlank())
+                && result.getMatchedSupplierId() == null;
+        return noItems && noInvoice && noSupplier;
     }
 
     /** Ưu tiên ảnh thu nhỏ do điện thoại gửi (đã xoay đúng chiều); không có thì tự tạo từ ảnh gốc. */

@@ -1,6 +1,7 @@
 package com.duylongtech.backend.feature.ocr.service;
 
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.feature.inventory.OcrImportResponse;
 import com.duylongtech.backend.feature.partner.PartnerRepository;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.VendorProductMappingRepository;
@@ -111,6 +112,16 @@ class ImportOcrServiceSessionTest {
         var page = service.getSessionState(id).getPages().get(0);
         assertNull(page.getPreviewImage());
         waitUntilProcessed(page);
+    }
+
+    @Test
+    void scanWithNothingRecognisedIsTreatedAsNotADocument() {
+        assertTrue(ImportOcrService.isEmptyScan(null));
+        assertTrue(ImportOcrService.isEmptyScan(OcrImportResponse.builder().items(java.util.List.of()).build()));
+        assertTrue(!ImportOcrService.isEmptyScan(OcrImportResponse.builder().invoiceCode("HD-01").build()));
+        assertTrue(!ImportOcrService.isEmptyScan(OcrImportResponse.builder().rawSupplierName("NCC A").build()));
+        assertTrue(!ImportOcrService.isEmptyScan(OcrImportResponse.builder()
+                .items(java.util.List.of(new OcrImportResponse.OcrItemLine())).build()));
     }
 
     @Test

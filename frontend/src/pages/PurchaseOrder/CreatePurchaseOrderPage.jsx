@@ -75,6 +75,9 @@ function CreatePurchaseOrderPage() {
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrPreviewData, setOcrPreviewData] = useState(null);
+  // Quét bằng điện thoại: huỷ bảng xem trước thì quay lại đúng màn hình các ảnh đã chụp (không bắt quét lại)
+  const [ocrReturnToScan, setOcrReturnToScan] = useState(false);
+  const [ocrModalKey, setOcrModalKey] = useState(0); // đổi key = làm mới hoàn toàn phiên quét
   const [ocrQuickAddPreviewIndex, setOcrQuickAddPreviewIndex] = useState(null);
   const [ocrQuickAddProductName, setOcrQuickAddProductName] = useState('');
   const [ocrQuickAddUnitName, setOcrQuickAddUnitName] = useState('');
@@ -104,7 +107,8 @@ function CreatePurchaseOrderPage() {
     setShowQuickAddProduct(true);
   };
 
-  const handleOcrSuccess = (data) => {
+  const handleOcrSuccess = (data, meta) => {
+    setOcrReturnToScan(Boolean(meta?.fromPhone));
     setShowOcrModal(false);
     setOcrPreviewData(data);
   };
@@ -171,6 +175,8 @@ function CreatePurchaseOrderPage() {
     }
 
     setOcrPreviewData(null);
+    setOcrReturnToScan(false);
+    setOcrModalKey((k) => k + 1);
     showToast('success', 'Đã áp dụng dữ liệu từ chứng từ AI vào đơn mua hàng!');
   };
 
@@ -956,8 +962,9 @@ function CreatePurchaseOrderPage() {
       )}
 
       <OcrUploadModal
+        key={ocrModalKey}
         open={showOcrModal}
-        onClose={() => setShowOcrModal(false)}
+        onClose={() => { setShowOcrModal(false); setOcrModalKey((k) => k + 1); }}
         onFileSelected={handleOcrFile}
         loading={ocrLoading}
         onOcrSuccess={handleOcrSuccess}
@@ -967,7 +974,10 @@ function CreatePurchaseOrderPage() {
         open={Boolean(ocrPreviewData)}
         data={ocrPreviewData}
         onConfirm={confirmOcrPreview}
-        onCancel={() => setOcrPreviewData(null)}
+        onCancel={() => {
+          setOcrPreviewData(null);
+          if (ocrReturnToScan) setShowOcrModal(true);
+        }}
         onQuickAdd={handleOcrPreviewQuickAdd}
       />
     </AdminLayout>
