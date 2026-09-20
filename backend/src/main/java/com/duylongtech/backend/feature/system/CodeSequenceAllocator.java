@@ -28,6 +28,7 @@ class CodeSequenceAllocator {
      * với transaction của caller - chỉ khóa đúng 1 dòng nhỏ trong CODE_SEQUENCES
      * trong thời gian rất ngắn, không đụng đến bảng nghiệp vụ thật.
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public long nextValue(String sequenceKey, String tableName, String columnName, String prefix) {
         return nextValues(sequenceKey, tableName, columnName, prefix, 1);
     }

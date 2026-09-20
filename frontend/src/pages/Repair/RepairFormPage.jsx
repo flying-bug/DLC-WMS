@@ -831,22 +831,13 @@ function RepairFormPage() {
     if (isNew) {
       setPendingLines(prev => prev.map(l => ((l.id && l.id === lineId) || (l._key && l._key === key)) ? { ...l, ...updates } : l));
     } else {
-      let mergedLine = null;
-      setRepair(prev => {
-        const nextLines = prev.lines.map(l => {
-          if (l.id === lineId) {
-            mergedLine = { ...l, ...updates };
-            return mergedLine;
-          }
-          return l;
-        });
-        return { ...prev, lines: nextLines };
-      });
+      // Tính dòng sau khi gộp ngay từ state hiện tại (không gán biến bên trong hàm cập nhật của setState)
+      const mergedLine = { ...lines.find(l => l.id === lineId), ...updates };
+      setRepair(prev => ({
+        ...prev,
+        lines: prev.lines.map(l => (l.id === lineId ? { ...l, ...updates } : l))
+      }));
       try {
-        if (!mergedLine) {
-          const line = lines.find(l => l.id === lineId);
-          mergedLine = { ...line, ...updates };
-        }
         const payload = {
           actionType: mergedLine.actionType,
           componentVariantId: mergedLine.componentVariantId,
@@ -931,22 +922,12 @@ function RepairFormPage() {
     if (isNew) {
       setPendingFees(prev => prev.map(f => ((f.id && f.id === feeId) || (f._key && f._key === key)) ? { ...f, ...updates } : f));
     } else {
-      let mergedFee = null;
-      setRepair(prev => {
-        const nextFees = prev.fees.map(f => {
-          if (f.id === feeId) {
-            mergedFee = { ...f, ...updates };
-            return mergedFee;
-          }
-          return f;
-        });
-        return { ...prev, fees: nextFees };
-      });
+      const mergedFee = { ...fees.find(f => f.id === feeId), ...updates };
+      setRepair(prev => ({
+        ...prev,
+        fees: prev.fees.map(f => (f.id === feeId ? { ...f, ...updates } : f))
+      }));
       try {
-        if (!mergedFee) {
-          const fee = fees.find(f => f.id === feeId);
-          mergedFee = { ...fee, ...updates };
-        }
         const payload = {
           feeName: mergedFee.feeName,
           feeAmount: mergedFee.feeAmount,

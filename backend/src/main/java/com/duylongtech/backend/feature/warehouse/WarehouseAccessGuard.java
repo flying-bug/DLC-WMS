@@ -27,7 +27,7 @@ public class WarehouseAccessGuard {
     private boolean isBypass(Authentication auth) {
         return auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority() != null
-                        && (a.getAuthority().contains("MANAGER") || a.getAuthority().contains("ACCOUNTANT") || a.getAuthority().contains("ADMIN")));
+                        && (a.getAuthority().contains("MANAGER") || a.getAuthority().contains("ACCOUNTANT") || "ROLE_SUPER_ADMIN".equals(a.getAuthority())));
     }
 
     /**

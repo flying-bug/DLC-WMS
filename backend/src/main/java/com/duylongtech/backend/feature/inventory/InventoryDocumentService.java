@@ -237,7 +237,7 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
+        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
 
         if (!hasFullView) {
             boolean canRepair = hasAnyAuthority("repair:view");
@@ -344,7 +344,7 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
+        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
 
         if (!hasFullView) {
             boolean canRepair = hasAnyAuthority("repair:view");
