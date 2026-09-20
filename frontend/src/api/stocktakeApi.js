@@ -35,6 +35,15 @@ export const rejectStocktake = (id, reason) => {
   return axiosClient.post(`${STOCKTAKE_BASE}/${id}/reject`, { reason });
 };
 
+// Dòng lệch chọn "Không xử lý": thủ kho gửi yêu cầu, Manager/Kế toán xác nhận
+export const requestWaiverConfirmation = (id) => {
+  return axiosClient.post(`${STOCKTAKE_BASE}/${id}/waivers/request`);
+};
+
+export const confirmWaivers = (id) => {
+  return axiosClient.post(`${STOCKTAKE_BASE}/${id}/waivers/confirm`);
+};
+
 // Hủy phiếu (mở khóa kho nếu đang kiểm kê)
 export const cancelStocktake = (id) => {
   return axiosClient.post(`${STOCKTAKE_BASE}/${id}/cancel`);

@@ -64,6 +64,13 @@ public class Stocktake {
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
+    /** Manager/Kế toán xác nhận việc bỏ qua chênh lệch. Bị xóa mỗi khi số đếm hoặc dòng bỏ qua thay đổi. */
+    @Column(name = "waiver_confirmed_by")
+    private Long waiverConfirmedBy;
+
+    @Column(name = "waiver_confirmed_at")
+    private LocalDateTime waiverConfirmedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -94,6 +101,38 @@ public class Stocktake {
         }
         if (purpose != null) this.purpose = purpose;
         if (stocktakeDate != null) this.stocktakeDate = stocktakeDate;
+    }
+
+    /** Các dòng có chênh lệch nhưng được chọn "Không xử lý". */
+    public List<StocktakeLine> skippedDiffLines() {
+        return lines.stream().filter(StocktakeLine::isSkippedDiff).toList();
+    }
+
+    /** Có hàng thừa cần phiếu nhập điều chỉnh (dòng bỏ qua không tính). */
+    public boolean requiresImportAdjustment() {
+        return lines.stream().anyMatch(l -> !l.isSkipped() && l.getDiffQty() != null && l.getDiffQty().signum() > 0);
+    }
+
+    /** Có hàng thiếu cần phiếu xuất điều chỉnh (dòng bỏ qua không tính). */
+    public boolean requiresExportAdjustment() {
+        return lines.stream().anyMatch(l -> !l.isSkipped() && l.getDiffQty() != null && l.getDiffQty().signum() < 0);
+    }
+
+    public boolean hasUnconfirmedWaivers() {
+        return !skippedDiffLines().isEmpty() && this.waiverConfirmedAt == null;
+    }
+
+    public void confirmWaivers(Long confirmerId) {
+        if (skippedDiffLines().isEmpty()) {
+            throw new IllegalStateException("Không có dòng chênh lệch nào được bỏ qua để xác nhận");
+        }
+        this.waiverConfirmedBy = confirmerId;
+        this.waiverConfirmedAt = LocalDateTime.now();
+    }
+
+    public void clearWaiverConfirmation() {
+        this.waiverConfirmedBy = null;
+        this.waiverConfirmedAt = null;
     }
 
     public void addLine(StocktakeLine line) {

@@ -28,6 +28,7 @@ public class StocktakeLineResponse {
     private BigDecimal badQty;
     private BigDecimal lostQty;
     private String action;
+    private String skipReason;
     private List<StocktakeLineSerialResponse> serials;
 }
 

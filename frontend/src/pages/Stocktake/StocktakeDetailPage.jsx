@@ -90,6 +90,8 @@ function StocktakeDetailPage() {
           referenceExportId: data.referenceExportId,
           createdByAccountant: data.createdByAccountant,
           rejectReason: data.rejectReason,
+          skippedDiffCount: data.skippedDiffCount || 0,
+          waiverConfirmed: Boolean(data.waiverConfirmed),
           createdByCurrentUser: Boolean(data.createdBy) && String(data.createdBy) === String(getAuthUserId())
         });
 
@@ -109,6 +111,7 @@ function StocktakeDetailPage() {
             bad: l.badQty,
             lost: l.lostQty,
             action: l.action,
+            skipReason: l.skipReason,
             serials: l.serials || []
           })));
         }
@@ -182,6 +185,13 @@ function StocktakeDetailPage() {
       if (idx !== index) return line;
       return { ...line, [field]: valNum };
     }));
+  };
+
+  // Dòng có chênh lệch nhưng chọn "Không xử lý": không nằm trong phiếu nhập/xuất điều chỉnh, cần lý do + xác nhận.
+  const isSkippedDiff = (l) => l.action === 'Không xử lý' && Number(l.diffQty || 0) !== 0;
+
+  const handleSkipReasonChange = (index, reason) => {
+    setLines(prev => prev.map((line, idx) => (idx === index ? { ...line, skipReason: reason } : line)));
   };
 
   const handleActionChange = (index, actionVal) => {
@@ -417,6 +427,7 @@ function StocktakeDetailPage() {
       badQty: Number(l.bad || 0),
       lostQty: Number(l.lost || 0),
       action: l.action,
+      skipReason: l.skipReason || null,
       serials: l.serials ? l.serials.map(s => ({
         serialNumberId: s.serialNumberId,
         serialNumber: s.serialNumber,
@@ -522,13 +533,21 @@ function StocktakeDetailPage() {
     runStocktakeAction(() => stocktakeApi.cancelStocktake(id), 'Đã hủy phiếu kiểm kê');
   };
 
+  const handleConfirmWaivers = () => runStocktakeAction(
+    () => stocktakeApi.confirmWaivers(id), 'Đã xác nhận bỏ qua chênh lệch');
+
+  const handleRequestWaiverConfirmation = () => runStocktakeAction(
+    () => stocktakeApi.requestWaiverConfirmation(id), 'Đã gửi yêu cầu xác nhận tới Manager và Kế toán');
+
   const confirmComplete = async () => {
     setShowConfirmModal(false);
     try {
       const payload = buildPayload();
       if (!validateForm(payload)) return;
-      // Lưu lại thay đổi trước khi xử lý
-      await stocktakeApi.updateStocktake(id, payload);
+      // Lưu lại thay đổi trước khi xử lý (không lưu lại khi chỉ đang xem: lưu lại sẽ làm mất xác nhận bỏ qua chênh lệch)
+      if (!isSaved) {
+        await stocktakeApi.updateStocktake(id, payload);
+      }
       // Gọi API xử lý đổi trạng thái
       await stocktakeApi.postStocktake(id);
       showToast('success', 'Xử lý phiếu kiểm kê thành công!');
@@ -541,8 +560,8 @@ function StocktakeDetailPage() {
   };
 
   const handleCreateExportSlip = () => {
-    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0
-      || (l.serials || []).some(s => s.scanStatus === 'MISSING'));
+    const diffLackLines = lines.filter(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) < 0
+      || (l.serials || []).some(s => s.scanStatus === 'MISSING')));
     if (diffLackLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
@@ -578,8 +597,8 @@ function StocktakeDetailPage() {
   };
 
   const handleCreateImportSlip = () => {
-    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0
-      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED'));
+    const diffSurplusLines = lines.filter(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) > 0
+      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED')));
     if (diffSurplusLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
@@ -746,6 +765,24 @@ function StocktakeDetailPage() {
       )
     }
   ];
+  // Lý do không xử lý chênh lệch: chỉ hiện ở dòng lệch được chọn "Không xử lý"
+  linesColumns.push({
+    title: 'LÝ DO KHÔNG XỬ LÝ', width: '16%', render: (_, line, idx) => (
+      isSkippedDiff(line) ? (
+        isSaved ? <span>{line.skipReason || ''}</span> : (
+          <input
+            type="text"
+            maxLength={500}
+            placeholder="Bắt buộc nhập lý do"
+            value={line.skipReason || ''}
+            onChange={(e) => handleSkipReasonChange(idx, e.target.value)}
+            style={{ width: '100%', border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '2px 4px' }}
+          />
+        )
+      ) : null
+    )
+  });
+
   if (!isSaved) {
     linesColumns.push({
       title: 'XÓA', width: '4%', align: 'center', render: (_, __, idx) => (
@@ -822,6 +859,13 @@ function StocktakeDetailPage() {
         {isPendingApproval && (
           <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', fontSize: 13 }}>
             Yêu cầu kiểm kê đang chờ Manager duyệt. Kho chỉ bị khóa và thủ kho chỉ nhập được số đếm sau khi được duyệt.
+          </div>
+        )}
+        {isCounting && formData.skippedDiffCount > 0 && (
+          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: formData.waiverConfirmed ? '#f0fdf4' : '#fffbeb', border: `1px solid ${formData.waiverConfirmed ? '#86efac' : '#fcd34d'}`, color: formData.waiverConfirmed ? '#166534' : '#92400e', fontSize: 13 }}>
+            {formData.waiverConfirmed
+              ? `${formData.skippedDiffCount} dòng chênh lệch bỏ qua đã được Manager/Kế toán xác nhận.`
+              : `${formData.skippedDiffCount} dòng chênh lệch chọn "Không xử lý" đang chờ Manager/Kế toán xác nhận (không lập phiếu điều chỉnh cho các dòng này).`}
           </div>
         )}
         {isCounting && (
@@ -991,25 +1035,36 @@ function StocktakeDetailPage() {
                     <i className="bi bi-slash-circle"></i> {isCounting ? 'Hủy kiểm kê (mở khóa kho)' : 'Hủy yêu cầu'}
                   </button>
                 )}
+                {isCounting && formData.skippedDiffCount > 0 && !formData.waiverConfirmed && (
+                  isAccountantOrAdmin ? (
+                    <button className={styles.btnViewPrimary} style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }} onClick={handleConfirmWaivers}>
+                      <i className="bi bi-check2-square"></i> Xác nhận bỏ qua chênh lệch
+                    </button>
+                  ) : (
+                    <button className={styles.btnViewOutline} onClick={handleRequestWaiverConfirmation}>
+                      <i className="bi bi-send"></i> Gửi yêu cầu xác nhận
+                    </button>
+                  )
+                )}
                 {canWorkOnCounts && !isReadOnlyForStorekeeper && (
                   <>
                     <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
                       <i className="bi bi-pencil"></i> Sửa
                     </button>
-                    {lines.some(l => Number(l.diffQty || 0) < 0
-                      || (l.serials || []).some(s => s.scanStatus === 'MISSING')) && (
+                    {lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) < 0
+                      || (l.serials || []).some(s => s.scanStatus === 'MISSING'))) && (
                       <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
                         <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
                       </button>
                     )}
-                    {lines.some(l => Number(l.diffQty || 0) > 0
-                      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED')) && (
+                    {lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) > 0
+                      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED'))) && (
                       <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
                         <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
                       </button>
                     )}
-                    {!lines.some(l => Number(l.diffQty || 0) !== 0
-                      || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED')) && (
+                    {!lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) !== 0
+                      || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED'))) && (
                       <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
                         <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
                       </button>
@@ -1037,8 +1092,8 @@ function StocktakeDetailPage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>
               <i className="bi bi-box-arrow-right"></i> Lưu và Đóng
             </button>
-            {!lines.some(l => Number(l.diffQty || 0) !== 0
-              || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED')) && (
+            {!lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) !== 0
+              || (l.serials || []).some(s => s.scanStatus === 'MISSING' || s.scanStatus === 'UNEXPECTED'))) && (
               <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
                 <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
               </button>

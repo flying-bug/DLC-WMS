@@ -477,15 +477,11 @@ public class InventoryDocumentService {
                 }
 
                 if (DocumentStatus.POSTED.name().equals(doc.getStatus())) {
-                    boolean hasSurplus = stocktake.getLines().stream()
-                            .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(BigDecimal.ZERO) > 0);
-                    boolean hasShortage = stocktake.getLines().stream()
-                            .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(BigDecimal.ZERO) < 0);
+                    // Dòng "Không xử lý" không cần phiếu điều chỉnh; nhưng phải được Manager/Kế toán xác nhận trước khi hoàn thành.
+                    boolean importDone = !stocktake.requiresImportAdjustment() || stocktake.getReferenceImportId() != null;
+                    boolean exportDone = !stocktake.requiresExportAdjustment() || stocktake.getReferenceExportId() != null;
 
-                    boolean importDone = !hasSurplus || stocktake.getReferenceImportId() != null;
-                    boolean exportDone = !hasShortage || stocktake.getReferenceExportId() != null;
-
-                    if (importDone && exportDone) {
+                    if (importDone && exportDone && !stocktake.hasUnconfirmedWaivers()) {
                         stocktake.markAsPosted();
                     }
                 }

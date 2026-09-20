@@ -52,6 +52,10 @@ public class StocktakeLine {
     @Column(name = "action", length = 100)
     private String action;
 
+    /** Lý do không xử lý chênh lệch (bắt buộc khi action = "Không xử lý" và dòng có chênh lệch). */
+    @Column(name = "skip_reason", length = 500)
+    private String skipReason;
+
     @OneToMany(mappedBy = "stocktakeLine", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StocktakeLineSerial> serials = new ArrayList<>();
 
@@ -64,6 +68,26 @@ public class StocktakeLine {
         this.lostQty = lostQty;
         this.action = action;
         calculateDiff();
+    }
+
+    public static final String ACTION_SKIP = "Không xử lý";
+
+    public void updateSkipReason(String reason) {
+        this.skipReason = reason != null && !reason.trim().isEmpty() ? reason.trim() : null;
+    }
+
+    /** Người dùng chọn không điều chỉnh tồn cho dòng này. */
+    public boolean isSkipped() {
+        return this.action != null && ACTION_SKIP.equals(this.action.trim());
+    }
+
+    public boolean hasDiff() {
+        return this.diffQty != null && this.diffQty.signum() != 0;
+    }
+
+    /** Dòng lệch mà người dùng chọn bỏ qua: cần lý do và được Manager/Kế toán xác nhận. */
+    public boolean isSkippedDiff() {
+        return isSkipped() && hasDiff();
     }
 
     public void addSerial(StocktakeLineSerial serial) {

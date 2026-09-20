@@ -5,6 +5,8 @@ import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalance;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
+import com.duylongtech.backend.feature.inventory.InventoryDocument;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.notification.AppNotificationService;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
@@ -39,6 +41,7 @@ class StocktakeApprovalFlowTest {
     private StocktakeRepository stocktakeRepository;
     private InventoryBalanceRepository balanceRepository;
     private AppNotificationService notifications;
+    private InventoryDocumentRepository documentRepository;
     private StocktakeService service;
 
     private static UserDetailsImpl user(long id, String... authorities) {
@@ -55,6 +58,7 @@ class StocktakeApprovalFlowTest {
         stocktakeRepository = mock(StocktakeRepository.class);
         balanceRepository = mock(InventoryBalanceRepository.class);
         notifications = mock(AppNotificationService.class);
+        documentRepository = mock(InventoryDocumentRepository.class);
         StocktakeMapper mapper = mock(StocktakeMapper.class);
         when(mapper.toResponse(any())).thenAnswer(inv -> StocktakeResponse.builder()
                 .status(((Stocktake) inv.getArgument(0)).getStatus()).build());
@@ -72,7 +76,7 @@ class StocktakeApprovalFlowTest {
         service = new StocktakeService(stocktakeRepository, balanceRepository, mapper, codes,
                 mock(ProductVariantRepository.class), mock(WarehouseRepository.class),
                 mock(InventoryDocumentService.class), mock(SerialNumberRepository.class),
-                mock(UserRepository.class), notifications);
+                mock(UserRepository.class), notifications, documentRepository);
     }
 
     private static StocktakeRequest request() {
@@ -267,9 +271,116 @@ class StocktakeApprovalFlowTest {
         assertThrows(BusinessException.class, () -> service.postStocktake(100L, keeper));
 
         st.setReferenceExportId(55L);
+        InventoryDocument draftAdjustment = new InventoryDocument();
+        draftAdjustment.updateStatus("DRAFT");
+        when(documentRepository.findById(55L)).thenReturn(Optional.of(draftAdjustment));
+        assertThrows(BusinessException.class, () -> service.postStocktake(100L, keeper), "phiếu điều chỉnh còn nháp chưa đủ");
+
+        draftAdjustment.updateStatus("POSTED");
         service.postStocktake(100L, keeper);
         assertEquals("POSTED", st.getStatus());
         assertTrue(!st.isCounting(), "ghi sổ xong thì kho tự mở khóa");
+    }
+
+    // ---------------- Không xử lý chênh lệch ----------------
+
+    private Stocktake countingWithSkippedLine(String reason) {
+        Stocktake st = new Stocktake();
+        st.initOrder("KK000001", WAREHOUSE, "p", null, 1L);
+        st.setId(100L);
+        StocktakeLine line = new StocktakeLine();
+        line.initLine(11L, new BigDecimal("12"), new BigDecimal("11"), new BigDecimal("11"), null, null, "Không xử lý");
+        line.updateSkipReason(reason);
+        st.addLine(line);
+        st.startCounting(2L);
+        when(stocktakeRepository.findByIdWithDetails(100L)).thenReturn(Optional.of(st));
+        when(stocktakeRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(st));
+        return st;
+    }
+
+    @Test
+    void skippedLineNeedsNoAdjustmentSlipButNeedsAReason() {
+        Stocktake st = countingWithSkippedLine(null);
+
+        assertTrue(!st.requiresExportAdjustment(), "dòng Không xử lý không cần phiếu xuất điều chỉnh");
+        StocktakeRequest req = request();
+        req.getLines().get(0).setCountQty(new BigDecimal("11"));
+        req.getLines().get(0).setAction("Không xử lý");
+        assertThrows(BusinessException.class, () -> service.updateStocktake(100L, req, keeper), "thiếu lý do");
+
+        req.getLines().get(0).setSkipReason("Hao hụt trong định mức");
+        service.updateStocktake(100L, req, keeper);
+        assertEquals("Hao hụt trong định mức", st.getLines().get(0).getSkipReason());
+    }
+
+    @Test
+    void skippedDifferencesMustBeConfirmedByManagerOrAccountantBeforeCompleting() {
+        Stocktake st = countingWithSkippedLine("Hao hụt trong định mức");
+
+        assertThrows(BusinessException.class, () -> service.postStocktake(100L, keeper), "chưa có ai xác nhận");
+        assertThrows(BusinessException.class, () -> service.confirmWaivers(100L, keeper), "thủ kho không được tự xác nhận");
+        assertEquals("COUNTING", st.getStatus());
+
+        service.confirmWaivers(100L, accountant);
+
+        assertEquals("POSTED", st.getStatus(), "không còn phiếu điều chỉnh nào chờ -> hoàn thành, kho mở khóa");
+        assertEquals(1L, st.getWaiverConfirmedBy());
+        assertEquals("Hao hụt trong định mức", st.getLines().get(0).getSkipReason(), "lý do vẫn được lưu để tra cứu");
+    }
+
+    @Test
+    void confirmedWaiverIsInvalidatedWhenCountsAreEditedAgain() {
+        Stocktake st = countingWithSkippedLine("Hao hụt trong định mức");
+        st.getLines().add(lineWithBook(5, 3)); // thêm dòng lệch cần phiếu điều chỉnh -> chưa hoàn thành khi xác nhận
+        service.confirmWaivers(100L, manager);
+        assertEquals("COUNTING", st.getStatus(), "còn dòng thiếu chưa có phiếu xuất điều chỉnh");
+        assertTrue(st.getWaiverConfirmedAt() != null);
+
+        StocktakeRequest req = request();
+        req.getLines().get(0).setCountQty(new BigDecimal("11"));
+        req.getLines().get(0).setAction("Không xử lý");
+        req.getLines().get(0).setSkipReason("Hao hụt trong định mức");
+        service.updateStocktake(100L, req, keeper);
+
+        assertEquals(null, st.getWaiverConfirmedAt(), "sửa số đếm thì phải xác nhận lại");
+    }
+
+    @Test
+    void savingTheSameCountsAgainKeepsTheConfirmation() {
+        Stocktake st = countingWithSkippedLine("Hao hụt trong định mức");
+        StocktakeLine shortage = new StocktakeLine();
+        shortage.initLine(12L, new BigDecimal("5"), new BigDecimal("3"), new BigDecimal("3"), null, null, "Xử lý chênh lệch");
+        st.addLine(shortage);
+        service.confirmWaivers(100L, manager);
+        assertTrue(st.getWaiverConfirmedAt() != null);
+
+        StocktakeLineRequest first = request().getLines().get(0);
+        first.setCountQty(new BigDecimal("11"));
+        first.setAction("Không xử lý");
+        first.setSkipReason("Hao hụt trong định mức");
+        StocktakeLineRequest second = new StocktakeLineRequest();
+        second.setVariantId(12L);
+        second.setCountQty(new BigDecimal("3"));
+        second.setGoodQty(new BigDecimal("3"));
+        second.setAction("Xử lý chênh lệch");
+        StocktakeRequest req = request();
+        req.setLines(List.of(first, second));
+
+        service.updateStocktake(100L, req, keeper);
+
+        assertTrue(st.getWaiverConfirmedAt() != null, "lưu lại y nguyên thì xác nhận vẫn còn");
+    }
+
+    @Test
+    void requestingConfirmationNotifiesManagersAndAccountants() {
+        countingWithSkippedLine("Hao hụt trong định mức");
+
+        service.requestWaiverConfirmation(100L);
+
+        verify(notifications).createNotification(eq("ROLE_MANAGER"), any(), anyString(), anyString(),
+                eq("STOCKTAKE_WAIVER"), eq("STOCKTAKE"), eq(100L), anyString(), any());
+        verify(notifications).createNotification(eq("ROLE_ACCOUNTANT"), any(), anyString(), anyString(),
+                eq("STOCKTAKE_WAIVER"), eq("STOCKTAKE"), eq(100L), anyString(), any());
     }
 
     private static InventoryBalance balance(String onHand) {

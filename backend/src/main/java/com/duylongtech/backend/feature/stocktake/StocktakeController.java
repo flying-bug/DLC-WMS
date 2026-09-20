@@ -168,4 +168,26 @@ public class StocktakeController {
                 .userMessage("Đã hủy phiếu kiểm kê")
                 .build());
     }
+
+    @PostMapping("/{id}/waivers/request")
+    @PreAuthorize("hasAuthority('stocktake:edit')")
+    public ResponseEntity<ApiResponse<StocktakeResponse>> requestWaiverConfirmation(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
+                .success(true)
+                .data(stocktakeService.requestWaiverConfirmation(id))
+                .userMessage("Đã gửi yêu cầu xác nhận tới Manager và Kế toán")
+                .build());
+    }
+
+    @PostMapping("/{id}/waivers/confirm")
+    @PreAuthorize("hasAnyRole('MANAGER','SUPER_ADMIN','ACCOUNTANT')")
+    public ResponseEntity<ApiResponse<StocktakeResponse>> confirmWaivers(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
+                .success(true)
+                .data(stocktakeService.confirmWaivers(id, userPrincipal))
+                .userMessage("Đã xác nhận bỏ qua chênh lệch")
+                .build());
+    }
 }

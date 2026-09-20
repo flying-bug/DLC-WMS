@@ -21,6 +21,7 @@ public class StocktakeLineRequest {
     private BigDecimal badQty;
     private BigDecimal lostQty;
     private String action;
+    private String skipReason;
     private List<StocktakeLineSerialRequest> serials;
 }
 

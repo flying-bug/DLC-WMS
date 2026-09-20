@@ -166,6 +166,13 @@ function CreateStocktakePage() {
     }));
   };
 
+  // Dòng có chênh lệch nhưng chọn "Không xử lý": không nằm trong phiếu nhập/xuất điều chỉnh, cần lý do + xác nhận.
+  const isSkippedDiff = (l) => l.action === 'Không xử lý' && Number(l.diffQty || 0) !== 0;
+
+  const handleSkipReasonChange = (index, reason) => {
+    setLines(prev => prev.map((line, idx) => (idx === index ? { ...line, skipReason: reason } : line)));
+  };
+
   const handleActionChange = (index, actionVal) => {
     setLines(prev => prev.map((line, idx) => (idx === index ? { ...line, action: actionVal } : line)));
   };
@@ -474,6 +481,7 @@ function CreateStocktakePage() {
       badQty: Number(l.bad || 0),
       lostQty: Number(l.lost || 0),
       action: l.action,
+      skipReason: l.skipReason || null,
       serials: l.serials ? l.serials.map(s => ({
         serialNumberId: s.serialNumberId,
         serialNumber: s.serialNumber,
@@ -554,8 +562,8 @@ function CreateStocktakePage() {
 
   // Navigation for Export/Import Slips
   const handleCreateExportSlip = () => {
-    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0
-      || (l.serials || []).some(s => s.scanStatus === 'MISSING'));
+    const diffLackLines = lines.filter(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) < 0
+      || (l.serials || []).some(s => s.scanStatus === 'MISSING')));
     if (diffLackLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
@@ -588,8 +596,8 @@ function CreateStocktakePage() {
   };
 
   const handleCreateImportSlip = () => {
-    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0
-      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED'));
+    const diffSurplusLines = lines.filter(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) > 0
+      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED')));
     if (diffSurplusLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
@@ -771,6 +779,24 @@ function CreateStocktakePage() {
       )
     )}
   ];
+  // Lý do không xử lý chênh lệch: chỉ hiện ở dòng lệch được chọn "Không xử lý"
+  linesColumns.push({
+    title: 'LÝ DO KHÔNG XỬ LÝ', width: '16%', render: (_, line, idx) => (
+      isSkippedDiff(line) ? (
+        isSaved ? <span>{line.skipReason || ''}</span> : (
+          <input
+            type="text"
+            maxLength={500}
+            placeholder="Bắt buộc nhập lý do"
+            value={line.skipReason || ''}
+            onChange={(e) => handleSkipReasonChange(idx, e.target.value)}
+            style={{ width: '100%', border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '2px 4px' }}
+          />
+        )
+      ) : null
+    )
+  });
+
 
   if (!isSaved) {
     linesColumns.push({

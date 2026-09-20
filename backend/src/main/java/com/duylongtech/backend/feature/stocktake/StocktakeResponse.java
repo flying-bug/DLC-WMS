@@ -28,6 +28,12 @@ public class StocktakeResponse {
     private Long approvedBy;
     private LocalDateTime approvedAt;
     private String rejectReason;
+    private Long waiverConfirmedBy;
+    private LocalDateTime waiverConfirmedAt;
+    /** Số dòng lệch được chọn bỏ qua. */
+    private int skippedDiffCount;
+    /** Có dòng bỏ qua và đã được Manager/Kế toán xác nhận. */
+    private boolean waiverConfirmed;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<StocktakeLineResponse> lines;

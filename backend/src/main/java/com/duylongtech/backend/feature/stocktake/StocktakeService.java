@@ -69,6 +69,7 @@ public class StocktakeService {
     private final SerialNumberRepository serialNumberRepository;
     private final com.duylongtech.backend.feature.auth.UserRepository userRepository;
     private final AppNotificationService appNotificationService;
+    private final com.duylongtech.backend.feature.inventory.InventoryDocumentRepository inventoryDocumentRepository;
 
     @Autowired(required = false)
     private UserWarehouseRoleRepository userWarehouseRoleRepository;
@@ -289,6 +290,7 @@ public class StocktakeService {
                     : SystemMessage.INV_ERR_014.getMessage());
         }
         boolean counting = stocktake.isCounting();
+        String signatureBefore = countSignature(stocktake);
         java.util.Map<Long, java.math.BigDecimal> frozenBook = new java.util.HashMap<>();
         if (counting) {
             stocktake.getLines().forEach(l -> frozenBook.put(l.getVariantId(), l.getBookQty()));
@@ -319,6 +321,12 @@ public class StocktakeService {
             }
         }
 
+        // Dòng lệch chọn "Không xử lý" phải có lý do; mọi thay đổi số đếm/lý do làm mất xác nhận cũ.
+        validateSkippedLines(stocktake);
+        if (!signatureBefore.equals(countSignature(stocktake))) {
+            stocktake.clearWaiverConfirmation();
+        }
+
         return toResponse(stocktakeRepository.save(stocktake));
     }
 
@@ -332,9 +340,13 @@ public class StocktakeService {
                     ? "Phiếu kiểm kê chưa được manager duyệt"
                     : SystemMessage.STK_ERR_005.getMessage());
         }
-        assertAdjustmentsCreated(stocktake);
+        assertReadyToComplete(stocktake);
 
         for (StocktakeLine line : stocktake.getLines()) {
+            // Dòng lệch được bỏ qua: không đụng tới trạng thái serial
+            if (line.isSkippedDiff()) {
+                continue;
+            }
             // Process serial updates if available
             if (line.getSerials() != null && !line.getSerials().isEmpty()) {
                 for (StocktakeLineSerial sLine : line.getSerials()) {
@@ -404,6 +416,7 @@ public class StocktakeService {
             req.getLines().forEach(lineReq -> {
                 StocktakeLine line = new StocktakeLine();
                 line.initLine(lineReq.getVariantId(), lineReq.getBookQty(), lineReq.getCountQty(), lineReq.getGoodQty(), lineReq.getBadQty(), lineReq.getLostQty(), lineReq.getAction());
+                line.updateSkipReason(lineReq.getSkipReason());
                 stocktake.addLine(line);
 
                 if (lineReq.getSerials() != null && !lineReq.getSerials().isEmpty()) {
@@ -426,6 +439,10 @@ public class StocktakeService {
 
     private StocktakeResponse toResponse(Stocktake entity) {
         StocktakeResponse response = stocktakeMapper.toResponse(entity);
+        if (response != null && entity.getLines() != null) {
+            response.setSkippedDiffCount(entity.skippedDiffLines().size());
+            response.setWaiverConfirmed(entity.getWaiverConfirmedAt() != null && !entity.skippedDiffLines().isEmpty());
+        }
         
         if (entity.getCreatedBy() != null) {
             userRepository.findById(entity.getCreatedBy()).ifPresent(user -> {
@@ -481,6 +498,7 @@ public class StocktakeService {
 
     private static final String NOTIFICATION_APPROVAL = "STOCKTAKE_APPROVAL";
     private static final String NOTIFICATION_DECIDED = "STOCKTAKE_DECIDED";
+    private static final String NOTIFICATION_WAIVER = "STOCKTAKE_WAIVER";
     private static final String NOTIFICATION_RESULT = "STOCKTAKE";
     private static final java.util.List<String> OPEN_STATUSES = java.util.List.of(
             StocktakeStatus.PENDING_APPROVAL.name(), StocktakeStatus.COUNTING.name());
@@ -541,20 +559,111 @@ public class StocktakeService {
     }
 
     /**
-     * Còn chênh lệch thì kiểm kê chỉ kết thúc khi phiếu nhập/xuất điều chỉnh được lập và ghi sổ
-     * (hệ thống tự chốt phiếu, xem InventoryPostingService.syncStocktakeReference). Bấm "hoàn thành" thẳng sẽ
-     * mở khóa kho khi tồn chưa được điều chỉnh.
+     * Phiếu chỉ hoàn thành khi mọi dòng lệch đã được xử lý: hoặc có phiếu nhập/xuất điều chỉnh ĐÃ GHI SỔ,
+     * hoặc được chọn "Không xử lý" kèm lý do và được Manager/Kế toán xác nhận. Trả về null nếu đã sẵn sàng.
      */
-    private void assertAdjustmentsCreated(Stocktake stocktake) {
-        boolean hasSurplus = stocktake.getLines().stream()
-                .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(java.math.BigDecimal.ZERO) > 0);
-        boolean hasShortage = stocktake.getLines().stream()
-                .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(java.math.BigDecimal.ZERO) < 0);
-        if ((hasSurplus && stocktake.getReferenceImportId() == null)
-                || (hasShortage && stocktake.getReferenceExportId() == null)) {
-            throw new BusinessException("Còn chênh lệch số đếm. Hãy lập và ghi sổ phiếu nhập/xuất điều chỉnh trước; "
-                    + "phiếu kiểm kê sẽ tự hoàn thành và kho được mở khóa.");
+    private String readinessProblem(Stocktake stocktake) {
+        if (stocktake.requiresImportAdjustment() && !isPostedDocument(stocktake.getReferenceImportId())) {
+            return "Còn hàng thừa: cần lập và ghi sổ phiếu nhập điều chỉnh (hoặc chọn \"Không xử lý\" kèm lý do) trước khi hoàn thành kiểm kê.";
         }
+        if (stocktake.requiresExportAdjustment() && !isPostedDocument(stocktake.getReferenceExportId())) {
+            return "Còn hàng thiếu: cần lập và ghi sổ phiếu xuất điều chỉnh (hoặc chọn \"Không xử lý\" kèm lý do) trước khi hoàn thành kiểm kê.";
+        }
+        if (stocktake.hasUnconfirmedWaivers()) {
+            return "Các dòng \"Không xử lý\" chưa được Manager hoặc Kế toán xác nhận. Hãy gửi yêu cầu xác nhận.";
+        }
+        return null;
+    }
+
+    private void assertReadyToComplete(Stocktake stocktake) {
+        validateSkippedLines(stocktake);
+        String problem = readinessProblem(stocktake);
+        if (problem != null) {
+            throw new BusinessException(problem);
+        }
+    }
+
+    private boolean isPostedDocument(Long documentId) {
+        return documentId != null && inventoryDocumentRepository.findById(documentId)
+                .map(d -> DocumentStatus.POSTED.name().equals(d.getStatus()))
+                .orElse(false);
+    }
+
+    /** Dấu vân tay của số đếm/lựa chọn xử lý: chỉ khi nó đổi thì xác nhận bỏ qua chênh lệch cũ mới mất hiệu lực. */
+    private static String countSignature(Stocktake stocktake) {
+        return stocktake.getLines().stream()
+                .sorted(java.util.Comparator.comparing(StocktakeLine::getVariantId))
+                .map(l -> l.getVariantId() + "|" + l.getCountQty() + "|" + l.getAction() + "|" + l.getSkipReason())
+                .collect(java.util.stream.Collectors.joining(";"));
+    }
+
+    /** Dòng lệch mà chọn "Không xử lý" bắt buộc có lý do (để tra cứu về sau). */
+    private void validateSkippedLines(Stocktake stocktake) {
+        for (StocktakeLine line : stocktake.skippedDiffLines()) {
+            if (line.getSkipReason() == null || line.getSkipReason().isBlank()) {
+                String label = productVariantRepository.findById(line.getVariantId())
+                        .map(ProductVariant::getSku).orElse("#" + line.getVariantId());
+                throw new BusinessException("Sản phẩm " + label + " có chênh lệch nhưng chọn \"Không xử lý\": vui lòng nhập lý do.");
+            }
+            if (line.getSkipReason().length() > 500) {
+                throw new BusinessException("Lý do không xử lý chênh lệch tối đa 500 ký tự.");
+            }
+        }
+    }
+
+    static boolean isWaiverApprover(com.duylongtech.backend.security.UserDetailsImpl principal) {
+        return principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MANAGER".equals(a.getAuthority()) || "ROLE_SUPER_ADMIN".equals(a.getAuthority())
+                        || "ROLE_ACCOUNTANT".equals(a.getAuthority()));
+    }
+
+    /** Thủ kho báo cho Manager/Kế toán biết có dòng chênh lệch xin bỏ qua cần xác nhận. */
+    @Transactional(rollbackFor = Exception.class)
+    public StocktakeResponse requestWaiverConfirmation(Long id) {
+        Stocktake stocktake = stocktakeRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+        if (!stocktake.isCounting()) {
+            throw new BusinessException("Chỉ gửi yêu cầu xác nhận khi phiếu đang kiểm kê");
+        }
+        if (stocktake.skippedDiffLines().isEmpty()) {
+            throw new BusinessException("Không có dòng chênh lệch nào chọn \"Không xử lý\"");
+        }
+        validateSkippedLines(stocktake);
+        if (stocktake.getWaiverConfirmedAt() != null) {
+            throw new BusinessException("Các dòng bỏ qua đã được xác nhận");
+        }
+        String message = "Phiếu " + stocktake.getStocktakeCode() + " có " + stocktake.skippedDiffLines().size()
+                + " dòng chênh lệch xin bỏ qua (không lập phiếu điều chỉnh). Vui lòng xem lý do và xác nhận.";
+        for (String role : new String[] {"ROLE_MANAGER", "ROLE_ACCOUNTANT"}) {
+            appNotificationService.createNotification(role, null, "Xác nhận bỏ qua chênh lệch " + stocktake.getStocktakeCode(),
+                    message, NOTIFICATION_WAIVER, "STOCKTAKE", stocktake.getId(), "/stocktakes/" + stocktake.getId(), null);
+        }
+        return toResponse(stocktake);
+    }
+
+    /** Manager/Kế toán xác nhận các dòng bỏ qua; nếu không còn gì chờ thì phiếu hoàn thành và kho mở khóa. */
+    @Transactional(rollbackFor = Exception.class)
+    public StocktakeResponse confirmWaivers(Long id, com.duylongtech.backend.security.UserDetailsImpl principal) {
+        if (!isWaiverApprover(principal)) {
+            throw new BusinessException("Chỉ Manager hoặc Kế toán mới được xác nhận bỏ qua chênh lệch");
+        }
+        Stocktake stocktake = stocktakeRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+        if (!stocktake.isCounting()) {
+            throw new BusinessException("Chỉ xác nhận khi phiếu đang kiểm kê");
+        }
+        if (stocktake.skippedDiffLines().isEmpty()) {
+            throw new BusinessException("Không có dòng chênh lệch nào chọn \"Không xử lý\" để xác nhận");
+        }
+        validateSkippedLines(stocktake);
+
+        stocktake.confirmWaivers(principal.getId());
+        if (readinessProblem(stocktake) == null) {
+            stocktake.markAsPosted();
+        }
+        Stocktake saved = stocktakeRepository.save(stocktake);
+        appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_WAIVER, NOTIFICATION_DECIDED);
+        return toResponse(saved);
     }
 
     private void notifyManagersForApproval(Stocktake stocktake) {
