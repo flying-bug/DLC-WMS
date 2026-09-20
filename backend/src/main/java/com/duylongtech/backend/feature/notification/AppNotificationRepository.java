@@ -27,6 +27,12 @@ public interface AppNotificationRepository extends JpaRepository<AppNotification
     @Query("UPDATE AppNotification n SET n.isRead = true WHERE :isAdmin = true OR n.userId = :userId OR (n.recipientRole IN :roles AND (n.warehouseId IS NULL OR n.warehouseId IN :warehouseIds))")
     void markAllAsRead(@Param("userId") Long userId, @Param("roles") List<String> roles, @Param("isAdmin") boolean isAdmin, @Param("warehouseIds") List<Long> warehouseIds);
 
+    /** Đổi kiểu thông báo (vd. STOCKTAKE_APPROVAL -> STOCKTAKE_DECIDED) để giao diện ẩn nút Đồng ý/Từ chối khi đã có người quyết định. */
+    @Modifying
+    @Query("UPDATE AppNotification n SET n.type = :newType WHERE n.referenceType = :referenceType AND n.referenceId = :referenceId AND n.type = :oldType")
+    int retypeByReference(@Param("referenceType") String referenceType, @Param("referenceId") Long referenceId,
+                          @Param("oldType") String oldType, @Param("newType") String newType);
+
     @Query("SELECT COUNT(n) > 0 FROM AppNotification n WHERE n.referenceType = :referenceType AND n.referenceId = :referenceId AND n.recipientRole = :recipientRole AND n.createdAt >= :after")
     boolean existsRecentNotification(
         @Param("referenceType") String referenceType,

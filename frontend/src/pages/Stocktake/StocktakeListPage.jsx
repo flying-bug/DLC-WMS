@@ -20,7 +20,12 @@ import useSessionState from '../../hooks/useSessionState';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
+  PENDING_APPROVAL: { label: 'Chờ duyệt', code: 'warning' },
+  COUNTING: { label: 'Đang kiểm kê (kho bị khóa)', code: 'info' },
   POSTED: { label: 'Đã xử lý chênh lệch', code: 'success' },
+  COMPLETED: { label: 'Hoàn thành', code: 'success' },
+  REJECTED: { label: 'Bị từ chối', code: 'danger' },
+  CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -294,8 +299,12 @@ function StocktakeListPage() {
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
               >
                 <option value="">Tất cả</option>
-                <option value="DRAFT">Lưu tạm</option>
+                <option value="PENDING_APPROVAL">Chờ duyệt</option>
+                <option value="COUNTING">Đang kiểm kê</option>
                 <option value="POSTED">Đã xử lý</option>
+                <option value="REJECTED">Bị từ chối</option>
+                <option value="CANCELLED">Đã hủy</option>
+                <option value="DRAFT">Lưu tạm</option>
               </SearchableSelect>
             </div>
           </div>

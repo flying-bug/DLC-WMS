@@ -77,6 +77,11 @@ public class AppNotificationService {
     }
 
     @Transactional
+    public void retypeNotifications(String referenceType, Long referenceId, String oldType, String newType) {
+        notificationRepository.retypeByReference(referenceType, referenceId, oldType, newType);
+    }
+
+    @Transactional
     public AppNotification createNotification(String recipientRole, Long userId, String title, String message,
                                               String type, String referenceType, Long referenceId, String link, Long warehouseId) {
         AppNotification notif = new AppNotification();

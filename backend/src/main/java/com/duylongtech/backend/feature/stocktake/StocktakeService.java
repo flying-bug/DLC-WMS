@@ -2,6 +2,8 @@ package com.duylongtech.backend.feature.stocktake;
 
 import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.enums.SerialNumberStatus;
+import com.duylongtech.backend.enums.StocktakeStatus;
+import com.duylongtech.backend.feature.notification.AppNotificationService;
 
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.stocktake.StocktakeLineRequest;
@@ -66,6 +68,7 @@ public class StocktakeService {
     private final InventoryDocumentService inventoryDocumentService;
     private final SerialNumberRepository serialNumberRepository;
     private final com.duylongtech.backend.feature.auth.UserRepository userRepository;
+    private final AppNotificationService appNotificationService;
 
     @Autowired(required = false)
     private UserWarehouseRoleRepository userWarehouseRoleRepository;
@@ -93,7 +96,8 @@ public class StocktakeService {
             boolean isAdminOrManager = userPrincipal.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority() != null && (
                             a.getAuthority().contains("SUPER_ADMIN") ||
-                            a.getAuthority().contains("MANAGER")
+                            a.getAuthority().contains("MANAGER") ||
+                            a.getAuthority().contains("ACCOUNTANT")
                     ));
 
             if (!isAdminOrManager) {
@@ -137,7 +141,8 @@ public class StocktakeService {
             boolean isAdminOrManager = userPrincipal.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority() != null && (
                             a.getAuthority().contains("SUPER_ADMIN") ||
-                            a.getAuthority().contains("MANAGER")
+                            a.getAuthority().contains("MANAGER") ||
+                            a.getAuthority().contains("ACCOUNTANT")
                     ));
 
             if (!isAdminOrManager) {
@@ -161,9 +166,18 @@ public class StocktakeService {
         return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, SerialNumberStatus.AVAILABLE.name());
     }
 
-    @Transactional
     public StocktakeResponse createStocktake(StocktakeRequest req) {
+        return createStocktake(req, null);
+    }
+
+    /**
+     * Người có quyền duyệt (Manager / Super Admin) tạo phiếu thì vào kiểm kê ngay. Người khác tạo thì phiếu ở
+     * PENDING_APPROVAL và manager nhận thông báo có nút Đồng ý / Từ chối. Mỗi kho chỉ có một đợt kiểm kê đang mở.
+     */
+    @Transactional
+    public StocktakeResponse createStocktake(StocktakeRequest req, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
         validateRequest(req);
+        assertNoOpenStocktake(req.getWarehouseId());
         String docCode = resolveDocCode(req.getStocktakeCode());
 
         Stocktake stocktake = new Stocktake();
@@ -171,7 +185,96 @@ public class StocktakeService {
 
         mapLinesAndParticipants(stocktake, req);
 
-        return toResponse(stocktakeRepository.save(stocktake));
+        boolean autoApprove = isApprover(userPrincipal);
+        if (autoApprove) {
+            snapshotBookQuantities(stocktake);
+            stocktake.startCounting(userPrincipal.getId());
+        } else {
+            stocktake.submitForApproval();
+        }
+        Stocktake saved = stocktakeRepository.save(stocktake);
+
+        if (autoApprove) {
+            notifyCountingStarted(saved);
+        } else {
+            notifyManagersForApproval(saved);
+        }
+        return toResponse(saved);
+    }
+
+    /** Manager đồng ý: chốt số sổ sách theo tồn hiện tại và khóa kho. */
+    @Transactional(rollbackFor = Exception.class)
+    public StocktakeResponse approveStocktake(Long id, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
+        requireApprover(userPrincipal);
+        Stocktake stocktake = lockPending(id);
+        assertNoOtherCounting(stocktake);
+
+        snapshotBookQuantities(stocktake);
+        stocktake.approve(userPrincipal.getId());
+        Stocktake saved = stocktakeRepository.save(stocktake);
+
+        appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_APPROVAL, NOTIFICATION_DECIDED);
+        notifyCountingStarted(saved);
+        return toResponse(saved);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public StocktakeResponse rejectStocktake(Long id, String reason, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
+        requireApprover(userPrincipal);
+        String trimmed = reason != null ? reason.trim() : "";
+        if (trimmed.isEmpty()) {
+            throw new BusinessException("Vui lòng nhập lý do từ chối phiếu kiểm kê");
+        }
+        if (trimmed.length() > 500) {
+            throw new BusinessException("Lý do từ chối tối đa 500 ký tự");
+        }
+        Stocktake stocktake = lockPending(id);
+
+        stocktake.reject(userPrincipal.getId(), trimmed);
+        Stocktake saved = stocktakeRepository.save(stocktake);
+
+        appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_APPROVAL, NOTIFICATION_DECIDED);
+        if (saved.getCreatedBy() != null) {
+            appNotificationService.createNotification(null, saved.getCreatedBy(),
+                    "Phiếu kiểm kê " + saved.getStocktakeCode() + " bị từ chối",
+                    "Lý do: " + trimmed, NOTIFICATION_RESULT, "STOCKTAKE", saved.getId(),
+                    "/stocktakes/" + saved.getId(), null);
+        }
+        return toResponse(saved);
+    }
+
+    /**
+     * Hủy phiếu (mở khóa kho nếu đang kiểm kê). Manager / Super Admin hủy được mọi phiếu chưa kết thúc;
+     * người tạo chỉ hủy được phiếu của mình khi còn chờ duyệt.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public StocktakeResponse cancelStocktake(Long id, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
+        Stocktake stocktake = stocktakeRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+
+        boolean approver = isApprover(userPrincipal);
+        boolean ownPending = userPrincipal != null && StocktakeStatus.PENDING_APPROVAL.name().equals(stocktake.getStatus())
+                && userPrincipal.getId() != null && userPrincipal.getId().equals(stocktake.getCreatedBy());
+        if (!approver && !ownPending) {
+            throw new BusinessException("Chỉ Manager mới được hủy phiếu kiểm kê, hoặc người tạo hủy phiếu của mình khi đang chờ duyệt");
+        }
+
+        boolean wasCounting = stocktake.isCounting();
+        try {
+            stocktake.cancel();
+        } catch (IllegalStateException e) {
+            throw new BusinessException(e.getMessage());
+        }
+        Stocktake saved = stocktakeRepository.save(stocktake);
+
+        appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_APPROVAL, NOTIFICATION_DECIDED);
+        if (wasCounting && saved.getWarehouseId() != null) {
+            appNotificationService.createNotification("ROLE_WAREHOUSE_CONTROLLER", null,
+                    "Đã hủy kiểm kê " + saved.getStocktakeCode(),
+                    "Kho đã được mở khóa, có thể nhập/xuất/chuyển kho trở lại.", NOTIFICATION_RESULT, "STOCKTAKE",
+                    saved.getId(), "/stocktakes/" + saved.getId(), saved.getWarehouseId());
+        }
+        return toResponse(saved);
     }
 
     @Transactional
@@ -180,10 +283,15 @@ public class StocktakeService {
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
 
-        checkStorekeeperRestriction(stocktake, userPrincipal);
-
-        if (!DocumentStatus.DRAFT.name().equals(stocktake.getStatus())) {
-            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
+        if (!stocktake.isEditable()) {
+            throw new BusinessException(StocktakeStatus.PENDING_APPROVAL.name().equals(stocktake.getStatus())
+                    ? "Phiếu kiểm kê đang chờ manager duyệt, chưa thể nhập số đếm"
+                    : SystemMessage.INV_ERR_014.getMessage());
+        }
+        boolean counting = stocktake.isCounting();
+        java.util.Map<Long, java.math.BigDecimal> frozenBook = new java.util.HashMap<>();
+        if (counting) {
+            stocktake.getLines().forEach(l -> frozenBook.put(l.getVariantId(), l.getBookQty()));
         }
 
         String requestedCode = req.getStocktakeCode() != null ? req.getStocktakeCode().trim() : null;
@@ -200,6 +308,17 @@ public class StocktakeService {
 
         mapLinesAndParticipants(stocktake, req);
 
+        if (counting) {
+            // Số sổ sách đã chốt lúc bắt đầu kiểm kê: client không được đổi; dòng thêm mới thì chốt theo tồn hiện tại.
+            for (StocktakeLine line : stocktake.getLines()) {
+                if (frozenBook.containsKey(line.getVariantId())) {
+                    line.overrideBookQty(frozenBook.get(line.getVariantId()));
+                } else {
+                    line.rebaseBookQty(currentOnHand(stocktake.getWarehouseId(), line.getVariantId()));
+                }
+            }
+        }
+
         return toResponse(stocktakeRepository.save(stocktake));
     }
 
@@ -208,11 +327,12 @@ public class StocktakeService {
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
 
-        checkStorekeeperRestriction(stocktake, userPrincipal);
-
-        if (!DocumentStatus.DRAFT.name().equals(stocktake.getStatus())) {
-            throw new BusinessException(SystemMessage.STK_ERR_005.getMessage());
+        if (!stocktake.isEditable()) {
+            throw new BusinessException(StocktakeStatus.PENDING_APPROVAL.name().equals(stocktake.getStatus())
+                    ? "Phiếu kiểm kê chưa được manager duyệt"
+                    : SystemMessage.STK_ERR_005.getMessage());
         }
+        assertAdjustmentsCreated(stocktake);
 
         for (StocktakeLine line : stocktake.getLines()) {
             // Process serial updates if available
@@ -355,19 +475,109 @@ public class StocktakeService {
         return response;
     }
 
-    private void checkStorekeeperRestriction(Stocktake stocktake, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
-        if (userPrincipal == null) return;
-        boolean isStorekeeper = userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("STOREKEEPER"));
-        boolean isAccountantOrAdmin = userPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("ACCOUNTANT") || a.getAuthority().contains("SUPER_ADMIN") || a.getAuthority().contains("MANAGER"));
-        
-        if (isStorekeeper && !isAccountantOrAdmin && stocktake.getCreatedBy() != null) {
-            userRepository.findById(stocktake.getCreatedBy()).ifPresent(creator -> {
-                boolean createdByAccountant = creator.getRoles().stream()
-                        .anyMatch(r -> "ACCOUNTANT".equals(r.getName()) || "ROLE_ACCOUNTANT".equals(r.getName()));
-                if (createdByAccountant) {
-                    throw new BusinessException("Thủ kho không được phép sửa phiếu kiểm kê do kế toán tạo. Chỉ có quyền xem.");
-                }
-            });
+    // ---------------------------------------------------------------------
+    // Duyệt kiểm kê & khóa kho
+    // ---------------------------------------------------------------------
+
+    private static final String NOTIFICATION_APPROVAL = "STOCKTAKE_APPROVAL";
+    private static final String NOTIFICATION_DECIDED = "STOCKTAKE_DECIDED";
+    private static final String NOTIFICATION_RESULT = "STOCKTAKE";
+    private static final java.util.List<String> OPEN_STATUSES = java.util.List.of(
+            StocktakeStatus.PENDING_APPROVAL.name(), StocktakeStatus.COUNTING.name());
+
+    static boolean isApprover(com.duylongtech.backend.security.UserDetailsImpl principal) {
+        return principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MANAGER".equals(a.getAuthority()) || "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+    }
+
+    private void requireApprover(com.duylongtech.backend.security.UserDetailsImpl principal) {
+        if (!isApprover(principal)) {
+            throw new BusinessException("Chỉ Manager mới được duyệt hoặc từ chối phiếu kiểm kê");
+        }
+    }
+
+    /** Khóa dòng phiếu để hai manager bấm cùng lúc không cùng duyệt; báo rõ nếu phiếu đã được xử lý. */
+    private Stocktake lockPending(Long id) {
+        Stocktake stocktake = stocktakeRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+        if (!StocktakeStatus.PENDING_APPROVAL.name().equals(stocktake.getStatus())) {
+            throw new BusinessException("Phiếu kiểm kê " + stocktake.getStocktakeCode()
+                    + " không còn ở trạng thái chờ duyệt (hiện tại: " + stocktake.getStatus() + ")");
+        }
+        return stocktake;
+    }
+
+    private void assertNoOpenStocktake(Long warehouseId) {
+        if (stocktakeRepository.existsByWarehouseIdAndStatusIn(warehouseId, OPEN_STATUSES)) {
+            throw new BusinessException("Kho này đang có một đợt kiểm kê chưa kết thúc (chờ duyệt hoặc đang kiểm kê). "
+                    + "Hoàn tất hoặc hủy đợt đó trước khi tạo phiếu mới.");
+        }
+    }
+
+    private void assertNoOtherCounting(Stocktake stocktake) {
+        stocktakeRepository.findFirstByWarehouseIdAndStatus(stocktake.getWarehouseId(), StocktakeStatus.COUNTING.name())
+                .filter(other -> !other.getId().equals(stocktake.getId()))
+                .ifPresent(other -> {
+                    throw new BusinessException("Kho đang được kiểm kê bởi phiếu " + other.getStocktakeCode()
+                            + ". Hoàn tất hoặc hủy phiếu đó trước.");
+                });
+    }
+
+    /** Chốt số sổ sách của mọi dòng theo tồn thực tế của kho ngay lúc bắt đầu kiểm kê. */
+    private void snapshotBookQuantities(Stocktake stocktake) {
+        for (StocktakeLine line : stocktake.getLines()) {
+            // Dòng có serial: danh sách serial do người dùng quét, không tự đổi theo tồn.
+            if (line.getSerials() != null && !line.getSerials().isEmpty()) {
+                continue;
+            }
+            line.rebaseBookQty(currentOnHand(stocktake.getWarehouseId(), line.getVariantId()));
+        }
+    }
+
+    private java.math.BigDecimal currentOnHand(Long warehouseId, Long variantId) {
+        return inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(warehouseId, variantId, "GOOD")
+                .map(com.duylongtech.backend.feature.inventory.InventoryBalance::getQuantityOnHand)
+                .orElse(java.math.BigDecimal.ZERO);
+    }
+
+    /**
+     * Còn chênh lệch thì kiểm kê chỉ kết thúc khi phiếu nhập/xuất điều chỉnh được lập và ghi sổ
+     * (hệ thống tự chốt phiếu, xem InventoryPostingService.syncStocktakeReference). Bấm "hoàn thành" thẳng sẽ
+     * mở khóa kho khi tồn chưa được điều chỉnh.
+     */
+    private void assertAdjustmentsCreated(Stocktake stocktake) {
+        boolean hasSurplus = stocktake.getLines().stream()
+                .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(java.math.BigDecimal.ZERO) > 0);
+        boolean hasShortage = stocktake.getLines().stream()
+                .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(java.math.BigDecimal.ZERO) < 0);
+        if ((hasSurplus && stocktake.getReferenceImportId() == null)
+                || (hasShortage && stocktake.getReferenceExportId() == null)) {
+            throw new BusinessException("Còn chênh lệch số đếm. Hãy lập và ghi sổ phiếu nhập/xuất điều chỉnh trước; "
+                    + "phiếu kiểm kê sẽ tự hoàn thành và kho được mở khóa.");
+        }
+    }
+
+    private void notifyManagersForApproval(Stocktake stocktake) {
+        String warehouseName = warehouseRepository.findById(stocktake.getWarehouseId())
+                .map(com.duylongtech.backend.feature.warehouse.Warehouse::getName).orElse("#" + stocktake.getWarehouseId());
+        appNotificationService.createNotification("ROLE_MANAGER", null,
+                "Yêu cầu kiểm kê " + stocktake.getStocktakeCode(),
+                "Có đề nghị kiểm kê kho " + warehouseName + ". Đồng ý sẽ khóa nhập/xuất/chuyển kho cho tới khi kiểm kê xong.",
+                NOTIFICATION_APPROVAL, "STOCKTAKE", stocktake.getId(), "/stocktakes/" + stocktake.getId(), null);
+    }
+
+    private void notifyCountingStarted(Stocktake stocktake) {
+        String warehouseName = warehouseRepository.findById(stocktake.getWarehouseId())
+                .map(com.duylongtech.backend.feature.warehouse.Warehouse::getName).orElse("#" + stocktake.getWarehouseId());
+        appNotificationService.createNotification("ROLE_WAREHOUSE_CONTROLLER", null,
+                "Bắt đầu kiểm kê kho " + warehouseName,
+                "Phiếu " + stocktake.getStocktakeCode() + " đã được duyệt. Kho bị khóa nhập/xuất/chuyển; vui lòng nhập số đếm.",
+                NOTIFICATION_RESULT, "STOCKTAKE", stocktake.getId(), "/stocktakes/" + stocktake.getId(), stocktake.getWarehouseId());
+        if (stocktake.getCreatedBy() != null) {
+            appNotificationService.createNotification(null, stocktake.getCreatedBy(),
+                    "Phiếu kiểm kê " + stocktake.getStocktakeCode() + " đã được duyệt",
+                    "Kho " + warehouseName + " đang được kiểm kê.", NOTIFICATION_RESULT, "STOCKTAKE", stocktake.getId(),
+                    "/stocktakes/" + stocktake.getId(), null);
         }
     }
 }

@@ -174,7 +174,8 @@ public class RoleService {
         if ("assembly_config".equals(module)) return "assembly_config:view".equals(code);
         if ("assembly".equals(module)) return Arrays.asList("assembly:view", "assembly:approve").contains(code);
         if ("payment".equals(module)) return true;
-        if (Arrays.asList("transfer", "stocktake", "warehouse_master", "ai_chat").contains(module)) return code.endsWith(":view");
+        if ("stocktake".equals(module)) return code.endsWith(":view") || "stocktake:add".equals(code);
+        if (Arrays.asList("transfer", "warehouse_master", "ai_chat").contains(module)) return code.endsWith(":view");
         return false;
     }
 

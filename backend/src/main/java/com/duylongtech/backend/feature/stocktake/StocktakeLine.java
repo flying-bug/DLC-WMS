@@ -80,6 +80,30 @@ public class StocktakeLine {
         calculateDiff();
     }
     
+    /**
+     * Chốt lại số sổ sách theo tồn thực tế lúc bắt đầu kiểm kê. Số đếm/đạt còn đang bằng số sổ sách cũ
+     * (chưa ai sửa, do form tạo phiếu điền sẵn) thì đi theo số mới để không sinh chênh lệch giả.
+     */
+    public void rebaseBookQty(BigDecimal newBookQty) {
+        BigDecimal oldBook = this.bookQty != null ? this.bookQty : BigDecimal.ZERO;
+        boolean countUntouched = this.countQty != null && this.countQty.compareTo(oldBook) == 0;
+        boolean goodUntouched = this.goodQty != null && this.goodQty.compareTo(oldBook) == 0;
+        this.bookQty = newBookQty != null ? newBookQty : BigDecimal.ZERO;
+        if (countUntouched) {
+            this.countQty = this.bookQty;
+            if (goodUntouched) {
+                this.goodQty = this.bookQty;
+            }
+        }
+        calculateDiff();
+    }
+
+    /** Giữ nguyên số sổ sách đã chốt khi thủ kho lưu số đếm (client không được đổi số sổ sách). */
+    public void overrideBookQty(BigDecimal frozenBookQty) {
+        this.bookQty = frozenBookQty != null ? frozenBookQty : BigDecimal.ZERO;
+        calculateDiff();
+    }
+
     private void calculateDiff() {
         if (this.countQty != null) {
             this.diffQty = this.countQty.subtract(this.bookQty != null ? this.bookQty : BigDecimal.ZERO);

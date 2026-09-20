@@ -25,6 +25,9 @@ public class StocktakeResponse {
     private Long referenceImportId;
     private Long referenceExportId;
     private Long createdBy;
+    private Long approvedBy;
+    private LocalDateTime approvedAt;
+    private String rejectReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<StocktakeLineResponse> lines;

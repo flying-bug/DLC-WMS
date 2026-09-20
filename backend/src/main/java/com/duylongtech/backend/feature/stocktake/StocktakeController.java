@@ -93,11 +93,12 @@ public class StocktakeController {
         if (request.getCreatedBy() == null && userPrincipal != null) {
             request.setCreatedBy(userPrincipal.getId());
         }
-        StocktakeResponse response = stocktakeService.createStocktake(request);
+        StocktakeResponse response = stocktakeService.createStocktake(request, userPrincipal);
+        boolean pending = "PENDING_APPROVAL".equals(response.getStatus());
         return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
                 .success(true)
                 .data(response)
-                .userMessage("Tạo phiếu kiểm kê thành công")
+                .userMessage(pending ? "Đã gửi yêu cầu kiểm kê, chờ Manager duyệt" : "Tạo phiếu kiểm kê thành công, kho đã được khóa để kiểm kê")
                 .build());
     }
 
@@ -128,6 +129,43 @@ public class StocktakeController {
                 .success(true)
                 .data(response)
                 .userMessage("Xử lý phiếu kiểm kê thành công, các phiếu điều chỉnh lưu nháp đã được sinh ra.")
+                .build());
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('MANAGER','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<StocktakeResponse>> approveStocktake(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
+                .success(true)
+                .data(stocktakeService.approveStocktake(id, userPrincipal))
+                .userMessage("Đã duyệt. Kho đang được khóa để kiểm kê.")
+                .build());
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('MANAGER','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<StocktakeResponse>> rejectStocktake(
+            @PathVariable Long id,
+            @RequestBody StocktakeRejectRequest request,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
+                .success(true)
+                .data(stocktakeService.rejectStocktake(id, request != null ? request.getReason() : null, userPrincipal))
+                .userMessage("Đã từ chối phiếu kiểm kê")
+                .build());
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('stocktake:view')")
+    public ResponseEntity<ApiResponse<StocktakeResponse>> cancelStocktake(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
+                .success(true)
+                .data(stocktakeService.cancelStocktake(id, userPrincipal))
+                .userMessage("Đã hủy phiếu kiểm kê")
                 .build());
     }
 }

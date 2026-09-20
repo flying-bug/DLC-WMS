@@ -26,6 +26,20 @@ export const postStocktake = (id) => {
   return axiosClient.post(`${STOCKTAKE_BASE}/${id}/post`);
 };
 
+// Manager duyệt: bắt đầu kiểm kê và khóa kho
+export const approveStocktake = (id) => {
+  return axiosClient.post(`${STOCKTAKE_BASE}/${id}/approve`);
+};
+
+export const rejectStocktake = (id, reason) => {
+  return axiosClient.post(`${STOCKTAKE_BASE}/${id}/reject`, { reason });
+};
+
+// Hủy phiếu (mở khóa kho nếu đang kiểm kê)
+export const cancelStocktake = (id) => {
+  return axiosClient.post(`${STOCKTAKE_BASE}/${id}/cancel`);
+};
+
 export const getWarehouses = (params = {}) => {
   return axiosClient.get('/warehouses', { params });
 };

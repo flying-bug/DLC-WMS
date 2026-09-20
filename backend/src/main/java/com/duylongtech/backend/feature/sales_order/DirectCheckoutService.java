@@ -67,6 +67,7 @@ public class DirectCheckoutService {
     private final InventoryDocumentService inventoryDocumentService;
     private final PartnerLedgerService partnerLedgerService;
     private final PaymentService paymentService;
+    private final com.duylongtech.backend.feature.stocktake.StocktakeLockGuard stocktakeLockGuard;
 
     @Transactional(rollbackFor = Exception.class)
     public SalesOrderResponse directCheckout(DirectCheckoutRequest request, String actor) {
@@ -92,6 +93,8 @@ public class DirectCheckoutService {
         }
         warehouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> new BusinessException("Kho không tồn tại"));
+        // Báo sớm ngay lúc bán lẻ, thay vì để phiếu xuất nằm chờ mà thủ kho không ghi sổ được
+        stocktakeLockGuard.assertWarehouseNotLocked(request.getWarehouseId());
         if (request.getLines() == null || request.getLines().isEmpty()) {
             throw new BusinessException(SystemMessage.CHK_ERR_008.getMessage());
         }

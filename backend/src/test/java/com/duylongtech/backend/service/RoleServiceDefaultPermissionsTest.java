@@ -33,7 +33,7 @@ class RoleServiceDefaultPermissionsTest {
                 "product_category:view", "product_category:add", "product_category:edit",
                 "unit:view", "unit:add", "unit:edit",
                 "brand:view", "brand:add", "brand:edit",
-                "transfer:view", "stocktake:view", "warehouse_master:view",
+                "transfer:view", "stocktake:view", "stocktake:add", "warehouse_master:view",
                 "report_ledger:view", "report_ledger:export",
                 "report_transfer:view", "report_transfer:export",
                 "report_balance:view", "report_balance:export"

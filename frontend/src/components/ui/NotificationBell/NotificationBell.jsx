@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../../contexts/WorkspaceModeContext';
-import { hasPermission, NOTIFICATION_EVENT } from '../../../auth/session';
+import { hasPermission, getAuthRoles, NOTIFICATION_EVENT } from '../../../auth/session';
 import * as notificationApi from '../../../api/notificationApi';
+import * as stocktakeApi from '../../../api/stocktakeApi';
 import { playNotificationSound } from '../../../utils/notificationSound';
 import styles from './NotificationBell.module.css';
 import { formatDateTime } from '../../../utils/dateFormat';
@@ -15,6 +16,12 @@ export default function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const containerRef = useRef(null);
+    // Yêu cầu kiểm kê chờ duyệt: chỉ Manager / Super Admin thấy nút Đồng ý - Từ chối
+    const canDecideStocktake = getAuthRoles().some(r => ['ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'MANAGER', 'SUPER_ADMIN'].includes(String(r || '').toUpperCase()));
+    const [rejectingId, setRejectingId] = useState(null);
+    const [rejectReason, setRejectReason] = useState('');
+    const [actionBusyId, setActionBusyId] = useState(null);
+    const [actionResults, setActionResults] = useState({}); // id -> { ok, text }
 
     const fetchUnreadCount = async () => {
         try {
@@ -121,6 +128,45 @@ export default function NotificationBell() {
         }
     };
 
+    const finishStocktakeAction = (notif, ok, text) => {
+        setActionResults(prev => ({ ...prev, [notif.id]: { ok, text } }));
+        if (ok) {
+            setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, type: 'STOCKTAKE_DECIDED', isRead: true } : n));
+        }
+    };
+
+    const handleApproveStocktake = async (e, notif) => {
+        e.stopPropagation();
+        setActionBusyId(notif.id);
+        try {
+            await stocktakeApi.approveStocktake(notif.referenceId);
+            finishStocktakeAction(notif, true, 'Đã đồng ý. Kho đang được khóa để kiểm kê.');
+        } catch (err) {
+            finishStocktakeAction(notif, false, err.response?.data?.userMessage || 'Không thể duyệt phiếu kiểm kê');
+        } finally {
+            setActionBusyId(null);
+        }
+    };
+
+    const handleConfirmReject = async (e, notif) => {
+        e.stopPropagation();
+        if (!rejectReason.trim()) {
+            setActionResults(prev => ({ ...prev, [notif.id]: { ok: false, text: 'Vui lòng nhập lý do từ chối' } }));
+            return;
+        }
+        setActionBusyId(notif.id);
+        try {
+            await stocktakeApi.rejectStocktake(notif.referenceId, rejectReason.trim());
+            setRejectingId(null);
+            setRejectReason('');
+            finishStocktakeAction(notif, true, 'Đã từ chối phiếu kiểm kê.');
+        } catch (err) {
+            finishStocktakeAction(notif, false, err.response?.data?.userMessage || 'Không thể từ chối phiếu kiểm kê');
+        } finally {
+            setActionBusyId(null);
+        }
+    };
+
     const handleMarkAllAsRead = async () => {
         try {
             await notificationApi.markAllAsRead();
@@ -200,6 +246,34 @@ export default function NotificationBell() {
                                     <div className={styles.contentCol}>
                                         <div className={styles.itemTitle}>{n.title}</div>
                                         <div className={styles.itemMessage}>{n.message}</div>
+                                        {n.type === 'STOCKTAKE_APPROVAL' && canDecideStocktake && (
+                                            <div className={styles.actionBox} onClick={(e) => e.stopPropagation()}>
+                                                {rejectingId === n.id ? (
+                                                    <>
+                                                        <textarea
+                                                            className={styles.reasonInput}
+                                                            rows={2}
+                                                            maxLength={500}
+                                                            placeholder="Lý do từ chối..."
+                                                            value={rejectReason}
+                                                            onChange={(e) => setRejectReason(e.target.value)}
+                                                        />
+                                                        <div className={styles.actionRow}>
+                                                            <button type="button" className={styles.btnReject} disabled={actionBusyId === n.id} onClick={(e) => handleConfirmReject(e, n)}>Xác nhận từ chối</button>
+                                                            <button type="button" className={styles.btnGhost} onClick={(e) => { e.stopPropagation(); setRejectingId(null); setRejectReason(''); }}>Hủy</button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className={styles.actionRow}>
+                                                        <button type="button" className={styles.btnApprove} disabled={actionBusyId === n.id} onClick={(e) => handleApproveStocktake(e, n)}>Đồng ý</button>
+                                                        <button type="button" className={styles.btnReject} disabled={actionBusyId === n.id} onClick={(e) => { e.stopPropagation(); setRejectingId(n.id); setRejectReason(''); }}>Từ chối</button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {actionResults[n.id] && (
+                                            <div className={actionResults[n.id].ok ? styles.actionOk : styles.actionErr}>{actionResults[n.id].text}</div>
+                                        )}
                                         <div className={styles.itemTime}>{formatTime(n.createdAt)}</div>
                                     </div>
                                 </div>

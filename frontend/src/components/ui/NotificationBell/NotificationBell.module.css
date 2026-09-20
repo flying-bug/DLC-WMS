@@ -181,3 +181,67 @@
   color: var(--wms-text-subtle);
   font-size: 13px;
 }
+
+/* Nút Đồng ý / Từ chối trong thông báo yêu cầu kiểm kê */
+.actionBox {
+  margin-top: 8px;
+}
+
+.actionRow {
+  display: flex;
+  gap: 8px;
+}
+
+.btnApprove,
+.btnReject,
+.btnGhost {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnApprove {
+  background: #16a34a;
+  color: #fff;
+}
+
+.btnReject {
+  background: #fff;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.btnGhost {
+  background: none;
+  color: var(--wms-text-muted);
+}
+
+.btnApprove:disabled,
+.btnReject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reasonInput {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--wms-border-base, #d1d5db);
+  border-radius: 6px;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.actionOk,
+.actionErr {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.actionOk { color: #15803d; }
+.actionErr { color: #dc2626; }

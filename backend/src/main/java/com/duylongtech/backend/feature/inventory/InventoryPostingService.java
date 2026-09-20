@@ -57,6 +57,7 @@ import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrderService;
 import com.duylongtech.backend.feature.stocktake.Stocktake;
+import com.duylongtech.backend.feature.stocktake.StocktakeLockGuard;
 import com.duylongtech.backend.feature.stocktake.StocktakeRepository;
 import com.duylongtech.backend.feature.system.CodeGeneratorService;
 import com.duylongtech.backend.feature.warehouse.WarehouseRepository;
@@ -147,6 +148,7 @@ public class InventoryPostingService {
     private final AuditLogService auditLogService;
     private final com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard warehouseAccessGuard;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final StocktakeLockGuard stocktakeLockGuard;
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
@@ -163,6 +165,7 @@ public class InventoryPostingService {
             if (effectiveWarehouseId == null) {
                 throw new BusinessException("Dòng sản phẩm chưa được chọn kho xuất");
             }
+            stocktakeLockGuard.assertWarehouseNotLocked(effectiveWarehouseId, doc.getReferenceType(), doc.getReferenceId());
             BigDecimal qtyToExport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
                     ? line.getBaseQuantity()
                     : line.getQuantityOut();
@@ -525,6 +528,7 @@ public class InventoryPostingService {
             if (effectiveWarehouseId == null) {
                 throw new BusinessException("Dòng sản phẩm chưa được chọn kho nhập");
             }
+            stocktakeLockGuard.assertWarehouseNotLocked(effectiveWarehouseId, savedDoc.getReferenceType(), savedDoc.getReferenceId());
             BigDecimal qtyToImport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
                     ? line.getBaseQuantity()
                     : line.getQuantityIn();
@@ -664,6 +668,7 @@ public class InventoryPostingService {
         }
 
         Long warehouseId = doc.getWarehouseId();
+        stocktakeLockGuard.assertWarehouseNotLocked(warehouseId, doc.getReferenceType(), doc.getReferenceId());
 
         // 1. Hoàn tác tồn kho (giảm số lượng đã nhập)
         for (InventoryDocumentLine line : doc.getLines()) {
@@ -747,6 +752,7 @@ public class InventoryPostingService {
         }
 
         Long warehouseId = doc.getWarehouseId();
+        stocktakeLockGuard.assertWarehouseNotLocked(warehouseId, doc.getReferenceType(), doc.getReferenceId());
 
         // 1. Hoàn tác tồn kho (cộng lại số lượng đã xuất)
         for (InventoryDocumentLine line : doc.getLines()) {

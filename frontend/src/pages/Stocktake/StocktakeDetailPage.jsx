@@ -15,7 +15,7 @@ import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue, formatDateOnly } from '../../utils/dateFormat';
-import { getAuthRoles } from '../../auth/session';
+import { getAuthRoles, getAuthUserId } from '../../auth/session';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import DateInput from '../../components/ui/DateInput/DateInput';
@@ -29,6 +29,8 @@ function StocktakeDetailPage() {
   const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase());
   const isStorekeeper = userRoles.some(r => r.includes('STOREKEEPER'));
   const isAccountantOrAdmin = userRoles.some(r => r.includes('ACCOUNTANT') || r.includes('SUPER_ADMIN') || r.includes('MANAGER'));
+  // Chỉ Manager / Super Admin được duyệt, từ chối hoặc hủy phiếu đang kiểm kê
+  const isApprover = userRoles.some(r => r.includes('SUPER_ADMIN') || r.includes('MANAGER'));
 
 
   const [warehouses, setWarehouses] = useState([]);
@@ -47,6 +49,14 @@ function StocktakeDetailPage() {
   });
 
   const isReadOnlyForStorekeeper = formData?.createdByAccountant && isStorekeeper && !isAccountantOrAdmin;
+
+  // Vòng đời: PENDING_APPROVAL (chờ duyệt) -> COUNTING (đã duyệt, kho bị khóa, nhập số đếm) -> POSTED
+  //           hoặc REJECTED / CANCELLED. DRAFT là phiếu cũ trước khi có bước duyệt.
+  const stocktakeStatus = formData.status || 'DRAFT';
+  const isPendingApproval = stocktakeStatus === 'PENDING_APPROVAL';
+  const isCounting = stocktakeStatus === 'COUNTING';
+  const canWorkOnCounts = isCounting || stocktakeStatus === 'DRAFT';
+  const canCancelStocktake = (isPendingApproval || isCounting) && (isApprover || (isPendingApproval && formData.createdByCurrentUser));
 
   const [isSaved, setIsSaved] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -78,7 +88,9 @@ function StocktakeDetailPage() {
           status: data.status,
           referenceImportId: data.referenceImportId,
           referenceExportId: data.referenceExportId,
-          createdByAccountant: data.createdByAccountant
+          createdByAccountant: data.createdByAccountant,
+          rejectReason: data.rejectReason,
+          createdByCurrentUser: Boolean(data.createdBy) && String(data.createdBy) === String(getAuthUserId())
         });
 
         if (data.lines) {
@@ -477,6 +489,39 @@ function StocktakeDetailPage() {
     setShowConfirmModal(true);
   };
 
+  const runStocktakeAction = async (action, successMessage) => {
+    try {
+      await action();
+      showToast('success', successMessage);
+      fetchStocktakeData({ silent: true });
+    } catch (err) {
+      console.error(err);
+      showToast('error', err.response?.data?.userMessage || 'Thao tác thất bại');
+      fetchStocktakeData({ silent: true });
+    }
+  };
+
+  const handleApproveStocktake = () => runStocktakeAction(
+    () => stocktakeApi.approveStocktake(id), 'Đã duyệt. Kho đang được khóa để kiểm kê.');
+
+  const handleRejectStocktake = () => {
+    const reason = window.prompt('Nhập lý do từ chối phiếu kiểm kê:');
+    if (reason === null) return;
+    if (!reason.trim()) {
+      showToast('error', 'Vui lòng nhập lý do từ chối');
+      return;
+    }
+    runStocktakeAction(() => stocktakeApi.rejectStocktake(id, reason.trim()), 'Đã từ chối phiếu kiểm kê');
+  };
+
+  const handleCancelStocktake = () => {
+    const message = isCounting
+      ? 'Hủy đợt kiểm kê này? Kho sẽ được mở khóa và số đếm đã nhập sẽ không được áp dụng.'
+      : 'Hủy yêu cầu kiểm kê này?';
+    if (!window.confirm(message)) return;
+    runStocktakeAction(() => stocktakeApi.cancelStocktake(id), 'Đã hủy phiếu kiểm kê');
+  };
+
   const confirmComplete = async () => {
     setShowConfirmModal(false);
     try {
@@ -755,11 +800,35 @@ function StocktakeDetailPage() {
             )}
             {formData.isProcessed ? (
               <div className={styles.processedStamp}>Đã xử lý chênh lệch</div>
+            ) : isPendingApproval ? (
+              <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}>Chờ Manager duyệt</div>
+            ) : isCounting ? (
+              <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}><i className="bi bi-lock-fill"></i> Đang kiểm kê - kho đang bị khóa</div>
+            ) : stocktakeStatus === 'REJECTED' ? (
+              <div className={styles.processedStamp} style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5', color: '#b91c1c' }}>Bị từ chối</div>
+            ) : stocktakeStatus === 'CANCELLED' ? (
+              <div className={styles.processedStamp} style={{ backgroundColor: 'var(--wms-bg-subtle)', borderColor: 'var(--wms-border-base)', color: 'var(--wms-text-muted)' }}>Đã hủy</div>
             ) : (
               <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}>Chờ xử lý chênh lệch</div>
             )}
           </div>
         </div>
+
+        {stocktakeStatus === 'REJECTED' && (
+          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: 13 }}>
+            <b>Phiếu bị Manager từ chối.</b> {formData.rejectReason ? `Lý do: ${formData.rejectReason}` : ''}
+          </div>
+        )}
+        {isPendingApproval && (
+          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', fontSize: 13 }}>
+            Yêu cầu kiểm kê đang chờ Manager duyệt. Kho chỉ bị khóa và thủ kho chỉ nhập được số đếm sau khi được duyệt.
+          </div>
+        )}
+        {isCounting && (
+          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#eff6ff', border: '1px solid #93c5fd', color: '#1e40af', fontSize: 13 }}>
+            Kho đang được kiểm kê: không thể ghi sổ nhập/xuất/chuyển kho cho tới khi phiếu này hoàn thành hoặc bị hủy. Số sổ sách đã được chốt lúc duyệt.
+          </div>
+        )}
 
         {/* Master Data Section */}
         <div className={styles.masterForm}>
@@ -907,7 +976,22 @@ function StocktakeDetailPage() {
               </>
             ) : (
               <>
-                {!isReadOnlyForStorekeeper && (
+                {isPendingApproval && isApprover && (
+                  <>
+                    <button className={styles.btnViewPrimary} style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }} onClick={handleApproveStocktake}>
+                      <i className="bi bi-check-lg"></i> Đồng ý kiểm kê
+                    </button>
+                    <button className={styles.btnViewOutline} onClick={handleRejectStocktake}>
+                      <i className="bi bi-x-lg"></i> Từ chối
+                    </button>
+                  </>
+                )}
+                {canCancelStocktake && (
+                  <button className={styles.btnViewOutline} onClick={handleCancelStocktake}>
+                    <i className="bi bi-slash-circle"></i> {isCounting ? 'Hủy kiểm kê (mở khóa kho)' : 'Hủy yêu cầu'}
+                  </button>
+                )}
+                {canWorkOnCounts && !isReadOnlyForStorekeeper && (
                   <>
                     <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
                       <i className="bi bi-pencil"></i> Sửa

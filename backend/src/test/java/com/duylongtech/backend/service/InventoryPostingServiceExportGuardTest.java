@@ -29,6 +29,7 @@ import com.duylongtech.backend.feature.purchase_order.PurchaseOrderRepository;
 import com.duylongtech.backend.feature.repair.RepairRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrderService;
+import com.duylongtech.backend.feature.stocktake.StocktakeLockGuard;
 import com.duylongtech.backend.feature.stocktake.StocktakeRepository;
 import com.duylongtech.backend.feature.system.CodeGeneratorService;
 import com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard;
@@ -95,7 +96,8 @@ class InventoryPostingServiceExportGuardTest {
                 mock(DocumentDependencyService.class),
                 mock(AuditLogService.class),
                 mock(WarehouseAccessGuard.class),
-                mock(ApplicationEventPublisher.class)
+                mock(ApplicationEventPublisher.class),
+                mock(StocktakeLockGuard.class)
         );
     }
 

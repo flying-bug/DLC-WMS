@@ -526,7 +526,8 @@ function CreateStocktakePage() {
         return;
       }
       const response = await stocktakeApi.createStocktake(payload);
-      navigate(`/stocktakes/${response.data.data.id}`, { replace: true, state: { toastMessage: 'Lưu nháp thành công!', toastType: 'success' } });
+      // Kế toán tạo phiếu -> chờ Manager duyệt (Manager tạo thì vào kiểm kê ngay); server trả lời rõ trường hợp nào
+      navigate(`/stocktakes/${response.data.data.id}`, { replace: true, state: { toastMessage: response.data.userMessage || 'Đã tạo phiếu kiểm kê', toastType: 'success' } });
     } catch (err) {
       console.error(err);
       showToast('error', err.response?.data?.userMessage || 'Có lỗi xảy ra khi lưu nháp');
@@ -540,10 +541,11 @@ function CreateStocktakePage() {
         return;
       }
       const response = await stocktakeApi.createStocktake(payload);
-      if (formData.isProcessed) {
+      // Chỉ phiếu đã được duyệt (COUNTING) mới hoàn thành được; phiếu chờ duyệt thì dừng ở đây
+      if (formData.isProcessed && response.data.data.status === 'COUNTING') {
          await stocktakeApi.postStocktake(response.data.data.id);
       }
-      navigate('/stocktakes', { replace: true, state: { toastMessage: 'Lưu và Đóng thành công!', toastType: 'success' } });
+      navigate('/stocktakes', { replace: true, state: { toastMessage: response.data.userMessage || 'Lưu và Đóng thành công!', toastType: 'success' } });
     } catch (err) {
       console.error(err);
       showToast('error', err.response?.data?.userMessage || 'Có lỗi xảy ra khi lưu');

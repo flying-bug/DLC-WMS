@@ -29,10 +29,19 @@ public interface StocktakeRepository extends JpaRepository<Stocktake, Long> {
                                      @Param("allowedWarehouseIds") List<Long> allowedWarehouseIds,
                                      Pageable pageable);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Stocktake s WHERE s.id = :id")
+    Optional<Stocktake> findByIdForUpdate(@Param("id") Long id);
+
     @Query("SELECT DISTINCT s FROM Stocktake s LEFT JOIN FETCH s.lines l WHERE s.id = :id")
     Optional<Stocktake> findByIdWithDetails(@Param("id") Long id);
 
     boolean existsByStocktakeCode(String stocktakeCode);
+
+    /** Phiếu đang khóa kho (COUNTING) - tối đa một phiếu cho mỗi kho. */
+    Optional<Stocktake> findFirstByWarehouseIdAndStatus(Long warehouseId, String status);
+
+    boolean existsByWarehouseIdAndStatusIn(Long warehouseId, java.util.Collection<String> statuses);
 
     Optional<Stocktake> findTopByStocktakeCodeStartingWithOrderByStocktakeCodeDesc(String prefix);
 }
