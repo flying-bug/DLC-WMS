@@ -69,6 +69,13 @@ public class ReportService {
         
         return results;
     }
+    public List<RepairProfitReportResponse> getRepairProfitReport(LocalDateTime startDate, LocalDateTime endDate,
+                                                                  String search) {
+        return reportRepository.getRepairProfitReport(
+                startDate != null ? startDate.toLocalDate() : null,
+                endDate != null ? endDate.toLocalDate() : null,
+                search);
+    }
     public byte[] exportReportToExcel(String reportType, Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType, String status) {
         log.info("Exporting report to Excel. Type={}, warehouseId={}, startDate={}, endDate={}, search={}", reportType, warehouseId, startDate, endDate, search);
         try (org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
@@ -325,6 +332,38 @@ public class ReportService {
                     }
                 }
                 
+                for (int i = 0; i < columns.length; i++) {
+                    sheet.autoSizeColumn(i);
+                }
+            } else if ("repair-profit".equals(reportType)) {
+                reportTitle = "BAO CAO DOANH THU & LOI NHUAN SUA CHUA";
+                List<RepairProfitReportResponse> data = getRepairProfitReport(startDate, endDate, search);
+                columns = new String[]{"Ma lenh", "Ngay hoan thanh", "Khach hang", "Doanh thu linh kien",
+                        "Doanh thu dich vu", "VAT", "Gia von FIFO", "Loi nhuan gop", "Ty suat LN (%)"};
+
+                org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
+                for (int i = 0; i < columns.length; i++) {
+                    org.apache.poi.ss.usermodel.Cell cell = header.createCell(i);
+                    cell.setCellValue(columns[i]);
+                    cell.setCellStyle(headerStyle);
+                }
+
+                int rowIdx = 4;
+                for (RepairProfitReportResponse item : data) {
+                    org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
+                    row.createCell(0).setCellValue(item.getRepairCode());
+                    row.createCell(1).setCellValue(item.getCompletedDate() != null ? item.getCompletedDate().toString() : "");
+                    row.createCell(2).setCellValue(item.getPartnerName() != null ? item.getPartnerName() : "");
+                    row.createCell(3).setCellValue(item.getPartsRevenue().doubleValue());
+                    row.createCell(4).setCellValue(item.getServiceRevenue().doubleValue());
+                    row.createCell(5).setCellValue(item.getVatAmount().doubleValue());
+                    row.createCell(6).setCellValue(item.getCostAmount().doubleValue());
+                    row.createCell(7).setCellValue(item.getGrossProfit().doubleValue());
+                    row.createCell(8).setCellValue(item.getProfitMarginPercent().doubleValue());
+                    for (int i = 0; i < columns.length; i++) {
+                        row.getCell(i).setCellStyle(borderStyle);
+                    }
+                }
                 for (int i = 0; i < columns.length; i++) {
                     sheet.autoSizeColumn(i);
                 }

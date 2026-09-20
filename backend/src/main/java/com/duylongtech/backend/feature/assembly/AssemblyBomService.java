@@ -226,7 +226,7 @@ public class AssemblyBomService {
             ProductVariant component = productVariantRepository.findById(requestLine.getComponentVariantId())
                     .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện " + requestLine.getComponentVariantId()));
             AssemblyBomLine line = new AssemblyBomLine();
-            line.initLine(component, requestLine.getQuantity(), requestLine.getComponentRole(), requestLine.getNote(), requestLine.getUnitPrice() != null ? requestLine.getUnitPrice() : component.getSalePrice(), requestLine.getComponentSku() != null ? requestLine.getComponentSku() : component.getSku(), requestLine.getComponentName() != null ? requestLine.getComponentName() : variantName(component), requestLine.getWarrantyMonths() != null ? requestLine.getWarrantyMonths() : ((component.getWarrantyMonths() == null || component.getWarrantyMonths() <= 0) && component.getProduct() != null ? component.getProduct().getWarrantyPeriodMonths() : component.getWarrantyMonths()));
+            line.initLine(component, requestLine.getQuantity(), requestLine.getComponentRole(), requestLine.getNote(), BigDecimal.ZERO, requestLine.getComponentSku() != null ? requestLine.getComponentSku() : component.getSku(), requestLine.getComponentName() != null ? requestLine.getComponentName() : variantName(component), requestLine.getWarrantyMonths() != null ? requestLine.getWarrantyMonths() : ((component.getWarrantyMonths() == null || component.getWarrantyMonths() <= 0) && component.getProduct() != null ? component.getProduct().getWarrantyPeriodMonths() : component.getWarrantyMonths()));
             bom.addLine(line);
         }
     }
@@ -325,9 +325,6 @@ public class AssemblyBomService {
         }
         if (response.getUnitName() == null && product != null && product.getUnit() != null) {
             response.setUnitName(product.getUnit().getName());
-        }
-        if (response.getUnitPrice() == null && variant != null) {
-            response.setUnitPrice(variant.getSalePrice());
         }
         if (response.getWarrantyMonths() == null && variant != null) {
             response.setWarrantyMonths((variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null ? product.getWarrantyPeriodMonths() : variant.getWarrantyMonths());

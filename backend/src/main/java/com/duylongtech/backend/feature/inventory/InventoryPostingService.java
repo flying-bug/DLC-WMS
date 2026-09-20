@@ -121,6 +121,7 @@ public class InventoryPostingService {
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
+    private final InventoryCostAllocationService inventoryCostAllocationService;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final PartnerLedgerService partnerLedgerService;
@@ -251,41 +252,11 @@ public class InventoryPostingService {
             balance.setUpdatedAt(LocalDateTime.now());
             inventoryBalanceRepository.save(balance);
 
-            List<InventoryCostLayer> layers = inventoryCostLayerRepository
-                    .findAvailableLayersForUpdate(effectiveWarehouseId, line.getVariantId());
-            BigDecimal remainingQty = qtyToExport;
-            BigDecimal totalCost = ZERO;
-
-            for (InventoryCostLayer layer : layers) {
-                if (remainingQty.compareTo(ZERO) <= 0) {
-                    break;
-                }
-                BigDecimal qtyFromLayer = remainingQty.min(layer.getQuantityLayered());
-                layer.setQuantityLayered(layer.getQuantityLayered().subtract(qtyFromLayer));
-                inventoryCostLayerRepository.save(layer);
-                totalCost = totalCost.add(qtyFromLayer.multiply(layer.getUnitCost()));
-                remainingQty = remainingQty.subtract(qtyFromLayer);
-            }
-
-            if (remainingQty.compareTo(ZERO) > 0 || totalCost.compareTo(ZERO) <= 0) {
-                BigDecimal fallbackCost = (line.getUnitCost() != null && line.getUnitCost().compareTo(ZERO) > 0)
-                        ? line.getUnitCost()
-                        : ((balance != null && balance.getAverageCost() != null
-                                && balance.getAverageCost().compareTo(ZERO) > 0)
-                                        ? balance.getAverageCost()
-                                        : (variant != null && variant.getCostPrice() != null
-                                                && variant.getCostPrice().compareTo(ZERO) > 0
-                                                        ? variant.getCostPrice()
-                                                        : (variant != null && variant.getSalePrice() != null
-                                                                ? variant.getSalePrice()
-                                                                : ZERO)));
-                if (totalCost.compareTo(ZERO) <= 0) {
-                    totalCost = qtyToExport.multiply(fallbackCost);
-                } else if (remainingQty.compareTo(ZERO) > 0) {
-                    totalCost = totalCost.add(remainingQty.multiply(fallbackCost));
-                }
-                remainingQty = ZERO;
-            }
+            boolean reservationRequired = doc.getReferenceId() != null
+                    && ("ASSEMBLY_ORDER".equalsIgnoreCase(doc.getReferenceType())
+                            || "REPAIR".equalsIgnoreCase(doc.getReferenceType()));
+            BigDecimal totalCost = inventoryCostAllocationService.consumeForPosting(
+                    doc, line, qtyToExport, reservationRequired);
 
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
             line.setUnitCost(avgUnitCost);
@@ -673,18 +644,38 @@ public class InventoryPostingService {
             if (qtyIn == null || qtyIn.compareTo(ZERO) <= 0)
                 continue;
 
+            Long effectiveWarehouseId = line.getWarehouseId() != null ? line.getWarehouseId() : warehouseId;
             Optional<InventoryBalance> balanceOpt = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), SerialNumberStatus.AVAILABLE.name());
+                    .findByWarehouseAndVariantForUpdate(effectiveWarehouseId, line.getVariantId(), "GOOD");
             if (balanceOpt.isPresent()) {
                 InventoryBalance balance = balanceOpt.get();
-                balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyIn));
+                BigDecimal oldQty = balance.getQuantityOnHand();
+                BigDecimal newQty = oldQty.subtract(qtyIn);
+                if (newQty.compareTo(ZERO) < 0) {
+                    throw new BusinessException("Không thể bỏ ghi sổ vì tồn kho đã được sử dụng");
+                }
+                BigDecimal remainingValue = oldQty.multiply(balance.getAverageCost())
+                        .subtract(qtyIn.multiply(nonNegativeOrZero(line.getUnitCost(), "unitCost")));
+                balance.setQuantityOnHand(newQty);
+                balance.setAverageCost(newQty.compareTo(ZERO) > 0
+                        ? remainingValue.max(ZERO).divide(newQty, 4, RoundingMode.HALF_UP) : ZERO);
                 balance.setUpdatedAt(LocalDateTime.now());
                 inventoryBalanceRepository.save(balance);
 
                 InventoryLedger ledger = buildLedger(doc, line, "UNPOST_IMPORT", ZERO, qtyIn, line.getUnitCost(),
-                        balance.getQuantityOnHand(), warehouseId);
+                        balance.getQuantityOnHand(), effectiveWarehouseId);
                 inventoryLedgerRepository.save(ledger);
             }
+
+            List<InventoryCostLayer> importedLayers = inventoryCostLayerRepository
+                    .findByInventoryDocumentLineId(line.getId());
+            for (InventoryCostLayer layer : importedLayers) {
+                if (layer.getQuantityLayered().compareTo(layer.getQuantityReceived()) != 0
+                        || layer.getQuantityReserved().compareTo(ZERO) > 0) {
+                    throw new BusinessException("Không thể bỏ ghi sổ vì lớp giá FIFO của phiếu nhập đã được sử dụng hoặc giữ chỗ");
+                }
+            }
+            inventoryCostLayerRepository.deleteAll(importedLayers);
 
             // Xóa Serial Numbers đã sinh nếu có
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
@@ -756,8 +747,9 @@ public class InventoryPostingService {
             if (qtyOut == null || qtyOut.compareTo(ZERO) <= 0)
                 continue;
 
+            Long effectiveWarehouseId = line.getWarehouseId() != null ? line.getWarehouseId() : warehouseId;
             Optional<InventoryBalance> balanceOpt = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), SerialNumberStatus.AVAILABLE.name());
+                    .findByWarehouseAndVariantForUpdate(effectiveWarehouseId, line.getVariantId(), "GOOD");
             if (balanceOpt.isPresent()) {
                 InventoryBalance balance = balanceOpt.get();
                 balance.setQuantityOnHand(balance.getQuantityOnHand().add(qtyOut));
@@ -765,9 +757,13 @@ public class InventoryPostingService {
                 inventoryBalanceRepository.save(balance);
 
                 InventoryLedger ledger = buildLedger(doc, line, "UNPOST_EXPORT", qtyOut, ZERO, line.getUnitCost(),
-                        balance.getQuantityOnHand(), warehouseId);
+                        balance.getQuantityOnHand(), effectiveWarehouseId);
                 inventoryLedgerRepository.save(ledger);
             }
+
+            boolean keepReserved = "ASSEMBLY_ORDER".equalsIgnoreCase(doc.getReferenceType())
+                    && doc.getReferenceId() != null;
+            inventoryCostAllocationService.restoreAfterUnpost(doc, line, keepReserved);
 
             // Trả lại trạng thái Serial = AVAILABLE
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {

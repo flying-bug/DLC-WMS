@@ -126,6 +126,24 @@ public class ReportController {
                 .build());
     }
 
+    @GetMapping("/repair-profit")
+    @PreAuthorize("hasAuthority('report_sales:view') or hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<RepairProfitReportResponse>>> getRepairProfitReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String search) {
+        if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        if (endDate == null) {
+            endDate = LocalDate.now().atTime(23, 59, 59);
+        } else if (endDate.toLocalTime().equals(LocalTime.MIDNIGHT)) {
+            endDate = endDate.with(LocalTime.MAX);
+        }
+        return ResponseEntity.ok(ApiResponse.<List<RepairProfitReportResponse>>builder()
+                .success(true)
+                .data(reportService.getRepairProfitReport(startDate, endDate, search))
+                .build());
+    }
+
     @GetMapping("/dashboard")
     @PreAuthorize("hasAuthority('report_summary:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics(
@@ -145,6 +163,7 @@ public class ReportController {
             + " or (#reportType == 'debt' and hasAuthority('report_debt:export'))"
             + " or (#reportType == 'inventory-summary' and hasAuthority('report_summary:export'))"
             + " or (#reportType == 'sales-profit' and hasAuthority('report_sales:export'))"
+            + " or (#reportType == 'repair-profit' and hasAuthority('report_sales:export'))"
             + " or hasRole('SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportReport(
             @PathVariable String reportType,
@@ -156,7 +175,8 @@ public class ReportController {
             @RequestParam(required = false) String status) {
         
         // Defaults matching query methods
-        if ("debt".equals(reportType) || "inventory-summary".equals(reportType) || "sales-profit".equals(reportType)) {
+        if ("debt".equals(reportType) || "inventory-summary".equals(reportType)
+                || "sales-profit".equals(reportType) || "repair-profit".equals(reportType)) {
             if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
             if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
         }

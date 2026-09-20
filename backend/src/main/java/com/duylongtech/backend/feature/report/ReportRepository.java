@@ -68,25 +68,16 @@ public class ReportRepository {
                         "  - " +
                         "  SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) " +
                         ") AS availableQuantity, " +
-                        "SUM(CASE WHEN ( " +
-                        "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT') " +
-                        "    AND ib.serial_number_id IS NOT NULL " +
-                        "    AND sn.status = 'AVAILABLE' " +
-                        "    AND NOT EXISTS ( " +
-                        "      SELECT 1 FROM device_component_serials dcs " +
-                        "      WHERE dcs.component_variant_id = ib.variant_id " +
-                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
-                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
-                        "    ) " +
-                        "  ) " +
-                        "  OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
-                        ") THEN ib.quantity_on_hand * ib.average_cost ELSE 0 END) AS totalValue " +
+                        "COALESCE(MAX(fifo.total_value), 0) AS totalValue " +
                         "FROM inventory_balances ib " +
                         "JOIN product_variants pv ON ib.variant_id = pv.id " +
                         "JOIN products p ON pv.product_id = p.id " +
                         "JOIN units u ON p.unit_id = u.id " +
                         "JOIN warehouses w ON ib.warehouse_id = w.id " +
                         "LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id " +
+                        "LEFT JOIN (SELECT warehouse_id, variant_id, SUM(quantity_layered * unit_cost) AS total_value " +
+                        "           FROM inventory_cost_layers GROUP BY warehouse_id, variant_id) fifo " +
+                        "  ON fifo.warehouse_id = ib.warehouse_id AND fifo.variant_id = ib.variant_id " +
                         "WHERE ib.stock_status = 'GOOD' " +
                         "AND ( " +
                         "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')) " +
@@ -422,6 +413,78 @@ public class ReportRepository {
         }, params.toArray());
     }
 
+    public List<RepairProfitReportResponse> getRepairProfitReport(LocalDate startDate, LocalDate endDate,
+                                                                  String search) {
+        String sql = """
+                SELECT r.id AS repairId,
+                       r.repair_code AS repairCode,
+                       r.completed_date AS completedDate,
+                       COALESCE(p.name, '') AS partnerName,
+                       COALESCE(parts.partsRevenue, 0) AS partsRevenue,
+                       COALESCE(fees.serviceRevenue, 0) AS serviceRevenue,
+                       COALESCE(parts.partsVat, 0) + COALESCE(fees.serviceVat, 0) AS vatAmount,
+                       COALESCE(costs.costAmount, 0) AS costAmount
+                FROM repairs r
+                LEFT JOIN partners p ON p.id = r.partner_id
+                LEFT JOIN (
+                    SELECT repair_id,
+                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE')
+                                    THEN quantity * unit_price ELSE 0 END) AS partsRevenue,
+                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE')
+                                    THEN quantity * unit_price * COALESCE(vat_percent, 0) / 100 ELSE 0 END) AS partsVat
+                    FROM repair_lines
+                    GROUP BY repair_id
+                ) parts ON parts.repair_id = r.id
+                LEFT JOIN (
+                    SELECT repair_id,
+                           SUM(COALESCE(quantity, 1) * fee_amount) AS serviceRevenue,
+                           SUM(COALESCE(quantity, 1) * fee_amount * COALESCE(vat_percent, 0) / 100) AS serviceVat
+                    FROM repair_fees
+                    GROUP BY repair_id
+                ) fees ON fees.repair_id = r.id
+                LEFT JOIN (
+                    SELECT d.reference_id AS repairId,
+                           SUM(l.quantity_out * l.unit_cost) AS costAmount
+                    FROM inventory_documents d
+                    JOIN inventory_document_lines l ON l.inventory_document_id = d.id
+                    WHERE d.reference_type = 'REPAIR'
+                      AND d.doc_type = 'EX_SO'
+                      AND d.status = 'POSTED'
+                    GROUP BY d.reference_id
+                ) costs ON costs.repairId = r.id
+                WHERE r.repair_status = 'DONE'
+                  AND (? IS NULL OR r.completed_date >= ?)
+                  AND (? IS NULL OR r.completed_date <= ?)
+                  AND (? IS NULL OR LOWER(r.repair_code) LIKE LOWER(CONCAT('%', TRIM(?), '%'))
+                       OR LOWER(COALESCE(p.name, '')) LIKE LOWER(CONCAT('%', TRIM(?), '%')))
+                ORDER BY r.completed_date DESC, r.id DESC
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            BigDecimal partsRevenue = rs.getBigDecimal("partsRevenue");
+            BigDecimal serviceRevenue = rs.getBigDecimal("serviceRevenue");
+            BigDecimal revenue = partsRevenue.add(serviceRevenue);
+            BigDecimal cost = rs.getBigDecimal("costAmount");
+            BigDecimal profit = revenue.subtract(cost);
+            BigDecimal margin = revenue.compareTo(BigDecimal.ZERO) > 0
+                    ? profit.divide(revenue, 4, java.math.RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100"))
+                    : BigDecimal.ZERO;
+            return RepairProfitReportResponse.builder()
+                    .repairId(rs.getLong("repairId"))
+                    .repairCode(rs.getString("repairCode"))
+                    .completedDate(rs.getDate("completedDate") != null
+                            ? rs.getDate("completedDate").toLocalDate() : null)
+                    .partnerName(rs.getString("partnerName"))
+                    .partsRevenue(partsRevenue)
+                    .serviceRevenue(serviceRevenue)
+                    .vatAmount(rs.getBigDecimal("vatAmount"))
+                    .costAmount(cost)
+                    .grossProfit(profit)
+                    .profitMarginPercent(margin)
+                    .build();
+        }, startDate, startDate, endDate, endDate, search, search, search);
+    }
+
     // 6. Dashboard metrics
     public DashboardResponse getDashboardMetrics(String inventoryFlowRange, String categoryScope, String financeRange) {
         LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
@@ -532,33 +595,14 @@ public class ReportRepository {
         StringBuilder sql = new StringBuilder("""
                 SELECT
                     COALESCE(pc.name, 'Khác') AS categoryName,
-                    COALESCE(SUM(
-                        CASE
-                            WHEN (
-                                (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
-                                    AND ib.serial_number_id IS NOT NULL
-                                    AND sn.status = 'AVAILABLE'
-                                    AND NOT EXISTS (
-                                        SELECT 1 FROM device_component_serials dcs
-                                        WHERE dcs.component_variant_id = ib.variant_id
-                                          AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
-                                          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
-                                    )
-                                )
-                                OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
-                            )
-                            THEN ib.quantity_on_hand * ib.average_cost
-                            ELSE 0
-                        END
-                    ), 0) AS inventoryValue
-                FROM inventory_balances ib
-                JOIN product_variants pv ON ib.variant_id = pv.id
+                    COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) AS inventoryValue
+                FROM inventory_cost_layers icl
+                JOIN product_variants pv ON icl.variant_id = pv.id
                 JOIN products p ON pv.product_id = p.id
-                JOIN warehouses w ON ib.warehouse_id = w.id
+                JOIN warehouses w ON icl.warehouse_id = w.id
                 LEFT JOIN product_categories pc ON p.category_id = pc.id
-                LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id
-                WHERE ib.stock_status = 'GOOD'
-                  AND w.type = 'STANDARD'
+                WHERE w.type = 'STANDARD'
+                  AND icl.quantity_layered > 0
                 """);
 
         if ("finished".equals(normalizedScope)) {
@@ -569,25 +613,7 @@ public class ReportRepository {
 
         sql.append("""
                 GROUP BY COALESCE(pc.name, 'Khác')
-                HAVING COALESCE(SUM(
-                    CASE
-                        WHEN (
-                            (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
-                                AND ib.serial_number_id IS NOT NULL
-                                AND sn.status = 'AVAILABLE'
-                                AND NOT EXISTS (
-                                    SELECT 1 FROM device_component_serials dcs
-                                    WHERE dcs.component_variant_id = ib.variant_id
-                                      AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
-                                      AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
-                                )
-                            )
-                            OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
-                        )
-                        THEN ib.quantity_on_hand * ib.average_cost
-                        ELSE 0
-                    END
-                ), 0) > 0
+                HAVING COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) > 0
                 ORDER BY inventoryValue DESC
                 """);
 
@@ -836,35 +862,11 @@ public class ReportRepository {
 
     private BigDecimal getStandardWarehouseInventoryValue() {
         String sql = """
-                SELECT COALESCE(SUM(stock_rows.total_value), 0) AS totalInventoryValue
-                FROM (
-                    SELECT
-                        ib.id,
-                        CASE
-                            WHEN (
-                                (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
-                                    AND ib.serial_number_id IS NOT NULL
-                                    AND sn.status = 'AVAILABLE'
-                                    AND NOT EXISTS (
-                                        SELECT 1 FROM device_component_serials dcs
-                                        WHERE dcs.component_variant_id = ib.variant_id
-                                          AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
-                                          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
-                                    )
-                                )
-                                OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
-                            )
-                            THEN ib.quantity_on_hand * ib.average_cost
-                            ELSE 0
-                        END AS total_value
-                    FROM inventory_balances ib
-                    JOIN product_variants pv ON ib.variant_id = pv.id
-                    JOIN products p ON pv.product_id = p.id
-                    JOIN warehouses w ON ib.warehouse_id = w.id
-                    LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id
-                    WHERE ib.stock_status = 'GOOD'
-                      AND w.type = 'STANDARD'
-                ) stock_rows
+                SELECT COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) AS totalInventoryValue
+                FROM inventory_cost_layers icl
+                JOIN warehouses w ON icl.warehouse_id = w.id
+                WHERE w.type = 'STANDARD'
+                  AND icl.quantity_layered > 0
                 """;
         return jdbcTemplate.queryForObject(sql, BigDecimal.class);
     }

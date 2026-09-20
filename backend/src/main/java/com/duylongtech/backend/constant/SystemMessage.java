@@ -137,7 +137,7 @@ public enum SystemMessage {
     ASM_ERR_011("ASM_011", "Trạng thái cấu hình không hợp lệ"),
     ASM_ERR_012("ASM_012", "Mã cấu hình đã tồn tại"),
     ASM_ERR_013("ASM_013", "Mã lệnh lắp ráp/tháo dỡ đã tồn tại"),
-    ASM_ERR_014("ASM_014", "Chỉ có thể cập nhật lệnh DRAFT hoặc SUBMITTED"),
+    ASM_ERR_014("ASM_014", "Chỉ có thể cập nhật lệnh DRAFT hoặc REJECTED"),
     ASM_ERR_015("ASM_015", "Sản phẩm thành phẩm của cấu hình chưa có SKU"),
     ASM_ERR_016("ASM_016", "ID lệnh là bắt buộc"),
     ASM_ERR_017("ASM_017", "Cấu hình chưa có linh kiện"),

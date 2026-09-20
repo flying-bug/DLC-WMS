@@ -146,8 +146,8 @@ public class AssemblyOrder {
     }
 
     public void updateDetails(String orderCode, AssemblyBom bom, ProductVariant targetVariant, Long warehouseId, BigDecimal quantity, LocalDate executionDate, String note) {
-        if (!DocumentStatus.DRAFT.name().equals(this.status) && !DocumentStatus.APPROVED.name().equals(this.status) && !DocumentStatus.REJECTED.name().equals(this.status)) {
-            throw new IllegalStateException("Chỉ được sửa lệnh khi ở trạng thái DRAFT, REJECTED hoặc APPROVED");
+        if (!DocumentStatus.DRAFT.name().equals(this.status) && !DocumentStatus.REJECTED.name().equals(this.status)) {
+            throw new IllegalStateException("Chỉ được sửa lệnh khi ở trạng thái DRAFT hoặc REJECTED");
         }
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Số lượng phải lớn hơn 0");
@@ -243,6 +243,21 @@ public class AssemblyOrder {
             throw new IllegalStateException("Lệnh phải đang thực hiện mới có thể hoàn thành");
         }
         this.status = DocumentStatus.POSTED.name();
+    }
+
+    public void synchronizeInventoryState(boolean exportPosted, boolean importPosted) {
+        if (DocumentStatus.CANCELLED.name().equals(this.status)
+                || DocumentStatus.CANCEL_REQUESTED.name().equals(this.status)) {
+            return;
+        }
+        if (exportPosted && importPosted) {
+            this.status = DocumentStatus.POSTED.name();
+            this.quantityProduced = this.quantity;
+        } else if (exportPosted) {
+            this.status = DocumentStatus.SUBMITTED.name();
+        } else {
+            this.status = DocumentStatus.APPROVED.name();
+        }
     }
     
     public void updateProducedQuantity(BigDecimal quantity) {

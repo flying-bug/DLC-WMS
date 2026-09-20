@@ -30,6 +30,9 @@ public class InventoryCostLayer {
     @Column(name = "quantity_layered", nullable = false, precision = 15, scale = 4)
     private BigDecimal quantityLayered;
 
+    @Column(name = "quantity_reserved", nullable = false, precision = 15, scale = 4)
+    private BigDecimal quantityReserved = BigDecimal.ZERO;
+
     @Column(name = "unit_cost", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitCost;
 
@@ -42,6 +45,7 @@ public class InventoryCostLayer {
         this.inventoryDocumentLineId = inventoryDocumentLineId;
         this.quantityReceived = quantityReceived;
         this.quantityLayered = quantityLayered;
+        this.quantityReserved = BigDecimal.ZERO;
         this.unitCost = unitCost;
         this.createdAt = LocalDateTime.now();
     }

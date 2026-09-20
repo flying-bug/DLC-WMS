@@ -20,7 +20,6 @@ public class AssemblyBomLineRequest {
 
     private String note;
 
-    private BigDecimal unitPrice;
     private String componentSku;
     private String componentName;
     private Integer warrantyMonths;

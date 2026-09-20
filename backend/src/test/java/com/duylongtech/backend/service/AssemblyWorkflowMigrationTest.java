@@ -35,4 +35,15 @@ class AssemblyWorkflowMigrationTest {
             }
         }
     }
+
+    @Test
+    void fifoReservationMigrationAddsLayerReservationAndAllocationAudit() throws IOException {
+        try (var stream = getClass().getResourceAsStream("/db/migration/V61__reserve_fifo_cost_layers.sql")) {
+            assertTrue(stream != null, "V61 migration must be available on the classpath");
+            String sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(sql.contains("quantity_reserved"));
+            assertTrue(sql.contains("INVENTORY_COST_ALLOCATIONS"));
+            assertTrue(sql.contains("'HOLDING', 'CONSUMED', 'RELEASED'"));
+        }
+    }
 }

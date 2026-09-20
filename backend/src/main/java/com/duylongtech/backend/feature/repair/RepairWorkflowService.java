@@ -39,6 +39,7 @@ import com.duylongtech.backend.feature.inventory.InventoryDocument;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
+import com.duylongtech.backend.feature.inventory.InventoryCostAllocationService;
 import com.duylongtech.backend.feature.inventory.RepairScrapLineRequest;
 import com.duylongtech.backend.feature.inventory.RepairStockOutLineRequest;
 import com.duylongtech.backend.feature.product.ProductVariant;
@@ -109,6 +110,7 @@ public class RepairWorkflowService {
     private final RepairService repairService;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryDocumentService inventoryDocumentService;
+    private final InventoryCostAllocationService inventoryCostAllocationService;
     private final SerialNumberRepository serialNumberRepository;
     private final DeviceComponentSerialRepository deviceComponentSerialRepository;
     private final AppNotificationService notificationService;
@@ -195,6 +197,11 @@ public class RepairWorkflowService {
         }
 
         String previousStatus = repair.getRepairStatus();
+
+        if (target == RepairStatus.CANCELLED
+                || (current == RepairStatus.WAITING_FOR_APPROVAL && target == RepairStatus.QUOTATION)) {
+            ensureNoPostedInventoryDocument(repair.getId());
+        }
 
         // Side-effects + cập nhật trạng thái, tra theo bảng transitionHandlers ở trên
         // thay vì 2 khối switch riêng biệt.
@@ -294,6 +301,9 @@ public class RepairWorkflowService {
         }
 
         if (exportDocId != null) {
+            InventoryDocument exportDocument = inventoryDocumentRepository.findExportByIdWithLines(exportDocId)
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho sửa chữa vừa tạo"));
+            inventoryCostAllocationService.reserveDocument(exportDocument);
             notificationService.createNotification(
                     "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần xuất kho",
                     "Lệnh sửa chữa " + repair.getRepairCode() + " cần xuất kho linh kiện mới. Vui lòng ghi sổ phiếu xuất kho.",
@@ -398,7 +408,7 @@ public class RepairWorkflowService {
             String lineNote = (ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
                     + (rLine.getNote() != null ? rLine.getNote() : "");
             lineRequests.add(new RepairStockOutLineRequest(rLine.getComponentVariantId(), actualDoneQty,
-                    rLine.getUnitPrice(), stockOutSerialNumberId, serialNumbersText, lineNote, rLine.getId()));
+                    stockOutSerialNumberId, serialNumbersText, lineNote, rLine.getId()));
         }
 
         if (lineRequests.isEmpty()) {
@@ -475,21 +485,42 @@ public class RepairWorkflowService {
         if (RepairStatus.DONE.name().equals(repair.getRepairStatus())) {
             throw new BusinessException(SystemMessage.REP_CANNOT_CANCEL);
         }
-        // Với luồng mới, không có phiếu DRAFT, không giữ chỗ -> Không cần rollback inventory
+        List<InventoryDocument> documents = inventoryDocumentRepository.findByReferenceWithLines("REPAIR", repair.getId());
+        if (documents.stream().anyMatch(document -> DocumentStatus.POSTED.name().equals(document.getStatus()))) {
+            throw new BusinessException("Không thể hủy lệnh sửa chữa vì phiếu kho đã được ghi sổ");
+        }
+        documents.stream()
+                .filter(document -> REPAIR_DOC_TYPE_EXPORT.equals(document.getDocType()))
+                .filter(this::isOpenInventoryDocument)
+                .forEach(inventoryCostAllocationService::releaseDocument);
+        documents.stream()
+                .filter(this::isOpenInventoryDocument)
+                .forEach(document -> document.updateStatus(DocumentStatus.CANCELLED.name()));
+        inventoryDocumentRepository.saveAll(documents);
         log.info("[Repair {}] Hủy lệnh sửa chữa", repair.getRepairCode());
+    }
+
+    private void ensureNoPostedInventoryDocument(Long repairId) {
+        boolean posted = inventoryDocumentRepository.findByReferenceWithLines("REPAIR", repairId).stream()
+                .anyMatch(document -> DocumentStatus.POSTED.name().equals(document.getStatus()));
+        if (posted) {
+            throw new BusinessException("Phiếu kho đã được ghi sổ nên không thể hủy hoặc từ chối lệnh sửa chữa");
+        }
+    }
+
+    private boolean isOpenInventoryDocument(InventoryDocument document) {
+        return DocumentStatus.DRAFT.name().equals(document.getStatus())
+                || DocumentStatus.SUBMITTED.name().equals(document.getStatus())
+                || DocumentStatus.APPROVED.name().equals(document.getStatus())
+                || DocumentStatus.UNPOSTED.name().equals(document.getStatus());
     }
 
     // =====================================================================
     // Utility helpers
     // =====================================================================
     // NOTE: the WAITING_FOR_EXPORT -> UNDER_REPAIR auto-transition is handled
-    // exclusively by InventoryDocumentPostedEventListener, which waits for ALL
-    // inventory documents linked to the repair to be posted before advancing.
-    // A second, simpler listener used to live here that advanced the repair as
-    // soon as the FIRST linked document was posted - removed because a repair
-    // needing both an export (ADD/REPLACE parts) and a scrap-import (REMOVE
-    // parts) document could jump to UNDER_REPAIR before parts were fully
-    // issued from the warehouse.
+    // exclusively by InventoryDocumentPostedEventListener, which waits for all
+    // linked export documents. Scrap imports are required later by handleDone().
 
     /**
      * Giải quyết warehouse ID cho lệnh sửa chữa.
