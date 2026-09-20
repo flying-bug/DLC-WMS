@@ -15,13 +15,9 @@ import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-<<<<<<< Updated upstream
+import ProductGridSelect from '@/components/ui/ProductGridSelect/ProductGridSelect';
 import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
 import DateInput from '../../components/ui/DateInput/DateInput';
-=======
-import ProductGridSelect from '@/components/ui/ProductGridSelect/ProductGridSelect';
-import { hasPermission } from '../../auth/session';
->>>>>>> Stashed changes
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -1112,13 +1108,8 @@ function AssemblyOrderFormPage() {
             </div>
 
 
-<<<<<<< Updated upstream
-            <div className={styles.bottomBar}>
-                <button className="btn-misa-cancel" type="button" onClick={goBack}>
-=======
             <div className={styles.bottomBar} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
->>>>>>> Stashed changes
+                <button className="btn-misa-cancel" type="button" onClick={goBack}>
                     {canEdit ? 'Hủy bỏ' : 'Đóng'}
                 </button>
 
