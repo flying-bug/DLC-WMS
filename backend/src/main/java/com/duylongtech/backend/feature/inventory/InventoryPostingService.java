@@ -1,6 +1,5 @@
 package com.duylongtech.backend.feature.inventory;
 
-import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.enums.SerialNumberStatus;
@@ -146,7 +145,7 @@ public class InventoryPostingService {
     private final DocumentDependencyService documentDependencyService;
     private final AuditLogService auditLogService;
     private final com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard warehouseAccessGuard;
-    private final ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
@@ -289,6 +288,10 @@ public class InventoryPostingService {
 
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
             line.setUnitCost(avgUnitCost);
+            if (!ISSUE_PURPOSE_SALES.equals(doc.getIssuePurpose())) {
+                line.setUnitPrice(avgUnitCost);
+                line.calculateExportAmounts();
+            }
             BigDecimal currentOnHand = balance != null ? balance.getQuantityOnHand() : ZERO;
             inventoryLedgerRepository
                     .save(buildLedger(doc, line, "OUT", ZERO, qtyToExport, avgUnitCost, currentOnHand,
@@ -377,6 +380,35 @@ public class InventoryPostingService {
             }
         }
 
+        // Tự động cập nhật lại giá vốn cho phiếu nhập kho (thành phẩm) đang nháp của lệnh lắp ráp
+        // dựa trên tổng chi phí FIFO thực tế vừa tính toán xong của các linh kiện xuất kho
+        if (ISSUE_PURPOSE_ASSEMBLY.equals(doc.getIssuePurpose()) && "ASSEMBLY_ORDER".equals(doc.getReferenceType()) && doc.getReferenceId() != null) {
+            AssemblyOrder order = assemblyOrderRepository.findByIdWithLines(doc.getReferenceId()).orElse(null);
+            if (order != null && "ASSEMBLY".equals(order.getOrderType())) {
+                BigDecimal totalExportCost = doc.getLines().stream()
+                        .map(l -> (l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO)
+                                .multiply(l.getQuantityOut() != null ? l.getQuantityOut() : BigDecimal.ZERO))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                List<InventoryDocument> relatedDocs = inventoryDocumentRepository.findByReferenceWithLines(doc.getReferenceType(), doc.getReferenceId());
+                relatedDocs.stream()
+                        .filter(d -> "IN_PO".equals(d.getDocType()) && DocumentStatus.DRAFT.name().equals(d.getStatus()))
+                        .findFirst()
+                        .ifPresent(draftImport -> {
+                            for (InventoryDocumentLine impLine : draftImport.getLines()) {
+                                BigDecimal qtyIn = impLine.getQuantityIn() != null ? impLine.getQuantityIn() : BigDecimal.ZERO;
+                                if (qtyIn.compareTo(BigDecimal.ZERO) > 0) {
+                                    BigDecimal newUnitCost = totalExportCost.divide(qtyIn, 4, RoundingMode.HALF_UP);
+                                    impLine.setUnitCost(newUnitCost);
+                                    impLine.setUnitPrice(newUnitCost);
+                                    impLine.calculateImportAmounts();
+                                }
+                            }
+                            inventoryDocumentRepository.save(draftImport);
+                        });
+            }
+        }
+
         String actor = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         Long currentUserId = userRepository.findByUsername(actor)
                 .map(com.duylongtech.backend.feature.auth.User::getId).orElse(null);
@@ -396,7 +428,9 @@ public class InventoryPostingService {
         } catch (Exception ignored) {
         }
 
-        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, saved.getId(), saved.getReferenceType(), saved.getReferenceId()));
+        applicationEventPublisher.publishEvent(new InventoryDocumentPostedEvent(
+                this, saved.getId(), saved.getReferenceType(), saved.getReferenceId()
+        ));
 
         return toResponse(saved);
     }
@@ -445,7 +479,7 @@ public class InventoryPostingService {
                             .orElse("");
                 }
                 String docTypeLabel = isImport ? "nhập kho" : "xuất kho";
-                String notifTitle = (isImport ? "Cảnh báo nhập kho thiếu: " : "Cảnh báo xuất kho thiếu/thừa: ")
+                String notifTitle = (isImport ? "⚠️ Cảnh báo nhập kho thiếu: " : "⚠️ Cảnh báo xuất kho thiếu/thừa: ")
                         + savedDoc.getDocCode();
                 String notifMsg = String.format(
                         "Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện chênh lệch %s:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với đối tác.",
@@ -453,12 +487,12 @@ public class InventoryPostingService {
                         docTypeLabel, discrepancyDetails.toString().trim());
 
                 String refType = isImport ? "IMPORT_DOCUMENT" : "EXPORT_DOCUMENT";
-                String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId();
+                String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId() + "/edit";
 
                 appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
                 appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
             } catch (Exception e) {
                 // Log warning but do not fail the transaction
             }
@@ -472,6 +506,15 @@ public class InventoryPostingService {
         warehouseAccessGuard.checkAccess(doc.getWarehouseId());
         if (!doc.isPostable()) {
             throw new BusinessException(SystemMessage.INV_ERR_040.getMessage());
+        }
+
+        if ("ASSEMBLY_ORDER".equals(doc.getReferenceType()) && doc.getReferenceId() != null) {
+            List<InventoryDocument> relatedDocs = inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", doc.getReferenceId());
+            boolean exportPosted = relatedDocs.stream()
+                    .anyMatch(d -> "EX_SO".equals(d.getDocType()) && DocumentStatus.POSTED.name().equals(d.getStatus()));
+            if (!exportPosted) {
+                throw new BusinessException("Chưa thể ghi sổ Phiếu Nhập kho. Bạn cần phải hoàn tất xuất kho (Ghi sổ Phiếu Xuất giao cho kỹ thuật viên) trước khi có thể ghi sổ Phiếu Nhập!");
+            }
         }
 
         InventoryDocument savedDoc = inventoryDocumentRepository.saveAndFlush(doc);
@@ -568,9 +611,13 @@ public class InventoryPostingService {
                     .orElse(null);
             if (po != null && !DocumentStatus.POSTED.name().equals(po.getStatus()) && !DocumentStatus.CANCELLED.name().equals(po.getStatus())
                     && !Boolean.TRUE.equals(po.getIsShortClosed())) {
-                // Chỉ tính phiếu ĐÃ GHI SỔ (mọi kho): phiếu nháp của kho khác chưa nhận hàng thì PO chưa hoàn thành.
-                boolean fullyImported = PurchaseOrderReceiving.of(po.getLines(),
-                        inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), null)).isFullyPosted();
+                boolean fullyImported = !po.getLines().isEmpty() && po.getLines().stream().allMatch(l -> {
+                    BigDecimal imported = inventoryDocumentLineRepository
+                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), l.getVariantId());
+                    if (imported == null)
+                        imported = BigDecimal.ZERO;
+                    return l.getQuantity().subtract(imported).compareTo(BigDecimal.ZERO) <= 0;
+                });
                 if (fullyImported) {
                     // Cập nhật trạng thái POSTED
                     po.markAsPosted();
@@ -599,7 +646,9 @@ public class InventoryPostingService {
         } catch (Exception ignored) {
         }
 
-        eventPublisher.publishEvent(new InventoryDocumentPostedEvent(this, savedImport.getId(), savedImport.getReferenceType(), savedImport.getReferenceId()));
+        applicationEventPublisher.publishEvent(new InventoryDocumentPostedEvent(
+                this, savedImport.getId(), savedImport.getReferenceType(), savedImport.getReferenceId()
+        ));
 
         return toResponse(savedImport);
     }
@@ -926,6 +975,7 @@ public class InventoryPostingService {
                     serial.updateStatus(SerialNumberStatus.SCRAP.name());
                     serial.updateWarehouse(effectiveWh);
                     SerialNumber savedSerial = serialNumberRepository.save(serial);
+                    line.setSerialNumberId(savedSerial.getId());
                     InventoryBalance scrapBalance = new InventoryBalance();
                     scrapBalance.initBalance(effectiveWh, line.getVariantId(), savedSerial.getId(), "GOOD", BigDecimal.ONE, ZERO, unitCost);
                     inventoryBalanceRepository.save(scrapBalance);
@@ -938,6 +988,7 @@ public class InventoryPostingService {
                     serial.updateStatus(SerialNumberStatus.AVAILABLE.name());
                     serial.updateWarehouse(effectiveWh);
                     SerialNumber savedSerial = serialNumberRepository.save(serial);
+                    line.setSerialNumberId(savedSerial.getId());
                     InventoryBalance transferBalance = new InventoryBalance();
                     transferBalance.initBalance(effectiveWh, line.getVariantId(), savedSerial.getId(), "GOOD", BigDecimal.ONE, ZERO, unitCost);
                     inventoryBalanceRepository.save(transferBalance);
@@ -949,6 +1000,7 @@ public class InventoryPostingService {
             SerialNumber serial = new SerialNumber();
             serial.initSerialNumber(line.getVariantId(), effectiveWh, serialValue, SerialNumberStatus.AVAILABLE.name(), LocalDateTime.now());
             SerialNumber savedSerial = serialNumberRepository.save(serial);
+            line.setSerialNumberId(savedSerial.getId());
             InventoryBalance newSerialBalance = new InventoryBalance();
             newSerialBalance.initBalance(effectiveWh, line.getVariantId(), savedSerial.getId(), "GOOD", BigDecimal.ONE, ZERO, unitCost);
             inventoryBalanceRepository.save(newSerialBalance);

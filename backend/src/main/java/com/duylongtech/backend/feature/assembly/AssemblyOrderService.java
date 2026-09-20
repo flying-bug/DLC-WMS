@@ -40,8 +40,8 @@ public class AssemblyOrderService {
     private static final String DISASSEMBLY = "DISASSEMBLY";
     private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final Set<String> VALID_TYPES = Set.of(ASSEMBLY, DISASSEMBLY);
-    private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name());
-    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.APPROVED.name());
+    private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.PENDING_APPROVAL.name(), DocumentStatus.REJECTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.PROCESSING.name(), DocumentStatus.COMPLETED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name());
+    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.REJECTED.name(), DocumentStatus.APPROVED.name());
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
     private final AssemblyBomService assemblyBomService;

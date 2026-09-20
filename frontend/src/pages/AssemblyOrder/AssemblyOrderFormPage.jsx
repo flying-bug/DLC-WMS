@@ -15,8 +15,13 @@ import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+<<<<<<< Updated upstream
 import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
 import DateInput from '../../components/ui/DateInput/DateInput';
+=======
+import ProductGridSelect from '@/components/ui/ProductGridSelect/ProductGridSelect';
+import { hasPermission } from '../../auth/session';
+>>>>>>> Stashed changes
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -137,6 +142,7 @@ function AssemblyOrderFormPage() {
         && hasPermission(editing ? 'assembly:edit' : 'assembly:add');
     const canApprove = hasPermission('assembly:approve');
     const canSubmit = hasPermission('assembly:submit');
+    const canAddProduct = hasPermission('product:add');
     const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
@@ -163,7 +169,24 @@ function AssemblyOrderFormPage() {
                 axiosClient.get('/reports/inventory-balance', { params: { page: 0, size: 5000 } })
             ]);
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
-            setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
+
+            const rawVariants = listFrom(unwrap(variantResponse)).filter((item) => item.active !== false);
+            let finalVariants = rawVariants;
+            try {
+                const variantIds = rawVariants.map(v => v.id);
+                if (variantIds.length > 0) {
+                    const fifoRes = await axiosClient.post('/inventory/cost/fifo/bulk', variantIds);
+                    const fifoCosts = unwrap(fifoRes) || {};
+                    finalVariants = rawVariants.map(v => ({
+                        ...v,
+                        costPrice: fifoCosts[v.id] != null ? fifoCosts[v.id] : (v.costPrice || 0)
+                    }));
+                }
+            } catch (err) {
+                console.warn("Lỗi tải bulk FIFO cost", err);
+            }
+            setVariants(finalVariants);
+
             setInventoryBalances(listFrom(unwrap(inventoryResponse)));
         } catch (err) {
             setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
@@ -302,14 +325,8 @@ function AssemblyOrderFormPage() {
     }, [form.quantity]);
 
     const requiredComponents = useMemo(() => {
-        if (editing && orderDetail?.lines) {
-            return orderDetail.lines.reduce((sum, line) => sum + Number(line.quantityRequired || 0), 0);
-        }
-        if (!editing && selectedBom?.lines) {
-            return selectedBom.lines.reduce((sum, line) => sum + (Number(line.quantity || 0) * Number(form.quantity || 1)), 0);
-        }
-        return 0;
-    }, [editing, orderDetail, selectedBom, form.quantity]);
+        return customLines.reduce((sum, line) => sum + Number(line.quantityRequired || 0), 0);
+    }, [customLines]);
 
     const requiredTarget = Number(editing ? (orderDetail?.quantity || 1) : (form.quantity || 1));
 
@@ -377,6 +394,7 @@ function AssemblyOrderFormPage() {
     }, [linkedExports, linkedImports, form.orderType, editing, orderDetail, selectedBom, form.quantity, targetSumQty, requiredTargetQty, targetRatio]);
 
     const hasDrafts = linkedExports.some(s => s.status === 'DRAFT') || linkedImports.some(s => s.status === 'DRAFT');
+    const hasPostedSlips = linkedExports.some(s => s.status === 'POSTED') || linkedImports.some(s => s.status === 'POSTED');
     const disableComplete = saving || !isReadyToComplete || hasDrafts;
 
     // Removed unused manual serial mapping handlers
@@ -389,10 +407,10 @@ function AssemblyOrderFormPage() {
         status: overrideStatus || form.status,
         executionDate: form.executionDate,
         note: form.note || null,
-        lines: form.orderType === 'ASSEMBLY' && customLinesDirty ? customLines.map(line => ({
+        lines: (customLinesDirty || form.orderType === 'DISASSEMBLY') && customLines.length > 0 ? customLines.filter(l => l.componentVariantId).map(line => ({
             componentVariantId: Number(line.componentVariantId),
             quantityRequired: Number(line.quantityRequired),
-            note: line.note
+            note: line.note || null
         })) : undefined
     });
 
@@ -474,7 +492,7 @@ function AssemblyOrderFormPage() {
             showToast('error', 'Vui lòng nhập lý do!');
             return;
         }
-        
+
         setActionModal({ visible: false, type: '', reason: '' });
         setSaving(true);
         try {
@@ -734,17 +752,33 @@ function AssemblyOrderFormPage() {
         }
     };
 
-    const previewLines = editing && orderDetail?.lines?.length > 0
-        ? orderDetail.lines.map(line => ({
-            componentName: line.componentName,
-            componentSku: line.componentSku,
-            unitName: line.unitName,
+    const previewLines = customLines.map((line, index) => {
+        const variant = variants.find(v => String(v.id) === String(line.componentVariantId));
+        let cName = line.componentName;
+        let cSku = line.componentSku;
+        let cUnit = line.unitName;
+        if (variant) {
+            cName = variant.productName + (variant.variantName && variant.variantName !== variant.productName ? ` - ${variant.variantName}` : '');
+            cSku = variant.sku;
+            const parentProd = products.find(p => String(p.id) === String(variant.productId));
+            if (parentProd) cUnit = parentProd.unitName;
+        } else if (editing && orderDetail?.lines) {
+            const existingLine = orderDetail.lines.find(l => String(l.componentVariantId) === String(line.componentVariantId));
+            if (existingLine) {
+                cName = existingLine.componentName;
+                cSku = existingLine.componentSku;
+                cUnit = existingLine.unitName;
+            }
+        }
+        return {
+            _index: index,
+            componentVariantId: line.componentVariantId,
+            componentName: cName || '...',
+            componentSku: cSku || '...',
+            unitName: cUnit || '',
             required: line.quantityRequired,
-        }))
-        : selectedBom?.lines?.map((line) => ({
-            ...line,
-            required: Number(line.quantity || 0) * Number(form.quantity || 0)
-        })) || [];
+        };
+    });
 
     const targetItem = editing && orderDetail ? {
         name: orderDetail.targetName,
@@ -769,6 +803,51 @@ function AssemblyOrderFormPage() {
 
     const gainItems = form.orderType === 'DISASSEMBLY'
         ? previewLines.map((line) => ({
+            _index: line._index,
+            isEmpty: !line.componentVariantId,
+            renderSelect: () => {
+                const filteredVariants = variants.filter(v => {
+                    const parentProd = products.find(p => String(p.id) === String(v.productId));
+                    return (v.productType || (parentProd?.productType)) === 'Hàng hóa';
+                });
+                
+                return (
+                    <ProductGridSelect 
+                        products={filteredVariants}
+                        value={line.componentVariantId} 
+                        hideStock={true}
+                        placeholder="Chọn linh kiện thu hồi"
+                        displayMode="code-name"
+                        fullWidthPopover={false}
+                        onAddNew={canAddProduct ? () => window.open('/products', '_blank') : undefined}
+                        onChange={(selectedVariant) => {
+                            const selectedVariantId = selectedVariant?.id;
+                            if (!selectedVariantId) {
+                                const newLines = [...customLines];
+                                newLines[line._index].componentVariantId = '';
+                                setCustomLines(newLines);
+                                setCustomLinesDirty(true);
+                                return;
+                            }
+
+                            const existingIndex = customLines.findIndex(
+                                (l, idx) => idx !== line._index && String(l.componentVariantId) === String(selectedVariantId)
+                            );
+
+                            let newLines = [...customLines];
+                            if (existingIndex >= 0) {
+                                const currentQty = Number(newLines[line._index].quantityRequired || 1);
+                                newLines[existingIndex].quantityRequired = Number(newLines[existingIndex].quantityRequired || 0) + currentQty;
+                                newLines.splice(line._index, 1);
+                            } else {
+                                newLines[line._index].componentVariantId = selectedVariantId;
+                            }
+                            setCustomLines(newLines);
+                            setCustomLinesDirty(true);
+                        }}
+                    />
+                );
+            },
             name: line.componentName,
             sku: line.componentSku,
             quantity: line.required,
@@ -892,22 +971,39 @@ function AssemblyOrderFormPage() {
                         </div>
 
                         <div className={styles.card}>
-                            <h2 className={styles.cardTitle}>Chi tiết dòng nguyên liệu</h2>
+                            <h2 className={styles.cardTitle}>Chi tiết dòng sản phẩm</h2>
 
                             <div className={styles.flowGridContainer}>
                                 <FlowPanel
                                     tone="loss"
-                                    title="Nguyên liệu xuất (Bị trừ)"
+                                    title="Sản phẩm xuất"
                                     icon="bi-dash-circle-fill"
-                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn cấu hình để xem hàng bị trừ.'}
+                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn cấu hình để xem.'}
                                     items={lossItems}
                                 />
                                 <FlowPanel
                                     tone="gain"
-                                    title="Sản phẩm nhập (Được cộng)"
+                                    title="Sản phẩm nhập"
                                     icon="bi-plus-circle-fill"
-                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn cấu hình để xem hàng được cộng.'}
+                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn cấu hình để xem.'}
                                     items={gainItems}
+                                    editable={canEdit && form.orderType === 'DISASSEMBLY'}
+                                    onQuantityChange={(idx, val) => {
+                                        const newLines = [...customLines];
+                                        newLines[idx].quantityRequired = val;
+                                        setCustomLines(newLines);
+                                        setCustomLinesDirty(true);
+                                    }}
+                                    onRemove={(idx) => {
+                                        const newLines = [...customLines];
+                                        newLines.splice(idx, 1);
+                                        setCustomLines(newLines);
+                                        setCustomLinesDirty(true);
+                                    }}
+                                    onAdd={() => {
+                                        setCustomLines([...customLines, { componentVariantId: '', quantityRequired: 1 }]);
+                                        setCustomLinesDirty(true);
+                                    }}
                                 />
                             </div>
 
@@ -933,14 +1029,14 @@ function AssemblyOrderFormPage() {
                                     <span className={styles.summaryValue} style={{ textAlign: 'right' }}>{selectedBom?.productName || 'Chưa chọn'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Số linh kiện (SKU)</span>
+                                    <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Số linh kiện</span>
                                     <span className={styles.summaryValue}>{previewLines.length}</span>
                                 </div>
 
                                 <hr className={styles.divider} />
 
                                 <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                                    <span className={styles.summaryLabel}>Tiến độ xuất kho (Bị trừ):</span>
+                                    <span className={styles.summaryLabel}>Tiến độ xuất kho:</span>
                                     <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--wms-border-base)', borderRadius: '4px', overflow: 'hidden' }}>
                                         <div style={{
                                             height: '100%',
@@ -953,7 +1049,7 @@ function AssemblyOrderFormPage() {
                                     </span>
                                 </div>
                                 <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
-                                    <span className={styles.summaryLabel}>Tiến độ nhập kho (Được cộng):</span>
+                                    <span className={styles.summaryLabel}>Tiến độ nhập kho:</span>
                                     <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--wms-border-base)', borderRadius: '4px', overflow: 'hidden' }}>
                                         <div style={{
                                             height: '100%',
@@ -1016,40 +1112,35 @@ function AssemblyOrderFormPage() {
             </div>
 
 
+<<<<<<< Updated upstream
             <div className={styles.bottomBar}>
                 <button className="btn-misa-cancel" type="button" onClick={goBack}>
+=======
+            <div className={styles.bottomBar} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
+>>>>>>> Stashed changes
                     {canEdit ? 'Hủy bỏ' : 'Đóng'}
                 </button>
-                {['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(orderDetail?.status) && (
-                    <div className={styles.actionButtons}>
-                        {linkedExports?.length > 0 && (
-                            <button className={styles.btnOutline} type="button" onClick={() => navigate('/export-slips', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
-                                <i className="bi bi-box-arrow-up"></i> Xem phiếu xuất kho
-                            </button>
-                        )}
-                        {linkedImports?.length > 0 && (
-                            <button className={styles.btnOutline} type="button" onClick={() => navigate('/import-history', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
-                                <i className="bi bi-box-arrow-in-down"></i> Xem phiếu nhập kho
-                            </button>
-                        )}
-                        {orderDetail.status !== 'COMPLETED' && canSubmit && <button className="btn-misa-draft" type="button" onClick={requestCancel} disabled={saving}>Yêu cầu hủy</button>}
-                    </div>
-                )}
-                {orderDetail?.status === 'PENDING_APPROVAL' && canApprove && (
-                    <div className={styles.actionButtons}>
-                        <button className="btn-misa-draft" type="button" onClick={() => reviewOrder(false)} disabled={saving}>Từ chối</button>
-                        <button className="btn-misa-post" type="button" onClick={() => reviewOrder(true)} disabled={saving}>Duyệt lệnh</button>
-                    </div>
-                )}
-                {orderDetail?.cancellationSettlementStatus === 'REQUESTED' && canApprove && (
-                    <button className="btn-misa-post" type="button" onClick={confirmCancel} disabled={saving}>Xác nhận hủy</button>
-                )}
-                {orderDetail && ['DRAFT', 'REJECTED', 'PENDING_APPROVAL'].includes(orderDetail.status) && canSubmit && (
-                    <button className="btn-misa-draft" type="button" onClick={requestCancel} disabled={saving}>Hủy lệnh</button>
-                )}
 
-                {orderDetail && (
-                    <div className={styles.actionButtons} style={{ marginBottom: '16px', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(orderDetail?.status) && (
+                        <>
+                            {linkedExports?.length > 0 && (
+                                <button className={styles.btnOutline} type="button" onClick={() => navigate('/export-slips', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
+                                    <i className="bi bi-box-arrow-up"></i> Xem phiếu xuất kho
+                                </button>
+                            )}
+                            {linkedImports?.length > 0 && (
+                                <button className={styles.btnOutline} type="button" onClick={() => navigate('/import-history', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
+                                    <i className="bi bi-box-arrow-in-down"></i> Xem phiếu nhập kho
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+                
+                <div className={styles.actionButtons} style={{ margin: 0, marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {orderDetail && ['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(orderDetail.status) && (
                         <button className="btn-misa-draft" style={{ backgroundColor: '#fff', color: 'var(--color-text)', border: '1px solid var(--color-border-muted)' }} type="button" onClick={() => {
                             printAssemblyOrder(orderDetail, {
                                 warehouseName: warehouses.find(w => String(w.id) === String(orderDetail.warehouseId))?.name || '',
@@ -1057,22 +1148,42 @@ function AssemblyOrderFormPage() {
                                 variantById: new Map(variants.map(v => [String(v.id), v])),
                             });
                         }}>
-                            <i className="bi bi-printer"></i> In lệnh lắp ráp
+                            <i className="bi bi-printer"></i> In phiếu
                         </button>
-                    </div>
-                )}
+                    )}
 
-                {canEdit && (
-                    <div className={styles.actionButtons}>
+                    {orderDetail && ['DRAFT', 'REJECTED', 'PENDING_APPROVAL'].includes(orderDetail.status) && canSubmit && !hasPostedSlips && (
+                        <button className="btn-misa-draft" style={{ color: '#dc2626', borderColor: '#fca5a5' }} type="button" onClick={requestCancel} disabled={saving}>Hủy lệnh</button>
+                    )}
+                    {orderDetail && ['APPROVED'].includes(orderDetail.status) && canApprove && !hasPostedSlips && (
+                        <button className="btn-misa-draft" style={{ color: '#dc2626', borderColor: '#fca5a5' }} type="button" onClick={requestCancel} disabled={saving}>Hủy lệnh</button>
+                    )}
+                    {orderDetail?.status === 'PENDING_APPROVAL' && canApprove && (
+                        <button className="btn-misa-draft" style={{ color: '#dc2626', borderColor: '#fca5a5' }} type="button" onClick={() => reviewOrder(false)} disabled={saving}>Từ chối</button>
+                    )}
+
+                    {canEdit && (
                         <button className="btn-misa-draft" type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving}>
                             <i className="bi bi-save"></i> Lưu tạm
                         </button>
-                        {canSubmit && <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'PENDING_APPROVAL')} disabled={saving}>
-                            <i className="bi bi-check-circle"></i>
-                            {saving ? 'Đang gửi...' : form.status === 'REJECTED' ? 'Gửi lại duyệt' : 'Gửi duyệt'}
-                        </button>}
-                    </div>
-                )}
+                    )}
+                    
+                    {canEdit && canSubmit && (
+                        <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'PENDING_APPROVAL')} disabled={saving}>
+                            <i className="bi bi-check-circle"></i> {saving ? 'Đang gửi...' : form.status === 'REJECTED' ? 'Gửi lại duyệt' : 'Gửi duyệt'}
+                        </button>
+                    )}
+
+                    {orderDetail?.status === 'PENDING_APPROVAL' && canApprove && (
+                        <button className="btn-misa-post" type="button" onClick={() => reviewOrder(true)} disabled={saving}>
+                            <i className="bi bi-check-circle"></i> Duyệt lệnh
+                        </button>
+                    )}
+
+                    {orderDetail?.cancellationSettlementStatus === 'REQUESTED' && canApprove && (
+                        <button className="btn-misa-post" type="button" onClick={confirmCancel} disabled={saving}>Xác nhận hủy</button>
+                    )}
+                </div>
             </div>
 
             <Modal
@@ -1141,7 +1252,7 @@ function AssemblyOrderFormPage() {
                                                 <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
                                             </div>
                                             <div className={bomStyles.variantPickerPrice}>
-                                                {Number(variant.salePrice || 0).toLocaleString('vi-VN')} đ
+                                                {Number(variant.costPrice || 0).toLocaleString('vi-VN')} đ
                                             </div>
                                         </div>
                                         <div className={bomStyles.variantPickerAction}>
@@ -1236,7 +1347,7 @@ function AssemblyOrderFormPage() {
                                     <div className={bomStyles.bomTotalCost}>
                                         Chi phí dự tính: {bomForm.lines.reduce((sum, line) => {
                                             const v = variants.find(v => String(v.id) === String(line.componentVariantId));
-                                            return sum + (v ? Number(v.salePrice || 0) : 0) * Number(line.quantity || 0);
+                                            return sum + (v ? Number(v.costPrice || 0) : 0) * Number(line.quantity || 0);
                                         }, 0).toLocaleString('vi-VN')} đ
                                     </div>
                                 </div>
@@ -1423,7 +1534,7 @@ function AssemblyOrderFormPage() {
     );
 }
 
-function FlowPanel({ tone, title, icon, items, emptyText }) {
+function FlowPanel({ tone, title, icon, items, emptyText, editable, onQuantityChange, onRemove, onAdd }) {
     const isLoss = tone === 'loss';
     return (
         <div style={{
@@ -1454,18 +1565,47 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
                         padding: '12px 16px',
                         borderBottom: index < items.length - 1 ? '1px solid var(--wms-bg-hover)' : 'none'
                     }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--wms-text-muted)', width: '24px', flexShrink: 0, paddingRight: '8px' }}>
+                            {index + 1}.
+                        </div>
                         <div style={{ flex: 1, minWidth: 0, paddingRight: '16px' }}>
-                            <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px', wordBreak: 'break-word' }}>{item.name || 'Chưa có tên hàng'}</div>
-                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px', wordBreak: 'break-all' }}>{item.sku || 'Chưa có mã SKU'}</div>
+                            {editable && item.isEmpty ? (
+                                item.renderSelect()
+                            ) : (
+                                <>
+                                    <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px', wordBreak: 'break-word' }}>{item.name || 'Chưa có tên hàng'}</div>
+                                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px', wordBreak: 'break-all' }}>{item.sku || 'Chưa có mã SKU'}</div>
+                                </>
+                            )}
                         </div>
                         <div style={{
                             fontWeight: 600,
                             fontSize: '15px',
                             color: isLoss ? 'var(--wms-danger)' : '#16a34a',
                             whiteSpace: 'nowrap',
-                            flexShrink: 0
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px'
                         }}>
-                            {isLoss ? '-' : '+'}{Number(item.quantity || 0).toLocaleString('vi-VN')} {item.unitName || ''}
+                            {editable ? (
+                                <>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value={item.quantity}
+                                        onChange={(e) => onQuantityChange(item._index, e.target.value)}
+                                        style={{ width: '60px', textAlign: 'right', padding: '4px', border: '1px solid var(--wms-border-base)', borderRadius: '4px' }}
+                                    />
+                                    <span style={{ width: '30px', fontSize: '13px' }}>{item.unitName || ''}</span>
+                                    <button type="button" onClick={() => onRemove(item._index)} style={{ border: 'none', background: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px' }}>
+                                        <i className="bi bi-trash"></i>
+                                    </button>
+                                </>
+                            ) : (
+                                `${Number(item.quantity || 0).toLocaleString('vi-VN')} ${item.unitName || ''}`
+                            )}
                         </div>
                     </div>
                 )) : (
@@ -1474,6 +1614,13 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
                     </div>
                 )}
             </div>
+            {editable && onAdd && (
+                <div style={{ padding: '12px 16px', borderTop: '1px dashed var(--wms-border-base)', textAlign: 'center', backgroundColor: '#f8fafc' }}>
+                    <button type="button" onClick={onAdd} style={{ background: 'none', border: '1px solid #0ea5e9', color: '#0ea5e9', padding: '6px 16px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+                        <i className="bi bi-plus-lg"></i> Thêm linh kiện thu hồi
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

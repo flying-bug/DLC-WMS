@@ -1,29 +1,15 @@
 package com.duylongtech.backend.feature.repair;
 
-import com.duylongtech.backend.enums.DocumentStatus;
 import com.duylongtech.backend.enums.RepairStatus;
 
 import com.duylongtech.backend.constant.SystemMessage;
-import com.duylongtech.backend.feature.repair.RepairFeeRequest;
-import com.duylongtech.backend.feature.repair.RepairLineRequest;
-import com.duylongtech.backend.feature.repair.RepairRequest;
-import com.duylongtech.backend.feature.repair.RepairFeeResponse;
-import com.duylongtech.backend.feature.repair.RepairLineResponse;
-import com.duylongtech.backend.feature.repair.RepairResponse;
-import com.duylongtech.backend.feature.partner.Partner;
 import com.duylongtech.backend.feature.product.ProductVariant;
-import com.duylongtech.backend.feature.repair.Repair;
-import com.duylongtech.backend.feature.repair.RepairFee;
-import com.duylongtech.backend.feature.repair.RepairLine;
 import com.duylongtech.backend.feature.product.SerialNumber;
 import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.feature.partner.PartnerRepository;
 import com.duylongtech.backend.feature.product.ProductRepository;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
-import com.duylongtech.backend.feature.repair.RepairFeeRepository;
-import com.duylongtech.backend.feature.repair.RepairLineRepository;
-import com.duylongtech.backend.feature.repair.RepairRepository;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
 import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.audit.AuditLogService;
@@ -40,8 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,7 +46,7 @@ import com.duylongtech.backend.feature.system.CodeGeneratorService;
 @Slf4j
 public class RepairService {
 
-    private static final Set<String> EDITABLE_STATUSES = Set.of(RepairStatus.DRAFT.name(), RepairStatus.QUOTATION.name(), RepairStatus.UNDER_REPAIR.name());
+    private static final Set<String> EDITABLE_STATUSES = Set.of(RepairStatus.DRAFT.name(), RepairStatus.QUOTATION.name());
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
     private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REPLACE", "REMOVE");
 
@@ -181,10 +165,10 @@ public class RepairService {
                 trimToNull(request.getNote())
         );
         // repair.applyWarrantyZeroPrice() is already called inside updateDetails if underWarranty changed from false to true.
-        // Wait, applyWarrantyZeroPrice in entity needs the lines, which are mapped. 
+        // Wait, applyWarrantyZeroPrice in entity needs the lines, which are mapped.
         // We might need to ensure lines are updated.
         // For now, let's keep the logic.
-    
+
 
         if (repair.getExpectedDate() != null && repair.getReceivedDate() != null
                 && repair.getExpectedDate().isBefore(repair.getReceivedDate())) {
@@ -205,6 +189,10 @@ public class RepairService {
     public RepairResponse updateInternalNotes(Long id, String notes) {
         Repair repair = repairRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
+
+        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
+            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
+        }
 
         repair.updateDetails(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, trimToNull(notes), null, null, null, null, null);
         Repair saved = repairRepository.save(repair);
@@ -275,7 +263,7 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
         }
 
-        
+
         if (request.getQuantity() != null && request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(SystemMessage.REP_ERR_001.getMessage());
         }
@@ -345,8 +333,7 @@ public class RepairService {
         }
 
         // Logic giá bảo hành
-        boolean isFreeWarranty = Boolean.TRUE.equals(request.getIsFreeWarranty())
-                || Boolean.TRUE.equals(repair.getUnderWarranty());
+        boolean isFreeWarranty = Boolean.TRUE.equals(request.getIsFreeWarranty());
 
         BigDecimal feeAmount = isFreeWarranty ? BigDecimal.ZERO
                 : (request.getFeeAmount() != null ? request.getFeeAmount() : BigDecimal.ZERO);
@@ -433,13 +420,13 @@ public class RepairService {
     // Helper: Tính lại tổng tiền
     // =====================================================================
 
-    
+
 
     /**
      * Khi lệnh chuyển thành underWarranty = TRUE,
      * đặt unit_price = 0 cho tất cả các dòng linh kiện.
      */
-    
+
 
     // =====================================================================
     // Mapping: Entity -> Response
@@ -447,7 +434,7 @@ public class RepairService {
 
     private RepairResponse toSummaryResponse(Repair repair) {
         RepairResponse response = repairMapper.toResponse(repair);
-        
+
         // Resolve partner name (best effort)
         if (repair.getPartnerId() != null) {
             try {

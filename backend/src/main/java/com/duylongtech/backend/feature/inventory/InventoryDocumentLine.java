@@ -50,6 +50,9 @@ public class InventoryDocumentLine {
     @Column(name = "serial_numbers_text", columnDefinition = "TEXT")
     private String serialNumbersText;
 
+    @Column(name = "repair_line_id")
+    private Long repairLineId;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 

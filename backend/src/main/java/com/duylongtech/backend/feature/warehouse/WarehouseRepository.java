@@ -16,6 +16,8 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
     boolean existsByCodeIgnoreCase(String code);
 
     java.util.List<Warehouse> findByStatus(String status);
+    
+    Optional<Warehouse> findFirstByTypeAndStatus(String type, String status);
 
     @Query("SELECT w FROM Warehouse w WHERE " +
            "LOWER(w.code) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) OR " +

@@ -14,6 +14,7 @@ public record RepairStockOutLineRequest(
         BigDecimal unitPrice,
         Long serialNumberId,
         String serialNumberText,
-        String note
+        String note,
+        Long repairLineId
 ) {
 }
