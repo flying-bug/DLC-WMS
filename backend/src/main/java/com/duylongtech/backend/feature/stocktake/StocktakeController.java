@@ -190,4 +190,18 @@ public class StocktakeController {
                 .userMessage("Đã xác nhận bỏ qua chênh lệch")
                 .build());
     }
+
+    @PostMapping("/{id}/submit")
+    @PreAuthorize("hasAuthority('stocktake:add') or hasAuthority('stocktake:edit')")
+    public ResponseEntity<ApiResponse<StocktakeResponse>> submitStocktake(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        StocktakeResponse response = stocktakeService.submitStocktake(id, userPrincipal);
+        boolean pending = "PENDING_APPROVAL".equals(response.getStatus());
+        return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
+                .success(true)
+                .data(response)
+                .userMessage(pending ? "Đã gửi yêu cầu kiểm kê, chờ Manager duyệt" : "Kho đã được khóa để kiểm kê")
+                .build());
+    }
 }

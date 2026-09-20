@@ -282,6 +282,38 @@ class StocktakeApprovalFlowTest {
         assertTrue(!st.isCounting(), "ghi sổ xong thì kho tự mở khóa");
     }
 
+    // ---------------- phiếu lưu tạm cũ ----------------
+
+    private Stocktake legacyDraft() {
+        Stocktake st = new Stocktake();
+        st.initOrder("KK000004", WAREHOUSE, "p", null, 1L);
+        st.setId(100L);
+        st.addLine(lineWithBook(10, 10));
+        when(stocktakeRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(st));
+        return st;
+    }
+
+    @Test
+    void legacyDraftCanBeSentToTheManagerForApproval() {
+        Stocktake st = legacyDraft();
+
+        service.submitStocktake(100L, accountant);
+
+        assertEquals("PENDING_APPROVAL", st.getStatus());
+        verify(notifications).createNotification(eq("ROLE_MANAGER"), any(), anyString(), anyString(),
+                eq("STOCKTAKE_APPROVAL"), eq("STOCKTAKE"), eq(100L), anyString(), any());
+    }
+
+    @Test
+    void managerSubmittingALegacyDraftStartsCountingAndOnlyDraftsCanBeSubmitted() {
+        Stocktake st = legacyDraft();
+
+        service.submitStocktake(100L, manager);
+        assertEquals("COUNTING", st.getStatus());
+
+        assertThrows(BusinessException.class, () -> service.submitStocktake(100L, manager), "không gửi duyệt hai lần");
+    }
+
     // ---------------- Không xử lý chênh lệch ----------------
 
     private Stocktake countingWithSkippedLine(String reason) {

@@ -203,6 +203,34 @@ public class StocktakeService {
         return toResponse(saved);
     }
 
+    /**
+     * Phiếu lưu tạm (DRAFT) tạo trước khi có bước duyệt: gửi cho Manager duyệt như phiếu mới. Manager/Super Admin
+     * thì bắt đầu kiểm kê ngay. Không có thao tác này thì phiếu cũ không bao giờ tới được tay Manager.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public StocktakeResponse submitStocktake(Long id, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
+        Stocktake stocktake = stocktakeRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+        if (!StocktakeStatus.DRAFT.name().equals(stocktake.getStatus())) {
+            throw new BusinessException("Chỉ phiếu lưu tạm mới cần gửi duyệt (hiện tại: " + stocktake.getStatus() + ")");
+        }
+        assertNoOpenStocktake(stocktake.getWarehouseId());
+
+        if (isApprover(userPrincipal)) {
+            snapshotBookQuantities(stocktake);
+            stocktake.startCounting(userPrincipal.getId());
+        } else {
+            stocktake.submitForApproval();
+        }
+        Stocktake saved = stocktakeRepository.save(stocktake);
+        if (saved.isCounting()) {
+            notifyCountingStarted(saved);
+        } else {
+            notifyManagersForApproval(saved);
+        }
+        return toResponse(saved);
+    }
+
     /** Manager đồng ý: chốt số sổ sách theo tồn hiện tại và khóa kho. */
     @Transactional(rollbackFor = Exception.class)
     public StocktakeResponse approveStocktake(Long id, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {

@@ -26,6 +26,11 @@ export const postStocktake = (id) => {
   return axiosClient.post(`${STOCKTAKE_BASE}/${id}/post`);
 };
 
+// Phiếu lưu tạm cũ: gửi Manager duyệt
+export const submitStocktake = (id) => {
+  return axiosClient.post(`${STOCKTAKE_BASE}/${id}/submit`);
+};
+
 // Manager duyệt: bắt đầu kiểm kê và khóa kho
 export const approveStocktake = (id) => {
   return axiosClient.post(`${STOCKTAKE_BASE}/${id}/approve`);

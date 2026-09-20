@@ -15,7 +15,7 @@ import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue, formatDateOnly } from '../../utils/dateFormat';
-import { getAuthRoles, getAuthUserId } from '../../auth/session';
+import { getAuthRoles, getAuthUserId, hasPermission } from '../../auth/session';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import DateInput from '../../components/ui/DateInput/DateInput';
@@ -55,7 +55,9 @@ function StocktakeDetailPage() {
   const stocktakeStatus = formData.status || 'DRAFT';
   const isPendingApproval = stocktakeStatus === 'PENDING_APPROVAL';
   const isCounting = stocktakeStatus === 'COUNTING';
-  const canWorkOnCounts = isCounting || stocktakeStatus === 'DRAFT';
+  const canEditStocktake = hasPermission('stocktake:edit');
+  const canWorkOnCounts = (isCounting || stocktakeStatus === 'DRAFT') && canEditStocktake;
+  const canSubmitDraft = stocktakeStatus === 'DRAFT' && (hasPermission('stocktake:add') || canEditStocktake);
   const canCancelStocktake = (isPendingApproval || isCounting) && (isApprover || (isPendingApproval && formData.createdByCurrentUser));
 
   const [isSaved, setIsSaved] = useState(true);
@@ -533,6 +535,10 @@ function StocktakeDetailPage() {
     runStocktakeAction(() => stocktakeApi.cancelStocktake(id), 'Đã hủy phiếu kiểm kê');
   };
 
+  const handleSubmitStocktake = () => runStocktakeAction(
+    () => stocktakeApi.submitStocktake(id),
+    isApprover ? 'Đã bắt đầu kiểm kê, kho đang bị khóa' : 'Đã gửi yêu cầu kiểm kê, chờ Manager duyệt');
+
   const handleConfirmWaivers = () => runStocktakeAction(
     () => stocktakeApi.confirmWaivers(id), 'Đã xác nhận bỏ qua chênh lệch');
 
@@ -856,6 +862,11 @@ function StocktakeDetailPage() {
             <b>Phiếu bị Manager từ chối.</b> {formData.rejectReason ? `Lý do: ${formData.rejectReason}` : ''}
           </div>
         )}
+        {stocktakeStatus === 'DRAFT' && (
+          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', fontSize: 13 }}>
+            Phiếu lưu tạm <b>chưa được gửi cho Manager</b>. Bấm "{isApprover ? 'Bắt đầu kiểm kê' : 'Gửi Manager duyệt'}" để {isApprover ? 'khóa kho và bắt đầu kiểm kê' : 'Manager nhận thông báo và duyệt'}.
+          </div>
+        )}
         {isPendingApproval && (
           <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', fontSize: 13 }}>
             Yêu cầu kiểm kê đang chờ Manager duyệt. Kho chỉ bị khóa và thủ kho chỉ nhập được số đếm sau khi được duyệt.
@@ -1020,6 +1031,11 @@ function StocktakeDetailPage() {
               </>
             ) : (
               <>
+                {canSubmitDraft && (
+                  <button className={styles.btnViewPrimary} style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }} onClick={handleSubmitStocktake}>
+                    <i className="bi bi-send"></i> {isApprover ? 'Bắt đầu kiểm kê' : 'Gửi Manager duyệt'}
+                  </button>
+                )}
                 {isPendingApproval && isApprover && (
                   <>
                     <button className={styles.btnViewPrimary} style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }} onClick={handleApproveStocktake}>
