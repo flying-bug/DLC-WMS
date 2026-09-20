@@ -127,7 +127,7 @@ public class RepairWorkflowService {
                     notificationService.createNotification(
                             "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa bị từ chối duyệt",
                             "Kế toán đã từ chối lệnh sửa chữa " + repair.getRepairCode() + ". Lý do: " + note,
-                            "REPAIR_REJECTED", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                            "REPAIR_REJECTED", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
                     );
                 } else {
                     repair.moveToQuotation();
@@ -138,7 +138,7 @@ public class RepairWorkflowService {
                 notificationService.createNotification(
                         "ROLE_ACCOUNTANT", null, "Lệnh sửa chữa chờ duyệt",
                         "Lệnh sửa chữa " + repair.getRepairCode() + " đang chờ bạn duyệt xuất kho.",
-                        "REPAIR_APPROVAL", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                        "REPAIR_APPROVAL", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
                 );
             };
             case CONFIRMED -> (repair, note) -> {
@@ -297,21 +297,23 @@ public class RepairWorkflowService {
             notificationService.createNotification(
                     "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần xuất kho",
                     "Lệnh sửa chữa " + repair.getRepairCode() + " cần xuất kho linh kiện mới. Vui lòng ghi sổ phiếu xuất kho.",
-                    "REPAIR_INVENTORY", "EXPORT_DOCUMENT", exportDocId, "/warehouse-workspace/exports/" + exportDocId
+                    "REPAIR_INVENTORY", "EXPORT_DOCUMENT", exportDocId, "/warehouse-workspace/exports/" + exportDocId,
+                    resolveRepairWarehouseId(repair)
             );
         }
         if (importDocId != null) {
             notificationService.createNotification(
                     "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần nhập kho",
                     "Lệnh sửa chữa " + repair.getRepairCode() + " cần nhập kho thu hồi linh kiện phế liệu. Vui lòng ghi sổ phiếu nhập kho.",
-                    "REPAIR_INVENTORY", "IMPORT_DOCUMENT", importDocId, "/warehouse-workspace/imports/" + importDocId
+                    "REPAIR_INVENTORY", "IMPORT_DOCUMENT", importDocId, "/warehouse-workspace/imports/" + importDocId,
+                    resolveScrapWarehouseId()
             );
         }
 
         notificationService.createNotification(
                 "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa được duyệt",
                 "Lệnh sửa chữa " + repair.getRepairCode() + " đã được kế toán duyệt.",
-                "REPAIR_CONFIRMED", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                "REPAIR_CONFIRMED", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
         );
 
         // REMOVE-only repairs do not need an export before the technician starts.
@@ -360,12 +362,12 @@ public class RepairWorkflowService {
             notificationService.createNotification(
                 "ROLE_ACCOUNTANT", null, "Hoàn thành lệnh sửa chữa",
                 "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành, phát sinh phí. Vui lòng kiểm tra công nợ.",
-                "REPAIR_DONE", "REPAIR", repair.getId(), "/repairs/" + repair.getId()
+                "REPAIR_DONE", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
             );
             notificationService.createNotification(
                 "ROLE_CASHIER_CONTROLLER", null, "Có phiếu thu sửa chữa mới",
                 "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành. Vui lòng thu tiền khách hàng.",
-                "REPAIR_PAYMENT", "RECEIPT", payment.getId(), "/cashier-workspace?tab=requests"
+                "REPAIR_PAYMENT", "RECEIPT", payment.getId(), "/cashier-workspace?tab=requests", null
             );
         }
     }

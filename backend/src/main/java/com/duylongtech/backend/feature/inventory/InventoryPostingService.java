@@ -43,6 +43,7 @@ import com.duylongtech.backend.feature.product.Product;
 import com.duylongtech.backend.feature.product.ProductRepository;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
 import com.duylongtech.backend.feature.product.SerialNumber;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
 import com.duylongtech.backend.feature.product.UnitRepository;
@@ -490,9 +491,9 @@ public class InventoryPostingService {
                 String linkPath = (isImport ? "/import-slips/" : "/export-slips/") + savedDoc.getId() + "/edit";
 
                 appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
                 appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
-                        "DISCREPANCY", refType, savedDoc.getId(), linkPath);
+                        "DISCREPANCY", refType, savedDoc.getId(), linkPath, savedDoc.getWarehouseId());
             } catch (Exception e) {
                 // Log warning but do not fail the transaction
             }
@@ -611,13 +612,8 @@ public class InventoryPostingService {
                     .orElse(null);
             if (po != null && !DocumentStatus.POSTED.name().equals(po.getStatus()) && !DocumentStatus.CANCELLED.name().equals(po.getStatus())
                     && !Boolean.TRUE.equals(po.getIsShortClosed())) {
-                boolean fullyImported = !po.getLines().isEmpty() && po.getLines().stream().allMatch(l -> {
-                    BigDecimal imported = inventoryDocumentLineRepository
-                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), l.getVariantId());
-                    if (imported == null)
-                        imported = BigDecimal.ZERO;
-                    return l.getQuantity().subtract(imported).compareTo(BigDecimal.ZERO) <= 0;
-                });
+                boolean fullyImported = PurchaseOrderReceiving.of(po.getLines(),
+                        inventoryDocumentLineRepository.sumReceivedByPurchaseOrder(po.getId(), null)).isFullyPosted();
                 if (fullyImported) {
                     // Cập nhật trạng thái POSTED
                     po.markAsPosted();
