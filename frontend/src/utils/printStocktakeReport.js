@@ -1,4 +1,4 @@
-import { formatDateOnly } from './dateFormat';
+import { formatDateOnly, formatDateTime } from './dateFormat';
 
 export function printStocktakeReport(options = {}) {
   const {
@@ -9,6 +9,7 @@ export function printStocktakeReport(options = {}) {
     conclusion = '',
     lines = [],
     participants = [],
+    records = null,
     onError = null,
   } = options;
 
@@ -92,10 +93,23 @@ export function printStocktakeReport(options = {}) {
         <td style="text-align: right;">${bookQty.toLocaleString('vi-VN')}</td>
         <td style="text-align: right; font-weight: 600;">${countQty.toLocaleString('vi-VN')}</td>
         <td style="text-align: right; font-weight: 600; color: ${diffColor};">${diffText}</td>
-        <td>${escapeHtml(line.action || line.note || '')}</td>
+        <td>${escapeHtml(line.action || line.note || '')}${line.skipReason && Number(line.diffQty || 0) !== 0 && line.action === 'Không xử lý' ? `<div style="font-size: 11px; color: var(--wms-text-muted);">Lý do: ${escapeHtml(line.skipReason)}</div>` : ''}</td>
       </tr>
     `;
   });
+
+  // Ghi nhận xử lý trên hệ thống: người tạo, người duyệt kiểm kê, người xác nhận bỏ qua chênh lệch
+  let recordsHtml = '';
+  if (records) {
+    const fmt = (name, at) => `${escapeHtml(name || '—')}${at ? ` — ${escapeHtml(formatDateTime(at))}` : ''}`;
+    const rows = [];
+    if (records.createdByName || records.createdAt) rows.push(`<div><strong>Người lập phiếu:</strong> ${fmt(records.createdByName, records.createdAt)}</div>`);
+    if (records.approvedByName || records.approvedAt) rows.push(`<div><strong>${records.rejected ? 'Người từ chối kiểm kê' : 'Người duyệt kiểm kê'}:</strong> ${fmt(records.approvedByName, records.approvedAt)}</div>`);
+    if (records.waiverConfirmedByName || records.waiverConfirmedAt) rows.push(`<div><strong>Người xác nhận bỏ qua chênh lệch:</strong> ${fmt(records.waiverConfirmedByName, records.waiverConfirmedAt)}</div>`);
+    if (rows.length > 0) {
+      recordsHtml = `<div class="summary-box" style="border-top: 1px dashed #999; padding-top: 8px;"><strong>Ghi nhận trên hệ thống</strong>${rows.join('')}</div>`;
+    }
+  }
 
   const totalDiffText = totalDiff > 0 ? `+${totalDiff.toLocaleString('vi-VN')}` : totalDiff.toLocaleString('vi-VN');
 
@@ -269,6 +283,8 @@ export function printStocktakeReport(options = {}) {
       </table>
 
       ${conclusion ? `<div class="summary-box"><strong>Kết luận ban kiểm kê:</strong> ${escapeHtml(conclusion)}</div>` : ''}
+
+      ${recordsHtml}
 
       <div class="signatures">
         <div class="sig-block">

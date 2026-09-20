@@ -2,6 +2,7 @@ package com.duylongtech.backend.feature.stocktake;
 
 import com.duylongtech.backend.enums.StocktakeStatus;
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.feature.audit.AuditLogService;
 import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalance;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
@@ -42,6 +43,7 @@ class StocktakeApprovalFlowTest {
     private InventoryBalanceRepository balanceRepository;
     private AppNotificationService notifications;
     private InventoryDocumentRepository documentRepository;
+    private AuditLogService auditLog;
     private StocktakeService service;
 
     private static UserDetailsImpl user(long id, String... authorities) {
@@ -59,6 +61,7 @@ class StocktakeApprovalFlowTest {
         balanceRepository = mock(InventoryBalanceRepository.class);
         notifications = mock(AppNotificationService.class);
         documentRepository = mock(InventoryDocumentRepository.class);
+        auditLog = mock(AuditLogService.class);
         StocktakeMapper mapper = mock(StocktakeMapper.class);
         when(mapper.toResponse(any())).thenAnswer(inv -> StocktakeResponse.builder()
                 .status(((Stocktake) inv.getArgument(0)).getStatus()).build());
@@ -76,7 +79,7 @@ class StocktakeApprovalFlowTest {
         service = new StocktakeService(stocktakeRepository, balanceRepository, mapper, codes,
                 mock(ProductVariantRepository.class), mock(WarehouseRepository.class),
                 mock(InventoryDocumentService.class), mock(SerialNumberRepository.class),
-                mock(UserRepository.class), notifications, documentRepository);
+                mock(UserRepository.class), notifications, documentRepository, auditLog);
     }
 
     private static StocktakeRequest request() {
@@ -102,6 +105,12 @@ class StocktakeApprovalFlowTest {
         return st;
     }
 
+    private static void withParticipant(Stocktake st) {
+        StocktakeParticipant p = new StocktakeParticipant();
+        p.initParticipant("Nguyễn Văn A", "Thủ kho", "");
+        st.addParticipant(p);
+    }
+
     private static StocktakeLine lineWithBook(int book, int count) {
         StocktakeLine line = new StocktakeLine();
         line.initLine(11L, BigDecimal.valueOf(book), BigDecimal.valueOf(count), BigDecimal.valueOf(count), null, null, null);
@@ -117,6 +126,41 @@ class StocktakeApprovalFlowTest {
         assertEquals("PENDING_APPROVAL", response.getStatus());
         verify(notifications).createNotification(eq("ROLE_MANAGER"), any(), anyString(), anyString(),
                 eq("STOCKTAKE_APPROVAL"), eq("STOCKTAKE"), eq(100L), anyString(), any());
+    }
+
+    @Test
+    void everyStepIsWrittenToTheAuditLogWithTheActor() {
+        Stocktake st = pendingStocktake();
+
+        service.approveStocktake(100L, manager);
+        verify(auditLog).logEvent(eq("u2"), eq("APPROVE_STOCKTAKE"), eq("Stocktake"), eq(100L), eq("SUCCESS"),
+                anyString(), any(), any());
+
+        Stocktake pending = new Stocktake();
+        pending.initOrder("KK000009", WAREHOUSE, "p", null, 1L);
+        pending.setId(101L);
+        pending.addLine(lineWithBook(10, 10));
+        pending.submitForApproval();
+        when(stocktakeRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(pending));
+        service.rejectStocktake(101L, "Chưa đến kỳ kiểm kê", manager);
+        verify(auditLog).logEvent(eq("u2"), eq("REJECT_STOCKTAKE"), eq("Stocktake"), eq(101L), eq("SUCCESS"),
+                org.mockito.ArgumentMatchers.contains("Chưa đến kỳ kiểm kê"), any(), any());
+
+        service.createStocktake(request(), accountant);
+        verify(auditLog).logEvent(eq("u1"), eq("CREATE_STOCKTAKE"), eq("Stocktake"), any(), eq("SUCCESS"),
+                anyString(), any(), any());
+    }
+
+    @Test
+    void confirmingASkipIsAuditedWithTheReasons() {
+        countingWithSkippedLine("Hao hụt trong định mức");
+
+        service.confirmWaivers(100L, accountant);
+
+        verify(auditLog).logEvent(eq("u1"), eq("CONFIRM_STOCKTAKE_WAIVER"), eq("Stocktake"), eq(100L), eq("SUCCESS"),
+                org.mockito.ArgumentMatchers.contains("Hao hụt trong định mức"), any(), any());
+        verify(auditLog).logEvent(eq("u1"), eq("COMPLETE_STOCKTAKE"), eq("Stocktake"), eq(100L), eq("SUCCESS"),
+                anyString(), any(), any());
     }
 
     @Test
@@ -265,6 +309,7 @@ class StocktakeApprovalFlowTest {
         st.initOrder("KK000001", WAREHOUSE, "p", null, 1L);
         st.setId(100L);
         st.addLine(lineWithBook(12, 11));
+        withParticipant(st);
         st.startCounting(2L);
         when(stocktakeRepository.findByIdWithDetails(100L)).thenReturn(Optional.of(st));
 
@@ -314,6 +359,27 @@ class StocktakeApprovalFlowTest {
         assertThrows(BusinessException.class, () -> service.submitStocktake(100L, manager), "không gửi duyệt hai lần");
     }
 
+    @Test
+    void cannotCompleteWithoutAnyRecordedParticipant() {
+        Stocktake st = new Stocktake();
+        st.initOrder("KK000001", WAREHOUSE, "p", null, 1L);
+        st.setId(100L);
+        st.addLine(lineWithBook(10, 10));
+        st.startCounting(2L);
+        when(stocktakeRepository.findByIdWithDetails(100L)).thenReturn(Optional.of(st));
+
+        assertThrows(BusinessException.class, () -> service.postStocktake(100L, keeper), "chưa có thành viên tham gia");
+
+        StocktakeParticipant blank = new StocktakeParticipant();
+        blank.initParticipant("  ", "Thủ kho", "");
+        st.addParticipant(blank);
+        assertThrows(BusinessException.class, () -> service.postStocktake(100L, keeper), "dòng trống không tính");
+
+        withParticipant(st);
+        service.postStocktake(100L, keeper);
+        assertEquals("POSTED", st.getStatus());
+    }
+
     // ---------------- Không xử lý chênh lệch ----------------
 
     private Stocktake countingWithSkippedLine(String reason) {
@@ -324,6 +390,7 @@ class StocktakeApprovalFlowTest {
         line.initLine(11L, new BigDecimal("12"), new BigDecimal("11"), new BigDecimal("11"), null, null, "Không xử lý");
         line.updateSkipReason(reason);
         st.addLine(line);
+        withParticipant(st);
         st.startCounting(2L);
         when(stocktakeRepository.findByIdWithDetails(100L)).thenReturn(Optional.of(st));
         when(stocktakeRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(st));
@@ -448,7 +515,7 @@ class StocktakeApprovalFlowTest {
     void requestingConfirmationNotifiesManagersAndAccountants() {
         countingWithSkippedLine("Hao hụt trong định mức");
 
-        service.requestWaiverConfirmation(100L);
+        service.requestWaiverConfirmation(100L, keeper);
 
         verify(notifications).createNotification(eq("ROLE_MANAGER"), any(), anyString(), anyString(),
                 eq("STOCKTAKE_WAIVER"), eq("STOCKTAKE"), eq(100L), anyString(), any());

@@ -30,6 +30,13 @@ public class StocktakeResponse {
     private String rejectReason;
     private Long waiverConfirmedBy;
     private Long lastCountedBy;
+    // Họ tên người thực hiện từng bước (để hiện lịch sử xử lý và in biên bản)
+    private String createdByName;
+    private String approvedByName;
+    private String waiverConfirmedByName;
+    private String lastCountedByName;
+    /** Số thành viên tham gia có họ tên; cần tối thiểu Stocktake.MIN_PARTICIPANTS để hoàn thành. */
+    private long participantCount;
     /** Còn hàng thừa/thiếu (không tính dòng bỏ qua) cần phiếu nhập/xuất điều chỉnh, và phiếu đó đã ghi sổ chưa. */
     private boolean needsImportAdjustment;
     private boolean needsExportAdjustment;

@@ -13,8 +13,8 @@ import Modal from '../../components/ui/Modal/Modal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { printImportSlip } from '../../utils/printImportSlip';
-import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue, formatDateOnly } from '../../utils/dateFormat';
-import { getAuthRoles, getAuthUserId, hasPermission } from '../../auth/session';
+import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue, formatDateOnly, formatDateTime } from '../../utils/dateFormat';
+import { getAuthRoles, getAuthUserId, getAuthFullName, hasPermission } from '../../auth/session';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import DateInput from '../../components/ui/DateInput/DateInput';
@@ -94,6 +94,13 @@ function StocktakeDetailPage() {
           skippedDiffCount: data.skippedDiffCount || 0,
           waiverConfirmed: Boolean(data.waiverConfirmed),
           lastCountedBy: data.lastCountedBy,
+          createdAtRaw: data.createdAt,
+          createdByName: data.createdByName,
+          approvedByName: data.approvedByName,
+          approvedAt: data.approvedAt,
+          waiverConfirmedByName: data.waiverConfirmedByName,
+          waiverConfirmedAt: data.waiverConfirmedAt,
+          lastCountedByName: data.lastCountedByName,
           needsImportAdjustment: Boolean(data.needsImportAdjustment),
           needsExportAdjustment: Boolean(data.needsExportAdjustment),
           importAdjustmentPosted: Boolean(data.importAdjustmentPosted),
@@ -357,6 +364,15 @@ function StocktakeDetailPage() {
       conclusion: formData.conclusion,
       lines,
       participants,
+      records: {
+        createdByName: formData.createdByName,
+        createdAt: formData.createdAtRaw,
+        approvedByName: formData.approvedByName,
+        approvedAt: formData.approvedAt,
+        rejected: stocktakeStatus === 'REJECTED',
+        waiverConfirmedByName: formData.waiverConfirmedByName,
+        waiverConfirmedAt: formData.waiverConfirmedAt
+      },
       onError: (msg) => showToast('error', msg)
     });
   };
@@ -556,6 +572,17 @@ function StocktakeDetailPage() {
   const finishWith = async (action, successMessage) => {
     setShowFinishModal(false);
     await runStocktakeAction(action, successMessage);
+  };
+
+  const handleAddMeAsParticipant = () => {
+    const name = getAuthFullName();
+    if (!name) return;
+    if (participants.some(p => (p.name || '').trim().toLowerCase() === name.trim().toLowerCase())) return;
+    const title = userRoles.some(r => r.includes('SUPER_ADMIN') || r.includes('MANAGER')) ? 'Quản lý'
+      : userRoles.some(r => r.includes('ACCOUNTANT')) ? 'Kế toán'
+        : userRoles.some(r => r.includes('WAREHOUSE')) ? 'Thủ kho' : '';
+    const nonEmpty = participants.filter(p => (p.name || '').trim() || (p.title || '').trim() || (p.represent || '').trim());
+    setParticipants([...nonEmpty, { name, title, represent: '' }]);
   };
 
   const handleSubmitStocktake = () => runStocktakeAction(
@@ -856,32 +883,61 @@ function StocktakeDetailPage() {
         </div>
 
         {stocktakeStatus === 'REJECTED' && (
-          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: 13 }}>
+          <div className={`${styles.noteBox} ${styles.noteDanger}`}>
             <b>Phiếu bị Manager từ chối.</b> {formData.rejectReason ? `Lý do: ${formData.rejectReason}` : ''}
           </div>
         )}
         {stocktakeStatus === 'DRAFT' && (
-          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', fontSize: 13 }}>
+          <div className={`${styles.noteBox} ${styles.noteWarning}`}>
             Phiếu lưu tạm <b>chưa được gửi cho Manager</b>. Bấm "{isApprover ? 'Bắt đầu kiểm kê' : 'Gửi Manager duyệt'}" để {isApprover ? 'khóa kho và bắt đầu kiểm kê' : 'Manager nhận thông báo và duyệt'}.
           </div>
         )}
         {isPendingApproval && (
-          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', fontSize: 13 }}>
+          <div className={`${styles.noteBox} ${styles.noteWarning}`}>
             Yêu cầu kiểm kê đang chờ Manager duyệt. Kho chỉ bị khóa và thủ kho chỉ nhập được số đếm sau khi được duyệt.
           </div>
         )}
         {isCounting && formData.skippedDiffCount > 0 && (
-          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: formData.waiverConfirmed ? '#f0fdf4' : '#fffbeb', border: `1px solid ${formData.waiverConfirmed ? '#86efac' : '#fcd34d'}`, color: formData.waiverConfirmed ? '#166534' : '#92400e', fontSize: 13 }}>
+          <div className={`${styles.noteBox} ${formData.waiverConfirmed ? styles.noteSuccess : styles.noteWarning}`}>
             {formData.waiverConfirmed
               ? `${formData.skippedDiffCount} dòng chênh lệch bỏ qua đã được Manager/Kế toán xác nhận.`
               : `${formData.skippedDiffCount} dòng chênh lệch chọn "Không xử lý" đang chờ Manager/Kế toán xác nhận (không lập phiếu điều chỉnh cho các dòng này).`}
           </div>
         )}
         {isCounting && (
-          <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 8, background: '#eff6ff', border: '1px solid #93c5fd', color: '#1e40af', fontSize: 13 }}>
+          <div className={`${styles.noteBox} ${styles.noteInfo}`}>
             Kho đang được kiểm kê: không thể ghi sổ nhập/xuất/chuyển kho cho tới khi phiếu này hoàn thành hoặc bị hủy. Số sổ sách đã được chốt lúc duyệt.
           </div>
         )}
+
+        <div className={styles.historyBox}>
+          <div className={styles.historyTitle}>Lịch sử xử lý</div>
+          <div className={styles.historyRow}>
+            <span className={styles.historyLabel}>Tạo phiếu</span>
+            <span>{formData.createdByName || '—'}{formData.createdAtRaw ? ` · ${formatDateTime(formData.createdAtRaw)}` : ''}</span>
+          </div>
+          {formData.approvedAt && (
+            <div className={styles.historyRow}>
+              <span className={styles.historyLabel}>{stocktakeStatus === 'REJECTED' ? 'Từ chối kiểm kê' : 'Duyệt kiểm kê (khóa kho)'}</span>
+              <span>
+                {formData.approvedByName || '—'} · {formatDateTime(formData.approvedAt)}
+                {stocktakeStatus === 'REJECTED' && formData.rejectReason ? <span className={styles.historyReason}> — lý do: {formData.rejectReason}</span> : null}
+              </span>
+            </div>
+          )}
+          {formData.lastCountedByName && (
+            <div className={styles.historyRow}>
+              <span className={styles.historyLabel}>Người nhập số đếm gần nhất</span>
+              <span>{formData.lastCountedByName}</span>
+            </div>
+          )}
+          {formData.waiverConfirmedAt && formData.skippedDiffCount > 0 && (
+            <div className={styles.historyRow}>
+              <span className={styles.historyLabel}>Xác nhận bỏ qua chênh lệch</span>
+              <span>{formData.waiverConfirmedByName || '—'} · {formatDateTime(formData.waiverConfirmedAt)} ({formData.skippedDiffCount} dòng)</span>
+            </div>
+          )}
+        </div>
 
         {/* Master Data Section */}
         <div className={styles.masterForm}>
@@ -941,6 +997,13 @@ function StocktakeDetailPage() {
                     onClick={() => setParticipants([...participants, { name: '', title: '', represent: '' }])}
                   >
                     <i className="bi bi-plus"></i> Thêm thành viên
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btnOutline}
+                    onClick={handleAddMeAsParticipant}
+                  >
+                    <i className="bi bi-person-plus"></i> Thêm tôi
                   </button>
                   <button
                     type="button"
@@ -1412,82 +1475,89 @@ function StocktakeDetailPage() {
         const iCountedLast = !isSuperAdminUser && String(formData.lastCountedBy || '') === String(getAuthUserId() || '');
         const canConfirmNow = isAccountantOrAdmin && !iCountedLast;
         const waitingConfirm = skippedLines.length > 0 && !formData.waiverConfirmed;
-        const box = (bg, border, color) => ({ margin: '14px 0 0', padding: '10px 14px', borderRadius: 8, background: bg, border: `1px solid ${border}`, color, fontSize: 13, lineHeight: 1.5 });
-        const primary = { padding: '8px 16px', borderRadius: 6, border: '1px solid #10b981', background: '#10b981', color: '#fff', fontWeight: 600, cursor: 'pointer' };
-        const outline = { padding: '8px 16px', borderRadius: 6, border: '1px solid var(--wms-border-strong)', background: '#fff', color: 'var(--wms-text-body)', fontWeight: 600, cursor: 'pointer' };
+        const participantCount = participants.filter(p => (p.name || '').trim()).length;
+        // Tên hàng hóa đôi khi là "X (X)" (tên sản phẩm lặp lại tên biến thể): chỉ hiện một lần
+        const shortName = (name) => String(name || '').replace(/^(.*) \(\1\)$/, '$1');
+        const close = () => setShowFinishModal(false);
+        const note = (kind, content) => <div className={`${styles.noteBox} ${styles.finishNote} ${styles[kind]}`}>{content}</div>;
+        const actions = (...buttons) => <div className={styles.finishActions}>{buttons}</div>;
+        const btnClose = <button key="close" type="button" className={`${styles.btnOutline} ${styles.btnFinishOutline}`} onClick={close}>Đóng</button>;
+        const btnPrimary = (label, onClick) => <button key={label} type="button" className={styles.btnFinishPrimary} onClick={onClick}>{label}</button>;
+        const btnSecondary = (label, onClick) => <button key={label} type="button" className={`${styles.btnOutline} ${styles.btnFinishOutline}`} onClick={onClick}>{label}</button>;
+        const completeAction = () => finishWith(() => stocktakeApi.postStocktake(id), 'Đã hoàn thành kiểm kê, kho được mở khóa');
 
         let body;
-        if (diffLines.length === 0) {
+        if (participantCount < 1) {
           body = (
             <>
-              <div style={box('#f0fdf4', '#86efac', '#166534')}>Tất cả {lines.length} dòng đều khớp sổ sách. Không cần phiếu điều chỉnh.</div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
-                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.postStocktake(id), 'Đã hoàn thành kiểm kê, kho được mở khóa')}>Hoàn thành kiểm kê</button>
-              </div>
+              {note('noteWarning', <>Chưa có <b>thành viên tham gia kiểm kê</b>. Cần ghi nhận ít nhất 1 thành viên (họ tên) để lập biên bản trước khi hoàn thành.</>)}
+              {actions(btnClose, canEditStocktake && btnPrimary('Thêm thành viên', () => {
+                close();
+                setIsParticipantsExpanded(true);
+                setIsSaved(false);
+                if (participants.length === 0) setParticipants([{ name: '', title: '', represent: '' }]);
+              }))}
+            </>
+          );
+        } else if (diffLines.length === 0) {
+          body = (
+            <>
+              {note('noteSuccess', <>Tất cả {lines.length} dòng đều khớp sổ sách. Không cần phiếu điều chỉnh.</>)}
+              {actions(btnClose, btnPrimary('Hoàn thành kiểm kê', completeAction))}
             </>
           );
         } else if (importPending || exportPending) {
           body = (
             <>
-              <div style={box('#fef2f2', '#fca5a5', '#991b1b')}>
-                <b>Chưa thể hoàn thành:</b> còn {adjustLines.length} dòng lệch cần xử lý. Chọn một trong hai cách cho từng dòng:
-                <ul style={{ margin: '6px 0 0 18px' }}>
-                  <li>Lập phiếu {importPending && exportPending ? 'nhập/xuất' : importPending ? 'nhập' : 'xuất'} điều chỉnh và <b>ghi sổ</b> phiếu đó, hoặc</li>
-                  <li>Bấm Đóng → Sửa → đổi cột "Xử lý" sang <b>"Không xử lý"</b> và nhập lý do (cần Manager/Kế toán khác xác nhận).</li>
-                </ul>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
-                {importPending && <button type="button" style={outline} onClick={() => { setShowFinishModal(false); handleCreateImportSlip(); }}>Lập phiếu nhập</button>}
-                {exportPending && <button type="button" style={outline} onClick={() => { setShowFinishModal(false); handleCreateExportSlip(); }}>Lập phiếu xuất</button>}
-              </div>
+              {note('noteDanger', (
+                <>
+                  <b>Chưa thể hoàn thành:</b> còn {adjustLines.length} dòng lệch cần xử lý. Chọn một trong hai cách cho từng dòng:
+                  <ul style={{ margin: '6px 0 0 18px' }}>
+                    <li>Lập phiếu {importPending && exportPending ? 'nhập/xuất' : importPending ? 'nhập' : 'xuất'} điều chỉnh và <b>ghi sổ</b> phiếu đó, hoặc</li>
+                    <li>Bấm Đóng → Sửa → đổi cột "Xử lý" sang <b>"Không xử lý"</b> và nhập lý do (cần Manager/Kế toán khác xác nhận).</li>
+                  </ul>
+                </>
+              ))}
+              {actions(
+                btnClose,
+                importPending && btnSecondary('Lập phiếu nhập', () => { close(); handleCreateImportSlip(); }),
+                exportPending && btnSecondary('Lập phiếu xuất', () => { close(); handleCreateExportSlip(); })
+              )}
             </>
           );
         } else if (waitingConfirm && stocktakeStatus !== 'COUNTING') {
           body = (
             <>
-              <div style={box('#fffbeb', '#fcd34d', '#92400e')}>Phiếu chưa được duyệt kiểm kê. Hãy bấm "Gửi Manager duyệt" trước khi hoàn thành.</div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
-              </div>
+              {note('noteWarning', <>Phiếu chưa được duyệt kiểm kê. Hãy bấm "Gửi Manager duyệt" trước khi hoàn thành.</>)}
+              {actions(btnClose)}
             </>
           );
         } else if (waitingConfirm && canConfirmNow) {
           body = (
             <>
-              <div style={box('#eff6ff', '#93c5fd', '#1e40af')}>
-                Bạn đang <b>xác nhận bỏ qua {skippedLines.length} dòng chênh lệch</b> ở trên (không lập phiếu điều chỉnh, số sổ sách giữ nguyên). Lý do đã được ghi lại kèm tên bạn.
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
-                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.confirmWaivers(id), 'Đã xác nhận bỏ qua chênh lệch')}>Xác nhận bỏ qua &amp; Hoàn thành</button>
-              </div>
+              {note('noteInfo', <>Bạn đang <b>xác nhận bỏ qua {skippedLines.length} dòng chênh lệch</b> ở trên (không lập phiếu điều chỉnh, số sổ sách giữ nguyên). Lý do đã được ghi lại kèm tên bạn.</>)}
+              {actions(btnClose, btnPrimary('Xác nhận bỏ qua & Hoàn thành', () => finishWith(() => stocktakeApi.confirmWaivers(id), 'Đã xác nhận bỏ qua chênh lệch')))}
             </>
           );
         } else if (waitingConfirm) {
           body = (
             <>
-              <div style={box('#fffbeb', '#fcd34d', '#92400e')}>
-                {iCountedLast
-                  ? 'Bạn là người vừa nhập số đếm / chọn "Không xử lý" nên không tự xác nhận được. '
-                  : 'Cần người có thẩm quyền xác nhận. '}
-                Gửi yêu cầu để <b>Manager hoặc Kế toán khác</b> xem lý do và xác nhận.
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
-                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.requestWaiverConfirmation(id), 'Đã gửi yêu cầu xác nhận tới Manager và Kế toán')}>Gửi yêu cầu xác nhận</button>
-              </div>
+              {note('noteWarning', (
+                <>
+                  {iCountedLast
+                    ? 'Bạn là người vừa nhập số đếm / chọn "Không xử lý" nên không tự xác nhận được. '
+                    : 'Cần người có thẩm quyền xác nhận. '}
+                  Gửi yêu cầu để <b>Manager hoặc Kế toán khác</b> xem lý do và xác nhận.
+                </>
+              ))}
+              {actions(btnClose, btnPrimary('Gửi yêu cầu xác nhận', () => finishWith(() => stocktakeApi.requestWaiverConfirmation(id), 'Đã gửi yêu cầu xác nhận tới Manager và Kế toán')))}
             </>
           );
         } else {
           body = (
             <>
-              <div style={box('#f0fdf4', '#86efac', '#166534')}>Mọi dòng lệch đã được xử lý{skippedLines.length > 0 ? ' (các dòng bỏ qua đã được xác nhận)' : ''}. Sẵn sàng hoàn thành.</div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                <button type="button" style={outline} onClick={() => setShowFinishModal(false)}>Đóng</button>
-                <button type="button" style={primary} onClick={() => finishWith(() => stocktakeApi.postStocktake(id), 'Đã hoàn thành kiểm kê, kho được mở khóa')}>Hoàn thành kiểm kê</button>
-              </div>
+              {note('noteSuccess', <>Mọi dòng lệch đã được xử lý{skippedLines.length > 0 ? ' (các dòng bỏ qua đã được xác nhận)' : ''}. Sẵn sàng hoàn thành.</>)}
+              {actions(btnClose, btnPrimary('Hoàn thành kiểm kê', completeAction))}
             </>
           );
         }
@@ -1495,34 +1565,37 @@ function StocktakeDetailPage() {
         return (
           <Modal
             isOpen
-            onClose={() => setShowFinishModal(false)}
-            dialogStyle={{ maxWidth: '760px', width: '95%', padding: '20px 24px', borderRadius: '8px' }}
+            onClose={close}
+            dialogStyle={{ maxWidth: '820px', width: '95%', padding: '20px 24px', borderRadius: '8px' }}
           >
-            <h3 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 600 }}>Kết thúc kiểm kê {formData.code}</h3>
-            <div style={{ fontSize: 13, color: 'var(--wms-text-muted)', marginBottom: 12 }}>
+            <h3 className={styles.finishTitle}>Kết thúc kiểm kê {formData.code}</h3>
+            <div className={styles.finishSub}>
               {lines.length} dòng: {matchedCount} khớp, {diffLines.length} lệch
               {skippedLines.length > 0 ? ` (${skippedLines.length} dòng chọn "Không xử lý")` : ''}
+              {` · ${participantCount} thành viên tham gia`}
             </div>
             {diffLines.length > 0 && (
-              <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--wms-border-base)', borderRadius: 6 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <div className={styles.finishTableWrap}>
+                <table className={styles.finishTable}>
                   <thead>
-                    <tr style={{ background: 'var(--wms-bg-subtle)', textAlign: 'left' }}>
-                      <th style={{ padding: '6px 10px' }}>Hàng hóa</th>
-                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Sổ</th>
-                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Thực tế</th>
-                      <th style={{ padding: '6px 10px', textAlign: 'right' }}>Lệch</th>
-                      <th style={{ padding: '6px 10px' }}>Cách xử lý</th>
+                    <tr>
+                      <th>Hàng hóa</th>
+                      <th className={styles.finishNum}>Sổ</th>
+                      <th className={styles.finishNum}>Thực tế</th>
+                      <th className={styles.finishNum}>Lệch</th>
+                      <th>Cách xử lý</th>
                     </tr>
                   </thead>
                   <tbody>
                     {diffLines.map(l => (
-                      <tr key={l.id || l.variantId} style={{ borderTop: '1px solid var(--wms-border-base)' }}>
-                        <td style={{ padding: '6px 10px' }}>{l.sku} - {l.itemName}</td>
-                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>{l.bookQty}</td>
-                        <td style={{ padding: '6px 10px', textAlign: 'right' }}>{l.countQty}</td>
-                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 700, color: Number(l.diffQty) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Number(l.diffQty) > 0 ? `+${l.diffQty}` : l.diffQty}</td>
-                        <td style={{ padding: '6px 10px' }}>
+                      <tr key={l.id || l.variantId}>
+                        <td className={styles.finishName}>{l.sku} - {shortName(l.itemName)}</td>
+                        <td className={styles.finishNum}>{l.bookQty}</td>
+                        <td className={styles.finishNum}>{l.countQty}</td>
+                        <td className={`${styles.finishNum} ${Number(l.diffQty) > 0 ? styles.finishDiffPlus : styles.finishDiffMinus}`}>
+                          {Number(l.diffQty) > 0 ? `+${l.diffQty}` : l.diffQty}
+                        </td>
+                        <td className={styles.finishHandling}>
                           {isSkippedDiff(l)
                             ? <span><b>Không xử lý</b> - lý do: {l.skipReason || '(chưa nhập)'}{formData.waiverConfirmed ? ' ✓ đã xác nhận' : ''}</span>
                             : <span>Lập phiếu {Number(l.diffQty) > 0 ? 'nhập' : 'xuất'} điều chỉnh</span>}

@@ -107,6 +107,17 @@ public class Stocktake {
         if (stocktakeDate != null) this.stocktakeDate = stocktakeDate;
     }
 
+    /** Số thành viên tối thiểu (có họ tên) phải ghi nhận trước khi hoàn thành kiểm kê. */
+    public static final int MIN_PARTICIPANTS = 1;
+
+    public long participantCount() {
+        return participants.stream().filter(p -> p.getFullName() != null && !p.getFullName().isBlank()).count();
+    }
+
+    public boolean hasEnoughParticipants() {
+        return participantCount() >= MIN_PARTICIPANTS;
+    }
+
     /** Các dòng có chênh lệch nhưng được chọn "Không xử lý". */
     public List<StocktakeLine> skippedDiffLines() {
         return lines.stream().filter(StocktakeLine::isSkippedDiff).toList();

@@ -70,6 +70,7 @@ public class StocktakeService {
     private final com.duylongtech.backend.feature.auth.UserRepository userRepository;
     private final AppNotificationService appNotificationService;
     private final com.duylongtech.backend.feature.inventory.InventoryDocumentRepository inventoryDocumentRepository;
+    private final com.duylongtech.backend.feature.audit.AuditLogService auditLogService;
 
     @Autowired(required = false)
     private UserWarehouseRoleRepository userWarehouseRoleRepository;
@@ -197,8 +198,10 @@ public class StocktakeService {
 
         if (autoApprove) {
             notifyCountingStarted(saved);
+            audit(userPrincipal, "START_STOCKTAKE", saved, "Tạo và bắt đầu kiểm kê " + saved.getStocktakeCode() + " - kho bị khóa nhập/xuất/chuyển");
         } else {
             notifyManagersForApproval(saved);
+            audit(userPrincipal, "CREATE_STOCKTAKE", saved, "Tạo phiếu kiểm kê " + saved.getStocktakeCode() + " - chờ Manager duyệt");
         }
         return toResponse(saved);
     }
@@ -225,8 +228,10 @@ public class StocktakeService {
         Stocktake saved = stocktakeRepository.save(stocktake);
         if (saved.isCounting()) {
             notifyCountingStarted(saved);
+            audit(userPrincipal, "START_STOCKTAKE", saved, "Bắt đầu kiểm kê " + saved.getStocktakeCode() + " (phiếu lưu tạm) - kho bị khóa nhập/xuất/chuyển");
         } else {
             notifyManagersForApproval(saved);
+            audit(userPrincipal, "SUBMIT_STOCKTAKE", saved, "Gửi duyệt phiếu kiểm kê " + saved.getStocktakeCode());
         }
         return toResponse(saved);
     }
@@ -244,6 +249,7 @@ public class StocktakeService {
 
         appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_APPROVAL, NOTIFICATION_DECIDED);
         notifyCountingStarted(saved);
+        audit(userPrincipal, "APPROVE_STOCKTAKE", saved, "Duyệt kiểm kê " + saved.getStocktakeCode() + " - kho bị khóa nhập/xuất/chuyển, số sổ sách được chốt");
         return toResponse(saved);
     }
 
@@ -263,6 +269,7 @@ public class StocktakeService {
         Stocktake saved = stocktakeRepository.save(stocktake);
 
         appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_APPROVAL, NOTIFICATION_DECIDED);
+        audit(userPrincipal, "REJECT_STOCKTAKE", saved, "Từ chối kiểm kê " + saved.getStocktakeCode() + ". Lý do: " + trimmed);
         if (saved.getCreatedBy() != null) {
             appNotificationService.createNotification(null, saved.getCreatedBy(),
                     "Phiếu kiểm kê " + saved.getStocktakeCode() + " bị từ chối",
@@ -297,6 +304,7 @@ public class StocktakeService {
         Stocktake saved = stocktakeRepository.save(stocktake);
 
         appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_APPROVAL, NOTIFICATION_DECIDED);
+        audit(userPrincipal, "CANCEL_STOCKTAKE", saved, "Hủy phiếu kiểm kê " + saved.getStocktakeCode() + (wasCounting ? " - kho được mở khóa" : ""));
         if (wasCounting && saved.getWarehouseId() != null) {
             appNotificationService.createNotification("ROLE_WAREHOUSE_CONTROLLER", null,
                     "Đã hủy kiểm kê " + saved.getStocktakeCode(),
@@ -407,7 +415,9 @@ public class StocktakeService {
         }
 
         stocktake.markAsPosted();
-        return toResponse(stocktakeRepository.save(stocktake));
+        Stocktake completed = stocktakeRepository.save(stocktake);
+        audit(userPrincipal, "COMPLETE_STOCKTAKE", completed, "Hoàn thành kiểm kê " + completed.getStocktakeCode() + " - kho được mở khóa");
+        return toResponse(completed);
     }
 
     private void validateRequest(StocktakeRequest req) {
@@ -472,6 +482,12 @@ public class StocktakeService {
         StocktakeResponse response = stocktakeMapper.toResponse(entity);
         if (response != null && entity.getLines() != null) {
             response.setSkippedDiffCount(entity.skippedDiffLines().size());
+            response.setParticipantCount(entity.participantCount());
+            java.util.Map<Long, String> names = userNames(entity.getCreatedBy(), entity.getApprovedBy(), entity.getWaiverConfirmedBy(), entity.getLastCountedBy());
+            response.setCreatedByName(names.get(entity.getCreatedBy()));
+            response.setApprovedByName(names.get(entity.getApprovedBy()));
+            response.setWaiverConfirmedByName(names.get(entity.getWaiverConfirmedBy()));
+            response.setLastCountedByName(names.get(entity.getLastCountedBy()));
             response.setWaiverConfirmed(entity.getWaiverConfirmedAt() != null && !entity.skippedDiffLines().isEmpty());
             response.setNeedsImportAdjustment(entity.requiresImportAdjustment());
             response.setNeedsExportAdjustment(entity.requiresExportAdjustment());
@@ -598,6 +614,9 @@ public class StocktakeService {
      * hoặc được chọn "Không xử lý" kèm lý do và được Manager/Kế toán xác nhận. Trả về null nếu đã sẵn sàng.
      */
     private String readinessProblem(Stocktake stocktake) {
+        if (!stocktake.hasEnoughParticipants()) {
+            return "Cần ghi nhận ít nhất " + Stocktake.MIN_PARTICIPANTS + " thành viên tham gia kiểm kê (họ tên) trước khi hoàn thành.";
+        }
         if (stocktake.requiresImportAdjustment() && !isPostedDocument(stocktake.getReferenceImportId())) {
             return "Còn hàng thừa: cần lập và ghi sổ phiếu nhập điều chỉnh (hoặc chọn \"Không xử lý\" kèm lý do) trước khi hoàn thành kiểm kê.";
         }
@@ -646,6 +665,34 @@ public class StocktakeService {
         }
     }
 
+    private void audit(com.duylongtech.backend.security.UserDetailsImpl principal, String action, Stocktake stocktake, String description) {
+        // logEvent không bao giờ ném lỗi ra ngoài (không làm hỏng nghiệp vụ chính)
+        auditLogService.logEvent(principal != null ? principal.getUsername() : null, action, "Stocktake",
+                stocktake.getId(), "SUCCESS", description, null, null);
+    }
+
+    /** "SKU lệch +2 (lý do); ..." - ghi vào Audit Log để tra cứu về sau. */
+    private String describeSkippedLines(Stocktake stocktake) {
+        return stocktake.skippedDiffLines().stream()
+                .map(l -> productVariantRepository.findById(l.getVariantId()).map(ProductVariant::getSku).orElse("#" + l.getVariantId())
+                        + " lệch " + (l.getDiffQty().signum() > 0 ? "+" : "") + l.getDiffQty().stripTrailingZeros().toPlainString()
+                        + " (" + l.getSkipReason() + ")")
+                .collect(Collectors.joining("; "));
+    }
+
+    private java.util.Map<Long, String> userNames(Long... ids) {
+        java.util.Set<Long> wanted = new java.util.LinkedHashSet<>();
+        for (Long id : ids) {
+            if (id != null) wanted.add(id);
+        }
+        java.util.Map<Long, String> names = new java.util.HashMap<>();
+        if (!wanted.isEmpty()) {
+            userRepository.findAllById(wanted).forEach(u ->
+                    names.put(u.getId(), u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : u.getUsername()));
+        }
+        return names;
+    }
+
     static boolean isWaiverApprover(com.duylongtech.backend.security.UserDetailsImpl principal) {
         return principal != null && principal.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_MANAGER".equals(a.getAuthority()) || "ROLE_SUPER_ADMIN".equals(a.getAuthority())
@@ -654,7 +701,7 @@ public class StocktakeService {
 
     /** Thủ kho báo cho Manager/Kế toán biết có dòng chênh lệch xin bỏ qua cần xác nhận. */
     @Transactional(rollbackFor = Exception.class)
-    public StocktakeResponse requestWaiverConfirmation(Long id) {
+    public StocktakeResponse requestWaiverConfirmation(Long id, com.duylongtech.backend.security.UserDetailsImpl principal) {
         Stocktake stocktake = stocktakeRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
         if (!stocktake.isCounting()) {
@@ -669,6 +716,7 @@ public class StocktakeService {
         }
         String message = "Phiếu " + stocktake.getStocktakeCode() + " có " + stocktake.skippedDiffLines().size()
                 + " dòng chênh lệch xin bỏ qua (không lập phiếu điều chỉnh). Vui lòng xem lý do và xác nhận.";
+        audit(principal, "REQUEST_STOCKTAKE_WAIVER", stocktake, "Gửi yêu cầu xác nhận bỏ qua chênh lệch - phiếu " + stocktake.getStocktakeCode() + ": " + describeSkippedLines(stocktake));
         for (String role : new String[] {"ROLE_MANAGER", "ROLE_ACCOUNTANT"}) {
             appNotificationService.createNotification(role, null, "Xác nhận bỏ qua chênh lệch " + stocktake.getStocktakeCode(),
                     message, NOTIFICATION_WAIVER, "STOCKTAKE", stocktake.getId(), "/stocktakes/" + stocktake.getId(), null);
@@ -705,6 +753,10 @@ public class StocktakeService {
         }
         Stocktake saved = stocktakeRepository.save(stocktake);
         appNotificationService.retypeNotifications("STOCKTAKE", saved.getId(), NOTIFICATION_WAIVER, NOTIFICATION_DECIDED);
+        audit(principal, "CONFIRM_STOCKTAKE_WAIVER", saved, "Xác nhận bỏ qua chênh lệch - phiếu " + saved.getStocktakeCode() + ": " + describeSkippedLines(saved));
+        if (saved.getStatus().equals(StocktakeStatus.POSTED.name())) {
+            audit(principal, "COMPLETE_STOCKTAKE", saved, "Hoàn thành kiểm kê " + saved.getStocktakeCode() + " - kho được mở khóa");
+        }
         return toResponse(saved);
     }
 

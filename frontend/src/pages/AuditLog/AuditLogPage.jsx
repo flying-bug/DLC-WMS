@@ -54,6 +54,7 @@ const MODULE_LABELS = {
     ExportSlip: 'Phiếu xuất kho',
     ImportSlip: 'Phiếu nhập kho',
     InventoryDocument: 'Chứng từ kho',
+    Stocktake: 'Kiểm kê',
     User: 'Người dùng',
     Role: 'Vai trò',
     Warehouse: 'Kho hàng',

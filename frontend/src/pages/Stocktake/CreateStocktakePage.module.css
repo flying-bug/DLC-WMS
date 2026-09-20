@@ -637,3 +637,33 @@
   gap: 12px;
 }
 
+/* ===== Hộp thoại kết thúc kiểm kê + ô thông báo trạng thái (dùng token màu hệ thống) ===== */
+.finishTitle { margin: 0 0 4px; font-size: 18px; font-weight: 600; color: var(--wms-text-title); }
+.finishSub { font-size: 13px; color: var(--wms-text-muted); margin-bottom: 12px; }
+.finishTableWrap { max-height: 260px; overflow: auto; border: 1px solid var(--wms-border-base); border-radius: 6px; }
+.finishTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.finishTable th { position: sticky; top: 0; background: var(--wms-bg-subtle); text-align: left; padding: 8px 10px; font-weight: 600; white-space: nowrap; }
+.finishTable td { padding: 8px 10px; border-top: 1px solid var(--wms-border-base); vertical-align: top; }
+.finishTable th.finishNum, .finishTable td.finishNum { text-align: right; white-space: nowrap; width: 1%; }
+.finishName { min-width: 220px; }
+.finishHandling { min-width: 190px; }
+.finishDiffPlus { color: var(--color-success-deep, #16a34a); font-weight: 700; }
+.finishDiffMinus { color: var(--wms-danger); font-weight: 700; }
+.finishActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.btnFinishPrimary { height: 34px; padding: 0 16px; border-radius: 4px; border: 1px solid #16a34a; background: #16a34a; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btnFinishPrimary:hover { background: var(--color-success-deep, #15803d); }
+.btnFinishOutline { height: 34px; padding: 0 16px; }
+
+.noteBox { margin: 0 0 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; border: 1px solid; }
+.finishNote { margin-top: 14px; }
+.noteSuccess { background: var(--color-success-bg-soft, #f0fdf4); border-color: var(--color-success-border-soft, #86efac); color: var(--color-success-deep, #166534); }
+.noteWarning { background: var(--color-warning-bg, #fffbeb); border-color: var(--color-warning-border, #fcd34d); color: var(--color-warning-dark, #92400e); }
+.noteDanger { background: var(--color-danger-bg-soft, #fef2f2); border-color: var(--color-danger-border-soft, #fca5a5); color: var(--color-danger-deep, #991b1b); }
+.noteInfo { background: var(--color-info-bg, #eff6ff); border-color: var(--color-info-border-soft, #bfdbfe); color: var(--color-info-hover, #1e40af); }
+
+/* ===== Lịch sử xử lý phiếu kiểm kê ===== */
+.historyBox { margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--wms-border-base); border-radius: 8px; background: #fff; font-size: 13px; }
+.historyTitle { font-weight: 600; color: var(--wms-text-title); margin-bottom: 6px; }
+.historyRow { display: flex; gap: 8px; padding: 2px 0; color: var(--wms-text-body); }
+.historyLabel { min-width: 230px; color: var(--wms-text-muted); }
+.historyReason { color: var(--wms-text-muted); }

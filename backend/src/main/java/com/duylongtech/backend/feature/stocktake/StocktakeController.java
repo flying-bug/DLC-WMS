@@ -171,10 +171,12 @@ public class StocktakeController {
 
     @PostMapping("/{id}/waivers/request")
     @PreAuthorize("hasAuthority('stocktake:edit')")
-    public ResponseEntity<ApiResponse<StocktakeResponse>> requestWaiverConfirmation(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<StocktakeResponse>> requestWaiverConfirmation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
         return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
                 .success(true)
-                .data(stocktakeService.requestWaiverConfirmation(id))
+                .data(stocktakeService.requestWaiverConfirmation(id, userPrincipal))
                 .userMessage("Đã gửi yêu cầu xác nhận tới Manager và Kế toán")
                 .build());
     }

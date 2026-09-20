@@ -481,8 +481,10 @@ public class InventoryDocumentService {
                     boolean importDone = !stocktake.requiresImportAdjustment() || stocktake.getReferenceImportId() != null;
                     boolean exportDone = !stocktake.requiresExportAdjustment() || stocktake.getReferenceExportId() != null;
 
-                    if (importDone && exportDone && !stocktake.hasUnconfirmedWaivers()) {
+                    if (importDone && exportDone && !stocktake.hasUnconfirmedWaivers() && stocktake.hasEnoughParticipants()) {
                         stocktake.markAsPosted();
+                        auditLogService.logEvent(null, "COMPLETE_STOCKTAKE", "Stocktake", stocktake.getId(), "SUCCESS",
+                                "Hoàn thành kiểm kê " + stocktake.getStocktakeCode() + " - các phiếu điều chỉnh đã ghi sổ, kho được mở khóa", null, null);
                     }
                 }
                 stocktakeRepository.save(stocktake);
