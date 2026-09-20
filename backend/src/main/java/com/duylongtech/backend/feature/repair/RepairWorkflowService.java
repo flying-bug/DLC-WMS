@@ -35,6 +35,9 @@ import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalance;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
+import com.duylongtech.backend.feature.inventory.InventoryDocument;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
 import com.duylongtech.backend.feature.inventory.RepairScrapLineRequest;
 import com.duylongtech.backend.feature.inventory.RepairStockOutLineRequest;
@@ -99,6 +102,7 @@ public class RepairWorkflowService {
     private final RepairLineRepository repairLineRepository;
     private final RepairFeeRepository repairFeeRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
+    private final InventoryDocumentRepository inventoryDocumentRepository;
     private final WarehouseRepository warehouseRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
@@ -137,9 +141,9 @@ public class RepairWorkflowService {
                         "REPAIR_APPROVAL", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
                 );
             };
-            case CONFIRMED -> (repair, note) -> { 
+            case CONFIRMED -> (repair, note) -> {
                 repair.confirm();
-                boolean needsInventory = handleConfirm(repair); 
+                boolean needsInventory = handleConfirm(repair);
                 if (needsInventory) {
                     repair.waitForExport();
                 } else {
@@ -277,25 +281,43 @@ public class RepairWorkflowService {
         List<RepairLine> replaceLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_REPLACE);
         Map<Long, SerialNumber> serialById = loadSerialsForLines(repair, stockOutLines, replaceLines, removeLines);
 
+        Long exportDocId = null;
         if (!stockOutLines.isEmpty()) {
-            createFinalInventoryDocuments(repair, stockOutLines, serialById);
+            exportDocId = createFinalInventoryDocuments(repair, stockOutLines, serialById);
         }
 
         List<RepairLine> scrapLines = new java.util.ArrayList<>(removeLines);
         scrapLines.addAll(replaceLines);
+        Long importDocId = null;
         if (!scrapLines.isEmpty()) {
-            createScrapDocument(repair, scrapLines, serialById);
+            importDocId = createScrapDocument(repair, scrapLines, serialById);
         }
 
-        if (!stockOutLines.isEmpty() || !scrapLines.isEmpty()) {
+        if (exportDocId != null) {
             notificationService.createNotification(
-                    "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần xuất/nhập kho",
-                    "Lệnh sửa chữa " + repair.getRepairCode() + " đã được xác nhận. Vui lòng ghi sổ các phiếu xuất/nhập kho liên quan.",
-                    "REPAIR_INVENTORY", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
+                    "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần xuất kho",
+                    "Lệnh sửa chữa " + repair.getRepairCode() + " cần xuất kho linh kiện mới. Vui lòng ghi sổ phiếu xuất kho.",
+                    "REPAIR_INVENTORY", "EXPORT_DOCUMENT", exportDocId, "/warehouse-workspace/exports/" + exportDocId,
+                    resolveRepairWarehouseId(repair)
             );
         }
-        
-        return true;
+        if (importDocId != null) {
+            notificationService.createNotification(
+                    "ROLE_WAREHOUSE_CONTROLLER", null, "Có lệnh sửa chữa cần nhập kho",
+                    "Lệnh sửa chữa " + repair.getRepairCode() + " cần nhập kho thu hồi linh kiện phế liệu. Vui lòng ghi sổ phiếu nhập kho.",
+                    "REPAIR_INVENTORY", "IMPORT_DOCUMENT", importDocId, "/warehouse-workspace/imports/" + importDocId,
+                    resolveScrapWarehouseId()
+            );
+        }
+
+        notificationService.createNotification(
+                "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa được duyệt",
+                "Lệnh sửa chữa " + repair.getRepairCode() + " đã được kế toán duyệt.",
+                "REPAIR_CONFIRMED", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
+        );
+
+        // REMOVE-only repairs do not need an export before the technician starts.
+        return !stockOutLines.isEmpty();
     }
 
     // =====================================================================
@@ -310,6 +332,10 @@ public class RepairWorkflowService {
                 repair.getId(), ACTION_REMOVE);
 
         // Batch-resolve serial number & component variant 1 lần cho toàn bộ lệnh sửa
+        syncPostedInventorySerials(repair.getId());
+        validatePostedRepairDocuments(!allAddLines.isEmpty() || !replaceLines.isEmpty(),
+                !removeLines.isEmpty() || !replaceLines.isEmpty(), repair.getId());
+
         Map<Long, SerialNumber> serialById = loadSerialsForLines(repair, allAddLines, replaceLines, removeLines);
         Map<Long, ProductVariant> variantById = loadVariantsForLines(allAddLines, replaceLines, removeLines);
 
@@ -329,8 +355,8 @@ public class RepairWorkflowService {
             req.setAmount(repair.getTotalAmount());
             req.setNote("Thu tiền sửa chữa phiếu " + repair.getRepairCode());
             req.setPaymentMethod("CASH");
-            paymentService.createPaymentReceipt(req);
-            
+            var payment = paymentService.createPaymentReceipt(req);
+
             log.info("[Repair {}] Đã tự động tạo phiếu thu với số tiền {}.", repair.getRepairCode(), repair.getTotalAmount());
 
             notificationService.createNotification(
@@ -338,11 +364,11 @@ public class RepairWorkflowService {
                 "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành, phát sinh phí. Vui lòng kiểm tra công nợ.",
                 "REPAIR_DONE", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
             );
-            // Không tự gửi thêm thông báo "phiếu thu mới" cho Thủ quỹ ở đây -
-            // paymentService.createPaymentReceipt(...) ở trên đã tự bắn thông báo
-            // đó rồi (đúng referenceType "PAYMENT_RECEIPT" để CashierWorkspacePage
-            // nhận realtime). Gửi thêm ở đây bị trùng lặp và referenceType "RECEIPT"
-            // không khớp bộ lọc nên không kích hoạt được auto-refresh.
+            notificationService.createNotification(
+                "ROLE_CASHIER_CONTROLLER", null, "Có phiếu thu sửa chữa mới",
+                "Lệnh sửa chữa " + repair.getRepairCode() + " đã hoàn thành. Vui lòng thu tiền khách hàng.",
+                "REPAIR_PAYMENT", "RECEIPT", payment.getId(), "/cashier-workspace?tab=requests", null
+            );
         }
     }
 
@@ -351,7 +377,7 @@ public class RepairWorkflowService {
      * kho (trừ kho thực tế) cho các linh kiện ADD - RepairWorkflowService không tự
      * new Entity/gọi thẳng repository của module Inventory nữa.
      */
-    private void createFinalInventoryDocuments(Repair repair, List<RepairLine> addLines, Map<Long, SerialNumber> serialById) {
+    private Long createFinalInventoryDocuments(Repair repair, List<RepairLine> addLines, Map<Long, SerialNumber> serialById) {
         Long warehouseId = resolveRepairWarehouseId(repair);
         Long currentUserId = resolveCurrentUserId();
 
@@ -372,11 +398,11 @@ public class RepairWorkflowService {
             String lineNote = (ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
                     + (rLine.getNote() != null ? rLine.getNote() : "");
             lineRequests.add(new RepairStockOutLineRequest(rLine.getComponentVariantId(), actualDoneQty,
-                    rLine.getUnitPrice(), stockOutSerialNumberId, serialNumbersText, lineNote));
+                    rLine.getUnitPrice(), stockOutSerialNumberId, serialNumbersText, lineNote, rLine.getId()));
         }
 
         if (lineRequests.isEmpty()) {
-            return;
+            return null;
         }
 
         Long docId = inventoryDocumentService.createExportForRepair(repair.getId(), repair.getRepairCode(), warehouseId,
@@ -387,22 +413,23 @@ public class RepairWorkflowService {
         if (docId == null) {
             log.warn("[Repair {}] Phiếu xuất kho REP-EX-{} đã tồn tại hoặc không có dòng hợp lệ, bỏ qua",
                     repair.getRepairCode(), repair.getRepairCode());
-            return;
+            return null;
         }
 
         log.info("[Repair {}] Đã tạo phiếu xuất kho DRAFT REP-EX-{} thành công qua InventoryDocumentService",
                 repair.getRepairCode(), repair.getRepairCode());
+        return docId;
     }
 
     /**
      * Chuẩn bị dữ liệu và ủy quyền cho InventoryDocumentService tạo + POST phiếu nhập
      * kho Scrap cho linh kiện bị tháo ra (REMOVE).
      */
-    private void createScrapDocument(Repair repair, List<RepairLine> removeLines, Map<Long, SerialNumber> serialById) {
+    private Long createScrapDocument(Repair repair, List<RepairLine> removeLines, Map<Long, SerialNumber> serialById) {
         Long scrapWarehouseId = resolveScrapWarehouseId();
         if (scrapWarehouseId == null) {
             log.warn("[Repair {}] Không tìm thấy kho Scrap, bỏ qua nhập kho phế liệu", repair.getRepairCode());
-            return;
+            return null;
         }
 
         Long currentUserId = resolveCurrentUserId();
@@ -417,11 +444,11 @@ public class RepairWorkflowService {
                 }
             }
             lineRequests.add(new RepairScrapLineRequest(resolveRemovedComponentVariantId(line, serialById),
-                    line.getQuantity(), line.getSerialNumberId(), serialNumbersText));
+                    line.getQuantity(), line.getSerialNumberId(), serialNumbersText, line.getId()));
         }
 
         if (lineRequests.isEmpty()) {
-            return;
+            return null;
         }
 
         Long docId = inventoryDocumentService.createScrapImportForRepair(repair.getId(), repair.getRepairCode(),
@@ -432,11 +459,12 @@ public class RepairWorkflowService {
         if (docId == null) {
             log.warn("[Repair {}] Phiếu Scrap REP-SCRAP-{} đã tồn tại hoặc không có dòng hợp lệ, bỏ qua",
                     repair.getRepairCode(), repair.getRepairCode());
-            return;
+            return null;
         }
 
         log.info("[Repair {}] Đã tạo phiếu Scrap DRAFT REP-SCRAP-{} thành công qua InventoryDocumentService",
                 repair.getRepairCode(), repair.getRepairCode());
+        return docId;
     }
 
     // =====================================================================
@@ -509,6 +537,115 @@ public class RepairWorkflowService {
         }
         Set<String> wanted = Set.of(authorities);
         return auth.getAuthorities().stream().anyMatch(a -> wanted.contains(a.getAuthority()));
+    }
+
+    /** Copies serials entered by the warehouse onto the linked repair lines. */
+    @Transactional
+    public void syncPostedInventorySerials(Long repairId) {
+        List<RepairLine> repairLines = repairLineRepository.findByRepairId(repairId);
+        if (repairLines.isEmpty()) {
+            return;
+        }
+
+        Map<Long, RepairLine> linesById = repairLines.stream()
+                .collect(Collectors.toMap(RepairLine::getId, line -> line));
+        Set<Long> assignedLineIds = new HashSet<>();
+        List<RepairLine> changed = new java.util.ArrayList<>();
+        List<InventoryDocument> documents = inventoryDocumentRepository.findByReferenceWithLines("REPAIR", repairId);
+
+        for (InventoryDocument document : documents) {
+            if (!DocumentStatus.POSTED.name().equals(document.getStatus())) {
+                continue;
+            }
+            for (InventoryDocumentLine documentLine : document.getLines()) {
+                Long repairLineId = documentLine.getRepairLineId();
+                Long serialNumberId = resolvePostedSerialNumberId(documentLine);
+                RepairLine repairLine = repairLineId == null ? null : linesById.get(repairLineId);
+                if (repairLine == null) {
+                    repairLine = resolveLegacyPostedLine(document, documentLine, repairLines, assignedLineIds);
+                }
+                if (repairLine == null || serialNumberId == null) {
+                    continue;
+                }
+                assignedLineIds.add(repairLine.getId());
+
+                if (REPAIR_DOC_TYPE_EXPORT.equals(document.getDocType())
+                        && ACTION_REPLACE.equals(repairLine.getActionType())) {
+                    repairLine.setReplacementSerialNumberId(serialNumberId);
+                    repairLine.setReplacementSerialNumberText(documentLine.getSerialNumbersText());
+                } else if (REPAIR_DOC_TYPE_EXPORT.equals(document.getDocType())
+                        && ACTION_ADD.equals(repairLine.getActionType())) {
+                    repairLine.setSerialNumberId(serialNumberId);
+                    repairLine.setSerialNumberText(documentLine.getSerialNumbersText());
+                } else if (REPAIR_DOC_TYPE_IMPORT.equals(document.getDocType())
+                        && (ACTION_REMOVE.equals(repairLine.getActionType())
+                        || ACTION_REPLACE.equals(repairLine.getActionType()))) {
+                    repairLine.setSerialNumberId(serialNumberId);
+                    repairLine.setSerialNumberText(documentLine.getSerialNumbersText());
+                } else {
+                    continue;
+                }
+                if (!changed.contains(repairLine)) {
+                    changed.add(repairLine);
+                }
+            }
+        }
+
+        if (!changed.isEmpty()) {
+            repairLineRepository.saveAll(changed);
+        }
+    }
+
+    private Long resolvePostedSerialNumberId(InventoryDocumentLine documentLine) {
+        if (documentLine.getSerialNumberId() != null) {
+            return documentLine.getSerialNumberId();
+        }
+        String rawSerials = documentLine.getSerialNumbersText();
+        if (rawSerials == null || rawSerials.isBlank()) {
+            return null;
+        }
+        String firstSerial = rawSerials.split("[,;\\s\\n]+")[0].trim();
+        if (firstSerial.isEmpty()) {
+            return null;
+        }
+        return serialNumberRepository.findByVariantIdAndSerialNumber(documentLine.getVariantId(), firstSerial)
+                .map(SerialNumber::getId)
+                .orElse(null);
+    }
+
+    private RepairLine resolveLegacyPostedLine(InventoryDocument document, InventoryDocumentLine documentLine,
+            List<RepairLine> repairLines, Set<Long> assignedLineIds) {
+        boolean replacementExport = REPAIR_DOC_TYPE_EXPORT.equals(document.getDocType())
+                && documentLine.getNote() != null
+                && documentLine.getNote().toLowerCase().contains("thay");
+        return repairLines.stream()
+                .filter(line -> line.getId() != null
+                        && (REPAIR_DOC_TYPE_IMPORT.equals(document.getDocType())
+                        || !assignedLineIds.contains(line.getId())))
+                .filter(line -> java.util.Objects.equals(line.getComponentVariantId(), documentLine.getVariantId()))
+                .filter(line -> {
+                    if (REPAIR_DOC_TYPE_EXPORT.equals(document.getDocType())) {
+                        return replacementExport ? ACTION_REPLACE.equals(line.getActionType())
+                                : ACTION_ADD.equals(line.getActionType());
+                    }
+                    return ACTION_REMOVE.equals(line.getActionType()) || ACTION_REPLACE.equals(line.getActionType());
+                })
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void validatePostedRepairDocuments(boolean requiresExport, boolean requiresImport, Long repairId) {
+        List<InventoryDocument> documents = inventoryDocumentRepository.findByReferenceWithLines("REPAIR", repairId);
+        if (requiresExport && documents.stream().noneMatch(document ->
+                REPAIR_DOC_TYPE_EXPORT.equals(document.getDocType())
+                        && DocumentStatus.POSTED.name().equals(document.getStatus()))) {
+            throw new BusinessException("Phiếu xuất kho sửa chữa chưa được ghi sổ.");
+        }
+        if (requiresImport && documents.stream().noneMatch(document ->
+                REPAIR_DOC_TYPE_IMPORT.equals(document.getDocType())
+                        && DocumentStatus.POSTED.name().equals(document.getStatus()))) {
+            throw new BusinessException("Phiếu nhập kho chưa được ghi sổ.");
+        }
     }
 
     private void validateSerialPresenceForTrackedLines(List<RepairLine> lines, String actionType,

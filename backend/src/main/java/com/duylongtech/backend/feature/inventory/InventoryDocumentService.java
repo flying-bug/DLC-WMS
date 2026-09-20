@@ -237,15 +237,37 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        boolean hasFullView = hasAnyAuthority("export:view", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
 
         if (!hasFullView) {
-            if (hasAnyAuthority("repair:view") && !hasAnyAuthority("assembly:view")) {
-                issuePurpose = null;
-                referenceType = "REPAIR";
+            boolean canRepair = hasAnyAuthority("repair:view");
+            boolean canAssembly = hasAnyAuthority("assembly:view");
+            
+            if (!canRepair && !canAssembly) {
+                return List.of();
+            }
+            
+            if (referenceType != null && !referenceType.trim().isEmpty()) {
+                if ("REPAIR".equals(referenceType) && !canRepair) {
+                    return List.of();
+                }
+                if ("ASSEMBLY_ORDER".equals(referenceType) && !canAssembly) {
+                    return List.of();
+                }
+                if (!"REPAIR".equals(referenceType) && !"ASSEMBLY_ORDER".equals(referenceType)) {
+                    return List.of();
+                }
             } else {
-                issuePurpose = "ASSEMBLY";
-                referenceType = "ASSEMBLY_ORDER";
+                if (canRepair && canAssembly) {
+                    issuePurpose = null;
+                    referenceType = "MULTI_TECH";
+                } else if (canRepair) {
+                    issuePurpose = null;
+                    referenceType = "REPAIR";
+                } else {
+                    issuePurpose = "ASSEMBLY";
+                    referenceType = "ASSEMBLY_ORDER";
+                }
             }
         }
 
@@ -322,15 +344,37 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        boolean hasFullView = hasAnyAuthority("import:view", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
 
         if (!hasFullView) {
-            if (hasAnyAuthority("repair:view") && !hasAnyAuthority("assembly:view")) {
-                issuePurpose = null;
-                referenceType = "REPAIR";
+            boolean canRepair = hasAnyAuthority("repair:view");
+            boolean canAssembly = hasAnyAuthority("assembly:view");
+            
+            if (!canRepair && !canAssembly) {
+                return List.of();
+            }
+            
+            if (referenceType != null && !referenceType.trim().isEmpty()) {
+                if ("REPAIR".equals(referenceType) && !canRepair) {
+                    return List.of();
+                }
+                if ("ASSEMBLY_ORDER".equals(referenceType) && !canAssembly) {
+                    return List.of();
+                }
+                if (!"REPAIR".equals(referenceType) && !"ASSEMBLY_ORDER".equals(referenceType)) {
+                    return List.of();
+                }
             } else {
-                issuePurpose = "ASSEMBLY";
-                referenceType = "ASSEMBLY_ORDER";
+                if (canRepair && canAssembly) {
+                    issuePurpose = null;
+                    referenceType = "MULTI_TECH";
+                } else if (canRepair) {
+                    issuePurpose = null;
+                    referenceType = "REPAIR";
+                } else {
+                    issuePurpose = "ASSEMBLY";
+                    referenceType = "ASSEMBLY_ORDER";
+                }
             }
         }
 
@@ -1312,6 +1356,7 @@ public class InventoryDocumentService {
             docLine.setLineAmount(lr.unitPrice().multiply(lr.quantity()));
             docLine.setSerialNumberId(lr.serialNumberId());
             docLine.setSerialNumbersText(lr.serialNumberText());
+            docLine.setRepairLineId(lr.repairLineId());
             docLine.setNote(lr.note());
             exportDoc.getLines().add(docLine);
         }
@@ -1359,6 +1404,7 @@ public class InventoryDocumentService {
             scrapLine.setLineAmount(ZERO);
             scrapLine.setSerialNumberId(lr.serialNumberId());
             scrapLine.setSerialNumbersText(lr.serialNumberText());
+            scrapLine.setRepairLineId(lr.repairLineId());
             scrapLine.setNote("Linh kiện tháo ra từ lệnh sửa " + repairCode);
             scrapDoc.getLines().add(scrapLine);
         }
@@ -1603,6 +1649,7 @@ public class InventoryDocumentService {
             // SerialNumber rows generated for import lines, so that FK would dangle.
             // The raw text is kept as a reference for whoever edits this draft.
             line.setSerialNumbersText(sourceLine.getSerialNumbersText());
+            line.setRepairLineId(sourceLine.getRepairLineId());
             line.setNote(sourceLine.getNote());
             line.setWarrantyMonths(sourceLine.getWarrantyMonths());
             line.setWarehouseId(sourceLine.getWarehouseId());

@@ -51,12 +51,14 @@ const WarehouseInventoryList = ({ warehouseId }) => {
 
     // Lọc dữ liệu theo search query và toggle
     const filteredInventory = inventory.filter(item => {
-        const query = search.toLowerCase();
-        const matchesSearch = (
-            (item.productCode && item.productCode.toLowerCase().includes(query)) ||
-            (item.productName && item.productName.toLowerCase().includes(query)) ||
-            (item.sku && item.sku.toLowerCase().includes(query)) ||
-            (item.variantName && item.variantName.toLowerCase().includes(query))
+        const query = search.toLowerCase().trim().replace(/\s+/g, ' ');
+        const normalize = (str) => str ? str.toLowerCase().replace(/\s+/g, ' ') : '';
+        
+        const matchesSearch = !query || (
+            normalize(item.productCode).includes(query) ||
+            normalize(item.productName).includes(query) ||
+            normalize(item.sku).includes(query) ||
+            normalize(item.variantName).includes(query)
         );
 
         if (showBackorderedOnly) {

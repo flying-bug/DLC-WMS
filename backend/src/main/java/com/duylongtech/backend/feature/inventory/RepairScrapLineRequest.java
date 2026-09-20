@@ -10,6 +10,7 @@ public record RepairScrapLineRequest(
         Long componentVariantId,
         BigDecimal quantity,
         Long serialNumberId,
-        String serialNumberText
+        String serialNumberText,
+        Long repairLineId
 ) {
 }

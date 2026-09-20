@@ -41,6 +41,7 @@ public class AssemblyOrderWorkflowService {
     private final InventoryDocumentService inventoryDocumentService;
     private final AppNotificationService appNotificationService;
     private final UserRepository userRepository;
+    private final com.duylongtech.backend.feature.warehouse.WarehouseRepository warehouseRepository;
 
     private String getUserName(Long userId) {
         if (userId == null) return "Hệ thống";
@@ -217,6 +218,11 @@ public class AssemblyOrderWorkflowService {
             export.setNote("Xuất thành phẩm đi tháo dỡ theo lệnh " + order.getOrderCode());
             receipt.setLines(asImportLines(componentLines));
             receipt.setNote("Nhập linh kiện thu hồi từ lệnh " + order.getOrderCode());
+            
+            com.duylongtech.backend.feature.warehouse.Warehouse scrapWarehouse = warehouseRepository
+                    .findFirstByTypeAndStatus("SCRAP", DocumentStatus.APPROVED.name())
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy kho phế liệu (SCRAP) đang hoạt động"));
+            receipt.setWarehouseId(scrapWarehouse.getId());
         }
         InventoryDocumentResponse exportDoc = inventoryDocumentService.createExport(export);
         receipt.setIssuePurpose("PRODUCTION");

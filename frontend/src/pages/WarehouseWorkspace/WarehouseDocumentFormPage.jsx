@@ -470,7 +470,7 @@ export default function WarehouseDocumentFormPage() {
                 <span className={styles.fieldLabel}>{isImport ? 'Kho nhập:' : 'Kho xuất:'}</span>
                 <span className={styles.fieldValueBadge}>
                   <i className="bi bi-building" style={{ marginRight: 4 }}></i>
-                  {doc.warehouseName || doc.warehouseCode || 'Kho chính'}
+                  {doc.warehouseName || doc.warehouseCode || (lines.length > 0 ? (lines[0].warehouseName || lines[0].warehouseCode) : null)}
                 </span>
               </div>
               <div className={styles.formRow}>
@@ -543,7 +543,7 @@ export default function WarehouseDocumentFormPage() {
                       </td>
                       <td>{l.productName || l.variantName || '-'}</td>
                       <td>
-                        <div>{l.warehouseName || l.warehouseCode || doc.warehouseName || 'Kho chính'}</div>
+                        <div>{l.warehouseName || l.warehouseCode || doc.warehouseName || (lines.length > 0 ? lines[0].warehouseName : null) || 'Kho chính'}</div>
                         {l.locationCode && (
                           <span className={styles.subText}>Kệ: {l.locationCode}</span>
                         )}
