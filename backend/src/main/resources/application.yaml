@@ -6,6 +6,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # Temporary diagnostic setting: report connections held longer than 60s.
+      # Set HIKARI_LEAK_DETECTION_THRESHOLD=0 after diagnosis to disable it.
+      leak-detection-threshold: ${HIKARI_LEAK_DETECTION_THRESHOLD:60000}
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
