@@ -11,6 +11,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -66,6 +67,7 @@ public class RealtimeSessionService {
         connections.clear();
     }
 
+    @Transactional(readOnly = true)
     public SseEmitter subscribe(UserDetailsImpl userDetails) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         String connectionId = UUID.randomUUID().toString();
