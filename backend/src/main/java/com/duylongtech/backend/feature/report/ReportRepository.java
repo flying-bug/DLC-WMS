@@ -5,8 +5,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -17,7 +15,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import com.duylongtech.backend.feature.repair.Repair;
 
 @Repository
 @RequiredArgsConstructor
@@ -31,7 +28,7 @@ public class ReportRepository {
                         "pv.sku AS itemCode, " +
                         "pv.sku AS sku, " +
                         "pv.id AS variantId, " +
-                        "pv.variant_name AS itemName, " +
+                        "CONCAT(p.product_name, CASE WHEN pv.variant_name IS NULL OR pv.variant_name = '' THEN '' ELSE CONCAT(' - ', pv.variant_name) END) AS itemName, " +
                         "u.name AS unitName, " +
                         "w.id AS warehouseId, " +
                         "w.code AS warehouseCode, " +
@@ -68,25 +65,16 @@ public class ReportRepository {
                         "  - " +
                         "  SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) " +
                         ") AS availableQuantity, " +
-                        "SUM(CASE WHEN ( " +
-                        "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT') " +
-                        "    AND ib.serial_number_id IS NOT NULL " +
-                        "    AND sn.status = 'AVAILABLE' " +
-                        "    AND NOT EXISTS ( " +
-                        "      SELECT 1 FROM device_component_serials dcs " +
-                        "      WHERE dcs.component_variant_id = ib.variant_id " +
-                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
-                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
-                        "    ) " +
-                        "  ) " +
-                        "  OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
-                        ") THEN ib.quantity_on_hand * ib.average_cost ELSE 0 END) AS totalValue " +
+                        "COALESCE(MAX(fifo.total_value), 0) AS totalValue " +
                         "FROM inventory_balances ib " +
                         "JOIN product_variants pv ON ib.variant_id = pv.id " +
                         "JOIN products p ON pv.product_id = p.id " +
                         "JOIN units u ON p.unit_id = u.id " +
                         "JOIN warehouses w ON ib.warehouse_id = w.id " +
                         "LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id " +
+                        "LEFT JOIN (SELECT warehouse_id, variant_id, SUM(quantity_layered * unit_cost) AS total_value " +
+                        "           FROM inventory_cost_layers GROUP BY warehouse_id, variant_id) fifo " +
+                        "  ON fifo.warehouse_id = ib.warehouse_id AND fifo.variant_id = ib.variant_id " +
                         "WHERE ib.stock_status = 'GOOD' " +
                         "AND ( " +
                         "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')) " +
@@ -100,7 +88,9 @@ public class ReportRepository {
             params.add(warehouseId);
         }
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ?) ");
+            sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ? OR p.product_code LIKE ? OR p.product_name LIKE ?) ");
+            params.add("%" + search + "%");
+            params.add("%" + search + "%");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
@@ -130,14 +120,16 @@ public class ReportRepository {
     public List<StockLedgerReportResponse> getStockLedgerReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
+                        "l.id AS ledgerId, " +
                         "w.name AS warehouseName, " +
-                        "p.product_code AS productCode, " +
-                        "p.product_name AS productName, " +
+                        "pv.sku AS productCode, " +
+                        "CONCAT(p.product_name, CASE WHEN pv.variant_name IS NULL OR pv.variant_name = '' THEN '' ELSE CONCAT(' - ', pv.variant_name) END) AS productName, " +
                         "doc.note AS description, " +
                         "l.movement_at AS movementAt, " +
                         "doc.id AS documentId, " +
                         "doc.doc_date AS documentDate, " +
                         "doc.doc_code AS documentNumber, " +
+                        "l.movement_type AS movementType, " +
                         "CASE " +
                         "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'ASSEMBLY' THEN 'EX_BUILD' " +
                         "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'REPAIR' THEN 'EX_REPAIR' " +
@@ -146,6 +138,7 @@ public class ReportRepository {
                         "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'RETURN' THEN 'EX_RET' " +
                         "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'ASSEMBLY' THEN 'IN_BUILD' " +
                         "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'REPAIR' THEN 'IN_REPAIR' " +
+                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'SCRAP' AND doc.reference_type = 'REPAIR' THEN 'IN_REPAIR' " +
                         "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'TRANSFER_IMPORT' THEN 'IN_TRF' " +
                         "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'INVENTORY_ADJUSTMENT' THEN 'IN_ADJ' " +
                         "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'RETURN' THEN 'IN_RET' " +
@@ -154,7 +147,10 @@ public class ReportRepository {
                         "u.name AS unitName, " +
                         "l.unit_cost AS unitPrice, " +
                         "l.quantity_in AS quantityIn, " +
+                        "l.quantity_in * l.unit_cost AS amountIn, " +
                         "l.quantity_out AS quantityOut, " +
+                        "l.quantity_out * l.unit_cost AS amountOut, " +
+                        "l.balance_after - l.quantity_in + l.quantity_out AS balanceBefore, " +
                         "l.balance_after AS balanceAfter " +
                         "FROM inventory_ledger l " +
                         "JOIN warehouses w ON l.warehouse_id = w.id " +
@@ -175,18 +171,22 @@ public class ReportRepository {
             params.add(startDate);
         }
         if (endDate != null) {
-            sql.append(" AND l.movement_at <= ? ");
+            sql.append(" AND l.movement_at < ? ");
             params.add(endDate);
         }
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ?) ");
+            sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ? OR p.product_code LIKE ? OR p.product_name LIKE ? OR doc.doc_code LIKE ?) ");
+            params.add("%" + search + "%");
+            params.add("%" + search + "%");
+            params.add("%" + search + "%");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
 
-        sql.append(" ORDER BY l.movement_at DESC ");
+        sql.append(" ORDER BY w.code, pv.sku, l.movement_at ASC, l.id ASC ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> StockLedgerReportResponse.builder()
+                .ledgerId(rs.getLong("ledgerId"))
                 .warehouseName(rs.getString("warehouseName"))
                 .productCode(rs.getString("productCode"))
                 .productName(rs.getString("productName"))
@@ -196,11 +196,15 @@ public class ReportRepository {
                 .documentDate(rs.getDate("documentDate") != null ? rs.getDate("documentDate").toLocalDate() : null)
                 .documentNumber(rs.getString("documentNumber"))
                 .documentType(rs.getString("documentType"))
+                .movementType(rs.getString("movementType"))
                 .reference(rs.getString("documentType"))
                 .unitName(rs.getString("unitName"))
                 .unitPrice(rs.getBigDecimal("unitPrice"))
                 .quantityIn(rs.getBigDecimal("quantityIn"))
+                .amountIn(rs.getBigDecimal("amountIn"))
                 .quantityOut(rs.getBigDecimal("quantityOut"))
+                .amountOut(rs.getBigDecimal("amountOut"))
+                .balanceBefore(rs.getBigDecimal("balanceBefore"))
                 .balanceAfter(rs.getBigDecimal("balanceAfter"))
                 .build(), params.toArray());
     }
@@ -211,14 +215,14 @@ public class ReportRepository {
                 "SELECT " +
                         "st.transfer_date AS documentDate, " +
                         "st.transfer_code AS documentNumber, " +
-                        "p.product_code AS itemCode, " +
-                        "p.product_name AS itemName, " +
+                        "pv.sku AS itemCode, " +
+                        "CONCAT(p.product_name, CASE WHEN pv.variant_name IS NULL OR pv.variant_name = '' THEN '' ELSE CONCAT(' - ', pv.variant_name) END) AS itemName, " +
                         "w_from.name AS sourceWarehouse, " +
                         "w_to.name AS destinationWarehouse, " +
                         "u.name AS unitName, " +
-                        "stl.quantity AS quantity, " +
-                        "stl.unit_cost AS unitPrice, " +
-                        "(stl.quantity * stl.unit_cost) AS amount, " +
+                        "COALESCE(actual.actual_quantity, stl.quantity) AS quantity, " +
+                        "CASE WHEN actual.actual_quantity > 0 THEN actual.actual_amount / actual.actual_quantity ELSE NULL END AS unitPrice, " +
+                        "actual.actual_amount AS amount, " +
                         "st.status AS status " +
                         "FROM stock_transfers st " +
                         "JOIN stock_transfer_lines stl ON st.id = stl.stock_transfer_id " +
@@ -227,6 +231,17 @@ public class ReportRepository {
                         "JOIN product_variants pv ON stl.variant_id = pv.id " +
                         "JOIN products p ON pv.product_id = p.id " +
                         "JOIN units u ON p.unit_id = u.id " +
+                        "LEFT JOIN (" +
+                        "  SELECT d.reference_id AS transfer_id, l.variant_id, " +
+                        "         SUM(l.quantity_out) AS actual_quantity, " +
+                        "         SUM(l.quantity_out * l.unit_cost) AS actual_amount " +
+                        "  FROM inventory_documents d " +
+                        "  JOIN inventory_ledger l ON l.inventory_document_id = d.id " +
+                        "  WHERE d.reference_type = 'STOCK_TRANSFER' " +
+                        "    AND d.issue_purpose = 'TRANSFER_EXPORT' " +
+                        "    AND d.status = 'POSTED' " +
+                        "  GROUP BY d.reference_id, l.variant_id" +
+                        ") actual ON actual.transfer_id = st.id AND actual.variant_id = stl.variant_id " +
                         "WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
@@ -236,7 +251,7 @@ public class ReportRepository {
             params.add(status);
         } else {
             // Default to not showing DRAFT or CANCELLED unless explicitly requested
-            sql.append(" AND st.status IN ('APPROVED', 'POSTED') ");
+            sql.append(" AND st.status IN ('APPROVED', 'IN_TRANSIT', 'POSTED') ");
         }
 
         if (warehouseId != null) {
@@ -253,7 +268,9 @@ public class ReportRepository {
             params.add(endDate);
         }
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ? OR st.transfer_code LIKE ?) ");
+            sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ? OR p.product_code LIKE ? OR p.product_name LIKE ? OR st.transfer_code LIKE ?) ");
+            params.add("%" + search + "%");
+            params.add("%" + search + "%");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
@@ -283,13 +300,12 @@ public class ReportRepository {
             "SELECT " +
             "pt.code AS partnerCode, " +
             "pt.name AS partnerName, " +
-            "pt.is_customer AS isCustomer, " +
-            "pt.is_supplier AS isSupplier, " +
+            "pl.account_type AS accountType, " +
             "COALESCE(SUM(CASE WHEN pl.created_at < CAST(? AS DATETIME) THEN pl.amount_debt - pl.amount_receipt ELSE 0 END), 0) AS openingBalance, " +
-            "COALESCE(SUM(CASE WHEN pl.created_at >= CAST(? AS DATETIME) AND pl.created_at <= CAST(? AS DATETIME) THEN pl.amount_debt ELSE 0 END), 0) AS debitIncrease, " +
-            "COALESCE(SUM(CASE WHEN pl.created_at >= CAST(? AS DATETIME) AND pl.created_at <= CAST(? AS DATETIME) THEN pl.amount_receipt ELSE 0 END), 0) AS creditDecrease " +
+            "COALESCE(SUM(CASE WHEN pl.created_at >= CAST(? AS DATETIME) AND pl.created_at < CAST(? AS DATETIME) THEN pl.amount_debt ELSE 0 END), 0) AS debitIncrease, " +
+            "COALESCE(SUM(CASE WHEN pl.created_at >= CAST(? AS DATETIME) AND pl.created_at < CAST(? AS DATETIME) THEN pl.amount_receipt ELSE 0 END), 0) AS creditDecrease " +
             "FROM partners pt " +
-            "LEFT JOIN partner_ledger pl ON pt.id = pl.partner_id " +
+            "JOIN partner_ledger pl ON pt.id = pl.partner_id " +
             "WHERE 1=1 "
         );
             
@@ -302,16 +318,10 @@ public class ReportRepository {
 
         if (partnerType != null && !partnerType.trim().isEmpty()) {
             if (partnerType.equalsIgnoreCase("CUSTOMER")) {
-                sql.append(" AND pt.is_customer = ? ");
-                params.add(true);
+                sql.append(" AND pl.account_type = 'RECEIVABLE' ");
             } else if (partnerType.equalsIgnoreCase("SUPPLIER")) {
-                sql.append(" AND pt.is_supplier = ? ");
-                params.add(true);
+                sql.append(" AND pl.account_type = 'PAYABLE' ");
             }
-        } else {
-            sql.append(" AND (pt.is_customer = ? OR pt.is_supplier = ?) ");
-            params.add(true);
-            params.add(true);
         }
 
         if (search != null && !search.trim().isEmpty()) {
@@ -320,18 +330,16 @@ public class ReportRepository {
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY pt.id, pt.code, pt.name, pt.is_customer, pt.is_supplier ORDER BY pt.code");
+        sql.append(" GROUP BY pt.id, pt.code, pt.name, pl.account_type ORDER BY pt.code, pl.account_type");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
             BigDecimal open = rs.getBigDecimal("openingBalance");
             BigDecimal inc = rs.getBigDecimal("debitIncrease");
             BigDecimal dec = rs.getBigDecimal("creditDecrease");
             BigDecimal close = open.add(inc).subtract(dec);
-            String status = close.compareTo(BigDecimal.ZERO) > 0 ? "CO_NO" : "HET_NO";
-            
-            boolean isCust = rs.getBoolean("isCustomer");
-            boolean isSupp = rs.getBoolean("isSupplier");
-            String type = isCust ? "CUSTOMER" : (isSupp ? "SUPPLIER" : "OTHER");
+            String status = close.compareTo(BigDecimal.ZERO) > 0 ? "CO_NO"
+                    : close.compareTo(BigDecimal.ZERO) < 0 ? "DU_CO" : "HET_NO";
+            String type = "PAYABLE".equals(rs.getString("accountType")) ? "SUPPLIER" : "CUSTOMER";
             
             return DebtReportResponse.builder()
                 .partnerCode(rs.getString("partnerCode"))
@@ -346,6 +354,88 @@ public class ReportRepository {
         }, params.toArray());
     }
 
+    public List<SalesProfitReportResponse> getSalesProfitReport(Long warehouseId, LocalDateTime startDate,
+                                                                 LocalDateTime endDate, String search) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT sales.sku,
+                       sales.variantName,
+                       sales.unitName,
+                       SUM(sales.quantitySold) AS quantitySold,
+                       SUM(sales.salesAmount) AS salesAmount,
+                       SUM(sales.vatAmount) AS vatAmount,
+                       SUM(sales.totalAmount) AS totalAmount,
+                       COALESCE(SUM(costs.costAmount), 0) AS costAmount
+                FROM (
+                    SELECT so.id AS salesOrderId,
+                           COALESCE(sol.warehouse_id, so.warehouse_id) AS warehouseId,
+                           pv.id AS variantId,
+                           pv.sku,
+                           pv.variant_name AS variantName,
+                           u.name AS unitName,
+                           SUM(sol.quantity) AS quantitySold,
+                           SUM(sol.line_amount) AS salesAmount,
+                           SUM(COALESCE(sol.vat_amount, 0)) AS vatAmount,
+                           SUM(sol.line_amount + COALESCE(sol.vat_amount, 0)) AS totalAmount
+                    FROM sales_order_lines sol
+                    JOIN sales_orders so ON so.id = sol.sales_order_id
+                    JOIN product_variants pv ON pv.id = sol.variant_id
+                    JOIN products p ON p.id = pv.product_id
+                    LEFT JOIN units u ON u.id = p.unit_id
+                    WHERE so.status = 'POSTED'
+                      AND (? IS NULL OR so.posted_at >= ?)
+                      AND (? IS NULL OR so.posted_at < ?)
+                      AND (? IS NULL OR COALESCE(sol.warehouse_id, so.warehouse_id) = ?)
+                """);
+        List<Object> params = new ArrayList<>();
+        params.add(startDate);
+        params.add(startDate);
+        params.add(endDate);
+        params.add(endDate);
+        params.add(warehouseId);
+        params.add(warehouseId);
+        if (search != null && !search.isBlank()) {
+            sql.append(" AND (LOWER(pv.sku) LIKE LOWER(?) OR LOWER(pv.variant_name) LIKE LOWER(?) OR LOWER(p.product_name) LIKE LOWER(?)) ");
+            String keyword = "%" + search.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+            params.add(keyword);
+        }
+        sql.append("""
+                    GROUP BY so.id, COALESCE(sol.warehouse_id, so.warehouse_id), pv.id, pv.sku, pv.variant_name, u.name
+                ) sales
+                LEFT JOIN (
+                    SELECT d.sales_order_id, l.variant_id, l.warehouse_id,
+                           SUM((l.quantity_out - l.quantity_in) * l.unit_cost) AS costAmount
+                    FROM inventory_documents d
+                    JOIN inventory_ledger l ON l.inventory_document_id = d.id
+                    WHERE d.sales_order_id IS NOT NULL
+                      AND d.doc_type = 'EX_SO'
+                    GROUP BY d.sales_order_id, l.variant_id, l.warehouse_id
+                ) costs ON costs.sales_order_id = sales.salesOrderId
+                       AND costs.variant_id = sales.variantId
+                       AND costs.warehouse_id = sales.warehouseId
+                GROUP BY sales.variantId, sales.sku, sales.variantName, sales.unitName
+                ORDER BY salesAmount DESC
+                """);
+
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
+            BigDecimal salesAmount = rs.getBigDecimal("salesAmount");
+            BigDecimal costAmount = rs.getBigDecimal("costAmount");
+            return SalesProfitReportResponse.builder()
+                    .sku(rs.getString("sku"))
+                    .variantName(rs.getString("variantName"))
+                    .unitName(rs.getString("unitName"))
+                    .quantitySold(rs.getBigDecimal("quantitySold"))
+                    .salesAmount(salesAmount)
+                    .vatAmount(rs.getBigDecimal("vatAmount"))
+                    .totalAmount(rs.getBigDecimal("totalAmount"))
+                    .costAmount(costAmount)
+                    .grossProfit(salesAmount.subtract(costAmount))
+                    .profitMarginPercent(BigDecimal.ZERO)
+                    .build();
+        }, params.toArray());
+    }
+
     // 5. Inventory Summary Report
     public List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         LocalDate targetDate = (startDate != null ? startDate.toLocalDate() : LocalDate.now()).minusDays(1);
@@ -353,15 +443,15 @@ public class ReportRepository {
         StringBuilder sql = new StringBuilder(
             "SELECT " +
             "w.name AS warehouseName, " +
-            "p.product_code AS productCode, " +
-            "p.product_name AS productName, " +
+            "pv.sku AS productCode, " +
+            "CONCAT(p.product_name, CASE WHEN pv.variant_name IS NULL OR pv.variant_name = '' THEN '' ELSE CONCAT(' - ', pv.variant_name) END) AS productName, " +
             "u.name AS unitName, " +
             "COALESCE(MAX(ids.closing_quantity), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in - l.quantity_out ELSE 0 END), 0)) AS openingQuantity, " +
             "COALESCE(MAX(ids.closing_value), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN (l.quantity_in * l.unit_cost) - (l.quantity_out * l.unit_cost) ELSE 0 END), 0)) AS openingValue, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in ELSE 0 END), 0) AS receiptQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in * l.unit_cost ELSE 0 END), 0) AS receiptValue, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out ELSE 0 END), 0) AS issueQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out * l.unit_cost ELSE 0 END), 0) AS issueValue " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in ELSE 0 END), 0) AS receiptQuantity, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in * l.unit_cost ELSE 0 END), 0) AS receiptValue, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at < CAST(? AS DATETIME) THEN l.quantity_out ELSE 0 END), 0) AS issueQuantity, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at < CAST(? AS DATETIME) THEN l.quantity_out * l.unit_cost ELSE 0 END), 0) AS issueValue " +
             "FROM product_variants pv " +
             "JOIN products p ON pv.product_id = p.id " +
             "JOIN units u ON p.unit_id = u.id " +
@@ -389,13 +479,15 @@ public class ReportRepository {
             params.add(warehouseId);
         }
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ?) ");
+            sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ? OR p.product_code LIKE ? OR p.product_name LIKE ?) ");
+            params.add("%" + search + "%");
+            params.add("%" + search + "%");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY w.id, w.name, p.product_code, p.product_name, u.name ");
-        sql.append(" ORDER BY w.name, p.product_code ");
+        sql.append(" GROUP BY w.id, w.name, pv.id, pv.sku, pv.variant_name, p.product_name, u.name ");
+        sql.append(" ORDER BY w.name, pv.sku ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
             BigDecimal opQ = rs.getBigDecimal("openingQuantity");
@@ -422,10 +514,194 @@ public class ReportRepository {
         }, params.toArray());
     }
 
+    public CashFlowReportResponse getCashFlowReport(LocalDateTime startDate, LocalDateTime endDateExclusive,
+                                                     String search, String paymentMethod) {
+        String methodFilter = paymentMethod != null && !paymentMethod.isBlank() ? paymentMethod.trim().toUpperCase() : null;
+        String summarySql = """
+                SELECT
+                    COALESCE(SUM(CASE WHEN posted_at < ? AND payment_method = 'CASH'
+                                      THEN CASE WHEN type = 'RECEIPT' THEN amount ELSE -amount END ELSE 0 END), 0) AS openingCash,
+                    COALESCE(SUM(CASE WHEN posted_at >= ? AND posted_at < ? AND payment_method = 'CASH' AND type = 'RECEIPT' THEN amount ELSE 0 END), 0) AS cashReceipts,
+                    COALESCE(SUM(CASE WHEN posted_at >= ? AND posted_at < ? AND payment_method = 'CASH' AND type = 'VOUCHER' THEN amount ELSE 0 END), 0) AS cashVouchers,
+                    COALESCE(SUM(CASE WHEN posted_at < ? AND payment_method = 'BANK_TRANSFER'
+                                      THEN CASE WHEN type = 'RECEIPT' THEN amount ELSE -amount END ELSE 0 END), 0) AS openingBank,
+                    COALESCE(SUM(CASE WHEN posted_at >= ? AND posted_at < ? AND payment_method = 'BANK_TRANSFER' AND type = 'RECEIPT' THEN amount ELSE 0 END), 0) AS bankReceipts,
+                    COALESCE(SUM(CASE WHEN posted_at >= ? AND posted_at < ? AND payment_method = 'BANK_TRANSFER' AND type = 'VOUCHER' THEN amount ELSE 0 END), 0) AS bankVouchers
+                FROM payment_transactions
+                WHERE status = 'POSTED'
+                """;
+        Map<String, Object> summary = jdbcTemplate.queryForMap(summarySql,
+                startDate, startDate, endDateExclusive, startDate, endDateExclusive,
+                startDate, startDate, endDateExclusive, startDate, endDateExclusive);
+
+        StringBuilder rowsSql = new StringBuilder("""
+                SELECT tx.id, tx.transaction_code, tx.type, tx.payment_method, tx.amount,
+                       tx.note, tx.posted_at, COALESCE(pt.name, '') AS partner_name
+                FROM payment_transactions tx
+                LEFT JOIN partners pt ON pt.id = tx.partner_id
+                WHERE tx.status = 'POSTED'
+                  AND tx.posted_at >= ?
+                  AND tx.posted_at < ?
+                """);
+        List<Object> params = new ArrayList<>();
+        params.add(startDate);
+        params.add(endDateExclusive);
+        if (methodFilter != null) {
+            rowsSql.append(" AND tx.payment_method = ? ");
+            params.add(methodFilter);
+        }
+        if (search != null && !search.isBlank()) {
+            rowsSql.append(" AND (tx.transaction_code LIKE ? OR pt.name LIKE ? OR tx.note LIKE ?) ");
+            String keyword = "%" + search.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+            params.add(keyword);
+        }
+        rowsSql.append(" ORDER BY tx.posted_at DESC, tx.id DESC ");
+
+        List<CashFlowTransactionResponse> transactions = jdbcTemplate.query(rowsSql.toString(), (rs, rowNum) ->
+                CashFlowTransactionResponse.builder()
+                        .id(rs.getLong("id"))
+                        .code(rs.getString("transaction_code"))
+                        .type(rs.getString("type"))
+                        .paymentMethod(rs.getString("payment_method"))
+                        .partnerName(rs.getString("partner_name"))
+                        .amount(rs.getBigDecimal("amount"))
+                        .note(rs.getString("note"))
+                        .postedAt(rs.getTimestamp("posted_at").toLocalDateTime())
+                        .build(), params.toArray());
+
+        BigDecimal openingCash = toBigDecimal(summary.get("openingCash"));
+        BigDecimal cashReceipts = toBigDecimal(summary.get("cashReceipts"));
+        BigDecimal cashVouchers = toBigDecimal(summary.get("cashVouchers"));
+        BigDecimal openingBank = toBigDecimal(summary.get("openingBank"));
+        BigDecimal bankReceipts = toBigDecimal(summary.get("bankReceipts"));
+        BigDecimal bankVouchers = toBigDecimal(summary.get("bankVouchers"));
+        if ("CASH".equals(methodFilter)) {
+            openingBank = BigDecimal.ZERO;
+            bankReceipts = BigDecimal.ZERO;
+            bankVouchers = BigDecimal.ZERO;
+        } else if ("BANK_TRANSFER".equals(methodFilter)) {
+            openingCash = BigDecimal.ZERO;
+            cashReceipts = BigDecimal.ZERO;
+            cashVouchers = BigDecimal.ZERO;
+        }
+        return CashFlowReportResponse.builder()
+                .openingCash(openingCash)
+                .cashReceipts(cashReceipts)
+                .cashVouchers(cashVouchers)
+                .closingCash(openingCash.add(cashReceipts).subtract(cashVouchers))
+                .openingBank(openingBank)
+                .bankReceipts(bankReceipts)
+                .bankVouchers(bankVouchers)
+                .closingBank(openingBank.add(bankReceipts).subtract(bankVouchers))
+                .openingTotal(openingCash.add(openingBank))
+                .totalReceipts(cashReceipts.add(bankReceipts))
+                .totalVouchers(cashVouchers.add(bankVouchers))
+                .closingTotal(openingCash.add(openingBank).add(cashReceipts).add(bankReceipts)
+                        .subtract(cashVouchers).subtract(bankVouchers))
+                .transactions(transactions)
+                .build();
+    }
+
+    public List<RepairProfitReportResponse> getRepairProfitReport(Long warehouseId, LocalDate startDate, LocalDate endDate,
+                                                                  String search) {
+        String sql = """
+                SELECT r.id AS repairId,
+                       r.repair_code AS repairCode,
+                       r.completed_date AS completedDate,
+                       COALESCE(p.name, '') AS partnerName,
+                       COALESCE(parts.partsRevenue, 0) AS partsRevenue,
+                       COALESCE(fees.serviceRevenue, 0) AS serviceRevenue,
+                       COALESCE(parts.partsVat, 0) + COALESCE(fees.serviceVat, 0) AS vatAmount,
+                       COALESCE(costs.costAmount, 0) AS costAmount
+                FROM repairs r
+                LEFT JOIN partners p ON p.id = r.partner_id
+                LEFT JOIN (
+                    SELECT repair_id,
+                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE')
+                                    THEN quantity * unit_price ELSE 0 END) AS partsRevenue,
+                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE')
+                                    THEN quantity * unit_price * COALESCE(vat_percent, 0) / 100 ELSE 0 END) AS partsVat
+                    FROM repair_lines
+                    GROUP BY repair_id
+                ) parts ON parts.repair_id = r.id
+                LEFT JOIN (
+                    SELECT repair_id,
+                           SUM(COALESCE(quantity, 1) * fee_amount) AS serviceRevenue,
+                           SUM(COALESCE(quantity, 1) * fee_amount * COALESCE(vat_percent, 0) / 100) AS serviceVat
+                    FROM repair_fees
+                    GROUP BY repair_id
+                ) fees ON fees.repair_id = r.id
+                LEFT JOIN (
+                    SELECT d.reference_id AS repairId,
+                           SUM((l.quantity_out - l.quantity_in) * l.unit_cost) AS costAmount
+                    FROM inventory_documents d
+                    JOIN inventory_ledger l ON l.inventory_document_id = d.id
+                    WHERE d.reference_type = 'REPAIR'
+                      AND d.doc_type = 'EX_SO'
+                      AND d.status = 'POSTED'
+                    GROUP BY d.reference_id
+                ) costs ON costs.repairId = r.id
+                WHERE r.repair_status = 'DONE'
+                  AND (? IS NULL OR r.warehouse_id = ?)
+                  AND (
+                      NOT EXISTS (SELECT 1 FROM repair_lines used_part WHERE used_part.repair_id = r.id AND used_part.action_type IN ('ADD', 'REPLACE'))
+                      OR EXISTS (
+                          SELECT 1 FROM inventory_documents posted_export
+                          WHERE posted_export.reference_type = 'REPAIR'
+                            AND posted_export.reference_id = r.id
+                            AND posted_export.doc_type = 'EX_SO'
+                            AND posted_export.status = 'POSTED'
+                      )
+                  )
+                  AND (
+                      NOT EXISTS (SELECT 1 FROM repair_lines removed WHERE removed.repair_id = r.id AND removed.action_type IN ('REMOVE', 'REPLACE'))
+                      OR EXISTS (
+                          SELECT 1 FROM inventory_documents posted_scrap
+                          WHERE posted_scrap.reference_type = 'REPAIR'
+                            AND posted_scrap.reference_id = r.id
+                            AND posted_scrap.doc_type = 'IN_PO'
+                            AND posted_scrap.issue_purpose = 'SCRAP'
+                            AND posted_scrap.status = 'POSTED'
+                      )
+                  )
+                  AND (? IS NULL OR r.completed_date >= ?)
+                  AND (? IS NULL OR r.completed_date < ?)
+                  AND (? IS NULL OR LOWER(r.repair_code) LIKE LOWER(CONCAT('%', TRIM(?), '%'))
+                       OR LOWER(COALESCE(p.name, '')) LIKE LOWER(CONCAT('%', TRIM(?), '%')))
+                ORDER BY r.completed_date DESC, r.id DESC
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            BigDecimal partsRevenue = rs.getBigDecimal("partsRevenue");
+            BigDecimal serviceRevenue = rs.getBigDecimal("serviceRevenue");
+            BigDecimal revenue = partsRevenue.add(serviceRevenue);
+            BigDecimal cost = rs.getBigDecimal("costAmount");
+            BigDecimal profit = revenue.subtract(cost);
+            BigDecimal margin = revenue.compareTo(BigDecimal.ZERO) > 0
+                    ? profit.divide(revenue, 4, java.math.RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100"))
+                    : BigDecimal.ZERO;
+            return RepairProfitReportResponse.builder()
+                    .repairId(rs.getLong("repairId"))
+                    .repairCode(rs.getString("repairCode"))
+                    .completedDate(rs.getDate("completedDate") != null
+                            ? rs.getDate("completedDate").toLocalDate() : null)
+                    .partnerName(rs.getString("partnerName"))
+                    .partsRevenue(partsRevenue)
+                    .serviceRevenue(serviceRevenue)
+                    .vatAmount(rs.getBigDecimal("vatAmount"))
+                    .costAmount(cost)
+                    .grossProfit(profit)
+                    .profitMarginPercent(margin)
+                    .build();
+        }, warehouseId, warehouseId, startDate, startDate, endDate, endDate, search, search, search);
+    }
+
     // 6. Dashboard metrics
     public DashboardResponse getDashboardMetrics(String inventoryFlowRange, String categoryScope, String financeRange) {
         LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
-        LocalDate endOfMonth = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+        LocalDate endOfMonth = LocalDate.now();
 
         BigDecimal standardWarehouseInventoryValue = getStandardWarehouseInventoryValue();
         List<DashboardResponse.FinishedGoodInventoryDto> finishedGoodInventoryItems = getFinishedGoodInventoryItems();
@@ -436,10 +712,18 @@ public class ReportRepository {
         List<DashboardResponse.RepairSummaryDto> confirmedWarrantyRepairs = getConfirmedWarrantyRepairs();
         Map<String, Object> importExportMap = getImportExportMetrics(startOfMonth, endOfMonth);
         Map<String, Object> debtMap = getDebtMetrics();
+        BigDecimal averageInventory = getAverageInventoryValue(startOfMonth, endOfMonth);
+        BigDecimal consumedCost = getConsumedInventoryCost(startOfMonth, endOfMonth.plusDays(1));
+        BigDecimal turnover = averageInventory.compareTo(BigDecimal.ZERO) > 0
+                ? consumedCost.divide(averageInventory, 4, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        BigDecimal averageDays = turnover.compareTo(BigDecimal.ZERO) > 0
+                ? BigDecimal.valueOf(endOfMonth.getDayOfMonth()).divide(turnover, 2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
 
         return DashboardResponse.builder()
-                .inventoryTurnoverRatio(BigDecimal.ZERO)
-                .averageDaysInInventory(BigDecimal.ZERO)
+                .inventoryTurnoverRatio(turnover)
+                .averageDaysInInventory(averageDays)
                 .totalInventoryValue(standardWarehouseInventoryValue)
                 .standardWarehouseInventoryValue(standardWarehouseInventoryValue)
                 .totalImportThisMonth(toBigDecimal(importExportMap.get("totalImport")))
@@ -457,7 +741,7 @@ public class ReportRepository {
                 .approvedPurchaseOrdersCount(approvedPurchaseOrders.size())
                 .approvedSalesOrdersCount(approvedSalesOrders.size())
                 .backorderedSalesOrdersCount(backorderedSalesOrders.size())
-                .configuredLowStockProductsCount(getConfiguredLowStockProductsCount())
+                .configuredLowStockProductsCount(configuredLowStockProducts.size())
                 .confirmedWarrantyRepairsCount(confirmedWarrantyRepairs.size())
                 .inventoryFlow7Days(getInventoryFlowData(inventoryFlowRange))
                 .categoryInventoryBreakdown(getCategoryInventoryBreakdown(categoryScope))
@@ -492,15 +776,13 @@ public class ReportRepository {
 
         String sql = """
                 SELECT
-                    idoc.doc_date AS documentDate,
-                    COALESCE(SUM(idl.quantity_in), 0) AS totalImportQty,
-                    COALESCE(SUM(idl.quantity_out), 0) AS totalExportQty
-                FROM inventory_documents idoc
-                JOIN inventory_document_lines idl ON idoc.id = idl.inventory_document_id
-                WHERE idoc.status = 'POSTED'
-                  AND idoc.doc_date >= ?
-                  AND idoc.doc_date <= ?
-                GROUP BY idoc.doc_date
+                    DATE(l.movement_at) AS documentDate,
+                    COALESCE(SUM(l.quantity_in), 0) AS totalImportQty,
+                    COALESCE(SUM(l.quantity_out), 0) AS totalExportQty
+                FROM inventory_ledger l
+                WHERE l.movement_at >= ?
+                  AND l.movement_at < ?
+                GROUP BY DATE(l.movement_at)
                 """;
 
         Map<LocalDate, DashboardResponse.InventoryFlowDto> flowMap = new HashMap<>();
@@ -511,7 +793,7 @@ public class ReportRepository {
                     .importQuantity(rs.getBigDecimal("totalImportQty"))
                     .exportQuantity(rs.getBigDecimal("totalExportQty"))
                     .build());
-        }, startDate, endDate);
+        }, startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
 
         List<DashboardResponse.InventoryFlowDto> result = new ArrayList<>();
         long days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
@@ -532,33 +814,14 @@ public class ReportRepository {
         StringBuilder sql = new StringBuilder("""
                 SELECT
                     COALESCE(pc.name, 'Khác') AS categoryName,
-                    COALESCE(SUM(
-                        CASE
-                            WHEN (
-                                (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
-                                    AND ib.serial_number_id IS NOT NULL
-                                    AND sn.status = 'AVAILABLE'
-                                    AND NOT EXISTS (
-                                        SELECT 1 FROM device_component_serials dcs
-                                        WHERE dcs.component_variant_id = ib.variant_id
-                                          AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
-                                          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
-                                    )
-                                )
-                                OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
-                            )
-                            THEN ib.quantity_on_hand * ib.average_cost
-                            ELSE 0
-                        END
-                    ), 0) AS inventoryValue
-                FROM inventory_balances ib
-                JOIN product_variants pv ON ib.variant_id = pv.id
+                    COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) AS inventoryValue
+                FROM inventory_cost_layers icl
+                JOIN product_variants pv ON icl.variant_id = pv.id
                 JOIN products p ON pv.product_id = p.id
-                JOIN warehouses w ON ib.warehouse_id = w.id
+                JOIN warehouses w ON icl.warehouse_id = w.id
                 LEFT JOIN product_categories pc ON p.category_id = pc.id
-                LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id
-                WHERE ib.stock_status = 'GOOD'
-                  AND w.type = 'STANDARD'
+                WHERE w.type = 'STANDARD'
+                  AND icl.quantity_layered > 0
                 """);
 
         if ("finished".equals(normalizedScope)) {
@@ -569,25 +832,7 @@ public class ReportRepository {
 
         sql.append("""
                 GROUP BY COALESCE(pc.name, 'Khác')
-                HAVING COALESCE(SUM(
-                    CASE
-                        WHEN (
-                            (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
-                                AND ib.serial_number_id IS NOT NULL
-                                AND sn.status = 'AVAILABLE'
-                                AND NOT EXISTS (
-                                    SELECT 1 FROM device_component_serials dcs
-                                    WHERE dcs.component_variant_id = ib.variant_id
-                                      AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
-                                      AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
-                                )
-                            )
-                            OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
-                        )
-                        THEN ib.quantity_on_hand * ib.average_cost
-                        ELSE 0
-                    END
-                ), 0) > 0
+                HAVING COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) > 0
                 ORDER BY inventoryValue DESC
                 """);
 
@@ -635,13 +880,13 @@ public class ReportRepository {
 
         String cashflowSql = """
                 SELECT
-                    MONTH(created_at) AS monthNumber,
+                    MONTH(posted_at) AS monthNumber,
                     COALESCE(SUM(CASE WHEN type = 'RECEIPT' THEN amount ELSE 0 END), 0) AS receipts,
                     COALESCE(SUM(CASE WHEN type = 'VOUCHER' THEN amount ELSE 0 END), 0) AS vouchers
                 FROM payment_transactions
                 WHERE status = 'POSTED'
-                  AND YEAR(created_at) = ?
-                GROUP BY MONTH(created_at)
+                  AND YEAR(posted_at) = ?
+                GROUP BY MONTH(posted_at)
                 """;
 
         Map<Integer, DashboardResponse.FinanceOverviewDto> cashflowMap = new HashMap<>();
@@ -679,19 +924,17 @@ public class ReportRepository {
 
     private BigDecimal getCustomerClosingDebtForMonth(LocalDateTime monthEndExclusive) {
         String sql = """
-                SELECT COALESCE(SUM(latest_rows.balance_after), 0) AS totalDebt
+                SELECT COALESCE(SUM(partner_balances.balance), 0) AS totalDebt
                 FROM (
                     SELECT
                         pl.partner_id,
-                        pl.balance_after,
-                        ROW_NUMBER() OVER (PARTITION BY pl.partner_id ORDER BY pl.created_at DESC, pl.id DESC) AS rn
+                        SUM(pl.amount_debt - pl.amount_receipt) AS balance
                     FROM partner_ledger pl
-                    JOIN partners pt ON pl.partner_id = pt.id
-                    WHERE pt.is_customer = 1
+                    WHERE pl.account_type = 'RECEIVABLE'
                       AND pl.created_at < ?
-                ) latest_rows
-                WHERE latest_rows.rn = 1
-                  AND latest_rows.balance_after > 0
+                    GROUP BY pl.partner_id
+                ) partner_balances
+                WHERE partner_balances.balance > 0
                 """;
         BigDecimal result = jdbcTemplate.queryForObject(sql, BigDecimal.class, monthEndExclusive);
         return result != null ? result : BigDecimal.ZERO;
@@ -836,35 +1079,11 @@ public class ReportRepository {
 
     private BigDecimal getStandardWarehouseInventoryValue() {
         String sql = """
-                SELECT COALESCE(SUM(stock_rows.total_value), 0) AS totalInventoryValue
-                FROM (
-                    SELECT
-                        ib.id,
-                        CASE
-                            WHEN (
-                                (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
-                                    AND ib.serial_number_id IS NOT NULL
-                                    AND sn.status = 'AVAILABLE'
-                                    AND NOT EXISTS (
-                                        SELECT 1 FROM device_component_serials dcs
-                                        WHERE dcs.component_variant_id = ib.variant_id
-                                          AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
-                                          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
-                                    )
-                                )
-                                OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
-                            )
-                            THEN ib.quantity_on_hand * ib.average_cost
-                            ELSE 0
-                        END AS total_value
-                    FROM inventory_balances ib
-                    JOIN product_variants pv ON ib.variant_id = pv.id
-                    JOIN products p ON pv.product_id = p.id
-                    JOIN warehouses w ON ib.warehouse_id = w.id
-                    LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id
-                    WHERE ib.stock_status = 'GOOD'
-                      AND w.type = 'STANDARD'
-                ) stock_rows
+                SELECT COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) AS totalInventoryValue
+                FROM inventory_cost_layers icl
+                JOIN warehouses w ON icl.warehouse_id = w.id
+                WHERE w.type = 'STANDARD'
+                  AND icl.quantity_layered > 0
                 """;
         return jdbcTemplate.queryForObject(sql, BigDecimal.class);
     }
@@ -1018,20 +1237,6 @@ public class ReportRepository {
     }
 
 
-    private int getConfiguredLowStockProductsCount() {
-        String sql = """
-                SELECT COUNT(1)
-                FROM product_variants pv
-                JOIN products p ON p.id = pv.product_id
-                WHERE p.active = TRUE
-                  AND pv.active = TRUE
-                  AND COALESCE(pv.min_stock_qty, 0) > 0
-                  AND LOWER(TRIM(p.product_type)) NOT IN ('dịch vụ', 'dich vu', 'service')
-                """;
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class);
-        return count != null ? count : 0;
-    }
-
     private List<DashboardResponse.ConfiguredLowStockProductDto> getConfiguredLowStockProducts() {
         String sql = """
                 SELECT
@@ -1044,9 +1249,15 @@ public class ReportRepository {
                     COALESCE(SUM(CASE
                         WHEN pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
                              AND ib.serial_number_id IS NOT NULL
-                             AND sn.status = 'AVAILABLE' THEN ib.quantity_on_hand
+                             AND sn.status = 'AVAILABLE'
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM device_component_serials dcs
+                                 WHERE dcs.component_variant_id = ib.variant_id
+                                   AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
+                                   AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                             ) THEN ib.quantity_on_hand
                         WHEN pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
-                             AND ib.serial_number_id IS NULL THEN ib.quantity_on_hand
+                             AND ib.serial_number_id IS NULL THEN ib.quantity_on_hand - ib.quantity_reserved
                         ELSE 0 END), 0) AS stockQty
                 FROM product_variants pv
                 JOIN products p ON p.id = pv.product_id
@@ -1104,46 +1315,32 @@ public class ReportRepository {
     private Map<String, Object> getImportExportMetrics(LocalDate startOfMonth, LocalDate endOfMonth) {
         String sql = """
                 SELECT
-                    COALESCE(SUM(CASE WHEN idoc.doc_type = 'IN_PO' THEN idl.quantity_in * idl.unit_cost ELSE 0 END), 0) AS totalImport,
-                    COALESCE(SUM(CASE WHEN idoc.doc_type = 'EX_SO' THEN idl.quantity_out * idl.unit_cost ELSE 0 END), 0) AS totalExport
-                FROM inventory_documents idoc
-                JOIN inventory_document_lines idl ON idoc.id = idl.inventory_document_id
-                WHERE idoc.status = 'POSTED'
-                  AND idoc.doc_date >= ?
-                  AND idoc.doc_date <= ?
+                    COALESCE(SUM(l.quantity_in * l.unit_cost), 0) AS totalImport,
+                    COALESCE(SUM(l.quantity_out * l.unit_cost), 0) AS totalExport
+                FROM inventory_ledger l
+                WHERE l.movement_at >= ?
+                  AND l.movement_at < ?
                 """;
-        return jdbcTemplate.queryForMap(sql, startOfMonth, endOfMonth);
+        return jdbcTemplate.queryForMap(sql, startOfMonth.atStartOfDay(), endOfMonth.plusDays(1).atStartOfDay());
     }
 
     private Map<String, Object> getDebtMetrics() {
-        try {
-            String sql = """
-                    SELECT
-                        COALESCE(SUM(CASE WHEN pt.is_customer = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalCustomerDebt,
-                        COALESCE(SUM(CASE WHEN pt.is_supplier = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalSupplierDebt
-                    FROM partner_ledger pl
-                    INNER JOIN partners pt ON pl.partner_id = pt.id
-                    """;
-            return jdbcTemplate.queryForMap(sql);
-        } catch (Exception primaryError) {
-            try {
-                String fallbackSql = """
-                        SELECT
-                            COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE status = 'POSTED' AND type = 'RECEIPT'), 0) AS totalCustomerDebt,
-                            COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE status = 'POSTED' AND type = 'VOUCHER'), 0) AS totalSupplierDebt
-                        """;
-                return jdbcTemplate.queryForMap(fallbackSql);
-            } catch (Exception ignored) {
-                Map<String, Object> zeros = new HashMap<>();
-                zeros.put("totalCustomerDebt", BigDecimal.ZERO);
-                zeros.put("totalSupplierDebt", BigDecimal.ZERO);
-                return zeros;
-            }
-        }
+        String sql = """
+                SELECT
+                    COALESCE(SUM(CASE WHEN balances.account_type = 'RECEIVABLE' AND balances.balance > 0 THEN balances.balance ELSE 0 END), 0) AS totalCustomerDebt,
+                    COALESCE(SUM(CASE WHEN balances.account_type = 'PAYABLE' AND balances.balance > 0 THEN balances.balance ELSE 0 END), 0) AS totalSupplierDebt
+                FROM (
+                    SELECT partner_id, account_type, SUM(amount_debt - amount_receipt) AS balance
+                    FROM partner_ledger
+                    GROUP BY partner_id, account_type
+                ) balances
+                """;
+        return jdbcTemplate.queryForMap(sql);
     }
 
     private Integer getNewWarrantyTickets(LocalDate startOfMonth, LocalDate endOfMonth) {
-        String sql = "SELECT COUNT(id) FROM repairs WHERE received_date >= ? AND received_date <= ?";
+        String sql = "SELECT COUNT(id) FROM repairs WHERE received_date >= ? AND received_date <= ? " +
+                "AND (COALESCE(under_warranty, FALSE) = TRUE OR warranty_id IS NOT NULL)";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, startOfMonth, endOfMonth);
         return count != null ? count : 0;
     }
@@ -1166,6 +1363,39 @@ public class ReportRepository {
 
     private BigDecimal zeroIfNull(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private BigDecimal getAverageInventoryValue(LocalDate startDate, LocalDate endDate) {
+        String sql = """
+                SELECT COALESCE(AVG(day_value), 0)
+                FROM (
+                    SELECT s.snapshot_date, SUM(s.closing_value) AS day_value
+                    FROM inventory_daily_snapshots s
+                    JOIN warehouses w ON w.id = s.warehouse_id
+                    WHERE s.snapshot_date >= ? AND s.snapshot_date <= ?
+                      AND w.type = 'STANDARD'
+                    GROUP BY s.snapshot_date
+                ) daily_values
+                """;
+        BigDecimal value = jdbcTemplate.queryForObject(sql, BigDecimal.class, startDate, endDate);
+        return zeroIfNull(value);
+    }
+
+    private BigDecimal getConsumedInventoryCost(LocalDate startDate, LocalDate endDateExclusive) {
+        String sql = """
+                SELECT COALESCE(SUM((l.quantity_out - l.quantity_in) * l.unit_cost), 0)
+                FROM inventory_ledger l
+                JOIN inventory_documents d ON d.id = l.inventory_document_id
+                JOIN warehouses w ON w.id = l.warehouse_id
+                WHERE l.movement_at >= ?
+                  AND l.movement_at < ?
+                  AND d.doc_type = 'EX_SO'
+                  AND (d.sales_order_id IS NOT NULL OR d.issue_purpose = 'REPAIR')
+                  AND w.type = 'STANDARD'
+                """;
+        BigDecimal value = jdbcTemplate.queryForObject(sql, BigDecimal.class,
+                startDate.atStartOfDay(), endDateExclusive.atStartOfDay());
+        return zeroIfNull(value);
     }
 
     private BigDecimal toBigDecimal(Object value) {

@@ -109,11 +109,19 @@ public class ProductService {
         return stockResults.isEmpty() ? BigDecimal.ZERO : (BigDecimal) stockResults.get(0)[1];
     }
 
+    public String getNextProductCode() {
+        return codeGeneratorService.previewCode("products", "product_code", "SP", 5);
+    }
+
+
     @Transactional
     public ProductResponse createProduct(ProductRequest dto) {
         if (dto.getProductCode() == null || dto.getProductCode().isBlank()) {
             dto.setProductCode(codeGeneratorService.generateCode("products", "product_code", "SP", 5));
+        } else {
+            codeGeneratorService.syncSequence("products", "product_code", "SP", dto.getProductCode());
         }
+
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
             throw new BusinessException(String.format(SystemMessage.PROD_ERR_020.getMessage(), dto.getProductCode()));
         }
@@ -324,7 +332,7 @@ public class ProductService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<String> generateSerialCodes(Long productId, Long variantId, int quantity) {
         if (quantity < 1 || quantity > 1000) {
             throw new BusinessException(SystemMessage.PROD_ERR_016.getMessage());
@@ -338,22 +346,11 @@ public class ProductService {
             throw new BusinessException(SystemMessage.PROD_ERR_015.getMessage());
         }
 
-        Set<String> codes = new LinkedHashSet<>(quantity);
-        int maxAttempts = quantity * MAX_SERIAL_ATTEMPTS_PER_CODE;
-        for (int attempts = 0; codes.size() < quantity && attempts < maxAttempts; attempts++) {
-            String code = generateRandomSerialCode();
-            if (!codes.contains(code) && !serialNumberRepository.existsBySerialNumber(code)) {
-                codes.add(code);
-            }
-        }
-        if (codes.size() < quantity) {
-            throw new BusinessException(SystemMessage.PROD_ERR_014.getMessage());
-        }
-        return List.copyOf(codes);
-    }
-
-    static String generateRandomSerialCode() {
-        return String.valueOf(SERIAL_MIN + Math.floorMod(SERIAL_RANDOM.nextLong(), SERIAL_RANGE));
+        String yymm = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMM"));
+        String prefix = "DL" + yymm;
+        
+        // Sinh 1 lúc N mã tuần tự, cập nhật bộ đếm trong DB để tránh người khác lấy trùng số khi đang in tem
+        return codeGeneratorService.generateBatchCodes("serial_numbers", "serial_number", prefix, 4, quantity);
     }
 
     @Transactional

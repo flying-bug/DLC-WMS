@@ -58,6 +58,13 @@ public class ProductController {
         return ResponseEntity.ok(productService.getStockAlertSummary());
     }
 
+    @GetMapping("/next-code")
+    @PreAuthorize("hasAuthority('product:view')")
+    public ResponseEntity<ApiResponse<String>> getNextProductCode() {
+        return ResponseEntity.ok(ApiResponse.success(productService.getNextProductCode()));
+    }
+
+
     @GetMapping("/export")
     @PreAuthorize("hasAuthority('product:export')")
     public ResponseEntity<byte[]> exportProducts(

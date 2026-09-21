@@ -113,6 +113,15 @@ function RepairListPage() {
 
   useEffect(() => {
     loadRepairs();
+
+    const handleRealtimeNotification = (event) => {
+      const payload = event.detail;
+      if (payload && payload.referenceType === 'REPAIR') {
+        loadRepairs();
+      }
+    };
+    window.addEventListener('app:notification', handleRealtimeNotification);
+    return () => window.removeEventListener('app:notification', handleRealtimeNotification);
   }, [loadRepairs]);
 
   useEffect(() => {

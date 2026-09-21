@@ -4,16 +4,16 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import { getMyWarehouses } from '../../api/warehouseApi';
-import { getAllPayments } from '../../api/paymentApi';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeContext';
-import * as XLSX from 'xlsx';
 import {
     getInventoryBalanceReport,
     getStockLedgerReport,
     getStockTransferReport,
     getDebtReport,
+    getCashFlowReport,
     getInventorySummaryReport,
     getSalesProfitReport,
+    getRepairProfitReport,
     exportReportExcel
 } from '../../api/reportApi';
 import styles from './ReportListPage.module.css';
@@ -85,7 +85,8 @@ const MOCK_CATEGORIES = [
         domain: 'SALES',
         roleBadge: 'Kế toán',
         reports: [
-            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.', domain: 'SALES' }
+            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp bán hàng', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.', domain: 'SALES' },
+            { id: 'repair-profit', name: 'Báo cáo Doanh thu & Lợi nhuận sửa chữa', desc: 'Tổng hợp doanh thu linh kiện, dịch vụ, VAT, giá vốn FIFO và lợi nhuận theo từng lệnh sửa chữa hoàn thành.', domain: 'SALES' }
         ]
     }
 ];
@@ -149,6 +150,7 @@ const ReportListPage = () => {
     const [activeReport, setActiveReport] = useState(null); // The report definition currently selected
     const [loading, setLoading] = useState(false);
     const [reportData, setReportData] = useState([]);
+    const [cashFlowSummary, setCashFlowSummary] = useState(null);
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
     const [currentPage, setCurrentPage] = useState(0);
     const [pageSize, setPageSize] = useState(20);
@@ -170,7 +172,8 @@ const ReportListPage = () => {
             search: '',
             partnerType: '', // '', CUSTOMER, SUPPLIER
             status: '',
-            transactionType: '' // For stock-ledger
+            transactionType: '', // For stock-ledger
+            paymentMethod: ''
         };
     });
 
@@ -322,41 +325,24 @@ const ReportListPage = () => {
                 case 'sales-profit':
                     response = await getSalesProfitReport(params);
                     break;
-                case 'cash-flow': {
-                    const res = await getAllPayments();
-                    const data = res.data?.data || res.data || [];
-                    let list = Array.isArray(data) ? data : [];
-                    if (filters.startDate) {
-                        const from = new Date(filters.startDate).setHours(0, 0, 0, 0);
-                        list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() >= from);
-                    }
-                    if (filters.endDate) {
-                        const to = new Date(filters.endDate).setHours(23, 59, 59, 999);
-                        list = list.filter((p) => p.createdAt && new Date(p.createdAt).getTime() <= to);
-                    }
-                    if (filters.search && filters.search.trim()) {
-                        const term = filters.search.trim().toLowerCase();
-                        list = list.filter(
-                            (p) =>
-                                (p.code && p.code.toLowerCase().includes(term)) ||
-                                (p.partnerName && p.partnerName.toLowerCase().includes(term)) ||
-                                (p.note && p.note.toLowerCase().includes(term))
-                        );
-                    }
-                    if (filters.transactionType && filters.transactionType !== '') {
-                        list = list.filter((p) => p.type === filters.transactionType);
-                    }
-                    if (filters.status && filters.status !== '') {
-                        list = list.filter((p) => p.status === filters.status);
-                    }
-                    setReportData(list);
-                    return;
-                }
+                case 'repair-profit':
+                    response = await getRepairProfitReport(params);
+                    break;
+                case 'cash-flow':
+                    params.paymentMethod = filters.paymentMethod || undefined;
+                    response = await getCashFlowReport(params);
+                    break;
                 default:
                     throw new Error('Loại báo cáo không hợp lệ');
             }
 
             let data = response.data?.data || response.data || [];
+            if (activeReport.id === 'cash-flow') {
+                setCashFlowSummary(data);
+                data = data.transactions || [];
+            } else {
+                setCashFlowSummary(null);
+            }
 
             // local filtering for stock-ledger transaction type
             if (activeReport.id === 'stock-ledger' && filters.transactionType && filters.transactionType !== '') {
@@ -380,11 +366,12 @@ const ReportListPage = () => {
             console.error('Lỗi khi lấy dữ liệu báo cáo:', err);
             showToast('error', err.response?.data?.userMessage || 'Không thể tải dữ liệu báo cáo.');
             setReportData([]);
+            setCashFlowSummary(null);
         } finally {
             if (!silent) setLoading(false);
         }
     };
-  useRealtimeRefresh(['INVENTORY_BALANCE','IMPORT_DOCUMENT','EXPORT_DOCUMENT','STOCK_TRANSFER','PAYMENT','SALES_ORDER','PARTNER'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
+    useRealtimeRefresh(['INVENTORY_BALANCE', 'IMPORT_DOCUMENT', 'EXPORT_DOCUMENT', 'STOCK_TRANSFER', 'PAYMENT', 'SALES_ORDER', 'PARTNER'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
 
     // Auto-fetch data on switching to a report or changing filters
     useEffect(() => {
@@ -393,7 +380,7 @@ const ReportListPage = () => {
             handleViewReport();
         }
 
-    }, [viewMode, activeReport, filters.warehouseId, filters.startDate, filters.endDate, filters.partnerType, filters.status, filters.transactionType, debouncedSearch]);
+    }, [viewMode, activeReport, filters.warehouseId, filters.startDate, filters.endDate, filters.partnerType, filters.status, filters.transactionType, filters.paymentMethod, debouncedSearch]);
 
     // Format utility functions
     const formatCurrency = (val) => {
@@ -424,7 +411,7 @@ const ReportListPage = () => {
 
     // Export to Excel
     const handleExport = async () => {
-        if (!reportData || reportData.length === 0) {
+        if ((!reportData || reportData.length === 0) && activeReport.id !== 'cash-flow') {
             showToast('warning', 'Không có dữ liệu để xuất.');
             return;
         }
@@ -442,31 +429,12 @@ const ReportListPage = () => {
                 params.endDate = `${filters.endDate}T23:59:59`;
             }
 
-            if (activeReport.id === 'cash-flow') {
-                const worksheetData = reportData.map((item, idx) => ({
-                    'STT': idx + 1,
-                    'Ngày chứng từ': formatDate(item.createdAt),
-                    'Số phiếu': item.code || '-',
-                    'Loại nghiệp vụ': item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi',
-                    'Hình thức': item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản',
-                    'Đối tác / Người nộp - nhận': item.partnerName || '-',
-                    'Thu vào (VNĐ)': item.type === 'RECEIPT' ? Number(item.amount || 0) : 0,
-                    'Chi ra (VNĐ)': item.type === 'VOUCHER' ? Number(item.amount || 0) : 0,
-                    'Trạng thái': item.status === 'POSTED' ? 'Đã ghi sổ' : 'Chờ ghi sổ',
-                    'Ghi chú': item.note || '-'
-                }));
-                const ws = XLSX.utils.json_to_sheet(worksheetData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'DongTien');
-                XLSX.writeFile(wb, `DLC_BaoCao_DongTien_${new Date().toISOString().slice(0, 10)}.xlsx`);
-                showToast('success', 'Xuất Excel báo cáo dòng tiền thành công.');
-                return;
-            }
-
             if (activeReport.id === 'stock-transfers') {
                 params.status = filters.status || undefined;
             } else if (activeReport.id === 'debt') {
                 params.partnerType = filters.partnerType !== '' ? filters.partnerType : undefined;
+            } else if (activeReport.id === 'cash-flow') {
+                params.paymentMethod = filters.paymentMethod || undefined;
             }
 
             await exportReportExcel(activeReport.id, params);
@@ -628,13 +596,19 @@ const ReportListPage = () => {
                             <div className={styles.filterSection}>
                                 <div className={styles.searchAndFilters}>
                                     {/* Search Box - FIRST! */}
-                                    {activeReport.id !== 'debt' && (
+                                    {(
                                         <div className={styles.searchBox}>
                                             <i className="bi bi-search"></i>
                                             <input
                                                 type="text"
                                                 className={styles.searchInput}
-                                                placeholder={activeReport.id === 'cash-flow' ? "Mã phiếu, đối tác, ghi chú..." : "Tìm tên, mã mặt hàng..."}
+                                                placeholder={activeReport.id === 'cash-flow'
+                                                    ? "Mã phiếu, đối tác, ghi chú..."
+                                                    : activeReport.id === 'debt'
+                                                        ? "Mã hoặc tên đối tác..."
+                                                        : activeReport.id === 'repair-profit'
+                                                            ? "Mã lệnh hoặc khách hàng..."
+                                                            : "Tìm tên, mã mặt hàng..."}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') handleViewReport(); }}
                                                 value={filters.search}
                                                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
@@ -688,18 +662,17 @@ const ReportListPage = () => {
                                                 warehouseId: filters.warehouseId,
                                                 status: filters.status,
                                                 transactionType: filters.transactionType,
-                                                partnerType: filters.partnerType
+                                                partnerType: filters.partnerType,
+                                                paymentMethod: filters.paymentMethod
                                             }}
                                             showDateRange={activeReport.id !== 'inventory-balance'}
-                                            warehouses={activeReport.id !== 'debt' ? warehouses : []}
+                                            warehouses={!['debt', 'cash-flow'].includes(activeReport.id) ? warehouses : []}
                                             statusOptions={
                                                 activeReport.id === 'stock-transfers' ? [
-                                                    { value: 'COMPLETED', label: 'Hoàn thành' },
-                                                    { value: 'PENDING', label: 'Chờ duyệt' },
+                                                    { value: 'APPROVED', label: 'Đã duyệt, chờ xuất' },
+                                                    { value: 'IN_TRANSIT', label: 'Đang chuyển' },
+                                                    { value: 'POSTED', label: 'Hoàn thành' },
                                                     { value: 'CANCELLED', label: 'Đã hủy' }
-                                                ] : activeReport.id === 'cash-flow' ? [
-                                                    { value: 'POSTED', label: 'Đã ghi sổ' },
-                                                    { value: 'DRAFT', label: 'Chờ ghi sổ' }
                                                 ] : []
                                             }
                                             customSelects={[
@@ -727,12 +700,12 @@ const ReportListPage = () => {
                                                     ]
                                                 }] : []),
                                                 ...(activeReport.id === 'cash-flow' ? [{
-                                                    key: 'transactionType',
-                                                    label: 'Loại nghiệp vụ',
-                                                    defaultOption: 'Tất cả nghiệp vụ',
+                                                    key: 'paymentMethod',
+                                                    label: 'Phương thức',
+                                                    defaultOption: 'Tất cả phương thức',
                                                     options: [
-                                                        { value: 'RECEIPT', label: 'Phiếu thu' },
-                                                        { value: 'VOUCHER', label: 'Phiếu chi' }
+                                                        { value: 'CASH', label: 'Tiền mặt' },
+                                                        { value: 'BANK_TRANSFER', label: 'Chuyển khoản' }
                                                     ]
                                                 }] : [])
                                             ]}
@@ -745,7 +718,8 @@ const ReportListPage = () => {
                                                     warehouseId: newFilters.warehouseId || '',
                                                     status: newFilters.status || '',
                                                     transactionType: newFilters.transactionType || '',
-                                                    partnerType: newFilters.partnerType || ''
+                                                    partnerType: newFilters.partnerType || '',
+                                                    paymentMethod: newFilters.paymentMethod || ''
                                                 }));
                                             }}
                                             onReset={() => {
@@ -756,6 +730,7 @@ const ReportListPage = () => {
                                                     status: '',
                                                     transactionType: '',
                                                     partnerType: '',
+                                                    paymentMethod: '',
                                                     search: ''
                                                 }));
                                             }}
@@ -785,7 +760,7 @@ const ReportListPage = () => {
                                         <div className={styles.spinner}></div>
                                         <p>Đang lập báo cáo. Vui lòng chờ trong giây lát...</p>
                                     </div>
-                                ) : reportData.length === 0 ? (
+                                ) : reportData.length === 0 && activeReport.id !== 'cash-flow' ? (
                                     <div className={styles.noDataContainer}>
                                         <i className="bi bi-folder2-open"></i>
                                         <p>Không có dữ liệu phù hợp với bộ lọc đã chọn.</p>
@@ -855,7 +830,9 @@ const ReportListPage = () => {
                                                                         <th className={styles.colProductName}>Tên hàng</th>
                                                                         <th className={styles.colUnit}>Đơn vị tính</th>
                                                                         <th className={styles.colWarehouse}>Kho chứa</th>
-                                                                        <th className={styles.textRight}>Số lượng tồn</th>
+                                                                        <th className={styles.textRight}>Tồn thực tế</th>
+                                                                        <th className={styles.textRight}>Đang giữ</th>
+                                                                        <th className={styles.textRight}>Khả dụng</th>
                                                                         {canViewPricing() && <th className={styles.textRight}>Giá trị tồn</th>}
                                                                     </tr>
                                                                 </thead>
@@ -866,7 +843,9 @@ const ReportListPage = () => {
                                                                             <td className={styles.colProductName}>{item.itemName}</td>
                                                                             <td className={styles.colUnit}>{item.unitName || '-'}</td>
                                                                             <td className={styles.colWarehouse}>{item.warehouseCode ? `${item.warehouseCode} - ${item.warehouseName}` : '-'}</td>
-                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-success)' }}>{formatQuantity(item.totalQuantity)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`}>{formatQuantity(item.totalQuantity)}</td>
+                                                                            <td className={styles.textRight}>{formatQuantity(item.totalReserved)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: Number(item.availableQuantity || 0) < 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>{formatQuantity(item.availableQuantity)}</td>
                                                                             {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.totalValue)}</td>}
                                                                         </tr>
                                                                     ))}
@@ -876,37 +855,52 @@ const ReportListPage = () => {
 
                                                         {/* 3. STOCK LEDGER REPORT */}
                                                         {activeReport.id === 'stock-ledger' && (
-                                                            <table className={`${styles.reportTable} ${styles.boldTable}`}>
+                                                            <table className={`${styles.reportTable} ${styles.boldTable} ${styles.stockLedgerTable}`}>
+                                                                <colgroup>
+                                                                    <col style={{ width: canViewPricing() ? '8%' : '9%' }} />
+                                                                    <col style={{ width: canViewPricing() ? '6%' : '7%' }} />
+                                                                    <col style={{ width: canViewPricing() ? '9%' : '11%' }} />
+                                                                    <col style={{ width: canViewPricing() ? '6%' : '7%' }} />
+                                                                    <col style={{ width: canViewPricing() ? '14%' : '19%' }} />
+                                                                    <col style={{ width: canViewPricing() ? '6%' : '8%' }} />
+                                                                    <col style={{ width: canViewPricing() ? '4%' : '5%' }} />
+                                                                    {canViewPricing() && <col style={{ width: '7%' }} />}
+                                                                    <col style={{ width: canViewPricing() ? '4%' : '6%' }} />
+                                                                    {canViewPricing() && <col style={{ width: '7%' }} />}
+                                                                    <col style={{ width: canViewPricing() ? '4%' : '6%' }} />
+                                                                    {canViewPricing() && <col style={{ width: '7%' }} />}
+                                                                    <col style={{ width: canViewPricing() ? '6%' : '8%' }} />
+                                                                    <col style={{ width: canViewPricing() ? '6%' : '8%' }} />
+                                                                </colgroup>
                                                                 <thead>
                                                                     <tr>
-                                                                        <th style={{ whiteSpace: 'nowrap' }}>Ngày CT</th>
+                                                                        <th style={{ whiteSpace: 'nowrap' }}>Ngày ghi sổ</th>
                                                                         <th style={{ whiteSpace: 'nowrap' }}>Số chứng từ</th>
-                                                                        <th style={{ whiteSpace: 'nowrap' }}>Loại phiếu</th>
                                                                         <th style={{ whiteSpace: 'nowrap' }}>Nghiệp vụ</th>
                                                                         <th className={styles.colProductCode}>Mã hàng</th>
                                                                         <th className={styles.colProductName}>Tên hàng</th>
                                                                         <th className={styles.colWarehouse}>Kho</th>
                                                                         <th className={styles.colUnit}>ĐVT</th>
-                                                                        {canViewPricing() && <th className={styles.textRight} style={{ whiteSpace: 'nowrap' }}>Đơn giá</th>}
+                                                                        {canViewPricing() && <th className={styles.textRight} style={{ whiteSpace: 'nowrap' }}>Đơn giá vốn</th>}
                                                                         <th className={styles.textRight} style={{ width: '70px', minWidth: '70px' }}>SL Nhập</th>
+                                                                        {canViewPricing() && <th className={styles.textRight} style={{ whiteSpace: 'nowrap' }}>Tiền nhập</th>}
                                                                         <th className={styles.textRight} style={{ width: '70px', minWidth: '70px' }}>SL Xuất</th>
-                                                                        <th className={styles.textRight} style={{ width: '70px', minWidth: '70px' }}>Tồn</th>
+                                                                        {canViewPricing() && <th className={styles.textRight} style={{ whiteSpace: 'nowrap' }}>Tiền xuất</th>}
+                                                                        <th className={styles.textRight} style={{ whiteSpace: 'nowrap' }}>Tồn trước giao dịch</th>
+                                                                        <th className={styles.textRight} style={{ whiteSpace: 'nowrap' }}>Tồn sau giao dịch</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     {paginatedData.map((item, idx) => (
-                                                                        <tr key={idx}>
-                                                                            <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.documentDate)}</td>
-                                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.documentNumber}</td>
-                                                                            <td>
-                                                                                <span className={`${styles.badge} ${item.documentType?.startsWith('IN') || item.documentType?.includes('NHAP') || item.documentType?.includes('IMPORT') ? styles.badgeImport : styles.badgeExport}`}>
-                                                                                    {item.documentType?.startsWith('IN') || item.documentType?.includes('NHAP') || item.documentType?.includes('IMPORT') ? 'Nhập kho' : 'Xuất kho'}
-                                                                                </span>
-                                                                            </td>
+                                                                        <tr key={item.ledgerId || idx}>
+                                                                            <td title={`Ngày chứng từ: ${formatDate(item.documentDate)}`}>{formatDate(item.movementAt)}</td>
+                                                                            <td className={styles.fontSemibold} title={item.documentNumber}>{item.documentNumber}</td>
                                                                             <td>
                                                                                 <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
                                                                                     {(() => {
                                                                                         const t = item.documentType;
+                                                                                        if (item.movementType === 'UNPOST_EXPORT') return 'Hoàn tác xuất kho';
+                                                                                        if (item.movementType === 'UNPOST_IMPORT') return 'Hoàn tác nhập kho';
                                                                                         if (t === 'IN_PO') return 'Mua hàng';
                                                                                         if (t === 'EX_SO') return 'Bán hàng';
                                                                                         if (t === 'IN_RET') return 'Khách trả hàng';
@@ -923,13 +917,16 @@ const ReportListPage = () => {
                                                                                     })()}
                                                                                 </span>
                                                                             </td>
-                                                                            <td className={styles.colProductCode}>{item.productCode}</td>
-                                                                            <td className={styles.colProductName}>{item.productName}</td>
-                                                                            <td className={styles.colWarehouse}>{item.warehouseName}</td>
+                                                                            <td className={styles.colProductCode} title={item.productCode}>{item.productCode}</td>
+                                                                            <td className={styles.colProductName} title={item.productName}>{item.productName}</td>
+                                                                            <td className={styles.colWarehouse} title={item.warehouseName}>{item.warehouseName}</td>
                                                                             <td className={styles.colUnit}>{item.unitName || '-'}</td>
                                                                             {canViewPricing() && <td className={styles.textRight} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.unitPrice)}</td>}
-                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{item.quantityIn > 0 ? `+${formatQuantity(item.quantityIn)}` : '-'}</td>
-                                                                            <td className={`${styles.textRight} ${styles.textDanger}`}>{item.quantityOut > 0 ? `-${formatQuantity(item.quantityOut)}` : '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{item.quantityIn > 0 ? formatQuantity(item.quantityIn) : '-'}</td>
+                                                                            {canViewPricing() && <td className={styles.textRight}>{item.quantityIn > 0 ? formatCurrency(item.amountIn) : '-'}</td>}
+                                                                            <td className={`${styles.textRight} ${styles.textDanger}`}>{item.quantityOut > 0 ? formatQuantity(item.quantityOut) : '-'}</td>
+                                                                            {canViewPricing() && <td className={styles.textRight}>{item.quantityOut > 0 ? formatCurrency(item.amountOut) : '-'}</td>}
+                                                                            <td className={styles.textRight}>{formatQuantity(item.balanceBefore)}</td>
                                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`}>{formatQuantity(item.balanceAfter)}</td>
                                                                         </tr>
                                                                     ))}
@@ -969,8 +966,11 @@ const ReportListPage = () => {
                                                                             {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>}
                                                                             {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.amount)}</td>}
                                                                             <td>
-                                                                                <span className={`${styles.badge} ${item.status === 'COMPLETED' ? styles.badgeSuccess : styles.badgeWarning}`}>
-                                                                                    {item.status === 'COMPLETED' ? 'Hoàn thành' : item.status}
+                                                                                <span className={`${styles.badge} ${item.status === 'POSTED' ? styles.badgeSuccess : styles.badgeWarning}`}>
+                                                                                    {item.status === 'POSTED' ? 'Hoàn thành'
+                                                                                        : item.status === 'IN_TRANSIT' ? 'Đang chuyển'
+                                                                                            : item.status === 'APPROVED' ? 'Đã duyệt, chờ xuất'
+                                                                                                : item.status === 'CANCELLED' ? 'Đã hủy' : item.status}
                                                                                 </span>
                                                                             </td>
                                                                         </tr>
@@ -1025,6 +1025,8 @@ const ReportListPage = () => {
                                                                         <th className={styles.colUnit}>ĐVT</th>
                                                                         <th className={styles.textRight}>Số lượng bán</th>
                                                                         <th className={styles.textRight}>Tổng doanh thu</th>
+                                                                        <th className={styles.textRight}>VAT</th>
+                                                                        <th className={styles.textRight}>Tổng sau VAT</th>
                                                                         <th className={styles.textRight}>Tổng giá vốn</th>
                                                                         <th className={styles.textRight}>Lợi nhuận gộp</th>
                                                                         <th className={styles.textRight}>Tỷ suất LN (%)</th>
@@ -1038,6 +1040,8 @@ const ReportListPage = () => {
                                                                             <td className={styles.colUnit}>{item.unitName || '-'}</td>
                                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-primary)' }}>{formatQuantity(item.quantitySold)}</td>
                                                                             <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.salesAmount)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.vatAmount)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.totalAmount)}</td>
                                                                             <td className={styles.textRight}>{formatCurrency(item.costAmount)}</td>
                                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
                                                                                 {formatCurrency(item.grossProfit)}
@@ -1045,6 +1049,41 @@ const ReportListPage = () => {
                                                                             <td className={styles.textRight}>
                                                                                 {item.profitMarginPercent != null ? item.profitMarginPercent.toFixed(2) + '%' : '0%'}
                                                                             </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
+
+                                                        {activeReport.id === 'repair-profit' && (
+                                                            <table className={`${styles.reportTable} ${styles.boldTable}`}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Mã lệnh</th>
+                                                                        <th>Ngày hoàn thành</th>
+                                                                        <th>Khách hàng</th>
+                                                                        <th className={styles.textRight}>Doanh thu linh kiện</th>
+                                                                        <th className={styles.textRight}>Doanh thu dịch vụ</th>
+                                                                        <th className={styles.textRight}>VAT</th>
+                                                                        <th className={styles.textRight}>Giá vốn FIFO</th>
+                                                                        <th className={styles.textRight}>Lợi nhuận gộp</th>
+                                                                        <th className={styles.textRight}>Tỷ suất LN (%)</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item) => (
+                                                                        <tr key={item.repairId}>
+                                                                            <td className={styles.fontSemibold}>{item.repairCode}</td>
+                                                                            <td>{formatDateOnly(item.completedDate)}</td>
+                                                                            <td>{item.partnerName || '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.partsRevenue)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.serviceRevenue)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.vatAmount)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.costAmount)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                                                                                {formatCurrency(item.grossProfit)}
+                                                                            </td>
+                                                                            <td className={styles.textRight}>{Number(item.profitMarginPercent || 0).toFixed(2)}%</td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -1063,9 +1102,7 @@ const ReportListPage = () => {
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Tổng thu trong kỳ</span>
                                                                             <strong style={{ color: 'var(--wms-success)' }}>
-                                                                                {formatCurrency(
-                                                                                    reportData.reduce((acc, p) => p.type === 'RECEIPT' ? acc + Number(p.amount || 0) : acc, 0)
-                                                                                )}
+                                                                                {formatCurrency(cashFlowSummary?.totalReceipts || 0)}
                                                                             </strong>
                                                                         </div>
                                                                     </div>
@@ -1077,9 +1114,7 @@ const ReportListPage = () => {
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Tổng chi trong kỳ</span>
                                                                             <strong style={{ color: 'var(--wms-danger)' }}>
-                                                                                {formatCurrency(
-                                                                                    reportData.reduce((acc, p) => p.type === 'VOUCHER' ? acc + Number(p.amount || 0) : acc, 0)
-                                                                                )}
+                                                                                {formatCurrency(cashFlowSummary?.totalVouchers || 0)}
                                                                             </strong>
                                                                         </div>
                                                                     </div>
@@ -1091,8 +1126,8 @@ const ReportListPage = () => {
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Dòng tiền ròng (Thu - Chi)</span>
                                                                             {(() => {
-                                                                                const rec = reportData.reduce((acc, p) => p.type === 'RECEIPT' ? acc + Number(p.amount || 0) : acc, 0);
-                                                                                const vou = reportData.reduce((acc, p) => p.type === 'VOUCHER' ? acc + Number(p.amount || 0) : acc, 0);
+                                                                                const rec = Number(cashFlowSummary?.totalReceipts || 0);
+                                                                                const vou = Number(cashFlowSummary?.totalVouchers || 0);
                                                                                 const net = rec - vou;
                                                                                 return (
                                                                                     <strong style={{ color: net >= 0 ? 'var(--wms-success)' : 'var(--wms-danger)' }}>
@@ -1110,9 +1145,9 @@ const ReportListPage = () => {
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Tiền mặt & Ngân hàng</span>
                                                                             <strong style={{ fontSize: '13px', color: 'var(--color-text-strong)' }}>
-                                                                                Tiền mặt: {formatCurrency(reportData.reduce((acc, p) => p.paymentMethod === 'CASH' ? acc + Number(p.amount || 0) : acc, 0))}
+                                                                                Tiền mặt: {formatCurrency(cashFlowSummary?.closingCash || 0)}
                                                                                 <br />
-                                                                                Ngân hàng: {formatCurrency(reportData.reduce((acc, p) => p.paymentMethod === 'BANK_TRANSFER' ? acc + Number(p.amount || 0) : acc, 0))}
+                                                                                Ngân hàng: {formatCurrency(cashFlowSummary?.closingBank || 0)}
                                                                             </strong>
                                                                         </div>
                                                                     </div>
@@ -1137,7 +1172,7 @@ const ReportListPage = () => {
                                                                         {paginatedData.map((item, idx) => (
                                                                             <tr key={idx}>
                                                                                 <td>{currentPage * pageSize + idx + 1}</td>
-                                                                                <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.createdAt)}</td>
+                                                                                <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.postedAt)}</td>
                                                                                 <td className={styles.fontSemibold} style={{ color: 'var(--color-primary)' }}>{item.code || '-'}</td>
                                                                                 <td>
                                                                                     <span style={{ color: 'var(--color-text-strong)' }}>
@@ -1157,8 +1192,8 @@ const ReportListPage = () => {
                                                                                     {item.type === 'VOUCHER' ? formatCurrency(item.amount) : '-'}
                                                                                 </td>
                                                                                 <td>
-                                                                                    <span className={`${styles.badge} ${item.status === 'POSTED' ? styles.badgeSuccess : styles.badgeWarning}`}>
-                                                                                        {item.status === 'POSTED' ? 'Đã ghi sổ' : 'Chờ ghi sổ'}
+                                                                                    <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+                                                                                        Đã ghi sổ
                                                                                     </span>
                                                                                 </td>
                                                                                 <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.note || '-'}>

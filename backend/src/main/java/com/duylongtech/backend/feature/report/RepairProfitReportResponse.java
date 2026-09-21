@@ -6,19 +6,20 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SalesProfitReportResponse {
-    private String sku;
-    private String variantName;
-    private String unitName;
-    private BigDecimal quantitySold;
-    private BigDecimal salesAmount;
+public class RepairProfitReportResponse {
+    private Long repairId;
+    private String repairCode;
+    private LocalDate completedDate;
+    private String partnerName;
+    private BigDecimal partsRevenue;
+    private BigDecimal serviceRevenue;
     private BigDecimal vatAmount;
-    private BigDecimal totalAmount;
     private BigDecimal costAmount;
     private BigDecimal grossProfit;
     private BigDecimal profitMarginPercent;

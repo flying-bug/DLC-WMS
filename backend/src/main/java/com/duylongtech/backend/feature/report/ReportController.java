@@ -10,9 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
-import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 
 @RestController
 @RequestMapping("/api/v1/reports")
@@ -20,14 +18,6 @@ import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 public class ReportController {
 
     private final ReportService reportService;
-    private final com.duylongtech.backend.feature.inventory.InventoryBalanceRepository inventoryBalanceRepository;
-
-    @GetMapping("/debug-balances")
-    @PreAuthorize("hasAuthority('report_balance:view') or hasRole('SUPER_ADMIN')")
-    public ResponseEntity<List<com.duylongtech.backend.feature.inventory.InventoryBalance>> debugBalances() {
-        return ResponseEntity.ok(inventoryBalanceRepository.findAll());
-    }
-
     @GetMapping("/inventory-balance")
     @PreAuthorize("hasAuthority('report_balance:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<InventoryBalanceReportResponse>>> getInventoryBalanceReport(
@@ -46,6 +36,8 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search) {
+        startDate = normalizeStart(startDate);
+        endDate = normalizeEndExclusive(endDate);
         return ResponseEntity.ok(ApiResponse.<List<StockLedgerReportResponse>>builder()
                 .success(true)
                 .data(reportService.getStockLedgerReport(warehouseId, startDate, endDate, search))
@@ -77,12 +69,8 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String partnerType) {
-        if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        if (endDate == null) {
-            endDate = LocalDate.now().atTime(23, 59, 59);
-        } else if (endDate.toLocalTime().equals(LocalTime.MIDNIGHT)) {
-            endDate = endDate.with(LocalTime.MAX);
-        }
+        startDate = startDate == null ? LocalDate.now().withDayOfMonth(1).atStartOfDay() : normalizeStart(startDate);
+        endDate = endDate == null ? LocalDate.now().plusDays(1).atStartOfDay() : normalizeEndExclusive(endDate);
 
         return ResponseEntity.ok(ApiResponse.<List<DebtReportResponse>>builder()
                 .success(true)
@@ -93,19 +81,16 @@ public class ReportController {
     @GetMapping("/sales-profit")
     @PreAuthorize("hasAuthority('report_sales:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<SalesProfitReportResponse>>> getSalesProfitReport(
+            @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search) {
-        if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        if (endDate == null) {
-            endDate = LocalDate.now().atTime(23, 59, 59);
-        } else if (endDate.toLocalTime().equals(LocalTime.MIDNIGHT)) {
-            endDate = endDate.with(LocalTime.MAX);
-        }
+        startDate = startDate == null ? LocalDate.now().withDayOfMonth(1).atStartOfDay() : normalizeStart(startDate);
+        endDate = endDate == null ? LocalDate.now().plusDays(1).atStartOfDay() : normalizeEndExclusive(endDate);
 
         return ResponseEntity.ok(ApiResponse.<List<SalesProfitReportResponse>>builder()
                 .success(true)
-                .data(reportService.getSalesProfitReport(startDate, endDate, search))
+                .data(reportService.getSalesProfitReport(warehouseId, startDate, endDate, search))
                 .build());
     }
 
@@ -116,13 +101,42 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search) {
-        // Default to start of month and end of month if null
-        if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
+        startDate = startDate == null ? LocalDate.now().withDayOfMonth(1).atStartOfDay() : normalizeStart(startDate);
+        endDate = endDate == null ? LocalDate.now().plusDays(1).atStartOfDay() : normalizeEndExclusive(endDate);
 
         return ResponseEntity.ok(ApiResponse.<List<InventorySummaryReportResponse>>builder()
                 .success(true)
                 .data(reportService.getInventorySummaryReport(warehouseId, startDate, endDate, search))
+                .build());
+    }
+
+    @GetMapping("/repair-profit")
+    @PreAuthorize("hasAuthority('report_sales:view') or hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<RepairProfitReportResponse>>> getRepairProfitReport(
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String search) {
+        startDate = startDate == null ? LocalDate.now().withDayOfMonth(1).atStartOfDay() : normalizeStart(startDate);
+        endDate = endDate == null ? LocalDate.now().plusDays(1).atStartOfDay() : normalizeEndExclusive(endDate);
+        return ResponseEntity.ok(ApiResponse.<List<RepairProfitReportResponse>>builder()
+                .success(true)
+                .data(reportService.getRepairProfitReport(warehouseId, startDate, endDate, search))
+                .build());
+    }
+
+    @GetMapping("/cash-flow")
+    @PreAuthorize("hasAuthority('payment:view') or hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<CashFlowReportResponse>> getCashFlowReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String paymentMethod) {
+        startDate = startDate == null ? LocalDate.now().withDayOfMonth(1).atStartOfDay() : normalizeStart(startDate);
+        endDate = endDate == null ? LocalDate.now().plusDays(1).atStartOfDay() : normalizeEndExclusive(endDate);
+        return ResponseEntity.ok(ApiResponse.<CashFlowReportResponse>builder()
+                .success(true)
+                .data(reportService.getCashFlowReport(startDate, endDate, search, paymentMethod))
                 .build());
     }
 
@@ -145,6 +159,8 @@ public class ReportController {
             + " or (#reportType == 'debt' and hasAuthority('report_debt:export'))"
             + " or (#reportType == 'inventory-summary' and hasAuthority('report_summary:export'))"
             + " or (#reportType == 'sales-profit' and hasAuthority('report_sales:export'))"
+            + " or (#reportType == 'repair-profit' and hasAuthority('report_sales:export'))"
+            + " or (#reportType == 'cash-flow' and hasAuthority('payment:view'))"
             + " or hasRole('SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportReport(
             @PathVariable String reportType,
@@ -153,15 +169,19 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String partnerType,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String paymentMethod) {
         
         // Defaults matching query methods
-        if ("debt".equals(reportType) || "inventory-summary".equals(reportType) || "sales-profit".equals(reportType)) {
+        if ("debt".equals(reportType) || "inventory-summary".equals(reportType) || "cash-flow".equals(reportType)
+                || "sales-profit".equals(reportType) || "repair-profit".equals(reportType)) {
             if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            else startDate = normalizeStart(startDate);
             if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
+            else endDate = normalizeEndExclusive(endDate);
         }
 
-        byte[] excelBytes = reportService.exportReportToExcel(reportType, warehouseId, startDate, endDate, search, partnerType, status);
+        byte[] excelBytes = reportService.exportReportToExcel(reportType, warehouseId, startDate, endDate, search, partnerType, status, paymentMethod);
         
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
         String timestamp = java.time.LocalDateTime.now()
@@ -174,5 +194,13 @@ public class ReportController {
                 .contentType(org.springframework.http.MediaType
                         .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excelBytes);
+    }
+
+    private LocalDateTime normalizeStart(LocalDateTime value) {
+        return value == null ? null : value.toLocalDate().atStartOfDay();
+    }
+
+    private LocalDateTime normalizeEndExclusive(LocalDateTime value) {
+        return value == null ? null : value.toLocalDate().plusDays(1).atStartOfDay();
     }
 }

@@ -28,8 +28,16 @@ class CodeSequenceAllocator {
      * với transaction của caller - chỉ khóa đúng 1 dòng nhỏ trong CODE_SEQUENCES
      * trong thời gian rất ngắn, không đụng đến bảng nghiệp vụ thật.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public long nextValue(String sequenceKey, String tableName, String columnName, String prefix) {
+        return nextValues(sequenceKey, tableName, columnName, prefix, 1);
+    }
+
+    /**
+     * Tăng bộ đếm lên một khoảng (quantity) và trả về giá trị cuối cùng sau khi tăng.
+     * Để lấy danh sách các số vừa cấp, caller sẽ tính từ: (returnedValue - quantity + 1) đến returnedValue.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public long nextValues(String sequenceKey, String tableName, String columnName, String prefix, int quantity) {
         CodeSequence seq = codeSequenceRepository.findByIdForUpdate(sequenceKey).orElse(null);
         if (seq == null) {
             long bootstrapSeed = currentMaxSuffix(tableName, columnName, prefix);
@@ -43,9 +51,48 @@ class CodeSequenceAllocator {
                         .orElseThrow(() -> concurrentBootstrap);
             }
         }
-        seq.increment();
+        seq.incrementBy(quantity);
         codeSequenceRepository.save(seq);
         return seq.getNextValue();
+    }
+
+    /**
+     * Lấy giá trị tiếp theo (preview) mà không tăng bộ đếm trong CSDL.
+     */
+    @Transactional(readOnly = true)
+    public long previewNextValue(String sequenceKey, String tableName, String columnName, String prefix) {
+        CodeSequence seq = codeSequenceRepository.findById(sequenceKey).orElse(null);
+        if (seq == null) {
+            return currentMaxSuffix(tableName, columnName, prefix) + 1;
+        }
+        return seq.getNextValue() + 1;
+    }
+
+    /**
+     * Đồng bộ giá trị sequence trong CSDL với giá trị do người dùng tự nhập (nếu lớn hơn).
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void syncSequence(String sequenceKey, String tableName, String columnName, String prefix, long providedValue) {
+        CodeSequence seq = codeSequenceRepository.findByIdForUpdate(sequenceKey).orElse(null);
+        if (seq == null) {
+            long max = currentMaxSuffix(tableName, columnName, prefix);
+            seq = new CodeSequence();
+            seq.initSequence(sequenceKey, Math.max(max, providedValue));
+            try {
+                codeSequenceRepository.saveAndFlush(seq);
+            } catch (DataIntegrityViolationException e) {
+                seq = codeSequenceRepository.findByIdForUpdate(sequenceKey).orElseThrow(() -> e);
+                if (seq.getNextValue() < providedValue) {
+                    seq.initSequence(sequenceKey, providedValue);
+                    codeSequenceRepository.save(seq);
+                }
+            }
+        } else {
+            if (seq.getNextValue() < providedValue) {
+                seq.initSequence(sequenceKey, providedValue);
+                codeSequenceRepository.save(seq);
+            }
+        }
     }
 
     /**

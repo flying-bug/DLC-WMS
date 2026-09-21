@@ -955,7 +955,7 @@ const ProductPage = () => {
         setSearchTerm(tempSearch.trim());
     };
 
-    const handleOpenAdd = () => {
+    const handleOpenAdd = async () => {
         setIsEdit(false);
         setFormData(buildInitialFormData());
         setVariantDraft(resetVariantDraft());
@@ -967,6 +967,17 @@ const ProductPage = () => {
         setShowQuickAddCat(false);
         setShowQuickAddUnit(false);
         setShowQuickAddBrand(false);
+        
+        try {
+            const res = await axiosClient.get('/products/next-code');
+            const code = res.data?.data || res.data;
+            if (code) {
+                setFormData(fd => ({ ...fd, productCode: code }));
+            }
+        } catch (error) {
+            console.error('Lỗi lấy mã sản phẩm:', error);
+        }
+
         setShowModal(true);
     };
 
@@ -1152,7 +1163,7 @@ const ProductPage = () => {
 
     const validateForm = () => {
         const multiVariantCreate = isMultiVariantCreate();
-        if (isEdit && !formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
+        if (!formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
         if (multiVariantCreate && !formData.productCode.trim()) return 'Vui lòng nhập mã sản phẩm để sinh SKU phiên bản.';
         if (!formData.productName.trim()) return 'Tên sản phẩm không được để trống.';
         if (!formData.categoryId && !isServiceType(formData.productType)) return 'Vui lòng chọn danh mục.';
@@ -1500,7 +1511,7 @@ const ProductPage = () => {
 
     const getTableColumns = () => {
         const tableCols = [];
-        
+
         tableCols.push({
             title: <input type="checkbox" className={styles.checkbox} />,
             align: 'center',
@@ -1948,29 +1959,29 @@ const ProductPage = () => {
                                         {/* Row 2: Mã + (Danh mục OR Đơn vị tính chính for Dịch vụ) */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                             <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
-                                                    <label className={styles.fieldLabel}>
-                                                        Mã sản phẩm {isMultiVariantCreate() && <span className={styles.required}>*</span>}
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        className={styles.fieldInput}
-                                                        value={formData.productCode}
-                                                        disabled={isEdit}
-                                                        onChange={(e) => setFormData(fd => ({ ...fd, productCode: e.target.value }))}
-                                                        placeholder={isEdit
-                                                            ? 'Không cho sửa sau khi đã tạo'
-                                                            : isMultiVariantCreate()
-                                                                ? 'Nhập mã gốc để sinh SKU'
-                                                                : 'Để trống nếu muốn hệ thống tự sinh'}
-                                                    />
+                                                <label className={styles.fieldLabel}>
+                                                    Mã sản phẩm <span className={styles.required}>*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    className={styles.fieldInput}
+                                                    value={formData.productCode}
+                                                    disabled={isEdit}
+                                                    onChange={(e) => setFormData(fd => ({ ...fd, productCode: e.target.value }))}
+                                                    placeholder={isEdit
+                                                        ? 'Không cho sửa sau khi đã tạo'
+                                                        : isMultiVariantCreate()
+                                                            ? 'Nhập mã gốc để sinh SKU'
+                                                            : 'Mã tự động sinh, có thể sửa'}
+                                                />
+                                                { (isEdit || isMultiVariantCreate()) && (
                                                     <div style={{ marginTop: 4, fontSize: 11, color: '#6b7280', lineHeight: 1.35 }}>
                                                         {isEdit
                                                             ? 'Mã sản phẩm không thay đổi sau khi phát sinh dữ liệu.'
-                                                            : isMultiVariantCreate()
-                                                                ? 'Mã này dùng làm tiền tố cho các SKU phiên bản.'
-                                                                : 'Không bắt buộc khi tạo hàng hóa một SKU.'}
+                                                            : 'Mã này dùng làm tiền tố cho các SKU phiên bản.'}
                                                     </div>
-                                                </div>
+                                                )}
+                                            </div>
 
                                             {formData.productType !== 'Dịch vụ' ? (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
@@ -2430,9 +2441,9 @@ const ProductPage = () => {
                                         {/* Giá bán & Thuế VAT */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                             <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>
-                                                        {isMultiVariantCreate() ? 'Giá bán mặc định cho SKU' : <>Giá bán (VNĐ) <span className={styles.required}>*</span></>}
-                                                    </label>
+                                                <label className={styles.fieldLabel}>
+                                                    {isMultiVariantCreate() ? 'Giá bán mặc định cho SKU' : <>Giá bán (VNĐ) <span className={styles.required}>*</span></>}
+                                                </label>
                                                 <input
                                                     type="text"
                                                     className={styles.fieldInput}

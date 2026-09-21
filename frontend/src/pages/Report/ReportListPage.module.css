@@ -426,6 +426,39 @@
     word-break: break-word;
 }
 
+.stockLedgerTable {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 12px;
+}
+
+.stockLedgerTable th,
+.stockLedgerTable td {
+    padding: 8px 6px;
+    word-break: normal !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stockLedgerTable th {
+    white-space: normal !important;
+    line-height: 1.25;
+    text-overflow: clip;
+}
+
+.stockLedgerTable td {
+    white-space: nowrap !important;
+}
+
+.stockLedgerTable .colProductCode,
+.stockLedgerTable .colProductName,
+.stockLedgerTable .colWarehouse,
+.stockLedgerTable .colUnit {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
 /* Specific Alignment and weights */
 .textLeft { text-align: left; }
 .textCenter { text-align: center; }

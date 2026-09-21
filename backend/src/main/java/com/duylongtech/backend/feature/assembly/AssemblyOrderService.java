@@ -9,6 +9,7 @@ import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocument;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
+import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.product.Product;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
@@ -21,8 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,14 +43,15 @@ public class AssemblyOrderService {
     private static final String DISASSEMBLY = "DISASSEMBLY";
     private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final Set<String> VALID_TYPES = Set.of(ASSEMBLY, DISASSEMBLY);
-    private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name());
-    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.APPROVED.name());
+    private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.PENDING_APPROVAL.name(), DocumentStatus.REJECTED.name(), DocumentStatus.APPROVED.name(), DocumentStatus.PROCESSING.name(), DocumentStatus.COMPLETED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name());
+    private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.REJECTED.name());
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
     private final AssemblyBomService assemblyBomService;
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryDocumentRepository inventoryDocumentRepository;
+    private final InventoryBalanceRepository inventoryBalanceRepository;
     private final AssemblyOrderSerialRepository assemblyOrderSerialRepository;
     private final RepairRepository repairRepository;
     private final UserRepository userRepository;
@@ -63,7 +67,7 @@ public class AssemblyOrderService {
         }
         return assemblyOrderRepository.search(trimToNull(keyword), normalizedType, normalizedStatus, warehouseId, fromDate, toDate)
                 .stream()
-                .map(this::toOrderResponse)
+                .map(order -> toOrderResponse(order, false))
                 .toList();
     }
 
@@ -282,13 +286,8 @@ public class AssemblyOrderService {
             for (AssemblyOrderLineRequest lineReq : request.getLines()) {
                 ProductVariant variant = productVariantRepository.findById(lineReq.getComponentVariantId())
                         .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện " + lineReq.getComponentVariantId()));
-                BigDecimal price = bom.getLines().stream()
-                        .filter(bl -> bl.getComponentVariant().getId().equals(variant.getId()))
-                        .findFirst()
-                        .map(AssemblyBomLine::getUnitPrice)
-                        .orElseGet(() -> variant.getSalePrice() != null ? variant.getSalePrice() : ZERO);
                 AssemblyOrderLine line = new AssemblyOrderLine();
-                line.initLine(variant, lineReq.getQuantityRequired() != null ? lineReq.getQuantityRequired() : lineReq.getQuantityActual(), price, lineReq.getNote());
+                line.initLine(variant, lineReq.getQuantityRequired() != null ? lineReq.getQuantityRequired() : lineReq.getQuantityActual(), ZERO, lineReq.getNote());
                 line.updateActualQuantity(lineReq.getQuantityActual() != null ? lineReq.getQuantityActual() : lineReq.getQuantityRequired());
                 order.addLine(line);
             }
@@ -296,7 +295,7 @@ public class AssemblyOrderService {
             for (AssemblyBomLine bomLine : bom.getLines()) {
                 BigDecimal required = bomLine.getQuantity().multiply(orderQuantity);
                 AssemblyOrderLine line = new AssemblyOrderLine();
-                line.initLine(bomLine.getComponentVariant(), required, bomLine.getUnitPrice(), bomLine.getNote());
+                line.initLine(bomLine.getComponentVariant(), required, ZERO, bomLine.getNote());
                 line.updateActualQuantity(required);
                 order.addLine(line);
             }
@@ -362,6 +361,10 @@ public class AssemblyOrderService {
     }
 
     public AssemblyOrderResponse toOrderResponse(AssemblyOrder order) {
+        return toOrderResponse(order, true);
+    }
+
+    private AssemblyOrderResponse toOrderResponse(AssemblyOrder order, boolean includeAvailability) {
         AssemblyOrderResponse response = assemblyOrderMapper.toOrderResponse(order);
         ProductVariant target = order.getTargetVariant();
 
@@ -383,21 +386,83 @@ public class AssemblyOrderService {
         response.setMappedSerials(mappedSerials);
         response.setSerialChangeHistory(List.of());
 
+        boolean approved = order.getApprovedAt() != null;
+        boolean showUnitCost = approved && canViewInventoryCost();
+        Map<Long, BigDecimal> availableByVariant = !approved && includeAvailability
+                ? getAvailableQuantities(order)
+                : Map.of();
+        response.setTargetAvailableQuantity(!approved && includeAvailability
+                && DISASSEMBLY.equals(order.getOrderType()) && target != null
+                ? availableByVariant.getOrDefault(target.getId(), ZERO)
+                : null);
+        if (showUnitCost && order.getQuantity() != null && order.getQuantity().compareTo(ZERO) > 0) {
+            BigDecimal totalCost = order.getLines().stream()
+                    .map(line -> line.getUnitCost().multiply(line.getQuantityRequired()))
+                    .reduce(ZERO, BigDecimal::add);
+            response.setTargetUnitCost(totalCost.divide(order.getQuantity(), 4, java.math.RoundingMode.HALF_UP));
+        } else {
+            response.setTargetUnitCost(null);
+        }
         if (order.getLines() != null) {
-            response.setLines(order.getLines().stream().map(this::toOrderLineResponse).toList());
+            response.setLines(order.getLines().stream()
+                    .map(line -> toOrderLineResponse(line, showUnitCost,
+                            !approved && includeAvailability && ASSEMBLY.equals(order.getOrderType())
+                                    && line.getComponentVariant() != null
+                                    ? availableByVariant.getOrDefault(line.getComponentVariant().getId(), ZERO)
+                                    : null))
+                    .toList());
         } else {
             response.setLines(List.of());
         }
         return response;
     }
 
-    private AssemblyOrderLineResponse toOrderLineResponse(AssemblyOrderLine line) {
+    private AssemblyOrderLineResponse toOrderLineResponse(AssemblyOrderLine line, boolean showUnitCost,
+                                                           BigDecimal availableQuantity) {
         AssemblyOrderLineResponse response = assemblyOrderMapper.toOrderLineResponse(line);
         ProductVariant variant = line.getComponentVariant();
         if (response.getComponentName() == null) {
             response.setComponentName(variantName(variant));
         }
+        if (!showUnitCost) {
+            response.setUnitCost(null);
+        }
+        response.setAvailableQuantity(availableQuantity);
         return response;
+    }
+
+    private Map<Long, BigDecimal> getAvailableQuantities(AssemblyOrder order) {
+        if (order.getWarehouseId() == null) {
+            return Map.of();
+        }
+        List<Long> variantIds = DISASSEMBLY.equals(order.getOrderType())
+                ? order.getTargetVariant() == null ? List.of() : List.of(order.getTargetVariant().getId())
+                : order.getLines().stream()
+                        .map(AssemblyOrderLine::getComponentVariant)
+                        .filter(java.util.Objects::nonNull)
+                        .map(ProductVariant::getId)
+                        .distinct()
+                        .toList();
+        if (variantIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, BigDecimal> result = new HashMap<>();
+        inventoryBalanceRepository.sumAvailableLooseQuantitiesGroupedByVariant(
+                        order.getWarehouseId(), variantIds, "GOOD")
+                .forEach(row -> result.put((Long) row[0], (BigDecimal) row[1]));
+        return result;
+    }
+
+    private boolean canViewInventoryCost() {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .anyMatch(authority -> "ROLE_ACCOUNTANT".equals(authority)
+                        || "ROLE_MANAGER".equals(authority)
+                        || "ROLE_SUPER_ADMIN".equals(authority));
     }
 
     private String variantName(ProductVariant variant) {

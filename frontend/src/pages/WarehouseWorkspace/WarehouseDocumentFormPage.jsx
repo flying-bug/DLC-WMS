@@ -45,6 +45,7 @@ export default function WarehouseDocumentFormPage() {
   const hideToast = () => setToast((prev) => ({ ...prev, isVisible: false }));
 
   const scanInputRef = useRef(null);
+  const documentChangedRef = useRef(false);
 
   // Fetch document details
   useEffect(() => {
@@ -92,6 +93,7 @@ export default function WarehouseDocumentFormPage() {
         });
 
         setLines(initialLines);
+        documentChangedRef.current = false;
       } catch (err) {
         console.error('Error loading warehouse document:', err);
         showToast('error', 'Không thể tải chi tiết chứng từ');
@@ -105,6 +107,7 @@ export default function WarehouseDocumentFormPage() {
 
   // Handle actual quantity change
   const handleQtyChange = (idx, value) => {
+    documentChangedRef.current = true;
     setLines((prev) => {
       const next = [...prev];
       const parsedVal = value === '' ? '' : (Number.isNaN(Number(value)) ? 0 : Math.max(0, Number(value)));
@@ -153,6 +156,7 @@ export default function WarehouseDocumentFormPage() {
     });
 
     if (found) {
+      documentChangedRef.current = true;
       setLines(nextLines);
     } else {
       setScannerFeedback(`❌ Không tìm thấy mã ${code} trong chứng từ này`);
@@ -238,10 +242,14 @@ export default function WarehouseDocumentFormPage() {
       setSaving(true);
       const payload = buildPayload();
       if (isImport) {
-        await importApi.updateImportSlip(doc.id, payload);
+        if (documentChangedRef.current) {
+          await importApi.updateImportSlip(doc.id, payload);
+        }
         await importApi.postImportSlip(doc.id);
       } else {
-        await exportApi.updateExportSlip(doc.id, payload);
+        if (documentChangedRef.current) {
+          await exportApi.updateExportSlip(doc.id, payload);
+        }
         await exportApi.postExportSlip(doc.id);
       }
 
@@ -470,7 +478,7 @@ export default function WarehouseDocumentFormPage() {
                 <span className={styles.fieldLabel}>{isImport ? 'Kho nhập:' : 'Kho xuất:'}</span>
                 <span className={styles.fieldValueBadge}>
                   <i className="bi bi-building" style={{ marginRight: 4 }}></i>
-                  {doc.warehouseName || doc.warehouseCode || 'Kho chính'}
+                  {doc.warehouseName || doc.warehouseCode || (lines.length > 0 ? (lines[0].warehouseName || lines[0].warehouseCode) : null)}
                 </span>
               </div>
               <div className={styles.formRow}>
@@ -543,7 +551,7 @@ export default function WarehouseDocumentFormPage() {
                       </td>
                       <td>{l.productName || l.variantName || '-'}</td>
                       <td>
-                        <div>{l.warehouseName || l.warehouseCode || doc.warehouseName || 'Kho chính'}</div>
+                        <div>{l.warehouseName || l.warehouseCode || doc.warehouseName || (lines.length > 0 ? lines[0].warehouseName : null) || 'Kho chính'}</div>
                         {l.locationCode && (
                           <span className={styles.subText}>Kệ: {l.locationCode}</span>
                         )}
@@ -813,6 +821,7 @@ export default function WarehouseDocumentFormPage() {
             isOpen={serialModalOpen}
             onClose={(savedSerials) => {
               if (Array.isArray(savedSerials)) {
+                documentChangedRef.current = true;
                 setLines((prev) => {
                   const next = [...prev];
                   next[selectedLineIdx].serialList = savedSerials;

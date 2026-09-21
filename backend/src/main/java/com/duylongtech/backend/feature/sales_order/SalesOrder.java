@@ -85,6 +85,9 @@ public class SalesOrder {
     @Column(name = "updated_at", nullable = false, columnDefinition = "datetime(6) default CURRENT_TIMESTAMP(6)")
     private LocalDateTime updatedAt;
 
+    @Column(name = "posted_at")
+    private LocalDateTime postedAt;
+
     @OneToMany(mappedBy = "salesOrder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<SalesOrderLine> lines = new ArrayList<>();
 
@@ -199,6 +202,7 @@ public class SalesOrder {
             throw new com.duylongtech.backend.exception.BusinessException("Chỉ đơn hàng đã APPROVED mới có thể POSTED");
         }
         this.status = com.duylongtech.backend.enums.DocumentStatus.POSTED.name();
+        this.postedAt = LocalDateTime.now();
     }
 
     public void revertToApproved() {
@@ -206,5 +210,6 @@ public class SalesOrder {
             throw new com.duylongtech.backend.exception.BusinessException("Chỉ đơn hàng POSTED mới có thể revert về APPROVED");
         }
         this.status = com.duylongtech.backend.enums.DocumentStatus.APPROVED.name();
+        this.postedAt = null;
     }
 }

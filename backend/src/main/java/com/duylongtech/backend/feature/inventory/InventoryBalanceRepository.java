@@ -96,7 +96,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
   @Query("SELECT COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL")
   java.math.BigDecimal sumQuantityOnHandByWarehouseId(@Param("warehouseId") Long warehouseId);
 
-  @Query("SELECT COALESCE(SUM(b.quantityOnHand * b.averageCost), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL")
+  @Query(value = "SELECT COALESCE(SUM(quantity_layered * unit_cost), 0) FROM inventory_cost_layers WHERE warehouse_id = :warehouseId", nativeQuery = true)
   java.math.BigDecimal sumTotalValueByWarehouseId(@Param("warehouseId") Long warehouseId);
 
   @Query("SELECT v.product.id, COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b JOIN ProductVariant v ON v.id = b.variantId WHERE v.product.id IN :productIds AND b.serialNumberId IS NULL GROUP BY v.product.id")

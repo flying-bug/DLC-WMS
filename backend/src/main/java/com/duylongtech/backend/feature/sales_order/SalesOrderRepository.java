@@ -73,32 +73,4 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     """)
     Optional<SalesOrder> findByIdWithDetails(@Param("id") Long id);
 
-    @Query("""
-        SELECT new com.duylongtech.backend.feature.report.SalesProfitReportResponse(
-            v.sku,
-            v.variantName,
-            u.name,
-            SUM(l.quantity),
-            SUM(l.lineAmount),
-            SUM(l.costAmount),
-            SUM(l.lineAmount) - SUM(l.costAmount),
-            CAST(0 AS bigdecimal)
-        )
-        FROM SalesOrderLine l
-        JOIN l.salesOrder so
-        JOIN l.variant v
-        JOIN v.product p
-        LEFT JOIN p.unit u
-        WHERE so.status = 'POSTED'
-        AND (:keyword IS NULL OR LOWER(v.sku) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')) OR LOWER(v.variantName) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))
-        AND (:fromDate IS NULL OR so.soDate >= :fromDate)
-        AND (:toDate IS NULL OR so.soDate <= :toDate)
-        GROUP BY v.sku, v.variantName, u.name
-        ORDER BY SUM(l.lineAmount) DESC
-    """)
-    List<com.duylongtech.backend.feature.report.SalesProfitReportResponse> findSalesProfitReport(
-        @Param("keyword") String keyword,
-        @Param("fromDate") LocalDate fromDate,
-        @Param("toDate") LocalDate toDate
-    );
 }

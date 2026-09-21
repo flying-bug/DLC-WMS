@@ -11,6 +11,7 @@ import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.SerialNumber;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import com.duylongtech.backend.feature.repair.Repair;
 import com.duylongtech.backend.feature.repair.RepairRepository;
 import com.duylongtech.backend.feature.report.SerialTreeResponse;
@@ -48,6 +49,7 @@ public class AssemblyExecutionService {
     private final SerialNumberRepository serialNumberRepository;
     private final RepairRepository repairRepository;
     private final InventoryDocumentService inventoryDocumentService;
+    private final InventoryDocumentRepository inventoryDocumentRepository;
 
     public List<AssemblyOrderSerialResponse> getSerials(Long orderId) {
         return assemblyOrderSerialRepository.findByAssemblyOrderId(orderId).stream()
@@ -140,6 +142,9 @@ public class AssemblyExecutionService {
     @Transactional
     public void executeAssemblyOrder(Long id, AssemblyExecutionRequest request, Long userId) {
         AssemblyOrder order = findOrderOrThrow(id);
+        if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceId("ASSEMBLY_ORDER", id)) {
+            throw new BusinessException("Lệnh đã có cặp phiếu kho tự động; hãy thực hiện và ghi sổ trực tiếp trên các phiếu này");
+        }
         if (!DocumentStatus.APPROVED.name().equals(order.getStatus())) {
             throw new BusinessException(SystemMessage.ASM_ERR_003.getMessage());
         }

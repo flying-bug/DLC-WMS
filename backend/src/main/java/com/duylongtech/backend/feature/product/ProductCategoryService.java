@@ -58,7 +58,8 @@ public class ProductCategoryService {
     @Transactional
     public ProductCategoryResponse createCategory(ProductCategoryRequest dto) {
         if (dto.getCode() == null || dto.getCode().isBlank()) {
-            dto.setCode(codeGeneratorService.generateCode("product_categories", "code", "DM", 3));
+            String prefix = codeGeneratorService.generatePrefixFromName(dto.getName());
+            dto.setCode(codeGeneratorService.generateCode("product_categories", "code", prefix, 3));
         }
         if (categoryRepository.existsByCode(dto.getCode())) {
             throw new BusinessException(SystemMessage.CATEGORY_CODE_EXISTS);

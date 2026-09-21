@@ -56,4 +56,8 @@ public class AssemblyOrderLine {
         }
         this.quantityActual = actual;
     }
+
+    public void updateUnitCost(BigDecimal unitCost) {
+        this.unitCost = unitCost != null ? unitCost : BigDecimal.ZERO;
+    }
 }

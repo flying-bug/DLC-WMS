@@ -21,6 +21,8 @@ public class AssemblyOrderResponse {
     private String targetSku;
     private String targetName;
     private BigDecimal targetSalePrice;
+    private BigDecimal targetUnitCost;
+    private BigDecimal targetAvailableQuantity;
     private Long warehouseId;
     private BigDecimal quantity;
     private BigDecimal quantityProduced;

@@ -28,6 +28,7 @@ import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
+const formatQuantity = (value) => Number(value || 0).toLocaleString('vi-VN', { maximumFractionDigits: 4 });
 const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const customSelectStyles = {
@@ -49,7 +50,7 @@ const customSelectStyles = {
 
 const STAGES = ['DRAFT', 'CONFIRMED', 'WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'];
 const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', WAITING_FOR_APPROVAL: 'Chờ duyệt', CONFIRMED: 'Đã duyệt', WAITING_FOR_EXPORT: 'Chờ xuất kho', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
-const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'UNDER_REPAIR'];
+const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION'];
 const COMPONENT_SERIAL_STATUS = {
   ACTIVE: { label: 'Đang dùng', color: '#166534', bg: 'var(--color-success-bg)', border: 'var(--wms-success-border)' },
   REPLACED: { label: 'Đã thay thế', color: '#92400e', bg: '#fef3c7', border: 'var(--wms-warning-border)' },
@@ -161,13 +162,13 @@ function RepairFormPage() {
         setRepair({ ...repair, lines: updatedLines });
         const payload = serialModalData.serialRole === 'replacement'
           ? {
-              replacementSerialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
-              replacementSerialNumber: serialObj === null ? '' : serialObj.serialNumber
-            }
+            replacementSerialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
+            replacementSerialNumber: serialObj === null ? '' : serialObj.serialNumber
+          }
           : {
-              serialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
-              serialNumber: serialObj === null ? '' : serialObj.serialNumber
-            };
+            serialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
+            serialNumber: serialObj === null ? '' : serialObj.serialNumber
+          };
         repairApi.updateRepairLine(id, line.id, payload)
           .then(res => mergeUpdatedLine(unwrap(res)))
           .catch(() => loadData());
@@ -234,7 +235,7 @@ function RepairFormPage() {
           const data = Array.isArray(payload) ? payload : (payload?.content || []);
           setInventoryBalances(data);
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [repair?.warehouseId, formData.warehouseId]);
 
@@ -406,6 +407,26 @@ function RepairFormPage() {
         const warrantyId = searchParams.get('warrantyId');
         let initialData = { repairCode: '' };
 
+        try {
+          const res = await repairApi.getRepairs({ page: 0, size: 500 });
+          const repairs = res?.data?.data?.content || res?.data?.data || [];
+          let maxNum = 0;
+          const prefix = 'SC';
+          (Array.isArray(repairs) ? repairs : []).forEach(r => {
+            if (r.repairCode && r.repairCode.startsWith(prefix)) {
+              const numStr = r.repairCode.substring(prefix.length);
+              const num = parseInt(numStr, 10);
+              if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+              }
+            }
+          });
+          initialData.repairCode = `${prefix}${String(maxNum + 1).padStart(6, '0')}`;
+        } catch (e) {
+          console.error('Failed to auto generate next repair code', e);
+        }
+
+
         if (warrantyId) {
           try {
             const warRes = await warrantyApi.getWarrantyById(warrantyId);
@@ -518,7 +539,17 @@ function RepairFormPage() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+
+    const handleRealtimeNotification = (event) => {
+      const payload = event.detail;
+      if (payload && payload.referenceType === 'REPAIR' && String(payload.referenceId) === String(id)) {
+        loadData();
+      }
+    };
+
+    window.addEventListener('app:notification', handleRealtimeNotification);
+    return () => window.removeEventListener('app:notification', handleRealtimeNotification);
+  }, [loadData, id]);
 
   // Kho ghi sổ phiếu xuất -> backend tự chuyển trạng thái lệnh sang UNDER_REPAIR
   // và bắn thông báo realtime (SSE). Lắng nghe ở đây để màn hình KTV đang mở tự
@@ -666,31 +697,7 @@ function RepairFormPage() {
     }
   };
 
-  const getMissingSerialLineLabel = () => {
-    for (const line of lines) {
-      const variant = variants.find(v => String(v.id) === String(line.componentVariantId));
-      if (!variant || !variant.trackSerial) continue;
-      const actionType = line.actionType || 'ADD';
-      const missing = actionType === 'ADD'
-        ? !line.serialNumberId
-        : actionType === 'REPLACE'
-          ? (!line.serialNumberId || !line.replacementSerialNumberId)
-          : !line.serialNumberId;
-      if (missing) {
-        return line.componentVariant?.productName || line.componentName || variant.productName || variant.sku || 'linh kiện';
-      }
-    }
-    return null;
-  };
-
-  const handleFinishRepair = () => {
-    const missingLabel = getMissingSerialLineLabel();
-    if (missingLabel) {
-      showToast('error', `Vui lòng quét/nhập serial cho linh kiện "${missingLabel}" trước khi kết thúc sửa chữa.`);
-      return;
-    }
-    handleChangeStatus('DONE');
-  };
+  const handleFinishRepair = () => handleChangeStatus('DONE');
 
   const [rejectModal, setRejectModal] = useState({ isOpen: false, reason: '' });
 
@@ -702,7 +709,7 @@ function RepairFormPage() {
       ]);
       const exData = unwrap(exRes) || [];
       const imData = unwrap(imRes) || [];
-      
+
       setInventoryDocs([
         ...exData.map(d => ({ ...d, type: 'EXPORT' })),
         ...imData.map(d => ({ ...d, type: 'IMPORT' }))
@@ -825,12 +832,36 @@ function RepairFormPage() {
     if (isNew) {
       setPendingLines(prev => prev.map(l => ((l.id && l.id === lineId) || (l._key && l._key === key)) ? { ...l, ...updates } : l));
     } else {
-      setRepair(prev => ({
-        ...prev,
-        lines: prev.lines.map(l => l.id === lineId ? { ...l, ...updates } : l)
-      }));
+      let mergedLine = null;
+      setRepair(prev => {
+        const nextLines = prev.lines.map(l => {
+          if (l.id === lineId) {
+            mergedLine = { ...l, ...updates };
+            return mergedLine;
+          }
+          return l;
+        });
+        return { ...prev, lines: nextLines };
+      });
       try {
-        const res = await repairApi.updateRepairLine(id, lineId, updates);
+        if (!mergedLine) {
+          const line = lines.find(l => l.id === lineId);
+          mergedLine = { ...line, ...updates };
+        }
+        const payload = {
+          actionType: mergedLine.actionType,
+          componentVariantId: mergedLine.componentVariantId,
+          quantity: mergedLine.quantity,
+          unitPrice: mergedLine.unitPrice,
+          isFreeWarranty: mergedLine.isFreeWarranty,
+          vatPercent: mergedLine.vatPercent,
+          note: mergedLine.note,
+          serialNumberId: mergedLine.serialNumberId,
+          serialNumber: mergedLine.serialNumber,
+          replacementSerialNumberId: mergedLine.replacementSerialNumberId,
+          replacementSerialNumber: mergedLine.replacementSerialNumber
+        };
+        const res = await repairApi.updateRepairLine(id, lineId, payload);
         mergeUpdatedLine(unwrap(res));
       } catch (err) {
         showToast('error', 'Cập nhật thất bại');
@@ -901,12 +932,32 @@ function RepairFormPage() {
     if (isNew) {
       setPendingFees(prev => prev.map(f => ((f.id && f.id === feeId) || (f._key && f._key === key)) ? { ...f, ...updates } : f));
     } else {
-      setRepair(prev => ({
-        ...prev,
-        fees: prev.fees.map(f => f.id === feeId ? { ...f, ...updates } : f)
-      }));
+      let mergedFee = null;
+      setRepair(prev => {
+        const nextFees = prev.fees.map(f => {
+          if (f.id === feeId) {
+            mergedFee = { ...f, ...updates };
+            return mergedFee;
+          }
+          return f;
+        });
+        return { ...prev, fees: nextFees };
+      });
       try {
-        await repairApi.updateRepairFee(id, feeId, updates);
+        if (!mergedFee) {
+          const fee = fees.find(f => f.id === feeId);
+          mergedFee = { ...fee, ...updates };
+        }
+        const payload = {
+          feeName: mergedFee.feeName,
+          feeAmount: mergedFee.feeAmount,
+          quantity: mergedFee.quantity || 1,
+          unitName: mergedFee.unitName,
+          isFreeWarranty: mergedFee.isFreeWarranty,
+          vatPercent: mergedFee.vatPercent,
+          note: mergedFee.note
+        };
+        await repairApi.updateRepairFee(id, feeId, payload);
       } catch (err) {
         showToast('error', 'Cập nhật dịch vụ thất bại');
         loadData();
@@ -953,7 +1004,8 @@ function RepairFormPage() {
         _label: variant.productName,
         _unitName: variant.unitName,
         _salePrice: variant.salePrice,
-        unitPrice: l.isFreeWarranty ? 0 : variant.salePrice
+        unitPrice: l.isFreeWarranty ? 0 : variant.salePrice,
+        vatPercent: l.isFreeWarranty ? 0 : (l.vatPercent ?? vatConfig.defaultVatRate)
       } : l));
     } else {
       // Optimistic update
@@ -967,6 +1019,7 @@ function RepairFormPage() {
           componentVariantId: variantId,
           componentVariant: { ...l.componentVariant, id: variantId, productName: variant.productName, unitName: variant.unitName, salePrice: variant.salePrice },
           unitPrice: l.isFreeWarranty ? 0 : variant.salePrice,
+          vatPercent: l.isFreeWarranty ? 0 : (l.vatPercent ?? vatConfig.defaultVatRate),
           serialNumberId: null,
           serialNumber: '',
           replacementSerialNumberId: null,
@@ -977,6 +1030,7 @@ function RepairFormPage() {
         const res = await repairApi.updateRepairLine(id, lineId, {
           componentVariantId: variantId,
           unitPrice: isFree ? 0 : variant.salePrice,
+          vatPercent: isFree ? 0 : (existingLine?.vatPercent ?? vatConfig.defaultVatRate),
           serialNumberId: -1,
           serialNumber: '',
           replacementSerialNumberId: -1,
@@ -1044,9 +1098,10 @@ function RepairFormPage() {
   const currentStatus = repair?.repairStatus || 'DRAFT';
   const isEditable = isNew || EDITABLE_STATUSES.includes(currentStatus);
   const showRepairCols = ['UNDER_REPAIR', 'DONE'].includes(currentStatus);
+  const isFifoCostFinalized = ['CONFIRMED', 'WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'].includes(currentStatus);
   const lines = isNew ? pendingLines : (repair?.lines || []);
   const fees = isNew ? pendingFees : (repair?.fees || []);
-  const detailTableColSpan = 10
+  const detailTableColSpan = 11
     + (visibleColumns.description ? 1 : 0)
     + (showRepairCols && visibleColumns.serialNumber ? 1 : 0);
 
@@ -1094,14 +1149,13 @@ function RepairFormPage() {
             </button>
             <h1 className={styles.pageTitle}>{isNew ? 'Thêm mới Lệnh sửa chữa' : `Lệnh sửa chữa: ${repair?.repairCode}`}</h1>
             {!isNew && (
-              <span className={`${styles.badge} ${
-                ['CONFIRMED', 'DONE'].includes(currentStatus) ? styles.badgeSuccess :
+              <span className={`${styles.badge} ${['CONFIRMED', 'DONE'].includes(currentStatus) ? styles.badgeSuccess :
                 currentStatus === 'UNDER_REPAIR' ? styles.badgeWarning :
-                currentStatus === 'WAITING_FOR_EXPORT' ? styles.badgeWarning :
-                currentStatus === 'CANCELLED' ? styles.badgeDanger :
-                currentStatus === 'QUOTATION' ? styles.badgePrimary :
-                styles.badgeInfo
-              }`}>
+                  currentStatus === 'WAITING_FOR_EXPORT' ? styles.badgeWarning :
+                    currentStatus === 'CANCELLED' ? styles.badgeDanger :
+                      currentStatus === 'QUOTATION' ? styles.badgePrimary :
+                        styles.badgeInfo
+                }`}>
                 {STAGE_LABELS[currentStatus]}
               </span>
             )}
@@ -1218,15 +1272,15 @@ function RepairFormPage() {
                 </div>
                 {formData.referenceId ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                    <span 
-                      style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }} 
+                    <span
+                      style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }}
                       onClick={() => {
-                          if (formData.referenceType === 'IMPORT_SLIP') window.open(`/import-slips/${formData.referenceId}`, '_blank');
-                          else if (formData.referenceType === 'EXPORT_SLIP') window.open(`/export-slips/${formData.referenceId}`, '_blank');
-                          else if (formData.referenceType === 'ASSEMBLY_ORDER') window.open(`/manufacturing/assembly-orders/${formData.referenceId}`, '_blank');
-                          else if (formData.referenceType === 'STOCKTAKE') window.open(`/stocktakes/${formData.referenceId}`, '_blank');
-                          else if (formData.referenceType === 'STOCK_TRANSFER') window.open(`/stock-transfers/${formData.referenceId}`, '_blank');
-                          else window.open(`/warranties/${formData.referenceId}`, '_blank');
+                        if (formData.referenceType === 'IMPORT_SLIP') window.open(`/import-slips/${formData.referenceId}`, '_blank');
+                        else if (formData.referenceType === 'EXPORT_SLIP') window.open(`/export-slips/${formData.referenceId}`, '_blank');
+                        else if (formData.referenceType === 'ASSEMBLY_ORDER') window.open(`/manufacturing/assembly-orders/${formData.referenceId}`, '_blank');
+                        else if (formData.referenceType === 'STOCKTAKE') window.open(`/stocktakes/${formData.referenceId}`, '_blank');
+                        else if (formData.referenceType === 'STOCK_TRANSFER') window.open(`/stock-transfers/${formData.referenceId}`, '_blank');
+                        else window.open(`/warranties/${formData.referenceId}`, '_blank');
                       }}
                       title="Xem chứng từ tham chiếu"
                     >
@@ -1296,6 +1350,7 @@ function RepairFormPage() {
                   <th style={{ whiteSpace: 'nowrap' }}>Hạng mục (Linh kiện / Dịch vụ)</th>
                   <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Số lượng</th>
                   <th style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{isFifoCostFinalized ? 'Giá vốn FIFO' : 'Tồn khả dụng'}</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá / Phí</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '80px' }}>% VAT</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
@@ -1318,11 +1373,11 @@ function RepairFormPage() {
                   <tr key={line.id || line._key}>
                     <td>
                       {isEditable ? (
-                        <SearchableSelect className="misa-input" style={{ padding: '2px 28px 2px 8px', height: '28px', minWidth: '126px', width: '126px' }} value={line.actionType} onChange={(e) => handleChangeLineActionType(line.id, line._key, e.target.value)}>
+                        <select className="misa-input" style={{ padding: '2px 28px 2px 8px', height: '28px', minWidth: '126px', width: '126px', appearance: 'auto' }} value={line.actionType} onChange={(e) => handleChangeLineActionType(line.id, line._key, e.target.value)}>
                           <option value="ADD">Thêm</option>
                           <option value="REPLACE">Thay thế</option>
                           <option value="REMOVE">Loại bỏ</option>
-                        </SearchableSelect>
+                        </select>
                       ) : (line.actionType === 'ADD' ? 'Thêm' : line.actionType === 'REPLACE' ? 'Thay thế' : 'Loại bỏ')}
                     </td>
                     <td style={{ minWidth: '220px' }}>
@@ -1360,9 +1415,18 @@ function RepairFormPage() {
                       ) : Number(line.quantity || 0)}
                     </td>
                     <td>{variants.find(v => String(v.id) === String(line.componentVariantId))?.unitName || line.componentVariant?.unitName || line._unitName || '-'}</td>
+                    <td align="right" style={{ whiteSpace: 'nowrap' }}>
+                      {['ADD', 'REPLACE'].includes(line.actionType)
+                        ? (isFifoCostFinalized
+                          ? (line.fifoUnitCost != null
+                            ? <span title={`Tổng giá vốn: ${money(line.fifoCostAmount)} đ`}>{money(line.fifoUnitCost)} đ</span>
+                            : 'Chưa chốt')
+                          : formatQuantity(line.availableQuantity || 0))
+                        : '-'}
+                    </td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.isFreeWarranty ? 0 : money(line.unitPrice)} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', Number(e.target.value.replace(/\D/g, '')))} />
+                        <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} placeholder="0" value={line.isFreeWarranty ? 0 : (line.unitPrice ? money(line.unitPrice) : '')} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', Number(e.target.value.replace(/\D/g, '')))} />
                       ) : money(line.unitPrice)}
                     </td>
                     <td align="right">
@@ -1380,7 +1444,7 @@ function RepairFormPage() {
                         </select>
                       ) : (line.vatPercent || 0)}
                     </td>
-                    <td align="right" style={{ fontWeight: '500' }}>
+                    <td align="right" style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>
                       {(() => {
                         if (line.isFreeWarranty || !['ADD', 'REPLACE'].includes(line.actionType)) return money(0);
                         const amount = Number(line.quantity || 0) * Number(line.unitPrice);
@@ -1428,7 +1492,7 @@ function RepairFormPage() {
                           );
                         };
 
-                        if ((isEditable || currentStatus === 'UNDER_REPAIR') && line.actionType === 'REPLACE') {
+                        if (isEditable && line.actionType === 'REPLACE') {
                           return (
                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
                               {renderSerialButton('primary', 'Cũ', Boolean(line.serialNumberId || line.serialNumber))}
@@ -1437,7 +1501,7 @@ function RepairFormPage() {
                           );
                         }
 
-                        if ((isEditable || currentStatus === 'UNDER_REPAIR') && (line.actionType === 'ADD' || line.actionType === 'REMOVE')) {
+                        if (isEditable && (line.actionType === 'ADD' || line.actionType === 'REMOVE')) {
                           return renderSerialButton('primary', line.actionType === 'ADD' ? 'Thêm' : 'Bỏ', Boolean(line.serialNumberId || line.serialNumber));
                         }
                         if (line.actionType === 'REPLACE') {
@@ -1466,16 +1530,17 @@ function RepairFormPage() {
                     </td>
                     <td align="right">
                       {isEditable ? (
-                         <input type="number" min="1" step="1" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={fee.quantity || 1} onChange={(e) => {
-                            const newQty = e.target.value;
-                            handleUpdateFeeField(fee.id, fee._key, 'quantity', newQty);
-                         }} />
+                        <input type="number" min="1" step="1" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={fee.quantity || 1} onChange={(e) => {
+                          const newQty = e.target.value;
+                          handleUpdateFeeField(fee.id, fee._key, 'quantity', newQty);
+                        }} />
                       ) : (fee.quantity || 1)}
                     </td>
                     <td>{fee.unitName}</td>
+                    <td align="right">-</td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.isFreeWarranty ? 0 : money(fee.feeAmount)} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'feeAmount', Number(e.target.value.replace(/\D/g, '')))} />
+                        <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} placeholder="0" value={fee.isFreeWarranty ? 0 : (fee.feeAmount ? money(fee.feeAmount) : '')} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'feeAmount', Number(e.target.value.replace(/\D/g, '')))} />
                       ) : money(fee.feeAmount)}
                     </td>
                     <td align="right">
@@ -1493,12 +1558,12 @@ function RepairFormPage() {
                         </select>
                       ) : (fee.vatPercent || 0)}
                     </td>
-                    <td align="right" style={{ fontWeight: '500' }}>
+                    <td align="right" style={{ fontWeight: '500', whiteSpace: 'nowrap' }}>
                       {(() => {
-                         if (fee.isFreeWarranty) return money(0);
-                         const amount = Number(fee.quantity || 1) * Number(fee.feeAmount);
-                         const vatAmt = amount * Number(fee.vatPercent || 0) / 100;
-                         return money(amount + vatAmt);
+                        if (fee.isFreeWarranty) return money(0);
+                        const amount = Number(fee.quantity || 1) * Number(fee.feeAmount);
+                        const vatAmt = amount * Number(fee.vatPercent || 0) / 100;
+                        return money(amount + vatAmt);
                       })()}
                     </td>
                     <td align="center">
@@ -1542,7 +1607,7 @@ function RepairFormPage() {
 
           {isEditable && (
             <div style={{ padding: '16px', borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-white)', display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 type="button"
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px', fontWeight: '500', color: 'var(--wms-primary)', backgroundColor: 'var(--color-primary-soft)', border: '1px solid var(--color-info-border-soft)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
                 onClick={() => setAddingType('PART')}
@@ -1551,7 +1616,7 @@ function RepairFormPage() {
               >
                 <i className="bi bi-plus-lg"></i> Thêm linh kiện
               </button>
-              <button 
+              <button
                 type="button"
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px', fontWeight: '500', color: '#ea580c', backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
                 onClick={() => setAddingType('FEE')}
@@ -1601,7 +1666,7 @@ function RepairFormPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => handleGoBack()} style={{ marginRight: '8px' }}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => handleGoBack()} style={{ marginRight: '8px' }}>Đóng</button>
             {!isNew && ['WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'].includes(currentStatus) && (
               <>
                 {repair?.lines?.some(l => ['ADD', 'REPLACE'].includes(l.actionType)) && (
@@ -1616,17 +1681,15 @@ function RepairFormPage() {
           <div className={styles.footerRight}>
             {!isNew && repair && repair.repairStatus === 'DRAFT' && (
               <>
-                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
-                  <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
-                </button>
-                {canTechnicianActions && (
-                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('QUOTATION')} style={{ marginRight: '8px', backgroundColor: 'var(--wms-primary)', borderColor: 'var(--wms-primary)' }}>
-                    Lên báo giá
-                  </button>
-                )}
+
                 {canTechnicianActions && (
                   <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
                     Hủy đơn
+                  </button>
+                )}
+                {canTechnicianActions && (
+                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('QUOTATION')} style={{ marginRight: '8px', backgroundColor: 'var(--wms-primary)', borderColor: 'var(--wms-primary)' }}>
+                    Lên báo giá
                   </button>
                 )}
               </>
@@ -1634,6 +1697,11 @@ function RepairFormPage() {
 
             {!isNew && repair && repair.repairStatus === 'QUOTATION' && (
               <>
+                {canTechnicianActions && (
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                    Hủy đơn
+                  </button>
+                )}
                 <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
                   <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
                 </button>
@@ -1642,22 +1710,15 @@ function RepairFormPage() {
                     Gửi xin duyệt
                   </button>
                 )}
-                {canTechnicianActions && (
-                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
-                    Hủy đơn
-                  </button>
-                )}
               </>
             )}
 
             {!isNew && repair && repair.repairStatus === 'WAITING_FOR_APPROVAL' && (
               <>
-                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
-                  <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
-                </button>
+
                 {canAccountantActions && (
-                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }}>
-                    Duyệt / Xác nhận
+                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                    Hủy đơn
                   </button>
                 )}
                 {canAccountantActions && (
@@ -1666,8 +1727,8 @@ function RepairFormPage() {
                   </button>
                 )}
                 {canAccountantActions && (
-                  <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
-                    Hủy đơn
+                  <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: 'var(--color-success-alt)', borderColor: 'var(--color-success-alt)' }}>
+                    Duyệt
                   </button>
                 )}
               </>
@@ -1690,9 +1751,7 @@ function RepairFormPage() {
 
             {!isNew && repair && repair.repairStatus === 'WAITING_FOR_EXPORT' && (
               <>
-                <button className="btn-misa-post" style={{ marginRight: '8px', opacity: 0.7 }} disabled={true}>
-                  <i className="bi bi-hourglass-split" style={{ marginRight: '4px' }}></i> Chờ kho xuất linh kiện
-                </button>
+
                 {canAccountantActions && (
                   <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: 'var(--wms-danger)', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
                     Hủy lệnh
@@ -2059,7 +2118,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
     <tr>
       {/* 1. Loại */}
       <td>
-        <SearchableSelect
+        <select
           className="misa-input"
           value={form.actionType}
           disabled={isSaving}
@@ -2068,12 +2127,12 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
             setForm(nextForm);
             savePart(nextForm);
           }}
-          style={{ width: '126px', minWidth: '126px', height: '28px', padding: '2px 28px 2px 8px' }}
+          style={{ width: '126px', minWidth: '126px', height: '28px', padding: '2px 28px 2px 8px', appearance: 'auto' }}
         >
           <option value="ADD">Thêm</option>
           <option value="REPLACE">Thay thế</option>
           <option value="REMOVE">Loại bỏ</option>
-        </SearchableSelect>
+        </select>
       </td>
       {/* 2. Hạng mục */}
       <td>
@@ -2083,7 +2142,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           value={form.componentVariantId}
           onChange={opt => {
             if (opt) {
-              const nextForm = { ...form, componentVariantId: opt.id, _label: opt.productName, _unitName: opt.unitName, unitPrice: isFree ? 0 : (opt.salePrice || 0) };
+              const nextForm = { ...form, componentVariantId: opt.id, _label: opt.productName, _unitName: opt.unitName, unitPrice: isFree ? 0 : (opt.salePrice || 0), vatPercent: isFree ? 0 : (form.vatPercent ?? vatConfig.defaultVatRate) };
               setForm(nextForm);
               savePart(nextForm);
             } else {
@@ -2113,6 +2172,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       </td>
       {/* 5. ĐVT */}
       <td>{form._unitName || '-'}</td>
+      <td align="right">{form.componentVariantId ? formatQuantity(inventoryMap.get(String(form.componentVariantId)) || 0) : '-'}</td>
       {/* 6. Đơn giá */}
       <td align="right">
         <input
@@ -2148,10 +2208,10 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       {/* 7. Thành tiền */}
       <td align="right" style={{ fontWeight: '500' }}>
         {(() => {
-           if (isFree || !['ADD', 'REPLACE'].includes(form.actionType)) return money(0);
-           const amount = form.quantity * form.unitPrice;
-           const vatAmt = amount * Number(form.vatPercent || 0) / 100;
-           return money(amount + vatAmt);
+          if (isFree || !['ADD', 'REPLACE'].includes(form.actionType)) return money(0);
+          const amount = form.quantity * form.unitPrice;
+          const vatAmt = amount * Number(form.vatPercent || 0) / 100;
+          return money(amount + vatAmt);
         })()}
       </td>
       {/* 8. Bảo hành */}
@@ -2171,10 +2231,10 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       {/* 11. Thao tác */}
       <td align="center">
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-          <button 
+          <button
             type="button"
             onMouseDown={() => { skipPartCommitRef.current = true; }}
-            onClick={onCancel} 
+            onClick={onCancel}
             disabled={isSaving}
             title="Xóa dòng thêm mới"
             style={{
@@ -2247,6 +2307,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           placeholder="ĐVT"
         />
       </td>
+      <td align="right">-</td>
       {/* 6. Phí dịch vụ */}
       <td align="right">
         <input
@@ -2282,10 +2343,10 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       {/* 7. Thành tiền */}
       <td align="right" style={{ fontWeight: '500' }}>
         {(() => {
-           if (isFree) return money(0);
-           const amount = (form.quantity || 1) * form.feeAmount;
-           const vatAmt = amount * Number(form.vatPercent || 0) / 100;
-           return money(amount + vatAmt);
+          if (isFree) return money(0);
+          const amount = (form.quantity || 1) * form.feeAmount;
+          const vatAmt = amount * Number(form.vatPercent || 0) / 100;
+          return money(amount + vatAmt);
         })()}
       </td>
       {/* 8. Bảo hành */}
@@ -2307,10 +2368,10 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       {/* 11. Thao tác */}
       <td align="center">
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-          <button 
+          <button
             type="button"
             onMouseDown={() => { skipFeeCommitRef.current = true; }}
-            onClick={onCancel} 
+            onClick={onCancel}
             disabled={isSaving}
             title="Xóa dòng thêm mới"
             style={{

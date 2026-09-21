@@ -17,7 +17,7 @@ import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
 
-const defaultBomLine = { componentVariantId: '', categoryId: '', componentRole: '', quantity: '1', note: '', unitPrice: '', componentSku: '', componentName: '', warrantyMonths: '' };
+const defaultBomLine = { componentVariantId: '', categoryId: '', componentRole: '', quantity: '1', note: '', componentSku: '', componentName: '', warrantyMonths: '' };
 
 const createDefaultForm = () => ({
     id: null,
@@ -51,6 +51,7 @@ function AssemblyBomFormPage() {
     const canEdit = (!editing || ['DRAFT', 'REJECTED'].includes(form.status))
         && hasPermission(editing ? 'assembly_config:edit' : 'assembly_config:add');
     const canApprove = hasPermission('assembly:approve');
+    const canAddProduct = hasPermission('product:add');
 
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
@@ -84,7 +85,9 @@ function AssemblyBomFormPage() {
                 axiosClient.get('/reports/inventory-balance')
             ]);
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
+            
             setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
+            
             setInventoryBalances(unwrap(balanceResponse) || []);
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
@@ -113,7 +116,6 @@ function AssemblyBomFormPage() {
                     quantity: String(Number(line.quantity || 1)),
                     templateNote: '',
                     note: line.note || '',
-                    unitPrice: line.unitPrice != null ? line.unitPrice : '',
                     componentSku: line.componentSku || '',
                     componentName: line.componentName || '',
                     warrantyMonths: line.warrantyMonths != null ? line.warrantyMonths : ''
@@ -186,7 +188,6 @@ function AssemblyBomFormPage() {
                         quantity: String(Number(line.quantity || 1)),
                         templateNote: line.note || '',
                         note: '',
-                        unitPrice: '',
                         componentSku: '',
                         componentName: '',
                         warrantyMonths: ''
@@ -211,12 +212,13 @@ function AssemblyBomFormPage() {
     };
 
     const handleSelectVariant = (variantIdStr) => {
+        const targetLineIndex = pickingLineIndex;
         setForm(current => {
-            const existingIndex = current.lines.findIndex((line, idx) => idx !== pickingLineIndex && String(line.componentVariantId) === variantIdStr);
+            const existingIndex = current.lines.findIndex((line, idx) => idx !== targetLineIndex && String(line.componentVariantId) === variantIdStr);
 
             if (existingIndex !== -1) {
                 const newLines = [...current.lines];
-                const pickingLineQty = Number(newLines[pickingLineIndex].quantity || 1);
+                const pickingLineQty = Number(newLines[targetLineIndex].quantity || 1);
                 const currentQty = Number(newLines[existingIndex].quantity || 1);
 
                 // Tránh lỗi mutate state trực tiếp của React (tạo object mới cho existingIndex)
@@ -225,20 +227,20 @@ function AssemblyBomFormPage() {
                     quantity: currentQty + pickingLineQty
                 };
 
-                if (newLines[pickingLineIndex].componentRole) {
-                    newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: '' };
+                if (newLines[targetLineIndex].componentRole) {
+                    newLines[targetLineIndex] = { ...newLines[targetLineIndex], componentVariantId: '' };
                 } else {
                     if (newLines.length > 1) {
-                        newLines.splice(pickingLineIndex, 1);
+                        newLines.splice(targetLineIndex, 1);
                     } else {
-                        newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: '' };
+                        newLines[targetLineIndex] = { ...newLines[targetLineIndex], componentVariantId: '' };
                     }
                 }
 
                 return { ...current, lines: newLines };
             } else {
                 const newLines = [...current.lines];
-                newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: variantIdStr };
+                newLines[targetLineIndex] = { ...newLines[targetLineIndex], componentVariantId: variantIdStr };
                 return { ...current, lines: newLines };
             }
         });
@@ -286,7 +288,6 @@ function AssemblyBomFormPage() {
             quantity: Number.parseFloat(line.quantity),
             note: line.note?.trim() || null,
             componentRole: line.componentRole || null,
-            unitPrice: line.unitPrice !== '' ? Number(line.unitPrice) : null,
             componentSku: line.componentSku || null,
             componentName: line.componentName || null,
             warrantyMonths: line.warrantyMonths !== '' ? Number(line.warrantyMonths) : null
@@ -395,14 +396,11 @@ function AssemblyBomFormPage() {
         const data = cleanedLines.map(line => {
             const variant = variants.find(v => String(v.id) === String(line.componentVariantId));
             const quantity = Number(line.quantity) || 0;
-            const price = line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice) : Number(variant?.salePrice || 0);
             return {
                 sku: line.componentSku || variant?.sku || '---',
                 name: line.componentName || (variant ? `${variant.productName}${variant.variantName && variant.variantName !== variant.productName ? ' / ' + variant.variantName : ''}` : '---'),
                 warrantyMonths: line.warrantyMonths !== '' && line.warrantyMonths != null ? line.warrantyMonths : (variant?.warrantyMonths || 0),
-                quantity: quantity,
-                price: price,
-                amount: quantity * price
+                quantity
             };
         });
 
@@ -476,7 +474,7 @@ function AssemblyBomFormPage() {
                                         ))}
                                     </SearchableSelect>
                                 </div>
-                                {canEdit && (
+                                {canEdit && canAddProduct && (
                                     <button
                                         type="button"
                                         onClick={() => setShowQuickAddModal(true)}
@@ -512,13 +510,6 @@ function AssemblyBomFormPage() {
                     <div className={styles.bomBuilderContainer}>
                         <div className={styles.bomBuilderHeader}>
                             <h3 className={styles.bomBuilderTitle}>Chọn linh kiện xây cấu hình máy tính theo nhu cầu</h3>
-                            <div className={styles.bomTotalCost}>
-                                Chi phí dự tính: {form.lines.reduce((sum, line) => {
-                                    const v = variants.find(v => String(v.id) === String(line.componentVariantId));
-                                    const price = line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice) : (v ? Number(v.salePrice || 0) : 0);
-                                    return sum + price * Number(line.quantity || 0);
-                                }, 0).toLocaleString('vi-VN')} đ
-                            </div>
                         </div>
                         <div className={styles.bomList}>
                             {form.lines.map((line, index) => {
@@ -599,22 +590,8 @@ function AssemblyBomFormPage() {
                                                     </div>
                                                 </div>
                                                 <div className={styles.bomItemPriceGroup}>
-                                                    <input
-                                                        className={styles.bomItemQtyInput}
-                                                        style={{ width: '110px', textAlign: 'right' }}
-                                                        type="text"
-                                                        inputMode="numeric"
-                                                        value={line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice).toLocaleString('vi-VN') : (selectedVariant?.salePrice != null ? Number(selectedVariant.salePrice).toLocaleString('vi-VN') : '0')}
-                                                        onChange={(event) => setLineField(index, 'unitPrice', event.target.value.replace(/\D/g, ''))}
-                                                        disabled={!canEdit}
-                                                        title="Đơn giá"
-                                                    /> <span style={{ fontSize: '0.85rem' }}>đ</span>
-                                                    <span>x</span>
+                                                    <span style={{ fontSize: '0.85rem' }}>Số lượng</span>
                                                     <input className={styles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} disabled={!canEdit} />
-                                                    <span>=</span>
-                                                    <span className={styles.bomItemTotal}>
-                                                        {(Number(line.unitPrice !== '' && line.unitPrice != null ? line.unitPrice : (selectedVariant?.salePrice || 0)) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
-                                                    </span>
                                                 </div>
                                                 {canEdit && (
                                                     <div className={styles.bomItemActions}>
@@ -757,9 +734,6 @@ function AssemblyBomFormPage() {
                                                         <span>Bảo hành: <strong>{variant.warrantyMonths > 0 ? `${variant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
                                                         <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                     </div>
-                                                    <div className={styles.variantPickerPrice}>
-                                                        {Number(variant.salePrice || 0).toLocaleString('vi-VN')} đ
-                                                    </div>
                                                 </div>
                                                 <div className={styles.variantPickerAction}>
                                                     <button
@@ -809,11 +783,11 @@ function AssemblyBomFormPage() {
                     <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="Từ chối cấu hình">
                         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '14px' }}>Vui lòng nhập lý do từ chối để người lập cấu hình có thể điều chỉnh.</p>
-                            <textarea 
-                                className="misa-input" 
-                                rows={4} 
-                                value={rejectReason} 
-                                onChange={(e) => setRejectReason(e.target.value)} 
+                            <textarea
+                                className="misa-input"
+                                rows={4}
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
                                 placeholder="Nhập lý do từ chối..."
                                 autoFocus
                             />

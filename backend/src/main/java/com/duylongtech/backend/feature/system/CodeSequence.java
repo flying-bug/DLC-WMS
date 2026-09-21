@@ -29,4 +29,8 @@ public class CodeSequence {
     public void increment() {
         this.nextValue = this.nextValue + 1;
     }
+
+    public void incrementBy(int quantity) {
+        this.nextValue = this.nextValue + quantity;
+    }
 }

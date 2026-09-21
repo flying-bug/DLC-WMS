@@ -1,14 +1,6 @@
 package com.duylongtech.backend.constant;
 
 import lombok.Getter;
-import com.duylongtech.backend.feature.auth.User;
-import com.duylongtech.backend.feature.brand.Brand;
-import com.duylongtech.backend.feature.product.Product;
-import com.duylongtech.backend.feature.product.Unit;
-import com.duylongtech.backend.feature.repair.Repair;
-import com.duylongtech.backend.feature.stocktake.Stocktake;
-import com.duylongtech.backend.feature.warehouse.Warehouse;
-import com.duylongtech.backend.feature.warranty.Warranty;
 
 @Getter
 public enum SystemMessage {
@@ -22,7 +14,7 @@ public enum SystemMessage {
     INVALID_PHONE("MSG07", "Số điện thoại không hợp lệ (phải đúng mạng viễn thông Việt Nam)."),
     EXCEED_MAX_LENGTH("MSG08", "Độ dài dữ liệu vượt quá giới hạn cho phép."),
     INVALID_FULL_NAME("MSG09", "Họ và tên phải có 2-100 ký tự và không chứa số hoặc ký tự đặc biệt."),
-    
+
     // Auth & User
     LOGIN_FAILED("AUTH01", "Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại."),
     USER_NOT_FOUND("AUTH02", "Không tìm thấy tài khoản trong hệ thống."),
@@ -145,7 +137,7 @@ public enum SystemMessage {
     ASM_ERR_011("ASM_011", "Trạng thái cấu hình không hợp lệ"),
     ASM_ERR_012("ASM_012", "Mã cấu hình đã tồn tại"),
     ASM_ERR_013("ASM_013", "Mã lệnh lắp ráp/tháo dỡ đã tồn tại"),
-    ASM_ERR_014("ASM_014", "Chỉ có thể cập nhật lệnh DRAFT hoặc SUBMITTED"),
+    ASM_ERR_014("ASM_014", "Chỉ có thể cập nhật lệnh DRAFT hoặc REJECTED"),
     ASM_ERR_015("ASM_015", "Sản phẩm thành phẩm của cấu hình chưa có SKU"),
     ASM_ERR_016("ASM_016", "ID lệnh là bắt buộc"),
     ASM_ERR_017("ASM_017", "Cấu hình chưa có linh kiện"),

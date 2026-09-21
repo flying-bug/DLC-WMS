@@ -51,12 +51,14 @@ const WarehouseInventoryList = ({ warehouseId }) => {
 
     // Lọc dữ liệu theo search query và toggle
     const filteredInventory = inventory.filter(item => {
-        const query = search.toLowerCase();
-        const matchesSearch = (
-            (item.productCode && item.productCode.toLowerCase().includes(query)) ||
-            (item.productName && item.productName.toLowerCase().includes(query)) ||
-            (item.sku && item.sku.toLowerCase().includes(query)) ||
-            (item.variantName && item.variantName.toLowerCase().includes(query))
+        const query = search.toLowerCase().trim().replace(/\s+/g, ' ');
+        const normalize = (str) => str ? str.toLowerCase().replace(/\s+/g, ' ') : '';
+        
+        const matchesSearch = !query || (
+            normalize(item.productCode).includes(query) ||
+            normalize(item.productName).includes(query) ||
+            normalize(item.sku).includes(query) ||
+            normalize(item.variantName).includes(query)
         );
 
         if (showBackorderedOnly) {
@@ -275,11 +277,14 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                 <th>Mã SKU</th>
                                 <th>Phiên bản</th>
                                 <th style={{ textAlign: 'right' }}>Tồn kho thực tế</th>
+                                <th style={{ textAlign: 'right' }}>Đang giữ hàng</th>
+                                <th style={{ textAlign: 'right' }}>Khả dụng</th>
                             </tr>
                         </thead>
                         <tbody>
                             {currentItems.map((item, idx) => {
                                 const isExpanded = !!expandedVariants[item.variantId];
+                                const isLowStock = item.availableQuantity <= 5;
 
                                 return (
                                     <Fragment key={`${item.sku}-${idx}`}>
@@ -306,10 +311,18 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                             <td style={{ textAlign: 'right', fontWeight: '500' }}>
                                                 {formatNumber(item.quantityOnHand)}
                                             </td>
+                                            <td style={{ textAlign: 'right', color: 'var(--wms-text-muted)' }}>
+                                                {formatNumber(item.quantityReserved)}
+                                            </td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                <span className={`${styles.qtyBadge} ${isLowStock ? styles.lowStock : styles.normalStock}`}>
+                                                    {formatNumber(item.availableQuantity)}
+                                                </span>
+                                            </td>
                                         </tr>
                                         {isExpanded && (
                                             <tr className={styles.subRowWrapper}>
-                                                <td colSpan="6" className={styles.subRowCell}>
+                                                <td colSpan="8" className={styles.subRowCell}>
                                                     {renderVariantTree(item.variantId)}
                                                 </td>
                                             </tr>

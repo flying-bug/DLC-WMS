@@ -237,15 +237,37 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        boolean hasFullView = hasAnyAuthority("export:view", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
 
         if (!hasFullView) {
-            if (hasAnyAuthority("repair:view") && !hasAnyAuthority("assembly:view")) {
-                issuePurpose = null;
-                referenceType = "REPAIR";
+            boolean canRepair = hasAnyAuthority("repair:view");
+            boolean canAssembly = hasAnyAuthority("assembly:view");
+            
+            if (!canRepair && !canAssembly) {
+                return List.of();
+            }
+            
+            if (referenceType != null && !referenceType.trim().isEmpty()) {
+                if ("REPAIR".equals(referenceType) && !canRepair) {
+                    return List.of();
+                }
+                if ("ASSEMBLY_ORDER".equals(referenceType) && !canAssembly) {
+                    return List.of();
+                }
+                if (!"REPAIR".equals(referenceType) && !"ASSEMBLY_ORDER".equals(referenceType)) {
+                    return List.of();
+                }
             } else {
-                issuePurpose = "ASSEMBLY";
-                referenceType = "ASSEMBLY_ORDER";
+                if (canRepair && canAssembly) {
+                    issuePurpose = null;
+                    referenceType = "MULTI_TECH";
+                } else if (canRepair) {
+                    issuePurpose = null;
+                    referenceType = "REPAIR";
+                } else {
+                    issuePurpose = "ASSEMBLY";
+                    referenceType = "ASSEMBLY_ORDER";
+                }
             }
         }
 
@@ -322,15 +344,37 @@ public class InventoryDocumentService {
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId,
             Long partnerId, Long salespersonId) {
         
-        boolean hasFullView = hasAnyAuthority("import:view", "ROLE_SUPER_ADMIN", "ROLE_MANAGER");
+        boolean hasFullView = hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_ACCOUNTANT", "ROLE_WAREHOUSE_CONTROLLER");
 
         if (!hasFullView) {
-            if (hasAnyAuthority("repair:view") && !hasAnyAuthority("assembly:view")) {
-                issuePurpose = null;
-                referenceType = "REPAIR";
+            boolean canRepair = hasAnyAuthority("repair:view");
+            boolean canAssembly = hasAnyAuthority("assembly:view");
+            
+            if (!canRepair && !canAssembly) {
+                return List.of();
+            }
+            
+            if (referenceType != null && !referenceType.trim().isEmpty()) {
+                if ("REPAIR".equals(referenceType) && !canRepair) {
+                    return List.of();
+                }
+                if ("ASSEMBLY_ORDER".equals(referenceType) && !canAssembly) {
+                    return List.of();
+                }
+                if (!"REPAIR".equals(referenceType) && !"ASSEMBLY_ORDER".equals(referenceType)) {
+                    return List.of();
+                }
             } else {
-                issuePurpose = "ASSEMBLY";
-                referenceType = "ASSEMBLY_ORDER";
+                if (canRepair && canAssembly) {
+                    issuePurpose = null;
+                    referenceType = "MULTI_TECH";
+                } else if (canRepair) {
+                    issuePurpose = null;
+                    referenceType = "REPAIR";
+                } else {
+                    issuePurpose = "ASSEMBLY";
+                    referenceType = "ASSEMBLY_ORDER";
+                }
             }
         }
 
@@ -454,9 +498,12 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse updateExport(Long id, InventoryDocumentRequest req) {
         validateUpdateRequest(req);
         inventoryValidationService.validateOrderLineQuantities(req, id);
+        InventoryDocument doc = findExportOrThrow(id);
+        if (isRepairInventoryDocument(doc)) {
+            return updateRepairExportSerials(doc, req);
+        }
         inventoryValidationService.validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
                 req.getReferenceId(), req.getLines());
-        InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
         doc.clearLines();
@@ -471,6 +518,9 @@ public class InventoryDocumentService {
         inventoryValidationService.validateUpdateImportRequest(req);
         inventoryValidationService.validateOrderLineQuantities(req, id);
         InventoryDocument doc = findImportOrThrow(id);
+        if (isRepairInventoryDocument(doc)) {
+            return updateRepairImportReceipt(doc, req);
+        }
         ensureEditable(doc);
         if (req.getWarehouseId() != null && !req.getWarehouseId().equals(doc.getWarehouseId())
                 && doc.getPurchaseOrderId() != null) {
@@ -725,6 +775,9 @@ public class InventoryDocumentService {
     }
 
     private void ensureEditable(InventoryDocument doc) {
+        if (isManagedInventoryDocument(doc)) {
+            throw new BusinessException("Phiếu kho tự động của lệnh kỹ thuật không được sửa trực tiếp");
+        }
         String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
             throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
@@ -1302,16 +1355,21 @@ public class InventoryDocumentService {
             if (lr.quantity() == null || lr.quantity().compareTo(ZERO) <= 0) {
                 continue;
             }
+            if (lr.serialNumberId() != null
+                    && inventoryDocumentLineRepository.isSerialLockedInDrafts(lr.serialNumberId(), null)) {
+                throw new BusinessException("Serial đã được giữ cho một phiếu xuất kho khác");
+            }
             InventoryDocumentLine docLine = new InventoryDocumentLine();
             docLine.setInventoryDocument(exportDoc);
             docLine.setVariantId(lr.componentVariantId());
             docLine.setQuantityIn(ZERO);
             docLine.setQuantityOut(lr.quantity());
             docLine.setUnitCost(ZERO);
-            docLine.setUnitPrice(lr.unitPrice());
-            docLine.setLineAmount(lr.unitPrice().multiply(lr.quantity()));
+            docLine.setUnitPrice(ZERO);
+            docLine.setLineAmount(ZERO);
             docLine.setSerialNumberId(lr.serialNumberId());
             docLine.setSerialNumbersText(lr.serialNumberText());
+            docLine.setRepairLineId(lr.repairLineId());
             docLine.setNote(lr.note());
             exportDoc.getLines().add(docLine);
         }
@@ -1359,6 +1417,7 @@ public class InventoryDocumentService {
             scrapLine.setLineAmount(ZERO);
             scrapLine.setSerialNumberId(lr.serialNumberId());
             scrapLine.setSerialNumbersText(lr.serialNumberText());
+            scrapLine.setRepairLineId(lr.repairLineId());
             scrapLine.setNote("Linh kiện tháo ra từ lệnh sửa " + repairCode);
             scrapDoc.getLines().add(scrapLine);
         }
@@ -1372,6 +1431,8 @@ public class InventoryDocumentService {
 
     private InventoryDocumentResponse toResponse(InventoryDocument doc, boolean includeLines) {
         InventoryDocumentResponse r = inventoryDocumentMapper.toResponse(doc);
+        boolean hideAssemblyCost = "ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(doc.getReferenceType()))
+                && !hasAnyAuthority("ROLE_ACCOUNTANT", "ROLE_MANAGER", "ROLE_SUPER_ADMIN");
         if (doc.getCreatedBy() != null) {
             userRepository.findById(doc.getCreatedBy()).ifPresent(u -> r.setCreatedByName(u.getFullName()));
         }
@@ -1488,6 +1549,11 @@ public class InventoryDocumentService {
                         lr.setTargetWarehouseName(wh.getName());
                     });
                 }
+                if (hideAssemblyCost) {
+                    lr.setUnitCost(null);
+                    lr.setUnitPrice(null);
+                    lr.setLineAmount(null);
+                }
                 return lr;
             }).collect(Collectors.toList());
             r.setLines(lines);
@@ -1526,11 +1592,17 @@ public class InventoryDocumentService {
     // returns a fresh DRAFT clone referencing it, so the old row stays as history.
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostImport(Long id, String reason, Long currentUserId) {
+        InventoryDocument source = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
+        rejectRepairUnpost(source);
         inventoryPostingService.unpostImport(id, reason, currentUserId);
         inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
 
         InventoryDocument old = inventoryDocumentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
+        if ("ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(old.getReferenceType()))) {
+            return toResponse(old, true);
+        }
         old.cancelAfterUnpost();
         inventoryDocumentRepository.save(old);
 
@@ -1544,11 +1616,17 @@ public class InventoryDocumentService {
 
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
+        InventoryDocument source = inventoryDocumentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
+        rejectRepairUnpost(source);
         inventoryPostingService.unpostExport(id, reason, currentUserId);
         inventoryDocumentRepository.findById(id).ifPresent(this::synchronizeAssemblyOrder);
 
         InventoryDocument old = inventoryDocumentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
+        if ("ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(old.getReferenceType()))) {
+            return toResponse(old, true);
+        }
         old.cancelAfterUnpost();
         inventoryDocumentRepository.save(old);
 
@@ -1603,6 +1681,7 @@ public class InventoryDocumentService {
             // SerialNumber rows generated for import lines, so that FK would dangle.
             // The raw text is kept as a reference for whoever edits this draft.
             line.setSerialNumbersText(sourceLine.getSerialNumbersText());
+            line.setRepairLineId(sourceLine.getRepairLineId());
             line.setNote(sourceLine.getNote());
             line.setWarrantyMonths(sourceLine.getWarrantyMonths());
             line.setWarehouseId(sourceLine.getWarehouseId());
@@ -1656,6 +1735,108 @@ public class InventoryDocumentService {
         return documentId != null && inventoryDocumentRepository.findById(documentId)
                 .map(document -> DocumentStatus.POSTED.name().equals(document.getStatus()))
                 .orElse(false);
+    }
+
+    private boolean isManagedInventoryDocument(InventoryDocument document) {
+        String referenceType = trimToNull(document.getReferenceType());
+        return "ASSEMBLY_ORDER".equalsIgnoreCase(referenceType)
+                || "REPAIR".equalsIgnoreCase(referenceType);
+    }
+
+    private boolean isRepairInventoryDocument(InventoryDocument document) {
+        return "REPAIR".equalsIgnoreCase(trimToNull(document.getReferenceType()));
+    }
+
+    /**
+     * Repair exports already own held FIFO allocations. Warehouse staff may attach
+     * physical serials, but replacing the lines would cascade-delete those holds.
+     */
+    private InventoryDocumentResponse updateRepairExportSerials(InventoryDocument doc, InventoryDocumentRequest req) {
+        String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
+        if (!EDITABLE_STATUSES.contains(status)) {
+            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
+        }
+        if (!java.util.Objects.equals(doc.getWarehouseId(), req.getWarehouseId())) {
+            throw new BusinessException("Không được thay đổi kho của phiếu xuất sửa chữa");
+        }
+        if (req.getLines() == null || req.getLines().size() != doc.getLines().size()) {
+            throw new BusinessException("Không được thêm hoặc xóa dòng trên phiếu xuất sửa chữa");
+        }
+
+        for (int i = 0; i < doc.getLines().size(); i++) {
+            InventoryDocumentLine existing = doc.getLines().get(i);
+            InventoryDocumentLineRequest requested = req.getLines().get(i);
+            BigDecimal requestedQuantity = requested.getBaseQuantity() != null
+                    && requested.getBaseQuantity().compareTo(ZERO) > 0
+                    ? requested.getBaseQuantity()
+                    : requested.getQuantityOut();
+            if (!java.util.Objects.equals(existing.getVariantId(), requested.getVariantId())
+                    || requestedQuantity == null
+                    || existing.getQuantityOut() == null
+                    || existing.getQuantityOut().compareTo(requestedQuantity) != 0) {
+                throw new BusinessException("Không được thay đổi mã hàng hoặc số lượng đã giữ FIFO");
+            }
+
+            InventoryDocumentLine validated = toExportLineEntity(doc, requested, i);
+            existing.setSerialNumberId(validated.getSerialNumberId());
+            existing.setSerialNumbersText(validated.getSerialNumbersText());
+            existing.setNote(requested.getNote());
+        }
+
+        doc.setDocDate(req.getDocDate());
+        doc.setNote(req.getNote());
+        doc.setRecipientName(req.getRecipientName());
+        doc.setRecipientAddress(req.getRecipientAddress());
+        doc.setSalespersonId(req.getSalespersonId());
+        doc.setUpdatedAt(LocalDateTime.now());
+        return toResponse(inventoryDocumentRepository.save(doc));
+    }
+
+    /** Keeps the generated repair/import lines intact while recording actual scrap receipt. */
+    private InventoryDocumentResponse updateRepairImportReceipt(InventoryDocument doc, InventoryDocumentRequest req) {
+        String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
+        if (!EDITABLE_STATUSES.contains(status)) {
+            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
+        }
+        if (!java.util.Objects.equals(doc.getWarehouseId(), req.getWarehouseId())) {
+            throw new BusinessException("Không được thay đổi kho phế liệu của lệnh sửa chữa");
+        }
+        if (req.getLines() == null || req.getLines().size() != doc.getLines().size()) {
+            throw new BusinessException("Không được thêm hoặc xóa dòng trên phiếu nhập phế liệu");
+        }
+
+        for (int i = 0; i < doc.getLines().size(); i++) {
+            InventoryDocumentLine existing = doc.getLines().get(i);
+            InventoryDocumentLineRequest requested = req.getLines().get(i);
+            Long requestedWarehouseId = requested.getWarehouseId() != null
+                    ? requested.getWarehouseId() : req.getWarehouseId();
+            Long existingWarehouseId = existing.getWarehouseId() != null
+                    ? existing.getWarehouseId() : doc.getWarehouseId();
+            if (!java.util.Objects.equals(existing.getVariantId(), requested.getVariantId())
+                    || !java.util.Objects.equals(existingWarehouseId, requestedWarehouseId)) {
+                throw new BusinessException("Không được thay đổi mã hàng hoặc kho của phiếu nhập phế liệu");
+            }
+
+            InventoryDocumentLine validated = toImportLineEntity(doc, requested, i);
+            existing.setQuantityIn(validated.getQuantityIn());
+            existing.setBaseQuantity(validated.getBaseQuantity());
+            existing.setSerialNumberId(validated.getSerialNumberId());
+            existing.setSerialNumbersText(validated.getSerialNumbersText());
+            existing.setNote(requested.getNote());
+        }
+
+        doc.setDocDate(req.getDocDate());
+        doc.setNote(req.getNote());
+        doc.setRecipientName(req.getRecipientName());
+        doc.setRecipientAddress(req.getRecipientAddress());
+        doc.setUpdatedAt(LocalDateTime.now());
+        return toResponse(inventoryDocumentRepository.save(doc));
+    }
+
+    private void rejectRepairUnpost(InventoryDocument document) {
+        if ("REPAIR".equalsIgnoreCase(trimToNull(document.getReferenceType()))) {
+            throw new BusinessException("Phiếu kho sửa chữa đã ghi sổ không được phép bỏ ghi sổ");
+        }
     }
 
     private void validateAssemblyExportUnpost(InventoryDocument doc) {
@@ -1725,14 +1906,7 @@ public class InventoryDocumentService {
             inventoryDocumentRepository.save(importDoc);
         }
 
-        if (DocumentStatus.CANCELLED.name().equals(order.getStatus()) && DocumentStatus.UNPOSTED.name().equals(document.getStatus())) {
-            // order.setCancellationSettlementStatus("SETTLED"); // Handled in domain if needed
-        } else if (exportPosted && importPosted) {
-            order.markAsCompleted();
-            order.updateProducedQuantity(order.getQuantity());
-        } else if (exportPosted) {
-            order.markAsInProgress();
-        }
+        order.synchronizeInventoryState(exportPosted, importPosted);
         assemblyOrderRepository.save(order);
     }
 

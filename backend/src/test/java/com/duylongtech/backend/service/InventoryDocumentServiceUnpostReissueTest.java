@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.enums.DocumentStatus;
+import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.feature.assembly.AssemblyBomRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderSerialRepository;
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -167,6 +169,50 @@ class InventoryDocumentServiceUnpostReissueTest {
 
         verify(inventoryDocumentRepository, times(2)).save(any(InventoryDocument.class));
         verify(inventoryDocumentReferenceRepository, times(1)).save(argThatReferencesOldDoc(old));
+    }
+
+    @Test
+    void unpostAssemblyExportKeepsTheAuthoritativeDocumentPair() {
+        InventoryDocument old = new InventoryDocument();
+        old.setId(20L);
+        old.initExportDocument("XK00020");
+        old.setReferenceType("ASSEMBLY_ORDER");
+        old.setReferenceId(7L);
+        old.updateStatus(DocumentStatus.POSTED.name());
+
+        when(inventoryPostingService.unpostExport(20L, "Hủy thực hiện", 999L)).thenAnswer(inv -> {
+            old.updateStatus(DocumentStatus.UNPOSTED.name());
+            return null;
+        });
+        when(inventoryDocumentRepository.findById(20L)).thenReturn(Optional.of(old));
+        when(inventoryDocumentMapper.toResponse(old)).thenAnswer(inv -> {
+            InventoryDocumentResponse response = new InventoryDocumentResponse();
+            response.setId(old.getId());
+            response.setStatus(old.getStatus());
+            return response;
+        });
+
+        InventoryDocumentResponse response = newService().unpostExport(20L, "Hủy thực hiện", 999L);
+
+        assertEquals(20L, response.getId());
+        assertEquals(DocumentStatus.UNPOSTED.name(), response.getStatus());
+        verify(inventoryDocumentReferenceRepository, times(0)).save(any());
+    }
+
+    @Test
+    void postedRepairDocumentCannotBeUnposted() {
+        InventoryDocument document = new InventoryDocument();
+        document.setId(30L);
+        document.initExportDocument("XK00030");
+        document.setReferenceType("REPAIR");
+        document.setReferenceId(9L);
+        document.updateStatus(DocumentStatus.POSTED.name());
+        when(inventoryDocumentRepository.findById(30L)).thenReturn(Optional.of(document));
+
+        assertThrows(BusinessException.class,
+                () -> newService().unpostExport(30L, "Không còn được phép", 999L));
+
+        verify(inventoryPostingService, times(0)).unpostExport(any(), any(), any());
     }
 
     private static InventoryDocumentReference argThatReferencesOldDoc(InventoryDocument old) {

@@ -149,8 +149,8 @@ public class PaymentService {
             throw new BusinessException(SystemMessage.PAY_ERR_004.getMessage());
         }
 
-        ensurePaymentDoesNotExceedDebt(payment.getPartnerId(), payment.getAmount());
-        payment.setStatus(DocumentStatus.POSTED.name());
+        ensurePaymentDoesNotExceedDebt(payment.getPartnerId(), payment.getType(), payment.getAmount());
+        payment.markPosted();
         PaymentTransaction saved = paymentTransactionRepository.save(payment);
         recordPostedPaymentLedger(saved, saved.getNote());
         return toResponse(saved, partner);
@@ -186,7 +186,7 @@ public class PaymentService {
         );
 
         // Chuyển trạng thái phiếu về DRAFT (Chờ ghi sổ)
-        payment.setStatus(DocumentStatus.DRAFT.name());
+        payment.markDraft();
         PaymentTransaction saved = paymentTransactionRepository.save(payment);
 
         log.info("[Payment] Đã bỏ ghi sổ phiếu {}. Đưa về trạng thái DRAFT. Lý do: {}", 
@@ -199,7 +199,13 @@ public class PaymentService {
         if (partnerId == null) {
             return ZERO;
         }
-        return partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(partnerId)
+        BigDecimal receivable = getPartnerDebtBalance(partnerId, PartnerLedgerService.RECEIVABLE);
+        BigDecimal payable = getPartnerDebtBalance(partnerId, PartnerLedgerService.PAYABLE);
+        return receivable.add(payable);
+    }
+
+    private BigDecimal getPartnerDebtBalance(Long partnerId, String accountType) {
+        return partnerLedgerRepository.findTopByPartnerIdAndAccountTypeOrderByIdDesc(partnerId, accountType)
                 .map(PartnerLedger::getBalanceAfter)
                 .orElse(ZERO);
     }
@@ -223,6 +229,7 @@ public class PaymentService {
                 .map(ledger -> PartnerLedgerResponse.builder()
                         .id(ledger.getId())
                         .partnerId(ledger.getPartnerId())
+                        .accountType(ledger.getAccountType())
                         .entityType(ledger.getEntityType())
                         .entityId(ledger.getEntityId())
                         .referenceCode(ledger.getReferenceCode())
@@ -251,8 +258,10 @@ public class PaymentService {
         );
     }
 
-    private void ensurePaymentDoesNotExceedDebt(Long partnerId, BigDecimal amount) {
-        BigDecimal currentDebt = getPartnerDebtBalance(partnerId);
+    private void ensurePaymentDoesNotExceedDebt(Long partnerId, String paymentType, BigDecimal amount) {
+        String accountType = "VOUCHER".equals(paymentType)
+                ? PartnerLedgerService.PAYABLE : PartnerLedgerService.RECEIVABLE;
+        BigDecimal currentDebt = getPartnerDebtBalance(partnerId, accountType);
         if (amount.compareTo(currentDebt) > 0) {
             throw new BusinessException(SystemMessage.PAY_ERR_003.getMessage());
         }
@@ -270,7 +279,9 @@ public class PaymentService {
                 .type(payment.getType())
                 .note(payment.getNote())
                 .createdAt(payment.getCreatedAt())
-                .partnerDebtBalance(getPartnerDebtBalance(partner.getId()))
+                .postedAt(payment.getPostedAt())
+                .partnerDebtBalance(getPartnerDebtBalance(partner.getId(), "VOUCHER".equals(payment.getType())
+                        ? PartnerLedgerService.PAYABLE : PartnerLedgerService.RECEIVABLE))
                 .build();
     }
 

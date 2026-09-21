@@ -11,9 +11,9 @@ import java.math.BigDecimal;
 public record RepairStockOutLineRequest(
         Long componentVariantId,
         BigDecimal quantity,
-        BigDecimal unitPrice,
         Long serialNumberId,
         String serialNumberText,
-        String note
+        String note,
+        Long repairLineId
 ) {
 }

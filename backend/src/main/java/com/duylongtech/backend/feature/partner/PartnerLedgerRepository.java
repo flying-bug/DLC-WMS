@@ -12,6 +12,8 @@ public interface PartnerLedgerRepository extends JpaRepository<PartnerLedger, Lo
 
     Optional<PartnerLedger> findTopByPartnerIdOrderByIdDesc(Long partnerId);
 
+    Optional<PartnerLedger> findTopByPartnerIdAndAccountTypeOrderByIdDesc(Long partnerId, String accountType);
+
     List<PartnerLedger> findByPartnerIdOrderByIdDesc(Long partnerId);
 
     Optional<PartnerLedger> findTopByEntityTypeAndEntityIdOrderByIdDesc(String entityType, Long entityId);

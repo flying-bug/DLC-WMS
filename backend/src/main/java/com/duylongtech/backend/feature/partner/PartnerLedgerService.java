@@ -15,11 +15,22 @@ import java.math.BigDecimal;
 @Slf4j
 public class PartnerLedgerService {
 
+    public static final String RECEIVABLE = "RECEIVABLE";
+    public static final String PAYABLE = "PAYABLE";
+
     private final PartnerLedgerRepository partnerLedgerRepository;
     private final PartnerRepository partnerRepository;
 
     @Transactional
     public PartnerLedger recordLedger(Long partnerId, String entityType, Long entityId,
+                                       String referenceCode, BigDecimal amountDebt,
+                                       BigDecimal amountReceipt, String note) {
+        return recordLedger(partnerId, inferAccountType(entityType), entityType, entityId,
+                referenceCode, amountDebt, amountReceipt, note);
+    }
+
+    @Transactional
+    public PartnerLedger recordLedger(Long partnerId, String accountType, String entityType, Long entityId,
                                        String referenceCode, BigDecimal amountDebt,
                                        BigDecimal amountReceipt, String note) {
         if (partnerId == null) {
@@ -41,14 +52,14 @@ public class PartnerLedgerService {
         BigDecimal safeDebt = amountDebt != null ? amountDebt : BigDecimal.ZERO;
         BigDecimal safeReceipt = amountReceipt != null ? amountReceipt : BigDecimal.ZERO;
 
-        BigDecimal prevBalance = partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(partnerId)
+        BigDecimal prevBalance = partnerLedgerRepository.findTopByPartnerIdAndAccountTypeOrderByIdDesc(partnerId, accountType)
                 .map(PartnerLedger::getBalanceAfter)
                 .orElse(BigDecimal.ZERO);
 
         BigDecimal balanceAfter = prevBalance.add(safeDebt).subtract(safeReceipt);
 
         PartnerLedger ledger = new PartnerLedger();
-        ledger.initEntry(partnerId, entityType, entityId, referenceCode, safeDebt, safeReceipt, balanceAfter, note);
+        ledger.initEntry(partnerId, accountType, entityType, entityId, referenceCode, safeDebt, safeReceipt, balanceAfter, note);
 
         PartnerLedger saved = partnerLedgerRepository.save(ledger);
         log.info("[PartnerLedger] Ghi nhận công nợ cho PartnerID {}. Loại={}. Mã={}. Dư nợ mới={}", 
@@ -71,6 +82,7 @@ public class PartnerLedgerService {
         partnerLedgerRepository.findTopByEntityTypeAndEntityIdOrderByIdDesc(entityType, entityId)
                 .ifPresent(original -> recordLedger(
                         original.getPartnerId(),
+                        original.getAccountType(),
                         reverseEntityType,
                         entityId,
                         referenceCode,
@@ -78,5 +90,11 @@ public class PartnerLedgerService {
                         original.getAmountDebt(),
                         note
                 ));
+    }
+
+    private String inferAccountType(String entityType) {
+        String normalized = entityType != null ? entityType.toUpperCase() : "";
+        return normalized.contains("VOUCHER") || normalized.contains("IMPORT") || normalized.contains("PURCHASE")
+                ? PAYABLE : RECEIVABLE;
     }
 }

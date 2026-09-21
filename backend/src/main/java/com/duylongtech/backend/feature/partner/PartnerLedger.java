@@ -21,6 +21,9 @@ public class PartnerLedger {
     @Column(name = "partner_id", nullable = false)
     private Long partnerId;
 
+    @Column(name = "account_type", nullable = false, length = 20)
+    private String accountType;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "partner_id", insertable = false, updatable = false)
     private Partner partner;
@@ -50,8 +53,9 @@ public class PartnerLedger {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public void initEntry(Long partnerId, String entityType, Long entityId, String referenceCode, BigDecimal amountDebt, BigDecimal amountReceipt, BigDecimal balanceAfter, String note) {
+    public void initEntry(Long partnerId, String accountType, String entityType, Long entityId, String referenceCode, BigDecimal amountDebt, BigDecimal amountReceipt, BigDecimal balanceAfter, String note) {
         this.partnerId = partnerId;
+        this.accountType = accountType;
         this.entityType = entityType;
         this.entityId = entityId;
         this.referenceCode = referenceCode;
