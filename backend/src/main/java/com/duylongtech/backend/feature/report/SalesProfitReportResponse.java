@@ -17,6 +17,8 @@ public class SalesProfitReportResponse {
     private String unitName;
     private BigDecimal quantitySold;
     private BigDecimal salesAmount;
+    private BigDecimal vatAmount;
+    private BigDecimal totalAmount;
     private BigDecimal costAmount;
     private BigDecimal grossProfit;
     private BigDecimal profitMarginPercent;

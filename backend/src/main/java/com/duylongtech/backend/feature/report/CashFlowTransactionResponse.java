@@ -1,4 +1,4 @@
-package com.duylongtech.backend.feature.payment;
+package com.duylongtech.backend.feature.report;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,17 +12,13 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentResponse {
+public class CashFlowTransactionResponse {
     private Long id;
     private String code;
-    private Long partnerId;
+    private String type;
+    private String paymentMethod;
     private String partnerName;
     private BigDecimal amount;
-    private String status;
-    private String paymentMethod;
-    private String type; // RECEIPT / VOUCHER
     private String note;
-    private LocalDateTime createdAt;
     private LocalDateTime postedAt;
-    private BigDecimal partnerDebtBalance;
 }

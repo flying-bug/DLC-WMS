@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StockLedgerReportResponse {
+    private Long ledgerId;
     private String warehouseName;
     private String productCode;
     private String productName;
@@ -23,10 +24,14 @@ public class StockLedgerReportResponse {
     private LocalDate documentDate;
     private String documentNumber;
     private String documentType;
+    private String movementType;
     private String reference;
     private String unitName;
     private BigDecimal unitPrice;
     private BigDecimal quantityIn;
+    private BigDecimal amountIn;
     private BigDecimal quantityOut;
+    private BigDecimal amountOut;
+    private BigDecimal balanceBefore;
     private BigDecimal balanceAfter;
 }

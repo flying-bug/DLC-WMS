@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class PartnerLedgerResponse {
     private Long id;
     private Long partnerId;
+    private String accountType;
     private String entityType;
     private Long entityId;
     private String referenceCode;

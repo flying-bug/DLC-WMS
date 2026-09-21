@@ -45,18 +45,18 @@ public class DailyInventorySnapshotJob {
                     .orElse("00:05");
 
             LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
-            String nowTime = now.format(TIME_FMT); // "HH:mm"
-
-            if (!nowTime.equals(configuredTime)) return;
+            LocalTime configuredLocalTime = LocalTime.parse(configuredTime, TIME_FMT);
+            if (now.toLocalTime().isBefore(configuredLocalTime)) return;
 
             String currentDateKey = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             if (currentDateKey.equals(lastRunDate)) return;
 
-            lastRunDate = currentDateKey;
             LocalDate yesterday = now.toLocalDate().minusDays(1);
             log.info("[DailyInventorySnapshotJob] Bắt đầu tự động chốt sổ kho ngày {} (theo giờ cấu hình: {})", yesterday, configuredTime);
-            snapshotDate(yesterday);
-            log.info("[DailyInventorySnapshotJob] Tự động chốt sổ kho ngày {} hoàn tất.", yesterday);
+            if (snapshotDate(yesterday)) {
+                lastRunDate = currentDateKey;
+                log.info("[DailyInventorySnapshotJob] Tự động chốt sổ kho ngày {} hoàn tất.", yesterday);
+            }
         } catch (Exception e) {
             log.error("[DailyInventorySnapshotJob] Lỗi trong tiến trình kiểm tra lịch chốt sổ: {}", e.getMessage(), e);
         }
@@ -65,7 +65,7 @@ public class DailyInventorySnapshotJob {
     /**
      * Chốt sổ cho một ngày cụ thể (có thể dùng gọi thủ công hoặc re-calculate).
      */
-    public void snapshotDate(LocalDate date) {
+    public boolean snapshotDate(LocalDate date) {
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
         try {
             // Chạy trong transaction để đảm bảo @Modifying query thực thi thành công
@@ -88,9 +88,11 @@ public class DailyInventorySnapshotJob {
             }
 
             sendNotification(date, recordCount, totalQty, totalVal, true, null);
+            return true;
         } catch (Exception e) {
             log.error("[DailyInventorySnapshotJob] Lỗi khi tạo snapshot cho ngày {}: {}", date, e.getMessage(), e);
             sendNotification(date, 0, 0, BigDecimal.ZERO, false, e.getMessage());
+            return false;
         }
     }
 

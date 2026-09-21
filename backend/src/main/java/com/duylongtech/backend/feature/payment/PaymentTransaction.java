@@ -44,6 +44,9 @@ public class PaymentTransaction {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "posted_at")
+    private LocalDateTime postedAt;
+
     public void initTransaction(String transactionCode, String type, Long partnerId, BigDecimal amount, String status, String paymentMethod, String note) {
         this.transactionCode = transactionCode;
         this.type = type;
@@ -53,5 +56,15 @@ public class PaymentTransaction {
         this.paymentMethod = paymentMethod;
         this.note = note;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void markPosted() {
+        this.status = com.duylongtech.backend.enums.DocumentStatus.POSTED.name();
+        this.postedAt = LocalDateTime.now();
+    }
+
+    public void markDraft() {
+        this.status = com.duylongtech.backend.enums.DocumentStatus.DRAFT.name();
+        this.postedAt = null;
     }
 }

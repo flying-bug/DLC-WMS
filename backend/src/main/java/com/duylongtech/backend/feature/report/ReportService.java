@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
+import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -19,17 +21,27 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final ProductService productService;
-    private final com.duylongtech.backend.feature.sales_order.SalesOrderRepository salesOrderRepository;
+    private final WarehouseAccessGuard warehouseAccessGuard;
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
-        return reportRepository.getInventoryBalanceReport(search, warehouseId);
+        List<InventoryBalanceReportResponse> rows = reportRepository.getInventoryBalanceReport(search, resolveWarehouseId(warehouseId));
+        if (!canViewPricing()) rows.forEach(row -> row.setTotalValue(null));
+        return rows;
     }
     public List<StockLedgerReportResponse> getStockLedgerReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Stock Ledger Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
-        return reportRepository.getStockLedgerReport(warehouseId, startDate, endDate, search);
+        List<StockLedgerReportResponse> rows = reportRepository.getStockLedgerReport(resolveWarehouseId(warehouseId), startDate, endDate, search);
+        if (!canViewPricing()) rows.forEach(row -> {
+            row.setUnitPrice(null);
+            row.setAmountIn(null);
+            row.setAmountOut(null);
+        });
+        return rows;
     }
     public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status) {
         log.info("Fetching Stock Transfer Report. warehouseId={}, startDate={}, endDate={}, search={}, status={}", warehouseId, startDate, endDate, search, status);
-        return reportRepository.getStockTransferReport(warehouseId, startDate, endDate, search, status);
+        List<StockTransferReportResponse> rows = reportRepository.getStockTransferReport(resolveWarehouseId(warehouseId), startDate, endDate, search, status);
+        if (!canViewPricing()) rows.forEach(row -> { row.setUnitPrice(null); row.setAmount(null); });
+        return rows;
     }
     public List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType) {
         log.info("Fetching Debt Report. startDate={}, endDate={}, search={}, partnerType={}", startDate, endDate, search, partnerType);
@@ -37,7 +49,11 @@ public class ReportService {
     }
     public List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Inventory Summary Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
-        return reportRepository.getInventorySummaryReport(warehouseId, startDate, endDate, search);
+        List<InventorySummaryReportResponse> rows = reportRepository.getInventorySummaryReport(resolveWarehouseId(warehouseId), startDate, endDate, search);
+        if (!canViewPricing()) rows.forEach(row -> {
+            row.setOpeningValue(null); row.setReceiptValue(null); row.setIssueValue(null); row.setEndingValue(null);
+        });
+        return rows;
     }
     public DashboardResponse getDashboardMetrics(String inventoryFlowRange, String categoryScope, String financeRange) {
         log.info("Fetching Dashboard Metrics. inventoryFlowRange={}, categoryScope={}, financeRange={}", inventoryFlowRange, categoryScope, financeRange);
@@ -47,13 +63,11 @@ public class ReportService {
         dashboard.setOutOfStockItemsCount(stockAlerts.getOutOfStockCount());
         return dashboard;
     }
-    public List<SalesProfitReportResponse> getSalesProfitReport(LocalDateTime startDate, LocalDateTime endDate, String search) {
+    public List<SalesProfitReportResponse> getSalesProfitReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Sales Profit Report. startDate={}, endDate={}, search={}", startDate, endDate, search);
         
-        LocalDate start = startDate != null ? startDate.toLocalDate() : null;
-        LocalDate end = endDate != null ? endDate.toLocalDate() : null;
-        
-        List<SalesProfitReportResponse> results = salesOrderRepository.findSalesProfitReport(search, start, end);
+        List<SalesProfitReportResponse> results = reportRepository.getSalesProfitReport(
+                resolveWarehouseId(warehouseId), startDate, endDate, search);
         
         // Calculate profitMarginPercent safely in Java to avoid JPQL casting issues
         for (SalesProfitReportResponse r : results) {
@@ -67,17 +81,55 @@ public class ReportService {
             }
         }
         
+        if (!canViewPricing()) results.forEach(row -> {
+            row.setSalesAmount(null); row.setVatAmount(null); row.setTotalAmount(null);
+            row.setCostAmount(null); row.setGrossProfit(null); row.setProfitMarginPercent(null);
+        });
         return results;
     }
-    public List<RepairProfitReportResponse> getRepairProfitReport(LocalDateTime startDate, LocalDateTime endDate,
+    public CashFlowReportResponse getCashFlowReport(LocalDateTime startDate, LocalDateTime endDate,
+                                                     String search, String paymentMethod) {
+        return reportRepository.getCashFlowReport(startDate, endDate, search, paymentMethod);
+    }
+    public List<RepairProfitReportResponse> getRepairProfitReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate,
                                                                   String search) {
-        return reportRepository.getRepairProfitReport(
+        List<RepairProfitReportResponse> rows = reportRepository.getRepairProfitReport(
+                resolveWarehouseId(warehouseId),
                 startDate != null ? startDate.toLocalDate() : null,
                 endDate != null ? endDate.toLocalDate() : null,
                 search);
+        if (!canViewPricing()) rows.forEach(row -> {
+            row.setPartsRevenue(null); row.setServiceRevenue(null); row.setVatAmount(null);
+            row.setCostAmount(null); row.setGrossProfit(null); row.setProfitMarginPercent(null);
+        });
+        return rows;
     }
-    public byte[] exportReportToExcel(String reportType, Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType, String status) {
+
+    private Long resolveWarehouseId(Long requestedWarehouseId) {
+        List<Long> allowed = warehouseAccessGuard.resolveAllowedWarehouseIds();
+        if (allowed == null) return requestedWarehouseId;
+        if (requestedWarehouseId != null) {
+            warehouseAccessGuard.checkAccess(requestedWarehouseId);
+            return requestedWarehouseId;
+        }
+        if (allowed.size() == 1) return allowed.get(0);
+        if (allowed.isEmpty()) throw new BusinessException("Bạn chưa được phân công kho để xem báo cáo");
+        throw new BusinessException("Vui lòng chọn một kho trong phạm vi được phân công");
+    }
+
+    private boolean canViewPricing() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority().toUpperCase())
+                .anyMatch(role -> role.contains("SUPER_ADMIN") || role.contains("MANAGER")
+                        || role.contains("ACCOUNTANT") || role.contains("CASHIER_CONTROLLER"));
+    }
+    public byte[] exportReportToExcel(String reportType, Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType, String status, String paymentMethod) {
         log.info("Exporting report to Excel. Type={}, warehouseId={}, startDate={}, endDate={}, search={}", reportType, warehouseId, startDate, endDate, search);
+        if (!java.util.Set.of("inventory-summary", "inventory-balance", "stock-ledger", "stock-transfers",
+                "debt", "sales-profit", "repair-profit", "cash-flow").contains(reportType)) {
+            throw new BusinessException("Loại báo cáo không hợp lệ: " + reportType);
+        }
         try (org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
              java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
              
@@ -116,7 +168,7 @@ public class ReportService {
             // Retrieve data based on type
             if ("inventory-summary".equals(reportType)) {
                 reportTitle = "BAO CAO TONG HOP TON KHO (NHAP - XUAT - TON)";
-                List<InventorySummaryReportResponse> data = reportRepository.getInventorySummaryReport(warehouseId, startDate, endDate, search);
+                List<InventorySummaryReportResponse> data = getInventorySummaryReport(warehouseId, startDate, endDate, search);
                 
                 // Inventory Summary uses 2 header rows
                 org.apache.poi.ss.usermodel.Row header1 = sheet.createRow(3);
@@ -172,8 +224,8 @@ public class ReportService {
                 }
             } else if ("inventory-balance".equals(reportType)) {
                 reportTitle = "BAO CAO TON KHO HIEN TAI";
-                List<InventoryBalanceReportResponse> data = reportRepository.getInventoryBalanceReport(search, warehouseId);
-                columns = new String[]{"Mã hàng", "Tên hàng", "Đơn vị tính", "Kho chứa", "Số lượng tồn", "Giá trị tồn"};
+                List<InventoryBalanceReportResponse> data = getInventoryBalanceReport(search, warehouseId);
+                columns = new String[]{"Mã hàng", "Tên hàng", "Đơn vị tính", "Kho chứa", "Tồn thực tế", "Đang giữ", "Khả dụng", "Giá trị tồn"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
                 for (int i = 0; i < columns.length; i++) {
@@ -190,7 +242,9 @@ public class ReportService {
                     row.createCell(2).setCellValue(item.getUnitName() != null ? item.getUnitName() : "");
                     row.createCell(3).setCellValue(item.getWarehouseCode() != null ? item.getWarehouseCode() + " - " + item.getWarehouseName() : "");
                     row.createCell(4).setCellValue(item.getTotalQuantity() != null ? item.getTotalQuantity().doubleValue() : 0.0);
-                    row.createCell(5).setCellValue(item.getTotalValue() != null ? item.getTotalValue().doubleValue() : 0.0);
+                    row.createCell(5).setCellValue(item.getTotalReserved() != null ? item.getTotalReserved().doubleValue() : 0.0);
+                    row.createCell(6).setCellValue(item.getAvailableQuantity() != null ? item.getAvailableQuantity().doubleValue() : 0.0);
+                    row.createCell(7).setCellValue(item.getTotalValue() != null ? item.getTotalValue().doubleValue() : 0.0);
                     
                     for (int i = 0; i < columns.length; i++) {
                         row.getCell(i).setCellStyle(borderStyle);
@@ -202,8 +256,11 @@ public class ReportService {
                 }
             } else if ("stock-ledger".equals(reportType)) {
                 reportTitle = "SO CHI TIET VAT TU HANG HOA";
-                List<StockLedgerReportResponse> data = reportRepository.getStockLedgerReport(warehouseId, startDate, endDate, search);
-                columns = new String[]{"Ngày CT", "Số chứng từ", "Loại CT", "Mã hàng", "Tên hàng", "Kho", "ĐVT", "Đơn giá", "Số lượng nhập", "Số lượng xuất", "Tồn sau CT"};
+                List<StockLedgerReportResponse> data = getStockLedgerReport(warehouseId, startDate, endDate, search);
+                boolean showPricing = canViewPricing();
+                columns = showPricing
+                        ? new String[]{"Ngày ghi sổ", "Ngày CT", "Số chứng từ", "Loại CT", "Mã hàng", "Tên hàng", "Kho", "ĐVT", "Đơn giá vốn", "SL nhập", "Tiền nhập", "SL xuất", "Tiền xuất", "Tồn trước GD", "Tồn sau GD"}
+                        : new String[]{"Ngày ghi sổ", "Ngày CT", "Số chứng từ", "Loại CT", "Mã hàng", "Tên hàng", "Kho", "ĐVT", "SL nhập", "SL xuất", "Tồn trước GD", "Tồn sau GD"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
                 for (int i = 0; i < columns.length; i++) {
@@ -215,17 +272,23 @@ public class ReportService {
                 int rowIdx = 4;
                 for (StockLedgerReportResponse item : data) {
                     org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
-                    row.createCell(0).setCellValue(item.getDocumentDate() != null ? item.getDocumentDate().toString() : "");
-                    row.createCell(1).setCellValue(item.getDocumentNumber());
-                    row.createCell(2).setCellValue(item.getDocumentType());
-                    row.createCell(3).setCellValue(item.getProductCode());
-                    row.createCell(4).setCellValue(item.getProductName());
-                    row.createCell(5).setCellValue(item.getWarehouseName());
-                    row.createCell(6).setCellValue(item.getUnitName() != null ? item.getUnitName() : "");
-                    row.createCell(7).setCellValue(item.getUnitPrice() != null ? item.getUnitPrice().doubleValue() : 0.0);
-                    row.createCell(8).setCellValue(item.getQuantityIn() != null ? item.getQuantityIn().doubleValue() : 0.0);
-                    row.createCell(9).setCellValue(item.getQuantityOut() != null ? item.getQuantityOut().doubleValue() : 0.0);
-                    row.createCell(10).setCellValue(item.getBalanceAfter() != null ? item.getBalanceAfter().doubleValue() : 0.0);
+                    int col = 0;
+                    row.createCell(col++).setCellValue(item.getMovementAt() != null ? item.getMovementAt().toString() : "");
+                    row.createCell(col++).setCellValue(item.getDocumentDate() != null ? item.getDocumentDate().toString() : "");
+                    row.createCell(col++).setCellValue(item.getDocumentNumber());
+                    row.createCell(col++).setCellValue(item.getMovementType() != null && item.getMovementType().startsWith("UNPOST_")
+                            ? item.getMovementType() : item.getDocumentType());
+                    row.createCell(col++).setCellValue(item.getProductCode());
+                    row.createCell(col++).setCellValue(item.getProductName());
+                    row.createCell(col++).setCellValue(item.getWarehouseName());
+                    row.createCell(col++).setCellValue(item.getUnitName() != null ? item.getUnitName() : "");
+                    if (showPricing) row.createCell(col++).setCellValue(item.getUnitPrice() != null ? item.getUnitPrice().doubleValue() : 0.0);
+                    row.createCell(col++).setCellValue(item.getQuantityIn() != null ? item.getQuantityIn().doubleValue() : 0.0);
+                    if (showPricing) row.createCell(col++).setCellValue(item.getAmountIn() != null ? item.getAmountIn().doubleValue() : 0.0);
+                    row.createCell(col++).setCellValue(item.getQuantityOut() != null ? item.getQuantityOut().doubleValue() : 0.0);
+                    if (showPricing) row.createCell(col++).setCellValue(item.getAmountOut() != null ? item.getAmountOut().doubleValue() : 0.0);
+                    row.createCell(col++).setCellValue(item.getBalanceBefore() != null ? item.getBalanceBefore().doubleValue() : 0.0);
+                    row.createCell(col).setCellValue(item.getBalanceAfter() != null ? item.getBalanceAfter().doubleValue() : 0.0);
                     
                     for (int i = 0; i < columns.length; i++) {
                         row.getCell(i).setCellStyle(borderStyle);
@@ -239,7 +302,7 @@ public class ReportService {
                 reportTitle = "BAO CAO CHUYEN KHO NOI BO";
                 LocalDate startLd = startDate != null ? startDate.toLocalDate() : null;
                 LocalDate endLd = endDate != null ? endDate.toLocalDate() : null;
-                List<StockTransferReportResponse> data = reportRepository.getStockTransferReport(warehouseId, startLd, endLd, search, status);
+                List<StockTransferReportResponse> data = getStockTransferReport(warehouseId, startLd, endLd, search, status);
                 columns = new String[]{"Ngày CT", "Số chứng từ", "Mã hàng", "Tên hàng", "Kho chuyển", "Kho nhận", "ĐVT", "Số lượng", "Đơn giá", "Thành tiền", "Trạng thái"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
@@ -274,7 +337,7 @@ public class ReportService {
                 }
             } else if ("debt".equals(reportType)) {
                 reportTitle = "BAO CAO DOI CHIEU & CONG NO";
-                List<DebtReportResponse> data = reportRepository.getDebtReport(startDate, endDate, search, partnerType);
+                List<DebtReportResponse> data = getDebtReport(startDate, endDate, search, partnerType);
                 columns = new String[]{"Mã đối tác", "Tên đối tác", "Phân loại", "Dư đầu kỳ", "Phát sinh tăng (Nợ)", "Phát sinh giảm (Có)", "Dư cuối kỳ (Nợ cuối)"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
@@ -303,10 +366,56 @@ public class ReportService {
                 for (int i = 0; i < columns.length; i++) {
                     sheet.autoSizeColumn(i);
                 }
+            } else if ("cash-flow".equals(reportType)) {
+                reportTitle = "BAO CAO DONG TIEN";
+                CashFlowReportResponse data = getCashFlowReport(startDate, endDate, search, paymentMethod);
+                columns = new String[]{"Ngày ghi sổ", "Số phiếu", "Loại", "Phương thức", "Đối tác", "Thu", "Chi", "Ghi chú"};
+                org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
+                for (int i = 0; i < columns.length; i++) {
+                    org.apache.poi.ss.usermodel.Cell cell = header.createCell(i);
+                    cell.setCellValue(columns[i]);
+                    cell.setCellStyle(headerStyle);
+                }
+                int rowIdx = 4;
+                for (CashFlowTransactionResponse item : data.getTransactions()) {
+                    org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
+                    row.createCell(0).setCellValue(item.getPostedAt() != null ? item.getPostedAt().toString() : "");
+                    row.createCell(1).setCellValue(item.getCode());
+                    row.createCell(2).setCellValue("RECEIPT".equals(item.getType()) ? "Phiếu thu" : "Phiếu chi");
+                    row.createCell(3).setCellValue("CASH".equals(item.getPaymentMethod()) ? "Tiền mặt" : "Chuyển khoản");
+                    row.createCell(4).setCellValue(item.getPartnerName());
+                    row.createCell(5).setCellValue("RECEIPT".equals(item.getType()) ? item.getAmount().doubleValue() : 0.0);
+                    row.createCell(6).setCellValue("VOUCHER".equals(item.getType()) ? item.getAmount().doubleValue() : 0.0);
+                    row.createCell(7).setCellValue(item.getNote() != null ? item.getNote() : "");
+                    for (int i = 0; i < columns.length; i++) row.getCell(i).setCellStyle(borderStyle);
+                }
+                rowIdx++;
+                org.apache.poi.ss.usermodel.Row summaryHeader = sheet.createRow(rowIdx++);
+                String[] summaryColumns = {"Chỉ tiêu", "Tiền mặt", "Ngân hàng", "Tổng cộng"};
+                for (int i = 0; i < summaryColumns.length; i++) {
+                    org.apache.poi.ss.usermodel.Cell cell = summaryHeader.createCell(4 + i);
+                    cell.setCellValue(summaryColumns[i]);
+                    cell.setCellStyle(headerStyle);
+                }
+                String[] summaryLabels = {"Số dư đầu kỳ", "Thu trong kỳ", "Chi trong kỳ", "Số dư cuối kỳ"};
+                java.math.BigDecimal[][] summaryValues = {
+                        {data.getOpeningCash(), data.getOpeningBank(), data.getOpeningTotal()},
+                        {data.getCashReceipts(), data.getBankReceipts(), data.getTotalReceipts()},
+                        {data.getCashVouchers(), data.getBankVouchers(), data.getTotalVouchers()},
+                        {data.getClosingCash(), data.getClosingBank(), data.getClosingTotal()}
+                };
+                for (int i = 0; i < summaryLabels.length; i++) {
+                    org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
+                    row.createCell(4).setCellValue(summaryLabels[i]);
+                    row.createCell(5).setCellValue(summaryValues[i][0].doubleValue());
+                    row.createCell(6).setCellValue(summaryValues[i][1].doubleValue());
+                    row.createCell(7).setCellValue(summaryValues[i][2].doubleValue());
+                }
+                for (int i = 0; i < columns.length; i++) sheet.autoSizeColumn(i);
             } else if ("sales-profit".equals(reportType)) {
                 reportTitle = "BAO CAO DOANH THU & LOI NHUAN GOP";
-                List<SalesProfitReportResponse> data = getSalesProfitReport(startDate, endDate, search);
-                columns = new String[]{"Mã hàng", "Tên hàng", "ĐVT", "Số lượng bán", "Doanh thu", "Giá vốn", "Lợi nhuận gộp", "Tỷ suất LN (%)"};
+                List<SalesProfitReportResponse> data = getSalesProfitReport(warehouseId, startDate, endDate, search);
+                columns = new String[]{"Mã hàng", "Tên hàng", "ĐVT", "Số lượng bán", "Doanh thu chưa VAT", "VAT", "Tổng sau VAT", "Giá vốn", "Lợi nhuận gộp", "Tỷ suất LN (%)"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
                 for (int i = 0; i < columns.length; i++) {
@@ -323,9 +432,11 @@ public class ReportService {
                     row.createCell(2).setCellValue(item.getUnitName() != null ? item.getUnitName() : "");
                     row.createCell(3).setCellValue(item.getQuantitySold() != null ? item.getQuantitySold().doubleValue() : 0.0);
                     row.createCell(4).setCellValue(item.getSalesAmount() != null ? item.getSalesAmount().doubleValue() : 0.0);
-                    row.createCell(5).setCellValue(item.getCostAmount() != null ? item.getCostAmount().doubleValue() : 0.0);
-                    row.createCell(6).setCellValue(item.getGrossProfit() != null ? item.getGrossProfit().doubleValue() : 0.0);
-                    row.createCell(7).setCellValue(item.getProfitMarginPercent() != null ? item.getProfitMarginPercent().doubleValue() : 0.0);
+                    row.createCell(5).setCellValue(item.getVatAmount() != null ? item.getVatAmount().doubleValue() : 0.0);
+                    row.createCell(6).setCellValue(item.getTotalAmount() != null ? item.getTotalAmount().doubleValue() : 0.0);
+                    row.createCell(7).setCellValue(item.getCostAmount() != null ? item.getCostAmount().doubleValue() : 0.0);
+                    row.createCell(8).setCellValue(item.getGrossProfit() != null ? item.getGrossProfit().doubleValue() : 0.0);
+                    row.createCell(9).setCellValue(item.getProfitMarginPercent() != null ? item.getProfitMarginPercent().doubleValue() : 0.0);
                     
                     for (int i = 0; i < columns.length; i++) {
                         row.getCell(i).setCellStyle(borderStyle);
@@ -337,7 +448,7 @@ public class ReportService {
                 }
             } else if ("repair-profit".equals(reportType)) {
                 reportTitle = "BAO CAO DOANH THU & LOI NHUAN SUA CHUA";
-                List<RepairProfitReportResponse> data = getRepairProfitReport(startDate, endDate, search);
+                List<RepairProfitReportResponse> data = getRepairProfitReport(warehouseId, startDate, endDate, search);
                 columns = new String[]{"Ma lenh", "Ngay hoan thanh", "Khach hang", "Doanh thu linh kien",
                         "Doanh thu dich vu", "VAT", "Gia von FIFO", "Loi nhuan gop", "Ty suat LN (%)"};
 
@@ -354,12 +465,12 @@ public class ReportService {
                     row.createCell(0).setCellValue(item.getRepairCode());
                     row.createCell(1).setCellValue(item.getCompletedDate() != null ? item.getCompletedDate().toString() : "");
                     row.createCell(2).setCellValue(item.getPartnerName() != null ? item.getPartnerName() : "");
-                    row.createCell(3).setCellValue(item.getPartsRevenue().doubleValue());
-                    row.createCell(4).setCellValue(item.getServiceRevenue().doubleValue());
-                    row.createCell(5).setCellValue(item.getVatAmount().doubleValue());
-                    row.createCell(6).setCellValue(item.getCostAmount().doubleValue());
-                    row.createCell(7).setCellValue(item.getGrossProfit().doubleValue());
-                    row.createCell(8).setCellValue(item.getProfitMarginPercent().doubleValue());
+                    row.createCell(3).setCellValue(item.getPartsRevenue() != null ? item.getPartsRevenue().doubleValue() : 0.0);
+                    row.createCell(4).setCellValue(item.getServiceRevenue() != null ? item.getServiceRevenue().doubleValue() : 0.0);
+                    row.createCell(5).setCellValue(item.getVatAmount() != null ? item.getVatAmount().doubleValue() : 0.0);
+                    row.createCell(6).setCellValue(item.getCostAmount() != null ? item.getCostAmount().doubleValue() : 0.0);
+                    row.createCell(7).setCellValue(item.getGrossProfit() != null ? item.getGrossProfit().doubleValue() : 0.0);
+                    row.createCell(8).setCellValue(item.getProfitMarginPercent() != null ? item.getProfitMarginPercent().doubleValue() : 0.0);
                     for (int i = 0; i < columns.length; i++) {
                         row.getCell(i).setCellStyle(borderStyle);
                     }
