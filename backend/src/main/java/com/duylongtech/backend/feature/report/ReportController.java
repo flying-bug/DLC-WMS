@@ -129,18 +129,13 @@ public class ReportController {
     @GetMapping("/repair-profit")
     @PreAuthorize("hasAuthority('report_sales:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<RepairProfitReportResponse>>> getRepairProfitReport(
+            @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search) {
-        if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        if (endDate == null) {
-            endDate = LocalDate.now().atTime(23, 59, 59);
-        } else if (endDate.toLocalTime().equals(LocalTime.MIDNIGHT)) {
-            endDate = endDate.with(LocalTime.MAX);
-        }
         return ResponseEntity.ok(ApiResponse.<List<RepairProfitReportResponse>>builder()
                 .success(true)
-                .data(reportService.getRepairProfitReport(startDate, endDate, search))
+                .data(reportService.getRepairProfitReport(startDate, endDate, search, warehouseId))
                 .build());
     }
 
@@ -176,7 +171,7 @@ public class ReportController {
         
         // Defaults matching query methods
         if ("debt".equals(reportType) || "inventory-summary".equals(reportType)
-                || "sales-profit".equals(reportType) || "repair-profit".equals(reportType)) {
+                || "sales-profit".equals(reportType)) {
             if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
             if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
         }

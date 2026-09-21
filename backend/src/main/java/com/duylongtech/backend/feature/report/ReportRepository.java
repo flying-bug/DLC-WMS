@@ -24,6 +24,71 @@ import com.duylongtech.backend.feature.repair.Repair;
 public class ReportRepository {
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * Values inventory from FIFO only when the remaining FIFO quantity agrees with
+     * the reportable GOOD balance. Legacy/manual stock can legitimately have no
+     * cost layers; in that case using FIFO alone would silently value that stock at
+     * zero, so the complete warehouse/variant pair falls back to average cost.
+     */
+    private static final String INVENTORY_VALUATION_SQL = """
+            SELECT balances.warehouse_id,
+                   balances.variant_id,
+                   balances.balance_quantity,
+                   CASE
+                       WHEN ABS(COALESCE(fifo.fifo_quantity, 0) - balances.balance_quantity) < 0.0001
+                           THEN COALESCE(fifo.fifo_value, 0)
+                       ELSE balances.balance_value
+                   END AS inventory_value
+            FROM (
+                SELECT ib.warehouse_id,
+                       ib.variant_id,
+                       SUM(CASE WHEN (
+                           (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
+                               AND ib.serial_number_id IS NOT NULL
+                               AND sn.status = 'AVAILABLE'
+                               AND NOT EXISTS (
+                                   SELECT 1
+                                   FROM device_component_serials dcs
+                                   WHERE dcs.component_variant_id = ib.variant_id
+                                     AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
+                                     AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                               ))
+                           OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
+                               AND ib.serial_number_id IS NULL)
+                       ) THEN ib.quantity_on_hand ELSE 0 END) AS balance_quantity,
+                       SUM(CASE WHEN (
+                           (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
+                               AND ib.serial_number_id IS NOT NULL
+                               AND sn.status = 'AVAILABLE'
+                               AND NOT EXISTS (
+                                   SELECT 1
+                                   FROM device_component_serials dcs
+                                   WHERE dcs.component_variant_id = ib.variant_id
+                                     AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
+                                     AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                               ))
+                           OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
+                               AND ib.serial_number_id IS NULL)
+                       ) THEN ib.quantity_on_hand * ib.average_cost ELSE 0 END) AS balance_value
+                FROM inventory_balances ib
+                JOIN product_variants pv ON pv.id = ib.variant_id
+                LEFT JOIN serial_numbers sn ON sn.id = ib.serial_number_id
+                WHERE ib.stock_status = 'GOOD'
+                GROUP BY ib.warehouse_id, ib.variant_id
+            ) balances
+            LEFT JOIN (
+                SELECT warehouse_id,
+                       variant_id,
+                       SUM(quantity_layered) AS fifo_quantity,
+                       SUM(quantity_layered * unit_cost) AS fifo_value
+                FROM inventory_cost_layers
+                WHERE quantity_layered > 0
+                GROUP BY warehouse_id, variant_id
+            ) fifo ON fifo.warehouse_id = balances.warehouse_id
+                  AND fifo.variant_id = balances.variant_id
+            WHERE balances.balance_quantity > 0
+            """;
+
     // 1. Inventory Balance Report
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
         StringBuilder sql = new StringBuilder(
@@ -68,16 +133,15 @@ public class ReportRepository {
                         "  - " +
                         "  SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) " +
                         ") AS availableQuantity, " +
-                        "COALESCE(MAX(fifo.total_value), 0) AS totalValue " +
+                        "COALESCE(MAX(valuation.inventory_value), 0) AS totalValue " +
                         "FROM inventory_balances ib " +
                         "JOIN product_variants pv ON ib.variant_id = pv.id " +
                         "JOIN products p ON pv.product_id = p.id " +
                         "JOIN units u ON p.unit_id = u.id " +
                         "JOIN warehouses w ON ib.warehouse_id = w.id " +
                         "LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id " +
-                        "LEFT JOIN (SELECT warehouse_id, variant_id, SUM(quantity_layered * unit_cost) AS total_value " +
-                        "           FROM inventory_cost_layers GROUP BY warehouse_id, variant_id) fifo " +
-                        "  ON fifo.warehouse_id = ib.warehouse_id AND fifo.variant_id = ib.variant_id " +
+                        "LEFT JOIN (" + INVENTORY_VALUATION_SQL + ") valuation " +
+                        "  ON valuation.warehouse_id = ib.warehouse_id AND valuation.variant_id = ib.variant_id " +
                         "WHERE ib.stock_status = 'GOOD' " +
                         "AND ( " +
                         "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')) " +
@@ -414,8 +478,12 @@ public class ReportRepository {
     }
 
     public List<RepairProfitReportResponse> getRepairProfitReport(LocalDate startDate, LocalDate endDate,
-                                                                  String search) {
-        String sql = """
+                                                                  String search, List<Long> warehouseIds) {
+        if (warehouseIds != null && warehouseIds.isEmpty()) {
+            return List.of();
+        }
+
+        StringBuilder sql = new StringBuilder("""
                 SELECT r.id AS repairId,
                        r.repair_code AS repairCode,
                        r.completed_date AS completedDate,
@@ -457,9 +525,26 @@ public class ReportRepository {
                   AND (? IS NULL OR r.completed_date <= ?)
                   AND (? IS NULL OR LOWER(r.repair_code) LIKE LOWER(CONCAT('%', TRIM(?), '%'))
                        OR LOWER(COALESCE(p.name, '')) LIKE LOWER(CONCAT('%', TRIM(?), '%')))
-                ORDER BY r.completed_date DESC, r.id DESC
-                """;
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+                """);
+
+        List<Object> params = new ArrayList<>();
+        params.add(startDate);
+        params.add(startDate);
+        params.add(endDate);
+        params.add(endDate);
+        params.add(search);
+        params.add(search);
+        params.add(search);
+
+        if (warehouseIds != null) {
+            sql.append(" AND r.warehouse_id IN (")
+                    .append(String.join(", ", java.util.Collections.nCopies(warehouseIds.size(), "?")))
+                    .append(") ");
+            params.addAll(warehouseIds);
+        }
+        sql.append(" ORDER BY r.completed_date DESC, r.id DESC ");
+
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
             BigDecimal partsRevenue = rs.getBigDecimal("partsRevenue");
             BigDecimal serviceRevenue = rs.getBigDecimal("serviceRevenue");
             BigDecimal revenue = partsRevenue.add(serviceRevenue);
@@ -482,7 +567,7 @@ public class ReportRepository {
                     .grossProfit(profit)
                     .profitMarginPercent(margin)
                     .build();
-        }, startDate, startDate, endDate, endDate, search, search, search);
+        }, params.toArray());
     }
 
     // 6. Dashboard metrics
@@ -595,14 +680,15 @@ public class ReportRepository {
         StringBuilder sql = new StringBuilder("""
                 SELECT
                     COALESCE(pc.name, 'Khác') AS categoryName,
-                    COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) AS inventoryValue
-                FROM inventory_cost_layers icl
-                JOIN product_variants pv ON icl.variant_id = pv.id
+                    COALESCE(SUM(valuation.inventory_value), 0) AS inventoryValue
+                FROM (
+                """ + INVENTORY_VALUATION_SQL + """
+                ) valuation
+                JOIN product_variants pv ON valuation.variant_id = pv.id
                 JOIN products p ON pv.product_id = p.id
-                JOIN warehouses w ON icl.warehouse_id = w.id
+                JOIN warehouses w ON valuation.warehouse_id = w.id
                 LEFT JOIN product_categories pc ON p.category_id = pc.id
                 WHERE w.type = 'STANDARD'
-                  AND icl.quantity_layered > 0
                 """);
 
         if ("finished".equals(normalizedScope)) {
@@ -613,7 +699,7 @@ public class ReportRepository {
 
         sql.append("""
                 GROUP BY COALESCE(pc.name, 'Khác')
-                HAVING COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) > 0
+                HAVING COALESCE(SUM(valuation.inventory_value), 0) > 0
                 ORDER BY inventoryValue DESC
                 """);
 
@@ -862,11 +948,12 @@ public class ReportRepository {
 
     private BigDecimal getStandardWarehouseInventoryValue() {
         String sql = """
-                SELECT COALESCE(SUM(icl.quantity_layered * icl.unit_cost), 0) AS totalInventoryValue
-                FROM inventory_cost_layers icl
-                JOIN warehouses w ON icl.warehouse_id = w.id
+                SELECT COALESCE(SUM(valuation.inventory_value), 0) AS totalInventoryValue
+                FROM (
+                """ + INVENTORY_VALUATION_SQL + """
+                ) valuation
+                JOIN warehouses w ON valuation.warehouse_id = w.id
                 WHERE w.type = 'STANDARD'
-                  AND icl.quantity_layered > 0
                 """;
         return jdbcTemplate.queryForObject(sql, BigDecimal.class);
     }

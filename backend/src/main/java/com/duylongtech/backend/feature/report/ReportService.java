@@ -3,6 +3,8 @@ package com.duylongtech.backend.feature.report;
 import com.duylongtech.backend.feature.report.ReportRepository;
 import com.duylongtech.backend.feature.product.ProductService;
 import com.duylongtech.backend.feature.report.ReportService;
+import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.feature.warehouse.WarehouseAccessGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final ProductService productService;
     private final com.duylongtech.backend.feature.sales_order.SalesOrderRepository salesOrderRepository;
+    private final WarehouseAccessGuard warehouseAccessGuard;
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
         return reportRepository.getInventoryBalanceReport(search, warehouseId);
     }
@@ -70,11 +73,24 @@ public class ReportService {
         return results;
     }
     public List<RepairProfitReportResponse> getRepairProfitReport(LocalDateTime startDate, LocalDateTime endDate,
-                                                                  String search) {
+                                                                  String search, Long warehouseId) {
+        LocalDate start = startDate != null ? startDate.toLocalDate() : null;
+        LocalDate end = endDate != null ? endDate.toLocalDate() : null;
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new BusinessException("Ngày bắt đầu không được sau ngày kết thúc");
+        }
+
+        List<Long> allowedWarehouseIds = warehouseAccessGuard.resolveAllowedWarehouseIds();
+        List<Long> effectiveWarehouseIds = allowedWarehouseIds;
+        if (warehouseId != null) {
+            if (allowedWarehouseIds != null && !allowedWarehouseIds.contains(warehouseId)) {
+                throw new BusinessException("Bạn không có quyền xem báo cáo của kho này");
+            }
+            effectiveWarehouseIds = List.of(warehouseId);
+        }
+
         return reportRepository.getRepairProfitReport(
-                startDate != null ? startDate.toLocalDate() : null,
-                endDate != null ? endDate.toLocalDate() : null,
-                search);
+                start, end, search, effectiveWarehouseIds);
     }
     public byte[] exportReportToExcel(String reportType, Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType, String status) {
         log.info("Exporting report to Excel. Type={}, warehouseId={}, startDate={}, endDate={}, search={}", reportType, warehouseId, startDate, endDate, search);
@@ -337,9 +353,9 @@ public class ReportService {
                 }
             } else if ("repair-profit".equals(reportType)) {
                 reportTitle = "BAO CAO DOANH THU & LOI NHUAN SUA CHUA";
-                List<RepairProfitReportResponse> data = getRepairProfitReport(startDate, endDate, search);
+                List<RepairProfitReportResponse> data = getRepairProfitReport(startDate, endDate, search, warehouseId);
                 columns = new String[]{"Ma lenh", "Ngay hoan thanh", "Khach hang", "Doanh thu linh kien",
-                        "Doanh thu dich vu", "VAT", "Gia von FIFO", "Loi nhuan gop", "Ty suat LN (%)"};
+                        "Doanh thu dich vu", "VAT", "Gia von FIFO", "Lai sau gia von linh kien", "Ty suat LN (%)"};
 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
                 for (int i = 0; i < columns.length; i++) {
