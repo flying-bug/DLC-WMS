@@ -42,21 +42,19 @@ public class InventoryDocumentPostedEventListener {
             return;
         }
 
-        // Check if all inventory documents linked to this repair are POSTED
+        // Starting the repair only depends on issuing the replacement parts.
+        // Scrap receipts happen after the technician removes the old parts.
         List<InventoryDocument> linkedDocs = inventoryDocumentRepository.findByReferenceWithLines(
                 "REPAIR", repairId
         );
+        List<InventoryDocument> exportDocs = linkedDocs.stream()
+                .filter(doc -> "EX_SO".equals(doc.getDocType()))
+                .toList();
+        boolean allExportsPosted = !exportDocs.isEmpty() && exportDocs.stream()
+                .allMatch(doc -> DocumentStatus.POSTED.name().equals(doc.getStatus()));
 
-        boolean allPosted = true;
-        for (InventoryDocument doc : linkedDocs) {
-            if (!DocumentStatus.POSTED.name().equals(doc.getStatus()) && !DocumentStatus.CANCELLED.name().equals(doc.getStatus())) {
-                allPosted = false;
-                break;
-            }
-        }
-
-        if (allPosted && !linkedDocs.isEmpty()) {
-            log.info("[Repair {}] All linked inventory documents posted. Transitioning to UNDER_REPAIR.", repair.getRepairCode());
+        if (allExportsPosted) {
+            log.info("[Repair {}] All repair exports posted. Transitioning to UNDER_REPAIR.", repair.getRepairCode());
             try {
                 repairWorkflowService.transitionStatus(repairId, RepairStatus.UNDER_REPAIR.name(), "Tự động chuyển trạng thái vì kho đã xuất đủ linh kiện.");
 

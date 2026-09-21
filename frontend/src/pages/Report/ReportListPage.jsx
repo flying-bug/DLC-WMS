@@ -14,6 +14,7 @@ import {
     getDebtReport,
     getInventorySummaryReport,
     getSalesProfitReport,
+    getRepairProfitReport,
     exportReportExcel
 } from '../../api/reportApi';
 import styles from './ReportListPage.module.css';
@@ -85,7 +86,8 @@ const MOCK_CATEGORIES = [
         domain: 'SALES',
         roleBadge: 'Kế toán',
         reports: [
-            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.', domain: 'SALES' }
+            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp bán hàng', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.', domain: 'SALES' },
+            { id: 'repair-profit', name: 'Báo cáo Doanh thu & Lợi nhuận sửa chữa', desc: 'Tổng hợp doanh thu linh kiện, dịch vụ, VAT, giá vốn FIFO và lợi nhuận theo từng lệnh sửa chữa hoàn thành.', domain: 'SALES' }
         ]
     }
 ];
@@ -321,6 +323,9 @@ const ReportListPage = () => {
                     break;
                 case 'sales-profit':
                     response = await getSalesProfitReport(params);
+                    break;
+                case 'repair-profit':
+                    response = await getRepairProfitReport(params);
                     break;
                 case 'cash-flow': {
                     const res = await getAllPayments();
@@ -1045,6 +1050,41 @@ const ReportListPage = () => {
                                                                             <td className={styles.textRight}>
                                                                                 {item.profitMarginPercent != null ? item.profitMarginPercent.toFixed(2) + '%' : '0%'}
                                                                             </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
+
+                                                        {activeReport.id === 'repair-profit' && (
+                                                            <table className={`${styles.reportTable} ${styles.boldTable}`}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Mã lệnh</th>
+                                                                        <th>Ngày hoàn thành</th>
+                                                                        <th>Khách hàng</th>
+                                                                        <th className={styles.textRight}>Doanh thu linh kiện</th>
+                                                                        <th className={styles.textRight}>Doanh thu dịch vụ</th>
+                                                                        <th className={styles.textRight}>VAT</th>
+                                                                        <th className={styles.textRight}>Giá vốn FIFO</th>
+                                                                        <th className={styles.textRight}>Lợi nhuận gộp</th>
+                                                                        <th className={styles.textRight}>Tỷ suất LN (%)</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item) => (
+                                                                        <tr key={item.repairId}>
+                                                                            <td className={styles.fontSemibold}>{item.repairCode}</td>
+                                                                            <td>{formatDateOnly(item.completedDate)}</td>
+                                                                            <td>{item.partnerName || '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.partsRevenue)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.serviceRevenue)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.vatAmount)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.costAmount)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                                                                                {formatCurrency(item.grossProfit)}
+                                                                            </td>
+                                                                            <td className={styles.textRight}>{Number(item.profitMarginPercent || 0).toFixed(2)}%</td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>

@@ -10,8 +10,7 @@ import java.math.RoundingMode;
 import java.util.List;
 
 /**
- * Cung cấp thông tin giá vốn FIFO cho từng SKU linh kiện.
- * Được dùng trong màn hình tạo BOM để tự động điền và khoá giá linh kiện.
+ * Cung cấp thông tin tham khảo về các lớp giá FIFO còn khả dụng.
  */
 @RestController
 @RequestMapping("/api/v1/inventory/cost")
@@ -30,7 +29,7 @@ public class InventoryCostController {
      * GET /api/v1/inventory/cost/fifo/{variantId}?quantity=15
      */
     @GetMapping("/fifo/{variantId}")
-    @PreAuthorize("hasAuthority('assembly_config:view') or hasAuthority('assembly_config:add') or hasAuthority('assembly_config:edit') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ACCOUNTANT', 'MANAGER', 'SUPER_ADMIN')")
     public ApiResponse<java.util.Map<String, BigDecimal>> getFifoCostPrice(
             @PathVariable Long variantId,
             @RequestParam(required = false) BigDecimal quantity) {
@@ -58,16 +57,15 @@ public class InventoryCostController {
 
         for (InventoryCostLayer layer : layers) {
             if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
-            BigDecimal available = layer.getQuantityLayered();
+            BigDecimal available = layer.getQuantityLayered().subtract(layer.getQuantityReserved());
             BigDecimal take = remaining.min(available); // lấy tối đa những gì layer còn có
             totalCost = totalCost.add(take.multiply(layer.getUnitCost()));
             remaining = remaining.subtract(take);
         }
 
-        // Nếu kho không đủ hàng, phần còn thiếu tính bằng giá lô mới nhất (fallback)
+        // Không bịa giá fallback khi lớp FIFO không đủ cho số lượng yêu cầu.
         if (remaining.compareTo(BigDecimal.ZERO) > 0) {
-            InventoryCostLayer newestLayer = layers.get(layers.size() - 1);
-            totalCost = totalCost.add(remaining.multiply(newestLayer.getUnitCost()));
+            return ApiResponse.success(null);
         }
 
         BigDecimal blendedCost = totalCost.divide(quantity, 0, RoundingMode.HALF_UP);
@@ -79,7 +77,7 @@ public class InventoryCostController {
     }
 
     @PostMapping("/fifo/bulk")
-    @PreAuthorize("hasAuthority('assembly_config:view') or hasAuthority('assembly_config:add') or hasAuthority('assembly_config:edit') or hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ACCOUNTANT', 'MANAGER', 'SUPER_ADMIN')")
     public ApiResponse<java.util.Map<Long, BigDecimal>> getBulkFifoCostPrice(@RequestBody List<Long> variantIds) {
         if (variantIds == null || variantIds.isEmpty()) {
             return ApiResponse.success(new java.util.HashMap<>());
@@ -103,4 +101,3 @@ public class InventoryCostController {
         return ApiResponse.success(result);
     }
 }
-

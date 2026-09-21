@@ -15,6 +15,7 @@ public class AssemblyOrderLineResponse {
     private String unitName;
     private BigDecimal quantityRequired;
     private BigDecimal quantityActual;
+    private BigDecimal availableQuantity;
     private BigDecimal unitCost;
     private BigDecimal salePrice;
     private String note;

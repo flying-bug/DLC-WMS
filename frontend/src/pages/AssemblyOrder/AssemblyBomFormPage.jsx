@@ -17,7 +17,7 @@ import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
 
-const defaultBomLine = { componentVariantId: '', categoryId: '', componentRole: '', quantity: '1', note: '', unitPrice: '', componentSku: '', componentName: '', warrantyMonths: '' };
+const defaultBomLine = { componentVariantId: '', categoryId: '', componentRole: '', quantity: '1', note: '', componentSku: '', componentName: '', warrantyMonths: '' };
 
 const createDefaultForm = () => ({
     id: null,
@@ -46,7 +46,6 @@ function AssemblyBomFormPage() {
     const [showQuickAddModal, setShowQuickAddModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
-    const [fifoLoadingLines, setFifoLoadingLines] = useState(new Set()); // Đang tải giá FIFO
 
     const isApproved = editing && form.status === 'APPROVED';
     const canEdit = (!editing || ['DRAFT', 'REJECTED'].includes(form.status))
@@ -87,22 +86,7 @@ function AssemblyBomFormPage() {
             ]);
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
             
-            const rawVariants = listFrom(unwrap(variantResponse)).filter((item) => item.active !== false);
-            let finalVariants = rawVariants;
-            try {
-                const variantIds = rawVariants.map(v => v.id);
-                if (variantIds.length > 0) {
-                    const fifoRes = await axiosClient.post('/inventory/cost/fifo/bulk', variantIds);
-                    const fifoCosts = unwrap(fifoRes) || {};
-                    finalVariants = rawVariants.map(v => ({
-                        ...v,
-                        costPrice: fifoCosts[v.id] != null ? fifoCosts[v.id] : (v.costPrice || 0)
-                    }));
-                }
-            } catch (err) {
-                console.warn("Lỗi tải bulk FIFO cost", err);
-            }
-            setVariants(finalVariants);
+            setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
             
             setInventoryBalances(unwrap(balanceResponse) || []);
         } catch (err) {
@@ -132,8 +116,6 @@ function AssemblyBomFormPage() {
                     quantity: String(Number(line.quantity || 1)),
                     templateNote: '',
                     note: line.note || '',
-                    unitPrice: line.unitPrice != null ? line.unitPrice : '',
-                    averagePrice: '',
                     componentSku: line.componentSku || '',
                     componentName: line.componentName || '',
                     warrantyMonths: line.warrantyMonths != null ? line.warrantyMonths : ''
@@ -206,7 +188,6 @@ function AssemblyBomFormPage() {
                         quantity: String(Number(line.quantity || 1)),
                         templateNote: line.note || '',
                         note: '',
-                        unitPrice: '',
                         componentSku: '',
                         componentName: '',
                         warrantyMonths: ''
@@ -228,29 +209,6 @@ function AssemblyBomFormPage() {
             ...current,
             lines: current.lines.map((line, lineIndex) => lineIndex === index ? { ...line, [field]: value } : line)
         }));
-    };
-
-    // Gọi API lấy giá vốn FIFO khi chọn linh kiện — lấy đơn giá lô cũ nhất còn tồn
-    const fetchFifoCost = async (variantId, lineIndex) => {
-        if (!variantId) return;
-        setFifoLoadingLines(prev => new Set([...prev, lineIndex]));
-        try {
-            const res = await axiosClient.get(`/inventory/cost/fifo/${variantId}`);
-            const costData = res?.data?.data; // { fifoCost, blendedCost }
-            setForm(current => ({
-                ...current,
-                lines: current.lines.map((line, idx) =>
-                    idx === lineIndex ? {
-                        ...line,
-                        unitPrice: costData?.fifoCost != null ? String(costData.fifoCost) : ''
-                    } : line
-                )
-            }));
-        } catch (err) {
-            console.warn('Không lấy được giá FIFO, để trống:', err);
-        } finally {
-            setFifoLoadingLines(prev => { const s = new Set(prev); s.delete(lineIndex); return s; });
-        }
     };
 
     const handleSelectVariant = (variantIdStr) => {
@@ -282,14 +240,12 @@ function AssemblyBomFormPage() {
                 return { ...current, lines: newLines };
             } else {
                 const newLines = [...current.lines];
-                newLines[targetLineIndex] = { ...newLines[targetLineIndex], componentVariantId: variantIdStr, unitPrice: '' };
+                newLines[targetLineIndex] = { ...newLines[targetLineIndex], componentVariantId: variantIdStr };
                 return { ...current, lines: newLines };
             }
         });
         setPickingLineIndex(null);
         setSearchVariantQuery('');
-        // Sau khi đóng picker, gọi API 1 lần để lấy giá FIFO (lô cũ nhất)
-        fetchFifoCost(variantIdStr, targetLineIndex);
     };
 
     const addLine = () => {
@@ -332,7 +288,6 @@ function AssemblyBomFormPage() {
             quantity: Number.parseFloat(line.quantity),
             note: line.note?.trim() || null,
             componentRole: line.componentRole || null,
-            unitPrice: line.unitPrice !== '' ? Number(line.unitPrice) : null,
             componentSku: line.componentSku || null,
             componentName: line.componentName || null,
             warrantyMonths: line.warrantyMonths !== '' ? Number(line.warrantyMonths) : null
@@ -441,14 +396,11 @@ function AssemblyBomFormPage() {
         const data = cleanedLines.map(line => {
             const variant = variants.find(v => String(v.id) === String(line.componentVariantId));
             const quantity = Number(line.quantity) || 0;
-            const price = line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice) : Number(variant?.salePrice || 0);
             return {
                 sku: line.componentSku || variant?.sku || '---',
                 name: line.componentName || (variant ? `${variant.productName}${variant.variantName && variant.variantName !== variant.productName ? ' / ' + variant.variantName : ''}` : '---'),
                 warrantyMonths: line.warrantyMonths !== '' && line.warrantyMonths != null ? line.warrantyMonths : (variant?.warrantyMonths || 0),
-                quantity: quantity,
-                price: price,
-                amount: quantity * price
+                quantity
             };
         });
 
@@ -558,20 +510,6 @@ function AssemblyBomFormPage() {
                     <div className={styles.bomBuilderContainer}>
                         <div className={styles.bomBuilderHeader}>
                             <h3 className={styles.bomBuilderTitle}>Chọn linh kiện xây cấu hình máy tính theo nhu cầu</h3>
-                            <div className={styles.bomTotalCost}>
-                                Chi phí dự tính: {form.lines.reduce((sum, line) => {
-                                    const price = line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice) : 0;
-                                    return sum + price * Number(line.quantity || 0);
-                                }, 0).toLocaleString('vi-VN')} đ
-                            </div>
-                        </div>
-                        {/* Banner giải thích giá FIFO ước tính */}
-                        <div style={{ margin: '0 0 12px 0', padding: '10px 14px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.82rem', color: '#1e40af', lineHeight: 1.5 }}>
-                            <i className="bi bi-info-circle-fill" style={{ fontSize: '1rem', marginTop: '1px', flexShrink: 0 }}></i>
-                            <span>
-                                <strong>Giá linh kiện hiển thị là giá vốn ước tính</strong> tại thời điểm tạo cấu hình, dùng để tham khảo và lập kế hoạch chi phí.
-                                Giá kế toán thực tế sẽ được tính lại tự động chính xác khi Ghi sổ phiếu xuất kho.
-                            </span>
                         </div>
                         <div className={styles.bomList}>
                             {form.lines.map((line, index) => {
@@ -652,20 +590,8 @@ function AssemblyBomFormPage() {
                                                     </div>
                                                 </div>
                                                 <div className={styles.bomItemPriceGroup}>
-                                                    <input
-                                                        className={styles.bomItemQtyInput}
-                                                        style={{ width: '110px', textAlign: 'right', backgroundColor: '#f9fafb', cursor: 'not-allowed' }}
-                                                        type="text"
-                                                        value={fifoLoadingLines.has(index) ? '...' : (line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice).toLocaleString('vi-VN') : '0')}
-                                                        readOnly
-                                                        title="Giá vốn tự động tính theo FIFO từ lịch sử nhập kho"
-                                                    /> <span style={{ fontSize: '0.85rem' }}>đ</span>
-                                                    <span>x</span>
+                                                    <span style={{ fontSize: '0.85rem' }}>Số lượng</span>
                                                     <input className={styles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} disabled={!canEdit} />
-                                                    <span>=</span>
-                                                    <span className={styles.bomItemTotal}>
-                                                        {(Number(line.unitPrice !== '' && line.unitPrice != null ? line.unitPrice : 0) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
-                                                    </span>
                                                 </div>
                                                 {canEdit && (
                                                     <div className={styles.bomItemActions}>
@@ -807,9 +733,6 @@ function AssemblyBomFormPage() {
                                                         <span>Mã SP: <strong>{variant.sku}</strong></span>
                                                         <span>Bảo hành: <strong>{variant.warrantyMonths > 0 ? `${variant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
                                                         <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
-                                                    </div>
-                                                    <div className={styles.variantPickerPrice}>
-                                                        {Number(variant.costPrice || 0).toLocaleString('vi-VN')} đ
                                                     </div>
                                                 </div>
                                                 <div className={styles.variantPickerAction}>

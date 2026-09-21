@@ -16,13 +16,14 @@ import bomStyles from './AssemblyOrderPage.module.css';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ProductGridSelect from '@/components/ui/ProductGridSelect/ProductGridSelect';
-import { hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
+import { getAuthRoles, hasPermission, NOTIFICATION_EVENT } from '../../auth/session';
 import DateInput from '../../components/ui/DateInput/DateInput';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
 const today = getTodayIsoDate;
+const FIFO_COST_ROLES = new Set(['ACCOUNTANT', 'ROLE_ACCOUNTANT', 'MANAGER', 'ROLE_MANAGER', 'SUPER_ADMIN', 'ROLE_SUPER_ADMIN']);
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'info' },
@@ -100,13 +101,14 @@ function AssemblyOrderFormPage() {
     const getStockInfo = (variantId) => {
         if (!variantId) return { available: 0, total: 0 };
         return inventoryBalances
-            .filter(b => String(b.variantId) === String(variantId))
+            .filter(b => String(b.variantId) === String(variantId)
+                && (!form.warehouseId || String(b.warehouseId) === String(form.warehouseId)))
             .reduce((acc, b) => {
                 const total = Number(b.totalQuantity || 0);
                 const reserved = Number(b.totalReserved || 0);
                 return {
                     total: acc.total + total,
-                    available: acc.available + (total - reserved)
+                    available: acc.available + Number(b.availableQuantity ?? (total - reserved))
                 };
             }, { available: 0, total: 0 });
     };
@@ -139,6 +141,8 @@ function AssemblyOrderFormPage() {
     const canApprove = hasPermission('assembly:approve');
     const canSubmit = hasPermission('assembly:submit');
     const canAddProduct = hasPermission('product:add');
+    const canViewFifoCost = Boolean(orderDetail?.approvedAt)
+        && getAuthRoles().some(role => FIFO_COST_ROLES.has(String(role || '').toUpperCase()));
     const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
@@ -166,22 +170,7 @@ function AssemblyOrderFormPage() {
             ]);
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
 
-            const rawVariants = listFrom(unwrap(variantResponse)).filter((item) => item.active !== false);
-            let finalVariants = rawVariants;
-            try {
-                const variantIds = rawVariants.map(v => v.id);
-                if (variantIds.length > 0) {
-                    const fifoRes = await axiosClient.post('/inventory/cost/fifo/bulk', variantIds);
-                    const fifoCosts = unwrap(fifoRes) || {};
-                    finalVariants = rawVariants.map(v => ({
-                        ...v,
-                        costPrice: fifoCosts[v.id] != null ? fifoCosts[v.id] : (v.costPrice || 0)
-                    }));
-                }
-            } catch (err) {
-                console.warn("Lỗi tải bulk FIFO cost", err);
-            }
-            setVariants(finalVariants);
+            setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
 
             setInventoryBalances(listFrom(unwrap(inventoryResponse)));
         } catch (err) {
@@ -299,6 +288,7 @@ function AssemblyOrderFormPage() {
             setCustomLines(orderDetail.lines.map(line => ({
                 componentVariantId: line.componentVariantId,
                 quantityRequired: line.quantityRequired,
+                unitCost: line.unitCost,
                 note: line.note || ''
             })));
         } else if (!editing && selectedBom && !customLinesDirty) {
@@ -616,104 +606,6 @@ function AssemblyOrderFormPage() {
         return '';
     };
 
-    const handleGenerateInventory = (documentType) => {
-        if (!orderDetail || !orderDetail.id) return;
-
-        const isAssembly = orderDetail.orderType !== 'DISASSEMBLY';
-
-        const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly'
-            : documentType === 'SCRAP' ? '/import-history/create?type=SCRAP'
-                : !isAssembly ? '/import-history/create?type=OTHER'
-                    : '/import-history/create?type=PRODUCTION';
-
-        const draftSlip = documentType === 'GOODS_ISSUE'
-            ? linkedExports.find(s => s.status === 'DRAFT')
-            : linkedImports.find(s => s.status === 'DRAFT');
-
-        if (draftSlip) {
-            navigate(documentType === 'GOODS_ISSUE' ? `/export-slips/${draftSlip.id}/edit` : `/import-slips/${draftSlip.id}/edit`, {
-                state: { returnUrl: `/assembly-orders/${orderDetail.id}` }
-            });
-            return;
-        }
-
-        // Lắp ráp -> Nhập thành phẩm (GOODS_RECEIPT)
-        // Tháo dỡ -> Xuất thành phẩm (GOODS_ISSUE)
-        const isTargetItem = (isAssembly && documentType === 'GOODS_RECEIPT') || (!isAssembly && documentType === 'GOODS_ISSUE');
-        const isScrapItem = documentType === 'SCRAP';
-
-        let lines;
-
-        if (isTargetItem) {
-            let totalComponentsCost = 0;
-            if (orderDetail.lines && orderDetail.lines.length > 0) {
-                totalComponentsCost = orderDetail.lines.reduce((total, line) => {
-                    const price = line.unitCost || line.salePrice || 0;
-                    return total + (price * (line.quantityRequired || 0));
-                }, 0);
-            }
-
-            const assemblyQty = Number(orderDetail.quantity) || 1;
-            const calculatedUnitPrice = totalComponentsCost / assemblyQty;
-            const targetVariantId = orderDetail.targetVariantId || orderDetail.targetSku;
-
-            // Tính số lượng đã nhập/xuất để gợi ý số lượng còn lại
-            const completedQty = (documentType === 'GOODS_RECEIPT' ? linkedImports : linkedExports)
-                .filter(s => s.status === 'POSTED')
-                .reduce((sum, slip) => sum + slip.lines.filter(l => String(l.variantId) === String(targetVariantId)).reduce((s, l) => s + (documentType === 'GOODS_RECEIPT' ? (l.quantityIn || 0) : (l.quantityOut || 0)), 0), 0);
-
-            const remainingQty = Math.max(0, assemblyQty - completedQty);
-
-            lines = [{
-                variantId: targetVariantId,
-                quantity: remainingQty,
-                price: totalComponentsCost > 0 ? calculatedUnitPrice : (orderDetail.targetSalePrice || 0)
-            }];
-        } else if (isScrapItem) {
-            lines = orderDetail.lines.map(l => ({
-                variantId: l.componentVariantId,
-                quantity: 1, // Default quantity
-                price: l.salePrice || l.unitCost || 0
-            }));
-        } else {
-            // Document Type: GOODS_ISSUE cho Lắp ráp hoặc GOODS_RECEIPT cho tháo dỡ (Thành phần)
-            const completedMap = {};
-            (documentType === 'GOODS_ISSUE' ? linkedExports : linkedImports)
-                .filter(s => s.status === 'POSTED')
-                .forEach(slip => {
-                    slip.lines.forEach(l => {
-                        completedMap[l.variantId] = (completedMap[l.variantId] || 0) + (documentType === 'GOODS_ISSUE' ? (l.quantityOut || 0) : (l.quantityIn || 0));
-                    });
-                });
-
-            lines = orderDetail.lines.map(l => {
-                const required = Number(l.quantityRequired || 0) * targetRatio;
-                const completed = completedMap[l.componentVariantId] || 0;
-                const remaining = Math.max(0, required - completed);
-
-                return {
-                    variantId: l.componentVariantId,
-                    quantity: remaining,
-                    price: l.salePrice || l.unitCost || 0
-                };
-            }).filter(l => l.quantity > 0); // Chỉ giữ lại những linh kiện còn thiếu
-        }
-
-
-
-        navigate(targetPath, {
-            state: {
-                assemblyData: {
-                    id: orderDetail.id,
-                    code: orderDetail.orderCode,
-                    warehouseId: orderDetail.warehouseId,
-                    lines: lines
-                },
-                returnUrl: `/assembly-orders/${orderDetail.id}`
-            }
-        });
-    };
-
     const saveQuickBom = async () => {
         const cleanedLines = getCleanedBomLines();
         const validationMessage = validateBomForm(cleanedLines);
@@ -773,20 +665,33 @@ function AssemblyOrderFormPage() {
             componentSku: cSku || '...',
             unitName: cUnit || '',
             required: line.quantityRequired,
+            availableQuantity: line.availableQuantity ?? getStockInfo(line.componentVariantId).available,
+            unitCost: line.unitCost,
         };
     });
 
+    const selectedTargetVariant = selectedBom
+        ? variants.find(variant => String(variant.productId) === String(selectedBom.productId))
+        : null;
     const targetItem = editing && orderDetail ? {
         name: orderDetail.targetName,
         sku: orderDetail.targetSku,
         quantity: Number(orderDetail.quantity || 0),
-        unitName: selectedBom?.unitName || ''
+        unitName: selectedBom?.unitName || '',
+        availableQuantity: orderDetail.targetAvailableQuantity ?? getStockInfo(orderDetail.targetVariantId).available,
+        unitCost: orderDetail.targetUnitCost
     } : selectedBom ? {
         name: selectedBom.productName,
         sku: selectedBom.productCode,
         quantity: Number(form.quantity || 0),
-        unitName: selectedBom.unitName
+        unitName: selectedBom.unitName,
+        availableQuantity: getStockInfo(selectedTargetVariant?.id).available
     } : null;
+
+    const fifoTotalCost = canViewFifoCost && editing && orderDetail?.lines
+        ? orderDetail.lines.reduce((sum, line) => sum
+            + Number(line.unitCost || 0) * Number(line.quantityRequired || 0), 0)
+        : null;
 
     const lossItems = form.orderType === 'DISASSEMBLY'
         ? (targetItem ? [targetItem] : [])
@@ -794,7 +699,9 @@ function AssemblyOrderFormPage() {
             name: line.componentName,
             sku: line.componentSku,
             quantity: line.required,
-            unitName: line.unitName
+            unitName: line.unitName,
+            availableQuantity: line.availableQuantity,
+            unitCost: line.unitCost
         }));
 
     const gainItems = form.orderType === 'DISASSEMBLY'
@@ -847,7 +754,8 @@ function AssemblyOrderFormPage() {
             name: line.componentName,
             sku: line.componentSku,
             quantity: line.required,
-            unitName: line.unitName
+            unitName: line.unitName,
+            unitCost: line.unitCost
         }))
         : (targetItem ? [targetItem] : []);
 
@@ -976,6 +884,9 @@ function AssemblyOrderFormPage() {
                                     icon="bi-dash-circle-fill"
                                     emptyText={loading ? 'Đang tính toán...' : 'Chọn cấu hình để xem.'}
                                     items={lossItems}
+                                    showUnitCost={canViewFifoCost}
+                                    showAvailableQuantity={!orderDetail?.approvedAt}
+                                    showHeldStatus={orderDetail?.status === 'APPROVED' && !canViewFifoCost}
                                 />
                                 <FlowPanel
                                     tone="gain"
@@ -983,6 +894,7 @@ function AssemblyOrderFormPage() {
                                     icon="bi-plus-circle-fill"
                                     emptyText={loading ? 'Đang tính toán...' : 'Chọn cấu hình để xem.'}
                                     items={gainItems}
+                                    showUnitCost={canViewFifoCost}
                                     editable={canEdit && form.orderType === 'DISASSEMBLY'}
                                     onQuantityChange={(idx, val) => {
                                         const newLines = [...customLines];
@@ -1028,6 +940,12 @@ function AssemblyOrderFormPage() {
                                     <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Số linh kiện</span>
                                     <span className={styles.summaryValue}>{previewLines.length}</span>
                                 </div>
+                                {fifoTotalCost != null && (
+                                    <div className={styles.summaryItem}>
+                                        <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Tổng giá vốn FIFO</span>
+                                        <span className={styles.summaryValue}>{fifoTotalCost.toLocaleString('vi-VN')} đ</span>
+                                    </div>
+                                )}
 
                                 <hr className={styles.divider} />
 
@@ -1242,9 +1160,6 @@ function AssemblyOrderFormPage() {
                                                 <span>Bảo hành: <strong>{variant.warrantyQty != null ? `${variant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
                                                 <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : 'var(--wms-danger)' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
                                             </div>
-                                            <div className={bomStyles.variantPickerPrice}>
-                                                {Number(variant.costPrice || 0).toLocaleString('vi-VN')} đ
-                                            </div>
                                         </div>
                                         <div className={bomStyles.variantPickerAction}>
                                             <button
@@ -1335,12 +1250,6 @@ function AssemblyOrderFormPage() {
                             <div className={bomStyles.bomBuilderContainer} style={{ marginTop: '24px' }}>
                                 <div className={bomStyles.bomBuilderHeader}>
                                     <h3 className={bomStyles.bomBuilderTitle}>Chọn linh kiện xây cấu hình máy tính theo nhu cầu</h3>
-                                    <div className={bomStyles.bomTotalCost}>
-                                        Chi phí dự tính: {bomForm.lines.reduce((sum, line) => {
-                                            const v = variants.find(v => String(v.id) === String(line.componentVariantId));
-                                            return sum + (v ? Number(v.costPrice || 0) : 0) * Number(line.quantity || 0);
-                                        }, 0).toLocaleString('vi-VN')} đ
-                                    </div>
                                 </div>
                                 <div className={bomStyles.bomList}>
                                     {bomForm.lines.map((line, index) => {
@@ -1400,13 +1309,8 @@ function AssemblyOrderFormPage() {
                                                             </div>
                                                         </div>
                                                         <div className={bomStyles.bomItemPriceGroup}>
-                                                            <span className={bomStyles.bomItemPrice}>{Number(selectedVariant.salePrice || 0).toLocaleString('vi-VN')}</span>
-                                                            <span>x</span>
+                                                            <span style={{ fontSize: '0.85rem' }}>Số lượng</span>
                                                             <input className={bomStyles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
-                                                            <span>=</span>
-                                                            <span className={bomStyles.bomItemTotal}>
-                                                                {(Number(selectedVariant.salePrice || 0) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
-                                                            </span>
                                                         </div>
                                                         <div className={bomStyles.bomItemActions}>
                                                             <button className={`${bomStyles.bomActionBtn} ${bomStyles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
@@ -1525,7 +1429,7 @@ function AssemblyOrderFormPage() {
     );
 }
 
-function FlowPanel({ tone, title, icon, items, emptyText, editable, onQuantityChange, onRemove, onAdd }) {
+function FlowPanel({ tone, title, icon, items, emptyText, editable, onQuantityChange, onRemove, onAdd, showUnitCost, showAvailableQuantity, showHeldStatus }) {
     const isLoss = tone === 'loss';
     return (
         <div style={{
@@ -1595,7 +1499,22 @@ function FlowPanel({ tone, title, icon, items, emptyText, editable, onQuantityCh
                                     </button>
                                 </>
                             ) : (
-                                `${Number(item.quantity || 0).toLocaleString('vi-VN')} ${item.unitName || ''}`
+                                <span style={{ textAlign: 'right' }}>
+                                    {Number(item.quantity || 0).toLocaleString('vi-VN')} {item.unitName || ''}
+                                    {showUnitCost && item.unitCost != null && (
+                                        <small style={{ display: 'block', color: 'var(--color-text-muted)' }}>
+                                            Giá vốn {isLoss ? 'xuất' : 'nhập'}: {Number(item.unitCost || 0).toLocaleString('vi-VN')} đ
+                                        </small>
+                                    )}
+                                    {showAvailableQuantity && item.availableQuantity != null && (
+                                        <small style={{ display: 'block', color: Number(item.availableQuantity) >= Number(item.quantity || 0) ? '#16a34a' : 'var(--wms-danger)' }}>
+                                            Tồn khả dụng: {Number(item.availableQuantity).toLocaleString('vi-VN')}
+                                        </small>
+                                    )}
+                                    {showHeldStatus && isLoss && (
+                                        <small style={{ display: 'block', color: '#16a34a' }}>Đã giữ hàng</small>
+                                    )}
+                                </span>
                             )}
                         </div>
                     </div>

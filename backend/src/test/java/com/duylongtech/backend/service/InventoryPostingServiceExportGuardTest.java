@@ -11,6 +11,7 @@ import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.inventory.DocumentDependencyService;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.inventory.InventoryCostLayerRepository;
+import com.duylongtech.backend.feature.inventory.InventoryCostAllocationService;
 import com.duylongtech.backend.feature.inventory.InventoryDocument;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentMapper;
@@ -71,6 +72,7 @@ class InventoryPostingServiceExportGuardTest {
                 mock(InventoryDocumentLineRepository.class),
                 mock(InventoryBalanceRepository.class),
                 mock(InventoryCostLayerRepository.class),
+                mock(InventoryCostAllocationService.class),
                 mock(InventoryLedgerRepository.class),
                 mock(SerialNumberRepository.class),
                 mock(PartnerLedgerService.class),

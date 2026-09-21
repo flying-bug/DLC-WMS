@@ -45,6 +45,10 @@ export const getSalesProfitReport = (params = {}) => {
     return axiosClient.get(`${REPORT_BASE}/sales-profit`, { params });
 };
 
+export const getRepairProfitReport = (params = {}) => {
+    return axiosClient.get(`${REPORT_BASE}/repair-profit`, { params });
+};
+
 /**
  * Lấy các chỉ số dashboard tổng quan
  */

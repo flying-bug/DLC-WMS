@@ -28,6 +28,8 @@ public class RepairLineResponse {
     private BigDecimal quantity;
     private BigDecimal availableQuantity; // Số lượng tồn kho khả dụng
     private BigDecimal unitPrice;
+    private BigDecimal fifoUnitCost;
+    private BigDecimal fifoCostAmount;
     private BigDecimal lineAmount;
     private Boolean isFreeWarranty;
     private Long serialNumberId;
