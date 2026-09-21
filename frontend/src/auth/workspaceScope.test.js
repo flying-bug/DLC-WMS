@@ -8,7 +8,7 @@ const KEEPER = ['ROLE_WAREHOUSE_CONTROLLER'];
 const ACCOUNTANT = ['ROLE_ACCOUNTANT'];
 
 test('cashier cannot open order lists, warehouse pages or accountant payment pages by URL', () => {
-    for (const path of ['/sales-orders', '/sales-orders/12', '/purchase-orders', '/einvoices', '/payments', '/payments/receipt', '/payments/expense', '/import-history', '/dashboard', '/warehouse-workspace']) {
+    for (const path of ['/sales-orders', '/sales-orders/12', '/purchase-orders', '/einvoices', '/payments', '/payments/receipt', '/payments/expense', '/import-history', '/dashboard', '/main-dashboard', '/warehouse-workspace']) {
         assert.equal(isPathAllowedForRoles(path, CASHIER), false, path);
     }
 });
@@ -20,7 +20,7 @@ test('cashier keeps cash workspace, reports and partners', () => {
 });
 
 test('warehouse keeper is limited to warehouse mode', () => {
-    for (const path of ['/sales-orders', '/purchase-orders', '/payments/receipt', '/cashier-workspace', '/customers', '/dashboard']) {
+    for (const path of ['/sales-orders', '/purchase-orders', '/payments/receipt', '/cashier-workspace', '/customers', '/dashboard', '/main-dashboard']) {
         assert.equal(isPathAllowedForRoles(path, KEEPER), false, path);
     }
     for (const path of ['/warehouse-workspace/imports/5', '/import-history/create', '/import-slips/3/edit', '/export-slips', '/stocktakes/2', '/products', '/reports']) {
@@ -29,6 +29,7 @@ test('warehouse keeper is limited to warehouse mode', () => {
 });
 
 test('accountant works everywhere except the keeper and cashier workspaces', () => {
+    assert.equal(isPathAllowedForRoles('/main-dashboard', ACCOUNTANT), true);
     assert.equal(isPathAllowedForRoles('/sales-orders', ACCOUNTANT), true);
     assert.equal(isPathAllowedForRoles('/payments/receipt', ACCOUNTANT), true);
     assert.equal(isPathAllowedForRoles('/warehouse-workspace', ACCOUNTANT), false);

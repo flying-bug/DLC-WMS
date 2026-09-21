@@ -5,6 +5,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
 import styles from './AiChatPage.module.css';
 import { formatTime } from '../../utils/dateFormat';
+import { ROUTES } from '../../constants';
 
 const suggestedPrompts = [
     'Tồn kho hiện tại của sản phẩm nào đang thấp?',
@@ -324,7 +325,7 @@ function AiChatPage() {
                         Quản trị viên đã tắt tính năng Trợ lý AI trên toàn hệ thống. Vui lòng liên hệ Admin nếu bạn cần sử dụng tính năng này.
                     </p>
                     <button
-                        onClick={() => navigate('/main-dashboard')}
+                        onClick={() => navigate(ROUTES.MAIN_DASHBOARD)}
                         style={{
                             padding: '10px 24px',
                             backgroundColor: 'var(--wms-primary)',

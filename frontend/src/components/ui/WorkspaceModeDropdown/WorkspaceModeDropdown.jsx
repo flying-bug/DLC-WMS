@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../../contexts/WorkspaceModeContext';
+import { ROUTES } from '../../../constants';
 import styles from './WorkspaceModeDropdown.module.css';
 
 export default function WorkspaceModeDropdown() {
@@ -32,7 +33,7 @@ export default function WorkspaceModeDropdown() {
     } else if (modeId === WORKSPACE_MODES.CASHIER) {
       navigate('/cashier-workspace');
     } else {
-      navigate('/main-dashboard');
+      navigate(ROUTES.MAIN_DASHBOARD);
     }
   };
 

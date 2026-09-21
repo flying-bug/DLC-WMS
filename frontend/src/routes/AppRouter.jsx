@@ -4,6 +4,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
+import AnalyticsDashboard from '../pages/Dashboard/AnalyticsDashboard';
 import UnitPage from '../pages/Unit/UnitPage';
 import ProductPage from '../pages/Product/ProductPage';
 import ProductCategoryPage from '../pages/ProductCategory/ProductCategoryPage';
@@ -86,14 +87,16 @@ const getDefaultAuthenticatedPath = () => {
     // và bị đưa thẳng tới /main-dashboard thay vì bàn làm việc của họ.
     if (roles.some(role => ['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER'].includes(role))) return '/warehouse-workspace';
     if (roles.some(role => ['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER'].includes(role))) return '/cashier-workspace';
+    if (hasPermission('report_summary:view')) return ROUTES.MAIN_DASHBOARD;
     if (roles.some(role => ['TECHNICIAN', 'ROLE_TECHNICIAN'].includes(role))) return '/dashboard';
     return '/dashboard';
 };
 
 // Wrapper for protected routes (requires token)
-const ProtectedRoute = ({ allowedRoles, disallowedRoles, requiredPermission }) => {
+const ProtectedRoute = ({ allowedRoles, disallowedRoles, requiredPermission, allowSuperAdmin = false }) => {
     const tokenValid = isValidToken();
     const userRoles = getAuthRoles().map(r => String(r || '').toUpperCase().replace(/^ROLE_/, ''));
+    const isSuperAdmin = userRoles.includes('SUPER_ADMIN');
 
     if (!tokenValid) {
         return <Navigate to="/login" replace />;
@@ -115,7 +118,7 @@ const ProtectedRoute = ({ allowedRoles, disallowedRoles, requiredPermission }) =
         }
     }
 
-    if (requiredPermission && !hasPermission(requiredPermission)) {
+    if (requiredPermission && !(allowSuperAdmin && isSuperAdmin) && !hasPermission(requiredPermission)) {
         return <Navigate to={getDefaultAuthenticatedPath()} replace />;
     }
 
@@ -180,6 +183,12 @@ function AppRoutes() {
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/profile/edit" element={<ProfilePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
+                </Route>
+
+                {/* Khớp quyền GET /api/v1/reports/dashboard ở backend. WorkspaceScopeRoute
+                    vẫn chặn Thủ kho/Thủ quỹ khỏi màn hình tổng quan dùng chung. */}
+                <Route element={<ProtectedRoute requiredPermission="report_summary:view" allowSuperAdmin />}>
+                    <Route path={ROUTES.MAIN_DASHBOARD} element={<AnalyticsDashboard />} />
                 </Route>
 
                 {/* Business Routes for Staff & Manager only */}

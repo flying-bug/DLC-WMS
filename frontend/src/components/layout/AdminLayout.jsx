@@ -9,6 +9,7 @@ import WorkspaceModeDropdown from '../ui/WorkspaceModeDropdown/WorkspaceModeDrop
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeContext';
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
 import ErrorBoundary from '../ErrorBoundary';
+import { ROUTES } from '../../constants';
 
 import styles from './AdminLayout.module.css';
 
@@ -17,6 +18,7 @@ const MENU_CONFIG = [
         id: 'main',
         label: 'PHÂN HỆ',
         items: [
+            { path: ROUTES.MAIN_DASHBOARD, icon: 'bi bi-pie-chart', label: 'Tổng quan', moduleId: 'overview', moduleKey: 'report_summary' },
             { path: '/dashboard', icon: 'bi bi-building', label: 'Kho', moduleId: 'warehouse', moduleKeys: ['import', 'export', 'transfer', 'stocktake', 'assembly', 'assembly_config', 'warehouse_master', 'report_balance', 'report_ledger', 'report_transfer'] },
             { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase', moduleKey: 'purchase_order' },
             { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales', moduleKeys: ['sales_order', 'einvoice'] },
@@ -66,7 +68,9 @@ const AdminLayout = ({ children }) => {
     
     // Configuration for top header tabs based on active module
     const TABS_CONFIG = {
-        overview: [],
+        overview: [
+            { path: ROUTES.MAIN_DASHBOARD, label: 'Tổng quan', exact: true, moduleKey: 'report_summary' }
+        ],
         warehouse: [
             { path: '/dashboard', label: 'Quy trình', exact: true },
             { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'], moduleKeys: ['import', 'assembly'] },
@@ -146,6 +150,7 @@ const AdminLayout = ({ children }) => {
             }
         }
 
+        if (currentPath === ROUTES.MAIN_DASHBOARD) return 'overview';
         if (['/dashboard', '/import-history', '/import-slips', '/export-slips', '/transfer-history', '/stocktakes', '/assembly-orders', '/assembly-boms', '/warehouses', '/reports'].some(p => currentPath.startsWith(p))) return 'warehouse';
         if (currentPath.startsWith('/purchase-orders')) return 'purchase';
         if (currentPath.startsWith('/sales-orders') || currentPath.startsWith('/einvoices')) return 'sales';

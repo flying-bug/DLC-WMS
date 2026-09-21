@@ -21,6 +21,7 @@ import {
 import { getDashboardMetrics } from '../../api/reportApi';
 import { NOTIFICATION_EVENT } from '../../auth/session';
 import { formatDateOnly, formatDateTime as utilsFormatDateTime } from '../../utils/dateFormat';
+import { ROUTES } from '../../constants';
 import styles from './AnalyticsDashboard.module.css';
 
 const money = (value) =>
@@ -169,14 +170,13 @@ function AnalyticsDashboard() {
             case 'ASSEMBLY_ORDER':
             case 'DISASSEMBLY_ORDER':
                 navigate(`/assembly-orders/${transaction.entityId}?mode=view`, {
-                    state: { returnTo: '/main-dashboard' }
+                    state: { returnTo: ROUTES.MAIN_DASHBOARD }
                 });
                 break;
             case 'WARRANTY_REPAIR':
-                navigate(`/warranties/${transaction.entityId}`);
-                break;
             case 'REPAIR':
-                navigate(`/repairs/${transaction.entityId}/edit`);
+                // Backend trả entityId của bảng repairs cho cả sửa chữa thường và bảo hành.
+                navigate(`/repairs/${transaction.entityId}`);
                 break;
             default:
                 break;
@@ -329,7 +329,7 @@ function AnalyticsDashboard() {
         },
         {
             key: 'repairs',
-            title: 'Chờ bảo hành',
+            title: 'Sửa chữa bảo hành',
             value: `${quantity(dashboard?.confirmedWarrantyRepairsCount || 0)} đơn`,
             icon: 'bi bi-tools',
             color: 'purple',
@@ -450,7 +450,7 @@ function AnalyticsDashboard() {
                 ],
                 confirmedWarrantyRepairs,
                 'Không có đơn sửa chữa bảo hành ở trạng thái đã xác nhận sửa chữa.',
-                (row) => navigate(`/repairs/${row.id}/edit`)
+                (row) => navigate(`/repairs/${row.id}`)
             );
         }
 
@@ -475,10 +475,10 @@ function AnalyticsDashboard() {
                     </div>
                     <div className={styles.headerActions}>
                         <button className="btn-misa-outline" onClick={() => navigate('/purchase-orders')}>
-                            <i className="bi bi-cart"></i> Mua Hàng
+                            <i className="bi bi-bag-plus"></i> Đơn mua hàng
                         </button>
-                        <button className="btn-misa-primary" onClick={() => navigate('/import-history')}>
-                            <i className="bi bi-box-arrow-in-down"></i> Nhập Hàng
+                        <button className="btn-misa-primary" onClick={() => navigate('/sales-orders')}>
+                            <i className="bi bi-cart3"></i> Đơn bán hàng
                         </button>
                     </div>
                 </div>

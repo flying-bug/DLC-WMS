@@ -9,6 +9,7 @@ export const ROUTES = {
     LOGIN: '/login',
     FORGOT_PASSWORD: '/forgot-password',
     DASHBOARD: '/dashboard',
+    MAIN_DASHBOARD: '/main-dashboard',
     PRODUCTS: '/products',
     SUPPLIERS: '/suppliers',
     SUPPLIER_DETAIL: '/suppliers/:id',
