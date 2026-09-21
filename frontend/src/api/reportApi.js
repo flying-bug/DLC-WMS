@@ -31,6 +31,10 @@ export const getDebtReport = (params = {}) => {
     return axiosClient.get(`${REPORT_BASE}/debt`, { params });
 };
 
+export const getCashFlowReport = (params = {}) => {
+    return axiosClient.get(`${REPORT_BASE}/cash-flow`, { params });
+};
+
 /**
  * Lấy báo cáo tổng hợp tồn kho (Inventory Summary / Nhập xuất tồn)
  */
