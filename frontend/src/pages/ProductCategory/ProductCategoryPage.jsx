@@ -57,19 +57,14 @@ const ProductCategoryPage = () => {
                 size: pageSize
             };
             if (filters.search) params.search = filters.search;
-            if (filters.status) params.status = filters.status; // Currently API doesn't filter by status, but we send it anyway
+            if (filters.status) params.status = filters.status;
 
             const res = await axiosClient.get('/product-categories', { params });
             const payload = res.data?.data ?? res.data;
-            let data = payload?.content || [];
-
-            // Client-side fallback filter for status if API doesn't support it
-            if (filters.status) {
-                data = data.filter(c => c.status === filters.status);
-            }
+            const data = payload?.content || [];
 
             setCategories(data);
-            const total = filters.status ? data.length : (payload?.totalElements ?? data.length);
+            const total = payload?.totalElements ?? data.length;
             setTotalPages(Math.max(1, Math.ceil(total / pageSize)));
             setTotalElements(total);
         } catch (error) {

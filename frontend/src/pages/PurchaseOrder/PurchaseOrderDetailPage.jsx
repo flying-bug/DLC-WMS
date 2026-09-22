@@ -119,18 +119,7 @@ function PurchaseOrderDetailPage() {
   };
 
   const handleCreateImport = () => {
-    const importableLines = (po.lines || [])
-      .map(l => {
-        const rem = l.remainingQuantity !== undefined && l.remainingQuantity !== null
-          ? Number(l.remainingQuantity)
-          : Number(l.quantity || 1);
-        return {
-          ...l,
-          remainingQuantity: rem,
-          quantity: rem,
-        };
-      })
-      .filter(l => l.remainingQuantity > 0);
+    const importableLines = getImportableLines();
 
     if (importableLines.length === 0) {
       showToast('info', 'Toàn bộ số lượng của đơn đã có trong phiếu nhập (kể cả phiếu nháp chưa ghi sổ)');
@@ -155,22 +144,40 @@ function PurchaseOrderDetailPage() {
       return;
     }
 
+    openCreateImport(importableLines);
+  };
+
+  const getImportableLines = () => (po.lines || [])
+    .map(l => {
+      const rem = l.remainingQuantity !== undefined && l.remainingQuantity !== null
+        ? Number(l.remainingQuantity)
+        : Number(l.quantity || 1);
+      return { ...l, remainingQuantity: rem, quantity: rem };
+    })
+    .filter(l => l.remainingQuantity > 0);
+
+  const openCreateImport = (lines, warehouseId) => {
     navigate('/import-history/create', {
       state: {
         returnUrl: `/purchase-orders/${id}`,
         poData: {
           ...po,
-          lines: importableLines,
+          ...(warehouseId ? { warehouseId: Number(warehouseId) } : {}),
+          lines,
         }
       }
     });
   };
 
-  const handleWarehousePicked = (createdDoc) => {
+  // Nhập đa kho: đi theo luồng giống đơn kho - mở trang tạo phiếu nhập mới chỉ với các dòng của kho đã chọn.
+  const handleWarehousePicked = (warehouseId) => {
     setShowWarehousePicker(false);
-    if (createdDoc?.id) {
-      navigate(`/import-slips/${createdDoc.id}/edit`, { state: { returnUrl: `/purchase-orders/${id}` } });
+    const lines = getImportableLines().filter(l => String(l.warehouseId) === String(warehouseId));
+    if (lines.length === 0) {
+      showToast('info', 'Kho này đã nhập đủ số lượng của đơn');
+      return;
     }
+    openCreateImport(lines, warehouseId);
   };
 
   const handleShortClose = async () => {
@@ -528,10 +535,9 @@ function PurchaseOrderDetailPage() {
       />
       {showWarehousePicker && (
         <SelectReceivingWarehouseModal
-          po={po}
           warehouses={pickerWarehouses}
           onClose={() => setShowWarehousePicker(false)}
-          onCreated={handleWarehousePicked}
+          onSelect={handleWarehousePicked}
         />
       )}
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />

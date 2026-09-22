@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.ai.service;
 
+import com.duylongtech.backend.feature.ai.agent.AiAgentService;
 import com.duylongtech.backend.feature.ai.client.AiModelClient;
 import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
 import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
@@ -48,6 +49,7 @@ class AiChatServiceAccessTest {
     private PurchaseOrderRepository purchaseOrderRepository;
     private SalesOrderRepository salesOrderRepository;
     private InventoryDocumentRepository inventoryDocumentRepository;
+    private AiAgentService agent;
     private AiModelClient aiModelClient;
     private WarehouseAccessGuard warehouseAccessGuard;
     private AiChatService service;
@@ -62,6 +64,7 @@ class AiChatServiceAccessTest {
         salesOrderRepository = mock(SalesOrderRepository.class);
         inventoryDocumentRepository = mock(InventoryDocumentRepository.class);
         aiModelClient = mock(AiModelClient.class);
+        agent = mock(AiAgentService.class);
         warehouseAccessGuard = mock(WarehouseAccessGuard.class);
         when(aiModelClient.enhanceAnswer(any(), any(), any())).thenAnswer(invocation -> invocation.getArgument(2));
 
@@ -69,7 +72,7 @@ class AiChatServiceAccessTest {
                 productVariantRepository, partnerRepository, mock(WarrantyRepository.class),
                 mock(RepairRepository.class), mock(StockTransferRepository.class), mock(AssemblyOrderRepository.class),
                 purchaseOrderRepository, salesOrderRepository, inventoryDocumentRepository, aiModelClient,
-                new AiAccessPolicy(warehouseAccessGuard));
+                new AiAccessPolicy(warehouseAccessGuard), agent);
     }
 
     @AfterEach
@@ -183,5 +186,52 @@ class AiChatServiceAccessTest {
         AiChatResponse response = service.chat("cái này giá bao nhiêu", List.of(question, answer));
 
         assertEquals("PRODUCT_SEARCH", response.getIntent());
+    }
+
+    // ---------------- AI Agent (function calling) ----------------
+
+    @Test
+    void agentAnswersDataQuestionsWhenEnabledAndTheUserMayReadThatData() {
+        loginWith("ROLE_WAREHOUSE_CONTROLLER", "ai_chat:view", "report_balance:view");
+        when(agent.isAvailable()).thenReturn(true);
+        AiChatResponse fromAgent = AiChatResponse.builder().intent("AGENT_ANSWER").answer("Kho A còn 5 cái").build();
+        when(agent.answer(any(), any())).thenReturn(java.util.Optional.of(fromAgent));
+
+        AiChatResponse response = service.chat("Sản phẩm nào sắp hết hàng?");
+
+        assertEquals("AGENT_ANSWER", response.getIntent());
+    }
+
+    @Test
+    void agentIsNotConsultedWhenTheUserLacksTheStockPermissions() {
+        loginWith("ROLE_CASHIER_CONTROLLER", "ai_chat:view", "payment:view");
+        when(agent.isAvailable()).thenReturn(true);
+
+        AiChatResponse response = service.chat("Sản phẩm nào sắp hết hàng?");
+
+        assertEquals("ACCESS_DENIED", response.getIntent());
+        org.mockito.Mockito.verify(agent, org.mockito.Mockito.never()).answer(any(), any());
+    }
+
+    @Test
+    void whenTheAgentFailsTheClassicAnswerIsUsed() {
+        loginWith("ROLE_WAREHOUSE_CONTROLLER", "ai_chat:view", "report_balance:view");
+        when(agent.isAvailable()).thenReturn(true);
+        when(agent.answer(any(), any())).thenReturn(java.util.Optional.empty());
+        when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(null);
+
+        AiChatResponse response = service.chat("Sản phẩm nào sắp hết hàng?");
+
+        assertEquals("LOW_STOCK_QUERY", response.getIntent());
+    }
+
+    @Test
+    void agentIsSkippedForModulesItDoesNotCoverYet() {
+        loginWith("ROLE_ACCOUNTANT", "ai_chat:view", "purchase_order:view");
+        when(agent.isAvailable()).thenReturn(true);
+
+        service.chat("Đơn mua hàng PO0001 đang ở trạng thái nào?");
+
+        org.mockito.Mockito.verify(agent, org.mockito.Mockito.never()).answer(any(), any());
     }
 }

@@ -39,6 +39,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -80,7 +81,11 @@ public class ProductService {
                 stockMap.put((Long) result[0], (BigDecimal) result[1]);
             }
         }
-        return productPage.map(product -> convertToDtoWithStock(product, stockMap.getOrDefault(product.getId(), BigDecimal.ZERO)));
+        Map<Long, List<ProductUnitConversion>> conversionsByProductId = loadUnitConversionsByProductId(productIds);
+        return productPage.map(product -> convertToDtoWithStock(
+                product,
+                stockMap.getOrDefault(product.getId(), BigDecimal.ZERO),
+                conversionsByProductId.getOrDefault(product.getId(), List.of())));
     }
 
     public StockAlertSummaryResponse getStockAlertSummary() {
@@ -99,9 +104,11 @@ public class ProductService {
     }
 
     public ProductResponse getProductById(Long id) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findDetailsById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
-        return convertToDtoWithStock(product, getActualStock(id));
+        List<ProductUnitConversion> conversions = productUnitConversionRepository
+                .findAllWithUnitByProductIdIn(List.of(id));
+        return convertToDtoWithStock(product, getActualStock(id), conversions);
     }
 
     private BigDecimal getActualStock(Long productId) {
@@ -645,9 +652,17 @@ public class ProductService {
     }
 
     private ProductResponse convertToDtoWithStock(Product product, BigDecimal stockQty) {
+        List<ProductUnitConversion> conversions = product.getId() == null
+                ? List.of()
+                : productUnitConversionRepository.findAllWithUnitByProductIdIn(List.of(product.getId()));
+        return convertToDtoWithStock(product, stockQty, conversions);
+    }
+
+    private ProductResponse convertToDtoWithStock(Product product, BigDecimal stockQty,
+            List<ProductUnitConversion> conversions) {
         List<ProductUnitConversionResponse> convList = new java.util.ArrayList<>();
-        if (product.getUnitConversions() != null) {
-            for (ProductUnitConversion c : product.getUnitConversions()) {
+        if (conversions != null) {
+            for (ProductUnitConversion c : conversions) {
                 convList.add(ProductUnitConversionResponse.builder()
                         .id(c.getId())
                         .unitId(c.getUnit() != null ? c.getUnit().getId() : null)
@@ -667,6 +682,15 @@ public class ProductService {
         }
         response.setUnitConversions(convList);
         return response;
+    }
+
+    private Map<Long, List<ProductUnitConversion>> loadUnitConversionsByProductId(List<Long> productIds) {
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+        return productUnitConversionRepository.findAllWithUnitByProductIdIn(productIds)
+                .stream()
+                .collect(Collectors.groupingBy(conversion -> conversion.getProduct().getId()));
     }
 
     /**

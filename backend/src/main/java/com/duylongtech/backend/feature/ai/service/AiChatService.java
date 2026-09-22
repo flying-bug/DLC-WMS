@@ -96,6 +96,7 @@ public class AiChatService {
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final AiModelClient aiModelClient;
     private final AiAccessPolicy accessPolicy;
+    private final com.duylongtech.backend.feature.ai.agent.AiAgentService aiAgentService;
 
     @Transactional(readOnly = true)
     public AiChatResponse chat(String rawMessage) {
@@ -125,6 +126,12 @@ public class AiChatService {
             intent = AiIntentRouter.route(normalize(contextualMessage));
         }
         String contextualNormalized = normalize(contextualMessage);
+
+        // 4b. AI Agent (function calling, chỉ đọc): chỉ khi bật cờ và người hỏi đủ quyền như đường cũ; lỗi thì quay về đường cũ.
+        Optional<AiChatResponse> viaAgent = tryAgent(intent, message, history);
+        if (viaAgent.isPresent()) {
+            return viaAgent.get();
+        }
 
         // 5. Mỗi nhóm dữ liệu chỉ trả lời khi người hỏi có quyền xem đúng module đó (xem AiAccessPolicy).
         return switch (intent) {
@@ -163,6 +170,20 @@ public class AiChatService {
                     .suggestions(defaultSuggestions())
                     .build());
         };
+    }
+
+    private Optional<AiChatResponse> tryAgent(AiIntent intent, String message, List<AiChatMessageDto> history) {
+        if (!aiAgentService.isAvailable()) {
+            return Optional.empty();
+        }
+        boolean eligible = switch (intent) {
+            case LOW_STOCK, WAREHOUSE_LIST, WAREHOUSE_STOCK -> accessPolicy.canViewAny(STOCK_PERMISSIONS);
+            case PRODUCT -> accessPolicy.canView("product:view");
+            case PARTNER -> accessPolicy.canView("customer:view") || accessPolicy.canView("supplier:view");
+            case GENERAL -> true;
+            default -> false;
+        };
+        return eligible ? aiAgentService.answer(message, history) : Optional.empty();
     }
 
     private AiChatResponse enhance(String userQuestion, List<AiChatMessageDto> history, AiChatResponse groundedResponse) {

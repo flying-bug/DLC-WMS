@@ -1,0 +1,52 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam roundCorner 10
+skinparam componentStyle uml2
+
+title Package Diagram: Frontend & Backend
+
+package "Frontend (React/Vite)" {
+    package "api" as fe_api
+    package "assets" as fe_assets
+    package "auth" as fe_auth
+    package "components" as fe_components
+    package "constants" as fe_constants
+    package "contexts" as fe_contexts
+    package "hooks" as fe_hooks
+    package "pages" as fe_pages
+    package "routes" as fe_routes
+    package "styles" as fe_styles
+    package "theme" as fe_theme
+    package "utils" as fe_utils
+    
+    fe_pages ..> fe_components
+    fe_pages ..> fe_hooks
+    fe_pages ..> fe_api
+    fe_components ..> fe_utils
+    fe_api ..> fe_constants
+}
+
+package "Backend (Spring Boot)" {
+    package "annotation" as be_annotation
+    package "aspect" as be_aspect
+    package "common" as be_common
+    package "component" as be_component
+    package "config" as be_config
+    package "constant" as be_constant
+    package "enums" as be_enums
+    package "exception" as be_exception
+    package "feature" as be_feature
+    package "job" as be_job
+    package "security" as be_security
+    package "utils" as be_utils
+    
+    be_feature ..> be_common
+    be_feature ..> be_exception
+    be_feature ..> be_security
+    be_aspect ..> be_annotation
+    be_security ..> be_config
+}
+
+fe_api .right.> be_feature : " HTTP / REST API"
+
+@enduml

@@ -25,10 +25,11 @@ public class UnitController {
     @PreAuthorize("hasAuthority('unit:view')")
     public ResponseEntity<Page<UnitResponse>> getAllUnits(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(unitService.getAllUnits(search, pageable));
+        return ResponseEntity.ok(unitService.getAllUnits(search, status, pageable));
     }
 
     @GetMapping("/{id}")

@@ -2,16 +2,14 @@ import { useEffect, useState } from 'react';
 import styles from './SelectReceivingWarehouseModal.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { getMyWarehouses } from '../../../api/warehouseApi';
-import { createBackorderForPurchaseOrder } from '../../../api/inventoryImportApi';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 
-function SelectReceivingWarehouseModal({ po, warehouses: poWarehouses, onClose, onCreated }) {
+function SelectReceivingWarehouseModal({ warehouses: poWarehouses, onClose, onSelect }) {
   const [warehouses, setWarehouses] = useState(poWarehouses);
   const [warehouseId, setWarehouseId] = useState('');
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -39,20 +37,12 @@ function SelectReceivingWarehouseModal({ po, warehouses: poWarehouses, onClose, 
     return () => { cancelled = true; };
   }, [poWarehouses]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!warehouseId) {
       setError('Vui lòng chọn kho nhận hàng');
       return;
     }
-    setSubmitting(true);
-    setError('');
-    try {
-      const res = await createBackorderForPurchaseOrder(po.id, warehouseId);
-      onCreated(unwrap(res));
-    } catch (err) {
-      setError(err.response?.data?.userMessage || 'Không thể tạo phiếu nhập kho');
-      setSubmitting(false);
-    }
+    onSelect(warehouseId);
   };
 
   return (
@@ -73,7 +63,7 @@ function SelectReceivingWarehouseModal({ po, warehouses: poWarehouses, onClose, 
               name="warehouseId"
               value={warehouseId}
               onChange={(e) => { setWarehouseId(e.target.value); setError(''); }}
-              disabled={loading || submitting}
+              disabled={loading}
             >
               <option value="">{loading ? 'Đang tải...' : 'Chọn kho...'}</option>
               {warehouses.map((w) => (
@@ -91,15 +81,15 @@ function SelectReceivingWarehouseModal({ po, warehouses: poWarehouses, onClose, 
           <div className={styles.infoBox}>
             <i className="bi bi-info-circle-fill" />
             <div>
-              Đơn mua hàng này nhập về nhiều kho. Hệ thống sẽ tạo một phiếu nhập kho nháp gồm các sản phẩm còn thiếu của kho bạn chọn; kho của phiếu không thể đổi sau khi tạo. Các kho còn lại nhập bằng phiếu riêng.
+              Đơn mua hàng này nhập về nhiều kho. Mỗi kho nhập bằng một phiếu riêng: chọn kho để mở phiếu nhập mới gồm các sản phẩm còn thiếu của kho đó.
             </div>
           </div>
         </div>
 
         <div className={styles.modalFooter}>
-          <button className={styles.btnCancel} onClick={onClose} disabled={submitting}>Hủy</button>
-          <button className={styles.btnSubmit} onClick={handleSubmit} disabled={loading || submitting}>
-            {submitting ? 'Đang tạo...' : 'Tạo phiếu nhập'}
+          <button className={styles.btnCancel} onClick={onClose}>Hủy</button>
+          <button className={styles.btnSubmit} onClick={handleSubmit} disabled={loading}>
+            Tiếp tục
           </button>
         </div>
       </div>

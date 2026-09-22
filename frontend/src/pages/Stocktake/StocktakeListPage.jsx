@@ -30,6 +30,7 @@ const STATUS_LABELS = {
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
+const ALL_RECORDS_SIZE = 10000;
 const formatDate = (value) => value ? formatDateOnly(value) : '';
 
 function StocktakeListPage() {
@@ -97,6 +98,10 @@ function StocktakeListPage() {
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
         status: filters.status || undefined,
+        // API trả về Page (mặc định size=10) trong khi màn này phân trang phía client:
+        // phải lấy toàn bộ bản ghi, nếu không tổng số/số trang chỉ tính trên 10 phiếu đầu tiên.
+        page: 0,
+        size: ALL_RECORDS_SIZE,
       };
       const response = await stocktakeApi.getStocktakes(params);
       const data = pageContent(unwrap(response));

@@ -39,6 +39,31 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  # Spring AI (AI Agent). Mặc định TẮT: chọn nhà cung cấp bằng AI_AGENT_MODEL_PROVIDER=openai|google-genai và bật
+  # ai.agent.enabled. Các loại mô hình khác (embedding, image, audio, moderation) không dùng nên tắt hẳn,
+  # nếu không Spring AI sẽ đòi API key ngay lúc khởi động.
+  ai:
+    model:
+      chat: ${AI_AGENT_MODEL_PROVIDER:none}
+      embedding: none
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+    openai:
+      api-key: ${OPENAI_API_KEY:not-configured}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+          temperature: 0.2
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:not-configured}
+        chat:
+          options:
+            model: ${GEMINI_MODEL:gemini-2.0-flash}
+            temperature: 0.2
 
 backup:
   path: ${BACKUP_PATH:/tmp/backups}
@@ -61,6 +86,10 @@ cloudinary:
   max-file-size: ${CLOUDINARY_MAX_FILE_SIZE:5242880}
 
 ai:
+  agent:
+    enabled: ${AI_AGENT_ENABLED:false}
+    max-tool-calls: ${AI_AGENT_MAX_TOOL_CALLS:6}
+    max-rows: ${AI_AGENT_MAX_ROWS:10}
   provider: ${AI_PROVIDER:gemini}
   openai:
     enabled: ${OPENAI_ENABLED:false}

@@ -27,14 +27,11 @@ public class UnitService {
     private final UnitRepository unitRepository;
     private final UnitMapper unitMapper;
 
-    public Page<UnitResponse> getAllUnits(String search, Pageable pageable) {
-        Page<Unit> unitPage;
-        if (search != null && !search.isEmpty()) {
-            unitPage = unitRepository.findByNameContainingIgnoreCase(search, pageable);
-        } else {
-            unitPage = unitRepository.findAll(pageable);
-        }
-        return unitPage.map(unitMapper::toResponse);
+    public Page<UnitResponse> getAllUnits(String search, String status, Pageable pageable) {
+        // Lọc trạng thái ở tầng DB để totalElements khớp với bộ lọc (phân trang phía server).
+        String keyword = search != null && !search.isBlank() ? search.trim() : null;
+        String statusFilter = status != null && !status.isBlank() ? status.trim() : null;
+        return unitRepository.search(keyword, statusFilter, pageable).map(unitMapper::toResponse);
     }
 
     public UnitResponse getUnitById(Long id) {

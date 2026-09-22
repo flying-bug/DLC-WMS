@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import styles from './Pagination.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
@@ -17,6 +18,15 @@ const Pagination = ({
         ? Math.max(1, Math.ceil(totalElements / size))
         : 1;
     const effectiveTotalPages = calculatedTotalPages;
+
+    // Trang hiện tại (thường lưu trong session) có thể vượt số trang thực tế sau khi lọc/xóa bản ghi:
+    // bảng hiển thị rỗng trong khi vẫn báo "trên tổng số N bản ghi". Tự lùi về trang cuối hợp lệ.
+    // Chỉ kẹp khi đã có dữ liệu (totalElements > 0) để không làm mất trang đã lưu lúc đang tải.
+    useEffect(() => {
+        if (totalElements > 0 && page > effectiveTotalPages - 1 && onPageChange) {
+            onPageChange(effectiveTotalPages - 1);
+        }
+    }, [page, effectiveTotalPages, totalElements, onPageChange]);
 
     // Calculate which page numbers to show
     const getVisiblePages = () => {

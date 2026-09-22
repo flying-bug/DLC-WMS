@@ -14,6 +14,16 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByProductCode(String productCode);
 
+    @Query("""
+            SELECT p
+            FROM Product p
+            LEFT JOIN FETCH p.brand
+            LEFT JOIN FETCH p.category
+            LEFT JOIN FETCH p.unit
+            WHERE p.id = :id
+            """)
+    Optional<Product> findDetailsById(@Param("id") Long id);
+
     @Query(value = "SELECT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.unit " +
            "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', TRIM(:search), '%')) " +
            "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', TRIM(:search), '%'))) " +

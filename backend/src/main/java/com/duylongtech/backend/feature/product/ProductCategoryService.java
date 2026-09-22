@@ -34,19 +34,11 @@ public class ProductCategoryService {
     private final CodeGeneratorService codeGeneratorService;
     private final ProductCategoryMapper categoryMapper;
 
-    public Page<ProductCategoryResponse> getCategories(String search, Pageable pageable) {
-        Page<ProductCategory> categories;
-        if (search != null && !search.trim().isEmpty()) {
-            String keyword = search.trim();
-            categories = categoryRepository.findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
-                    keyword,
-                    keyword,
-                    pageable
-            );
-        } else {
-            categories = categoryRepository.findAll(pageable);
-        }
-        return categories.map(categoryMapper::toResponse);
+    public Page<ProductCategoryResponse> getCategories(String search, String status, Pageable pageable) {
+        // Lọc trạng thái ở tầng DB để totalElements khớp với bộ lọc (phân trang phía server).
+        String keyword = search != null && !search.isBlank() ? search.trim() : null;
+        String statusFilter = status != null && !status.isBlank() ? status.trim() : null;
+        return categoryRepository.search(keyword, statusFilter, pageable).map(categoryMapper::toResponse);
     }
 
     public ProductCategoryResponse getCategoryById(Long id) {

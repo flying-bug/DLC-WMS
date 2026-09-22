@@ -33,10 +33,11 @@ public class ProductCategoryController {
     @PreAuthorize("hasAuthority('product_category:view')")
     public ResponseEntity<Page<ProductCategoryResponse>> getCategories(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(categoryService.getCategories(search, pageable));
+        return ResponseEntity.ok(categoryService.getCategories(search, status, pageable));
     }
 
     @GetMapping("/{id}")
