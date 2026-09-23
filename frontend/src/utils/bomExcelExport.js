@@ -1,7 +1,8 @@
-import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { loadExcelJs } from './lazyExcel';
 
 export const exportBomToExcel = async (lines, bomCode) => {
+    const ExcelJS = await loadExcelJs();
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Cau_Hinh');
 

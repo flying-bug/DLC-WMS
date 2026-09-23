@@ -4,7 +4,7 @@ import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import Select from 'react-select';
-import * as XLSX from 'xlsx';
+import { loadXlsx } from '../../utils/lazyExcel';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -371,7 +371,8 @@ function CreateStocktakePage() {
   };
 
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
+    const XLSX = await loadXlsx();
     if (lines.length === 0) {
       showToast('warning', 'Không có dữ liệu vật tư hàng hóa để xuất');
       return;
@@ -414,8 +415,9 @@ function CreateStocktakePage() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await loadXlsx();
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];

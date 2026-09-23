@@ -10,8 +10,7 @@ import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
 import { getVietnamTimestamp } from '../../utils/dateFormat';
 import { compressImage } from '../../utils/imageCompressor';
-import * as XLSX from 'xlsx';
-import ExcelJS from 'exceljs';
+import { loadExcelJs, loadXlsx } from '../../utils/lazyExcel';
 import { saveAs } from 'file-saver';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import Modal from '../../components/ui/Modal/Modal';
@@ -376,6 +375,7 @@ const ProductPage = () => {
     };
 
     const handleDownloadTemplate = async () => {
+        const ExcelJS = await loadExcelJs();
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Mau_Nhap_Hang_Hoa');
 
@@ -471,6 +471,7 @@ const ProductPage = () => {
         reader.onload = async (evt) => {
             try {
                 setImporting(true);
+                const XLSX = await loadXlsx();
                 const bstr = evt.target.result;
                 const wb = XLSX.read(bstr, { type: 'binary' });
                 const wsname = wb.SheetNames[0];

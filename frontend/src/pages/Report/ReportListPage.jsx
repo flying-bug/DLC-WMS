@@ -6,7 +6,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import { getMyWarehouses } from '../../api/warehouseApi';
 import { getAllPayments } from '../../api/paymentApi';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeContext';
-import * as XLSX from 'xlsx';
+import { loadXlsx } from '../../utils/lazyExcel';
 import {
     getInventoryBalanceReport,
     getStockLedgerReport,
@@ -460,6 +460,7 @@ const ReportListPage = () => {
                     'Trạng thái': item.status === 'POSTED' ? 'Đã ghi sổ' : 'Chờ ghi sổ',
                     'Ghi chú': item.note || '-'
                 }));
+                const XLSX = await loadXlsx();
                 const ws = XLSX.utils.json_to_sheet(worksheetData);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'DongTien');
