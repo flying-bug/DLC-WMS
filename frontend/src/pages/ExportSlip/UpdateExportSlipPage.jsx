@@ -31,6 +31,8 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = getTodayIsoDate;
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
+// Số lượng KHÔNG dùng money(): hàm đó gắn sẵn đuôi " đ" nên tổng số lượng từng hiện "1 đ".
+const qty = (value) => Number(value || 0).toLocaleString('vi-VN');
 
 const normalizeProductType = (value) =>
   String(value || '')
@@ -1083,7 +1085,7 @@ function UpdateExportSlipPage() {
         Tổng số lượng
       </td>
       <td style={{ textAlign: 'right', padding: '8px 16px', fontWeight: 'bold', color: 'var(--color-primary)' }}>
-        {money(totalQuantity)}
+        {qty(totalQuantity)}
       </td>
       {showPricing && (
         <>
@@ -1103,7 +1105,7 @@ function UpdateExportSlipPage() {
   // valid as a React child" ngay khi mở màn sửa phiếu xuất kho ở giao diện mobile.
   const linesSummaryMobile = (
     <div style={{ padding: '12px', background: 'var(--color-bg)', fontWeight: 'bold' }}>
-      <div>Tổng số lượng: <span style={{ color: 'var(--color-primary)' }}>{totalQuantity}</span></div>
+      <div>Tổng số lượng: <span style={{ color: 'var(--color-primary)' }}>{qty(totalQuantity)}</span></div>
       {showPricing && (
         <>
           <div>Tổng tiền hàng: {money(totalPrice)}</div>
@@ -1457,7 +1459,7 @@ function UpdateExportSlipPage() {
                 <div className={styles.summaryBox}>
                   <div className={styles.summaryRow}>
                     <span>Tổng số lượng:</span>
-                    <span>{money(totalQuantity)}</span>
+                    <span>{qty(totalQuantity)}</span>
                   </div>
                   {showPricing && (
                     <>
