@@ -37,6 +37,7 @@ public enum SystemMessage {
     // Unit & Product
     UNIT_NOT_FOUND("UNIT01", "Không tìm thấy đơn vị tính."),
     UNIT_EXISTS("UNIT02", "Tên đơn vị tính đã tồn tại!"),
+    UNIT_INVALID_STATUS("UNIT03", "Trạng thái đơn vị tính không hợp lệ. Chỉ chấp nhận ACTIVE hoặc INACTIVE."),
     PRODUCT_NOT_FOUND("PROD01", "Không tìm thấy hàng hóa."),
     PRODUCT_CODE_EXISTS("PROD02", "Mã hàng hóa đã tồn tại trên hệ thống."),
     PRODUCT_NOT_DELETEABLE("PROD03", "Không tìm thấy hàng hóa để xóa."),

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import com.duylongtech.backend.enums.EntityStatus;
 
 import java.time.LocalDateTime;
 
@@ -46,5 +47,9 @@ public class Unit {
     public void updateDetails(String name, String description) {
         if (name != null) this.name = name;
         if (description != null) this.description = description;
+    }
+
+    public void changeStatus(EntityStatus status) {
+        this.status = status.name();
     }
 }

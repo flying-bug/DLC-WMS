@@ -16,6 +16,8 @@ public interface UnitRepository extends JpaRepository<Unit, Long> {
     Page<Unit> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
     @Query("SELECT u FROM Unit u WHERE (:search IS NULL OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "AND (:status IS NULL OR u.status = :status)")
+           "AND (:status IS NULL " +
+           "OR (:status = 'ACTIVE' AND u.status IN ('ACTIVE', 'APPROVED')) " +
+           "OR (:status <> 'ACTIVE' AND u.status = :status))")
     Page<Unit> search(@Param("search") String search, @Param("status") String status, Pageable pageable);
 }
