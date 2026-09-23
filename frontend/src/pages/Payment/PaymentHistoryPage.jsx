@@ -167,7 +167,20 @@ function PaymentHistoryPage() {
       <div className={styles.page}>
         <div className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>Thu chi &amp; Công nợ / Chi tiết công nợ đối tác</div>
+            <button
+              type="button"
+              className={styles.contextBackButton}
+              onClick={() => navigate(
+                mode === 'VOUCHER' ? `/suppliers/${partnerId}` : `/customers/${partnerId}`,
+                {
+                  replace: true,
+                  state: { forceBackTo: mode === 'VOUCHER' ? '/suppliers' : '/customers' },
+                },
+              )}
+            >
+              <i className="bi bi-arrow-left" />
+              {mode === 'VOUCHER' ? 'Quay lại chi tiết nhà cung cấp' : 'Quay lại chi tiết khách hàng'}
+            </button>
             <h1 className={styles.title}>Chi tiết công nợ {partnerTypeLabel}</h1>
             <p className={styles.subtitle}>
               <i className="bi bi-person-lines-fill" /> {partnerLabel} {partner?.phone ? ` | SĐT: ${partner.phone}` : ''}

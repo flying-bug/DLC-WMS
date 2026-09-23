@@ -22,14 +22,6 @@
   flex-direction: column;
 }
 
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-  color: var(--color-text-muted, var(--wms-text-muted));
-  margin-bottom: 4px;
-}
-
 .pageTitle {
   font-size: 22px;
   font-weight: 700;

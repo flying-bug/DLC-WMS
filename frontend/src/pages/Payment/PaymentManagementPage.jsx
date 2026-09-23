@@ -586,9 +586,6 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
         {/* HEADER SECTION: TIÊU ĐỀ & CÁC NÚT ĐIỀU HƯỚNG */}
         <div className={styles.pageTitleContainer}>
           <div className={styles.titleWrapper}>
-            <div className={styles.breadcrumb}>
-              <span style={{ color: 'var(--wms-text-title)', fontWeight: 600 }}>{mode === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}</span>
-            </div>
             <h1 className={styles.pageTitle}>
               {mode === 'RECEIPT' ? 'Danh sách phiếu thu tiền' : 'Danh sách phiếu chi tiền'}
             </h1>

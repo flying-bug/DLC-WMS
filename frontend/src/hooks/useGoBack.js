@@ -10,17 +10,19 @@ export default function useGoBack(fallbackPath) {
     const navigate = useNavigate();
     const location = useLocation();
     const returnUrl = location.state?.returnUrl || null;
+    const forceBackTo = location.state?.forceBackTo || null;
 
     return useCallback(() => {
         const target = resolveBackTarget({
             hasPrevious: hasPreviousAppPage(window.history.state),
             returnUrl,
             fallback: fallbackPath,
+            forceBackTo,
         });
         if (target.type === 'back') {
             navigate(-1);
         } else {
             navigate(target.to, { replace: true });
         }
-    }, [navigate, returnUrl, fallbackPath]);
+    }, [navigate, returnUrl, fallbackPath, forceBackTo]);
 }

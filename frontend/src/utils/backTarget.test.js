@@ -3,6 +3,13 @@ import test from 'node:test';
 
 import { hasPreviousAppPage, resolveBackTarget } from './backTarget.js';
 
+test('uses the forced target before browser history', () => {
+  assert.deepEqual(
+    resolveBackTarget({ hasPrevious: true, returnUrl: '/payments/history/1', fallback: '/customers', forceBackTo: '/customers' }),
+    { type: 'replace', to: '/customers' },
+  );
+});
+
 test('goes back in history when there is a previous page in the app', () => {
   assert.deepEqual(resolveBackTarget({ hasPrevious: true, returnUrl: '/x', fallback: '/list' }), { type: 'back' });
 });
