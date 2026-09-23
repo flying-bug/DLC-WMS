@@ -11,9 +11,6 @@ import {
     Tooltip as RechartsTooltip,
     Legend,
     ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
     LineChart,
     Line,
     ComposedChart
@@ -55,6 +52,16 @@ const shortMoney = (value) => {
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? {};
 
+const WEEKDAY_ORDER = new Map([
+    ['T2', 0],
+    ['T3', 1],
+    ['T4', 2],
+    ['T5', 3],
+    ['T6', 4],
+    ['T7', 5],
+    ['CN', 6]
+]);
+
 const KPI_SPARKLINES = {
     inventory: [{ v: 82 }, { v: 88 }, { v: 90 }, { v: 96 }, { v: 104 }, { v: 110 }],
     purchaseOrders: [{ v: 2 }, { v: 4 }, { v: 5 }, { v: 7 }, { v: 8 }, { v: 9 }],
@@ -65,9 +72,20 @@ const KPI_SPARKLINES = {
 
 const ORDER_STATUS_LABELS = {
     DRAFT: 'Nháp',
+    PENDING_APPROVAL: 'Chờ duyệt',
+    SUBMITTED: 'Đã trình duyệt',
     APPROVED: 'Đã duyệt',
-    POSTED: 'Ghi sổ',
-    CANCELLED: 'Đã hủy'
+    REJECTED: 'Đã từ chối',
+    POSTED: 'Đã ghi sổ',
+    UNPOSTED: 'Đã bỏ ghi sổ',
+    IN_TRANSIT: 'Đang vận chuyển',
+    CANCEL_REQUESTED: 'Chờ hủy',
+    CANCELLED: 'Đã hủy',
+    CANCELED: 'Đã hủy',
+    HOLDING: 'Đang giữ hàng',
+    COMPLETED: 'Hoàn tất',
+    RETURNED: 'Đã trả lại',
+    PROCESSING: 'Đang xử lý'
 };
 
 const REPAIR_STATUS_LABELS = {
@@ -84,23 +102,37 @@ const REPAIR_STATUS_LABELS = {
 const STATUS_LABELS = {
     ...ORDER_STATUS_LABELS,
     ...REPAIR_STATUS_LABELS,
-    SUBMITTED: 'Hoàn thành',
     COMPLETE: 'Hoàn thành',
-    COMPLETED: 'Hoàn thành'
+    RECEIVED: 'Đã tiếp nhận',
+    REPAIRING: 'Đang sửa chữa',
+    ACTIVE: 'Đang hoạt động',
+    INACTIVE: 'Ngừng hoạt động',
+    EXPIRED: 'Đã hết hạn',
+    VOIDED: 'Đã vô hiệu'
 };
 
 const getTransactionStatusMeta = (status) => {
     const normalized = String(status || '').toUpperCase();
     switch (normalized) {
         case 'DRAFT':
+        case 'UNPOSTED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-bg)', color: '#4b5563', borderColor: 'var(--color-border-muted)' };
         case 'QUOTATION':
+        case 'PENDING_APPROVAL':
+        case 'WAITING_FOR_APPROVAL':
+        case 'WAITING_FOR_EXPORT':
+        case 'IN_TRANSIT':
+        case 'CANCEL_REQUESTED':
+        case 'HOLDING':
+        case 'PROCESSING':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' };
         case 'CONFIRMED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-primary-pale)', color: 'var(--wms-primary-hover)', borderColor: '#93c5fd' };
         case 'UNDER_REPAIR':
+        case 'REPAIRING':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fef3c7', color: 'var(--wms-warning-hover)', borderColor: '#fcd34d' };
         case 'APPROVED':
+        case 'ACTIVE':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: 'var(--color-success-bg)', color: '#166534', borderColor: '#86efac' };
         case 'POSTED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#f3e8ff', color: '#7e22ce', borderColor: '#d8b4fe' };
@@ -108,11 +140,18 @@ const getTransactionStatusMeta = (status) => {
         case 'COMPLETE':
         case 'COMPLETED':
         case 'DONE':
+        case 'RECEIVED':
+        case 'RETURNED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#ccfbf1', color: '#0f766e', borderColor: '#5eead4' };
+        case 'REJECTED':
         case 'CANCELLED':
+        case 'CANCELED':
+        case 'INACTIVE':
+        case 'EXPIRED':
+        case 'VOIDED':
             return { label: STATUS_LABELS[normalized] || status, backgroundColor: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' };
         default:
-            return { label: STATUS_LABELS[normalized] || status || 'Không rõ', backgroundColor: 'var(--color-primary-soft)', color: 'var(--color-primary-link)', borderColor: 'var(--color-info-border-soft)' };
+            return { label: STATUS_LABELS[normalized] || 'Không xác định', backgroundColor: 'var(--color-primary-soft)', color: 'var(--color-primary-link)', borderColor: 'var(--color-info-border-soft)' };
     }
 };
 
@@ -149,7 +188,6 @@ function AnalyticsDashboard() {
     const [error, setError] = useState('');
     const [activeDetail, setActiveDetail] = useState(null);
     const [inventoryFlowRange, setInventoryFlowRange] = useState('7days');
-    const [categoryScope, setCategoryScope] = useState('all');
     const [financeRange, setFinanceRange] = useState(String(currentYear));
 
     const handleRowClick = (transaction) => {
@@ -191,7 +229,6 @@ function AnalyticsDashboard() {
         try {
             const response = await getDashboardMetrics({
                 inventoryFlowRange,
-                categoryScope,
                 financeRange
             });
             setDashboard(unwrap(response));
@@ -204,7 +241,7 @@ function AnalyticsDashboard() {
                 setLoading(false);
             }
         }
-    }, [inventoryFlowRange, categoryScope, financeRange]);
+    }, [inventoryFlowRange, financeRange]);
 
     useEffect(() => {
         loadDashboard();
@@ -232,19 +269,19 @@ function AnalyticsDashboard() {
     const confirmedWarrantyRepairs = dashboard?.confirmedWarrantyRepairs || [];
     const recentTransactions = dashboard?.recentTransactions || [];
 
-    const trafficData = (dashboard?.inventoryFlow7Days || []).map((item) => ({
+    const rawTrafficData = (dashboard?.inventoryFlow7Days || []).map((item) => ({
         name: item.label,
         nhap: Number(item.importQuantity || 0),
         xuat: Number(item.exportQuantity || 0)
     }));
-
-    const pieColors = ['var(--color-primary)', 'var(--color-success-alt)', 'var(--color-warning)', 'var(--wms-danger)', 'var(--wms-text-muted)', '#0f766e'];
-    const categoryData = (dashboard?.categoryInventoryBreakdown || []).map((item, index) => ({
-        name: item.categoryName,
-        value: Number(item.inventoryValue || 0),
-        percentage: Number(item.percentage || 0),
-        color: pieColors[index % pieColors.length]
-    }));
+    const trafficData = inventoryFlowRange === '7days'
+        ? [...rawTrafficData].sort((left, right) => {
+            const leftOrder = WEEKDAY_ORDER.get(String(left.name || '').trim().toUpperCase());
+            const rightOrder = WEEKDAY_ORDER.get(String(right.name || '').trim().toUpperCase());
+            if (leftOrder == null || rightOrder == null) return 0;
+            return leftOrder - rightOrder;
+        })
+        : rawTrafficData;
 
     const financeData = (dashboard?.financeOverview || []).map((item) => ({
         month: item.label,
@@ -253,7 +290,7 @@ function AnalyticsDashboard() {
         congNo: Number(item.closingDebt || 0)
     }));
 
-    const topInventoryItems = finishedGoodInventoryItems.slice(0, 5);
+    const topInventoryItems = finishedGoodInventoryItems.slice(0, 3);
     const maxTopQuantity = topInventoryItems.reduce((max, item) => Math.max(max, Number(item.quantity || 0)), 0) || 1;
 
     const pendingTasks = [
@@ -474,11 +511,11 @@ function AnalyticsDashboard() {
                         <p className={styles.pageSubtitle}>Các chỉ số chính đang được lấy trực tiếp từ dữ liệu hệ thống.</p>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className="btn-misa-outline" onClick={() => navigate('/purchase-orders')}>
-                            <i className="bi bi-bag-plus"></i> Đơn mua hàng
+                        <button className="btn-misa-outline" onClick={() => navigate('/import-history')}>
+                            <i className="bi bi-box-arrow-in-down"></i> Phiếu nhập kho
                         </button>
-                        <button className="btn-misa-primary" onClick={() => navigate('/sales-orders')}>
-                            <i className="bi bi-cart3"></i> Đơn bán hàng
+                        <button className="btn-misa-primary" onClick={() => navigate('/export-slips')}>
+                            <i className="bi bi-box-arrow-up"></i> Phiếu xuất kho
                         </button>
                     </div>
                 </div>
@@ -573,46 +610,60 @@ function AnalyticsDashboard() {
                         </div>
                     </div>
 
-                    <div className={styles.pieChartCard}>
-                        <div className={styles.cardHeader}>
-                            <h3 className={styles.cardTitle}>Cơ Cấu Giá Trị Tồn Kho</h3>
-                            <select className={styles.chartFilter} value={categoryScope} onChange={(e) => setCategoryScope(e.target.value)}>
-                                <option value="all">Tất cả hàng hóa</option>
-                                <option value="finished">Chỉ thành phẩm</option>
-                                <option value="nonFinished">Khác thành phẩm</option>
-                            </select>
-                        </div>
-                        <div className={styles.chartBody} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', paddingBottom: '30px' }}>
-                            {categoryData.length > 0 ? (
-                                <>
-                                    <ResponsiveContainer width="100%" height={220}>
-                                        <PieChart>
-                                            <Pie data={categoryData} cx="50%" cy="50%" innerRadius={70} outerRadius={95} paddingAngle={3} dataKey="value" stroke="none">
-                                                {categoryData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip
-                                                formatter={(value, _name, context) => {
-                                                    const payload = context?.payload;
-                                                    return [`${money(value)} (${payload?.percentage || 0}%)`, 'Giá trị tồn'];
-                                                }}
-                                                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                    <div className={styles.pieLegend}>
-                                        {categoryData.map((item, index) => (
-                                            <div key={index} className={styles.legendItem}>
-                                                <span className={styles.legendDot} style={{ backgroundColor: item.color }}></span>
-                                                <span className={styles.legendText}>{item.name} <strong style={{ color: 'var(--color-text-strong)' }}>{item.percentage}%</strong></span>
-                                            </div>
-                                        ))}
+                    <div className={styles.rightColumnStack}>
+                        <div className={styles.pendingTasksCard}>
+                            <div className={styles.cardHeader}>
+                                <h3 className={styles.cardTitle}>Việc Cần Xử Lý</h3>
+                            </div>
+                            <div className={styles.taskList}>
+                                {pendingTasks.length > 0 ? pendingTasks.map((task) => (
+                                    <div key={task.id} className={styles.taskItem} onClick={task.onClick}>
+                                        <div className={`${styles.taskIcon} ${styles[`bg${task.color.charAt(0).toUpperCase()}${task.color.slice(1)}Soft`]}`}>
+                                            <i className={task.icon}></i>
+                                        </div>
+                                        <div className={styles.taskInfo}>
+                                            <p className={styles.taskTitle}>{task.title}</p>
+                                            <span className={styles.taskTime}>{task.time}</span>
+                                        </div>
                                     </div>
-                                </>
-                            ) : (
-                                <div className={styles.detailEmpty}>Chưa có dữ liệu cơ cấu tồn kho theo bộ lọc này.</div>
-                            )}
+                                )) : (
+                                    <div className={styles.detailEmpty}>Hiện chưa có việc nào nổi bật cần xử lý.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={styles.topProductsCard}>
+                            <div className={styles.cardHeader}>
+                                <h3 className={styles.cardTitle}>Top 3 Thành Phẩm Tồn Nhiều</h3>
+                                <button className={styles.viewAllBtn} onClick={() => setActiveDetail('inventory')}>
+                                    Xem tất cả <i className="bi bi-arrow-right" style={{ marginLeft: '4px' }}></i>
+                                </button>
+                            </div>
+                            <div className={styles.topProductsList}>
+                                {topInventoryItems.length > 0 ? topInventoryItems.map((item, index) => {
+                                    const colors = ['primary', 'green', 'orange'];
+                                    const color = colors[index % colors.length];
+                                    return (
+                                        <div key={item.variantId} className={styles.productItem}>
+                                            <div className={styles.productHeader}>
+                                                <div className={styles.productInfo}>
+                                                    <span className={styles.productName}>{item.variantName || item.productName}</span>
+                                                    <span className={styles.productSku}>{item.sku}</span>
+                                                </div>
+                                                <div className={styles.productSold}>{quantity(item.quantity)}</div>
+                                            </div>
+                                            <div className={styles.productProgressBg}>
+                                                <div
+                                                    className={`${styles.productProgressFill} ${styles[`bg${color.charAt(0).toUpperCase()}${color.slice(1)}`]}`}
+                                                    style={{ '--target-width': `${(Number(item.quantity || 0) / maxTopQuantity) * 100}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    );
+                                }) : (
+                                    <div className={styles.detailEmpty}>Chưa có dữ liệu tồn kho thành phẩm.</div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -653,7 +704,7 @@ function AnalyticsDashboard() {
                     </div>
                 </div>
 
-                <div className={styles.bottomGrid}>
+                <div className={styles.fullWidthGrid}>
                     <div className={styles.transactionsCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Hoạt Động Gần Đây</h3>
@@ -662,7 +713,7 @@ function AnalyticsDashboard() {
                             <table className={`misa-table ${styles.txTable}`}>
                                 <thead>
                                     <tr>
-                                        <th>Loại GD</th>
+                                        <th>Loại Giao Dịch</th>
                                         <th>Mã đơn</th>
                                         <th>Đối tác / Khách hàng</th>
                                         <th>Trạng thái</th>
@@ -716,62 +767,6 @@ function AnalyticsDashboard() {
                         </div>
                     </div>
 
-                    <div className={styles.rightColumnStack}>
-                        <div className={styles.topProductsCard}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Top 5 Thành Phẩm Tồn Nhiều</h3>
-                                <button className={styles.viewAllBtn} onClick={() => setActiveDetail('inventory')}>
-                                    Xem tất cả <i className="bi bi-arrow-right" style={{ marginLeft: '4px' }}></i>
-                                </button>
-                            </div>
-                            <div className={styles.topProductsList}>
-                                {topInventoryItems.length > 0 ? topInventoryItems.map((item, index) => {
-                                    const colors = ['primary', 'green', 'orange', 'purple', 'slate'];
-                                    const color = colors[index % colors.length];
-                                    return (
-                                        <div key={item.variantId} className={styles.productItem}>
-                                            <div className={styles.productHeader}>
-                                                <div className={styles.productInfo}>
-                                                    <span className={styles.productName}>{item.variantName || item.productName}</span>
-                                                    <span className={styles.productSku}>{item.sku}</span>
-                                                </div>
-                                                <div className={styles.productSold}>{quantity(item.quantity)}</div>
-                                            </div>
-                                            <div className={styles.productProgressBg}>
-                                                <div
-                                                    className={`${styles.productProgressFill} ${styles[`bg${color.charAt(0).toUpperCase()}${color.slice(1)}`]}`}
-                                                    style={{ '--target-width': `${(Number(item.quantity || 0) / maxTopQuantity) * 100}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    );
-                                }) : (
-                                    <div className={styles.detailEmpty}>Chưa có dữ liệu tồn kho thành phẩm.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className={styles.pendingTasksCard}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Việc Cần Xử Lý</h3>
-                            </div>
-                            <div className={styles.taskList}>
-                                {pendingTasks.length > 0 ? pendingTasks.map((task) => (
-                                    <div key={task.id} className={styles.taskItem} onClick={task.onClick}>
-                                        <div className={`${styles.taskIcon} ${styles[`bg${task.color.charAt(0).toUpperCase()}${task.color.slice(1)}Soft`]}`}>
-                                            <i className={task.icon}></i>
-                                        </div>
-                                        <div className={styles.taskInfo}>
-                                            <p className={styles.taskTitle}>{task.title}</p>
-                                            <span className={styles.taskTime}>{task.time}</span>
-                                        </div>
-                                    </div>
-                                )) : (
-                                    <div className={styles.detailEmpty}>Hiện chưa có việc nào nổi bật cần xử lý.</div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
