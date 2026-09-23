@@ -452,7 +452,7 @@ function PurchaseOrderDetailPage() {
           <div className={styles.cardTitle}>
             <i className="bi bi-list-ul" /> Danh sách hàng hóa
           </div>
-          <div style={{ overflowX: 'auto', padding: '0 12px 12px' }}>
+          <div className={styles.detailLinesTable}>
             <ResponsiveTable
               columns={linesColumns}
               data={po.lines || []}

@@ -552,7 +552,7 @@ function CreatePurchaseOrderPage() {
 
   const linesColumns = [
     { title: '#', width: 36, align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)', fontSize: 13 }}>{idx + 1}</span> },
-    { title: 'Sản phẩm', minWidth: 260, render: (_, line, idx) => (
+    { title: 'Sản phẩm', width: 320, render: (_, line, idx) => (
         <ProductGridSelect
           id={`po-line-product-${idx}`}
           products={productOptions}
@@ -608,7 +608,7 @@ function CreatePurchaseOrderPage() {
         />
       )
     },
-    { title: 'VAT (%)', width: 80, align: 'center', render: (_, line, idx) => (
+    { title: 'VAT (%)', width: 75, align: 'center', render: (_, line, idx) => (
         <select
           id={`po-line-vat-${idx}`}
           className={styles.cellInput}
