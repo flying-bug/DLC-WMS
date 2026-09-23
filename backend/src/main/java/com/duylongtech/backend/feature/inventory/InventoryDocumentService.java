@@ -498,8 +498,10 @@ public class InventoryDocumentService {
         validateUpdateRequest(req);
         inventoryValidationService.validateOrderLineQuantities(req, id);
         InventoryDocument doc = findExportOrThrow(id);
-        if (isRepairInventoryDocument(doc)) {
-            return updateRepairExportSerials(doc, req);
+        // Phiếu xuất tự sinh của lệnh sửa chữa / lắp ráp: thủ kho chỉ được chọn serial (phiếu lắp ráp được tạo không
+        // kèm serial nên bắt buộc phải chọn), mã hàng / số lượng / kho giữ theo lệnh.
+        if (isManagedInventoryDocument(doc)) {
+            return updateManagedExportSerials(doc, req);
         }
         inventoryValidationService.validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
                 req.getReferenceId(), req.getLines());
@@ -1760,16 +1762,17 @@ public class InventoryDocumentService {
      * Repair exports already own held FIFO allocations. Warehouse staff may attach
      * physical serials, but replacing the lines would cascade-delete those holds.
      */
-    private InventoryDocumentResponse updateRepairExportSerials(InventoryDocument doc, InventoryDocumentRequest req) {
+    private InventoryDocumentResponse updateManagedExportSerials(InventoryDocument doc, InventoryDocumentRequest req) {
         String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
             throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
         }
+        String orderLabel = isRepairInventoryDocument(doc) ? "sửa chữa" : "lắp ráp";
         if (!java.util.Objects.equals(doc.getWarehouseId(), req.getWarehouseId())) {
-            throw new BusinessException("Không được thay đổi kho của phiếu xuất sửa chữa");
+            throw new BusinessException("Không được thay đổi kho của phiếu xuất " + orderLabel);
         }
         if (req.getLines() == null || req.getLines().size() != doc.getLines().size()) {
-            throw new BusinessException("Không được thêm hoặc xóa dòng trên phiếu xuất sửa chữa");
+            throw new BusinessException("Không được thêm hoặc xóa dòng trên phiếu xuất " + orderLabel);
         }
 
         for (int i = 0; i < doc.getLines().size(); i++) {

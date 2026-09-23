@@ -13,10 +13,11 @@ import * as exportApi from '../../api/inventoryExportApi';
 import styles from './WarehouseDocumentFormPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
-// Phiếu kho tự sinh từ lệnh lắp ráp / sửa chữa: số lượng và serial lấy theo lệnh, backend từ chối mọi lệnh sửa
-// (InventoryDocumentService.ensureEditable) nên thủ kho chỉ được ghi sổ, không sửa tại đây.
-const isManagedDocument = (document) =>
-  ['ASSEMBLY_ORDER', 'REPAIR'].includes(String(document?.referenceType || '').trim().toUpperCase());
+// Phiếu XUẤT tự sinh từ lệnh lắp ráp / sửa chữa: mã hàng và số lượng theo lệnh, thủ kho chỉ chọn serial
+// (backend InventoryDocumentService.updateManagedExportSerials từ chối đổi số lượng). Phiếu nhập tự sinh không
+// áp dụng: phiếu nhập phế liệu sửa chữa cho phép nhập số lượng thực nhận.
+const isManagedExport = (document, isImport) =>
+  !isImport && ['ASSEMBLY_ORDER', 'REPAIR'].includes(String(document?.referenceType || '').trim().toUpperCase());
 
 export default function WarehouseDocumentFormPage() {
   const { id } = useParams();
@@ -185,10 +186,6 @@ export default function WarehouseDocumentFormPage() {
       if (l.trackSerial && act > 0) {
         const snCount = (l.serialList || []).length;
         if (snCount !== act) {
-          if (isManagedDocument(doc)) {
-            showToast('warning', `Dòng ${i + 1} (${l.productName}): Phiếu chưa đủ ${act} mã serial (hiện có ${snCount}). Serial của phiếu này được chọn trên lệnh lắp ráp / sửa chữa.`);
-            return false;
-          }
           setSelectedLineIdx(i);
           setSerialModalOpen(true);
           showToast('warning', `Dòng ${i + 1} (${l.productName}): Vui lòng quét đủ ${act} mã serial (hiện có ${snCount}).`);
@@ -250,15 +247,13 @@ export default function WarehouseDocumentFormPage() {
     try {
       setSaving(true);
       const payload = buildPayload();
-      // Phiếu tự sinh của lệnh kỹ thuật không được sửa: ghi sổ thẳng, không gửi lệnh cập nhật.
-      const shouldSave = documentChangedRef.current && !isManagedDocument(doc);
       if (isImport) {
-        if (shouldSave) {
+        if (documentChangedRef.current) {
           await importApi.updateImportSlip(doc.id, payload);
         }
         await importApi.postImportSlip(doc.id);
       } else {
-        if (shouldSave) {
+        if (documentChangedRef.current) {
           await exportApi.updateExportSlip(doc.id, payload);
         }
         await exportApi.postExportSlip(doc.id);
@@ -341,7 +336,7 @@ export default function WarehouseDocumentFormPage() {
   }
 
   const isPosted = doc.status === 'POSTED' || doc.status === 'COMPLETED';
-  const isManagedDoc = isManagedDocument(doc);
+  const isManagedDoc = isManagedExport(doc, isImport);
   const isLinesEditable = !isPosted && !isManagedDoc;
   const isUnposted = doc.status === 'UNPOSTED';
   const isCancelled = doc.status === 'CANCELLED';
@@ -523,7 +518,7 @@ export default function WarehouseDocumentFormPage() {
               <i className="bi bi-info-circle" style={{ color: 'var(--color-primary)', fontSize: '1.25rem' }}></i>
               <span>
                 Phiếu tự động của lệnh {String(doc.referenceType).toUpperCase() === 'REPAIR' ? 'sửa chữa' : 'lắp ráp'}:
-                số lượng và serial theo lệnh, không sửa tại đây. Kiểm hàng rồi bấm Xác nhận Ghi sổ kho.
+                mã hàng và số lượng theo lệnh. Bấm nút serial ở từng dòng để chọn serial xuất rồi Xác nhận Ghi sổ kho.
               </span>
             </div>
           )}
@@ -629,7 +624,6 @@ export default function WarehouseDocumentFormPage() {
                                     ? `Đã nhập đủ ${snCount} serial`
                                     : 'Nhập / quét serial cho mặt hàng này'
                               }
-                              disabled={isManagedDoc && !isPosted}
                               onClick={() => {
                                 setSelectedLineIdx(idx);
                                 setSerialModalOpen(true);
@@ -849,7 +843,8 @@ export default function WarehouseDocumentFormPage() {
                 setLines((prev) => {
                   const next = [...prev];
                   next[selectedLineIdx].serialList = savedSerials;
-                  if (savedSerials.length > 0) {
+                  // Phiếu tự sinh giữ số lượng theo lệnh (backend từ chối đổi số lượng), chỉ cập nhật serial.
+                  if (savedSerials.length > 0 && !isManagedExport(doc, isImport)) {
                     next[selectedLineIdx].actualQty = savedSerials.length;
                   }
                   return next;
