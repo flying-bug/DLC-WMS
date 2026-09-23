@@ -93,6 +93,11 @@
   white-space: nowrap;
 }
 .btnSuccess:hover { background: var(--color-success-dark); }
+.btnSuccess:disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+.btnSuccess:disabled:hover { background: var(--color-success); }
 
 .btnWarning {
   display: flex;

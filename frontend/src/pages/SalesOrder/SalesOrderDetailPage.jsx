@@ -320,6 +320,27 @@ function SalesOrderDetailPage() {
   const taxAmount = so.taxAmount || 0;
   const totalAmount = so.totalAmount || (subTotalAmount + taxAmount);
 
+  const resolveExportWarehouseName = (doc) => {
+    const warehouseId = Number(doc.warehouseId);
+    const matchingDocumentLine = doc.lines?.find(line => (
+      line.warehouseName && (!doc.warehouseId || Number(line.warehouseId) === warehouseId)
+    ));
+    const matchingOrderLine = so.lines?.find(line => (
+      line.warehouseName && Number(line.warehouseId) === warehouseId
+    ));
+    const matchingReservation = so.reservations?.find(reservation => (
+      reservation.warehouseName && Number(reservation.warehouseId) === warehouseId
+    ));
+    const isOrderWarehouse = doc.warehouseId && Number(so.warehouseId) === warehouseId;
+
+    return doc.warehouseName
+      || matchingDocumentLine?.warehouseName
+      || matchingOrderLine?.warehouseName
+      || matchingReservation?.warehouseName
+      || (isOrderWarehouse ? so.warehouseName : null)
+      || '—';
+  };
+
   const linesColumns = [
     { title: '#', width: '50px', render: (_, __, idx) => idx + 1 },
     { title: 'SKU', render: (_, line) => <span className={styles.skuBadge}>{line.sku || `#${line.variantId}`}</span> },
@@ -394,7 +415,7 @@ function SalesOrderDetailPage() {
     { title: '#', width: '40px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
     { title: 'Mã phiếu xuất', render: (_, doc) => <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/export-slips/${doc.id}/edit`)}>{doc.docCode}</strong> },
     { title: 'Ngày xuất', render: (_, doc) => doc.docDate || fmtDateTime(doc.createdAt) },
-    { title: 'Kho xuất', render: (_, doc) => doc.warehouseName || (doc.warehouseId ? `Kho #${doc.warehouseId}` : '—') },
+    { title: 'Kho xuất', render: (_, doc) => resolveExportWarehouseName(doc) },
     { title: 'Số lượng', align: 'center', render: (_, doc) => {
         const qtyTotal = doc.lines?.reduce((s, l) => s + (Number(l.quantityOut ?? l.quantity ?? 0)), 0) || doc.totalQuantity || 0;
         return <span style={{ fontWeight: 600 }}>{Number(qtyTotal).toLocaleString('vi-VN')}</span>;
@@ -724,14 +745,14 @@ function SalesOrderDetailPage() {
               <>
                 {existingDraftExport ? (
                   <button
-                    className={styles.btnWarning}
+                    className={styles.btnPrimary}
                     onClick={handleContinueExport}
                   >
                     <i className="bi bi-arrow-right-circle" />
                     {draftExports.length > 1 ? ` Còn ${draftExports.length} phiếu xuất cần xử lý` : ' Tiếp tục xuất kho'}
                   </button>
                 ) : so.isFullyExported ? (
-                  <button className={styles.btnSecondary} disabled title="Đơn hàng này đã xuất kho đủ 100%">
+                  <button className={styles.btnSuccess} disabled title="Đơn hàng này đã xuất kho đủ 100%">
                     <i className="bi bi-check-all" /> Đã xuất kho đủ
                   </button>
                 ) : (
