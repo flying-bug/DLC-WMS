@@ -89,8 +89,29 @@ public class ReportRepository {
             WHERE balances.balance_quantity > 0
             """;
 
+    /**
+     * Giới hạn truy vấn theo danh sách kho người dùng được xem. null = không giới hạn; danh sách rỗng
+     * phải được chặn trước khi gọi (không có kho nào thì không truy vấn).
+     */
+    private static void appendWarehouseFilter(StringBuilder sql, List<Object> params, List<Long> warehouseIds,
+                                              String... columns) {
+        if (warehouseIds == null) {
+            return;
+        }
+        String placeholders = String.join(", ", java.util.Collections.nCopies(warehouseIds.size(), "?"));
+        List<String> conditions = new ArrayList<>();
+        for (String column : columns) {
+            conditions.add(column + " IN (" + placeholders + ")");
+            params.addAll(warehouseIds);
+        }
+        sql.append(" AND (").append(String.join(" OR ", conditions)).append(") ");
+    }
+
     // 1. Inventory Balance Report
-    public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
+    public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, List<Long> warehouseIds) {
+        if (warehouseIds != null && warehouseIds.isEmpty()) {
+            return List.of();
+        }
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
                         "pv.sku AS itemCode, " +
@@ -150,10 +171,7 @@ public class ReportRepository {
         );
         List<Object> params = new ArrayList<>();
 
-        if (warehouseId != null) {
-            sql.append(" AND ib.warehouse_id = ? ");
-            params.add(warehouseId);
-        }
+        appendWarehouseFilter(sql, params, warehouseIds, "ib.warehouse_id");
         if (search != null && !search.trim().isEmpty()) {
             sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ?) ");
             params.add("%" + search + "%");
@@ -182,7 +200,10 @@ public class ReportRepository {
 
 
     // 2. Stock Ledger Report
-    public List<StockLedgerReportResponse> getStockLedgerReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
+    public List<StockLedgerReportResponse> getStockLedgerReport(List<Long> warehouseIds, LocalDateTime startDate, LocalDateTime endDate, String search) {
+        if (warehouseIds != null && warehouseIds.isEmpty()) {
+            return List.of();
+        }
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
                         "w.name AS warehouseName, " +
@@ -221,10 +242,7 @@ public class ReportRepository {
         );
         List<Object> params = new ArrayList<>();
 
-        if (warehouseId != null) {
-            sql.append(" AND l.warehouse_id = ? ");
-            params.add(warehouseId);
-        }
+        appendWarehouseFilter(sql, params, warehouseIds, "l.warehouse_id");
         if (startDate != null) {
             sql.append(" AND l.movement_at >= ? ");
             params.add(startDate);
@@ -261,7 +279,10 @@ public class ReportRepository {
     }
 
     // 3. Stock Transfer Report
-    public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status) {
+    public List<StockTransferReportResponse> getStockTransferReport(List<Long> warehouseIds, LocalDate startDate, LocalDate endDate, String search, String status) {
+        if (warehouseIds != null && warehouseIds.isEmpty()) {
+            return List.of();
+        }
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
                         "st.transfer_date AS documentDate, " +
@@ -294,11 +315,7 @@ public class ReportRepository {
             sql.append(" AND st.status IN ('APPROVED', 'POSTED') ");
         }
 
-        if (warehouseId != null) {
-            sql.append(" AND (st.from_warehouse_id = ? OR st.to_warehouse_id = ?) ");
-            params.add(warehouseId);
-            params.add(warehouseId);
-        }
+        appendWarehouseFilter(sql, params, warehouseIds, "st.from_warehouse_id", "st.to_warehouse_id");
         if (startDate != null) {
             sql.append(" AND st.transfer_date >= ? ");
             params.add(startDate);
@@ -402,30 +419,32 @@ public class ReportRepository {
     }
 
     // 5. Inventory Summary Report
-    public List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
+    public List<InventorySummaryReportResponse> getInventorySummaryReport(List<Long> warehouseIds, LocalDateTime startDate, LocalDateTime endDate, String search) {
+        if (warehouseIds != null && warehouseIds.isEmpty()) {
+            return List.of();
+        }
         LocalDate targetDate = (startDate != null ? startDate.toLocalDate() : LocalDate.now()).minusDays(1);
 
+        // Snapshot chốt sổ lưu theo (kho, biến thể) nên tồn đầu kỳ phải tính theo từng biến thể trước (bảng con),
+        // rồi mới cộng lên theo sản phẩm. Bản cũ gộp thẳng theo sản phẩm với MAX(snapshot) nên sản phẩm có từ
+        // 2 biến thể trở lên chỉ lấy tồn đầu của biến thể lớn nhất.
         StringBuilder sql = new StringBuilder(
             "SELECT " +
-            "w.name AS warehouseName, " +
-            "p.product_code AS productCode, " +
-            "p.product_name AS productName, " +
-            "u.name AS unitName, " +
             "COALESCE(MAX(ids.closing_quantity), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in - l.quantity_out ELSE 0 END), 0)) AS openingQuantity, " +
             "COALESCE(MAX(ids.closing_value), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN (l.quantity_in * l.unit_cost) - (l.quantity_out * l.unit_cost) ELSE 0 END), 0)) AS openingValue, " +
             "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in ELSE 0 END), 0) AS receiptQuantity, " +
             "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in * l.unit_cost ELSE 0 END), 0) AS receiptValue, " +
             "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out ELSE 0 END), 0) AS issueQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out * l.unit_cost ELSE 0 END), 0) AS issueValue " +
-            "FROM product_variants pv " +
-            "JOIN products p ON pv.product_id = p.id " +
-            "JOIN units u ON p.unit_id = u.id " +
-            "JOIN inventory_ledger l ON l.variant_id = pv.id " +
-            "JOIN warehouses w ON l.warehouse_id = w.id " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out * l.unit_cost ELSE 0 END), 0) AS issueValue, " +
+            "l.warehouse_id AS warehouseId, " +
+            "pv.product_id AS productId " +
+            "FROM inventory_ledger l " +
+            "JOIN product_variants pv ON l.variant_id = pv.id " +
+            "JOIN products sp ON pv.product_id = sp.id " +
             "LEFT JOIN inventory_daily_snapshots ids ON ids.snapshot_date = ? AND ids.warehouse_id = l.warehouse_id AND ids.variant_id = l.variant_id " +
             "WHERE 1=1 "
         );
-        
+
         List<Object> params = new ArrayList<>();
         params.add(startDate);
         params.add(startDate);
@@ -439,17 +458,31 @@ public class ReportRepository {
         params.add(endDate);
         params.add(targetDate);
 
-        if (warehouseId != null) {
-            sql.append(" AND l.warehouse_id = ? ");
-            params.add(warehouseId);
-        }
+        appendWarehouseFilter(sql, params, warehouseIds, "l.warehouse_id");
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ?) ");
+            sql.append(" AND (sp.product_code LIKE ? OR sp.product_name LIKE ?) ");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
+        sql.append(" GROUP BY l.warehouse_id, l.variant_id, pv.product_id ");
 
-        sql.append(" GROUP BY w.id, w.name, p.product_code, p.product_name, u.name ");
+        sql.insert(0, "SELECT " +
+            "w.name AS warehouseName, " +
+            "p.product_code AS productCode, " +
+            "p.product_name AS productName, " +
+            "u.name AS unitName, " +
+            "SUM(v.openingQuantity) AS openingQuantity, " +
+            "SUM(v.openingValue) AS openingValue, " +
+            "SUM(v.receiptQuantity) AS receiptQuantity, " +
+            "SUM(v.receiptValue) AS receiptValue, " +
+            "SUM(v.issueQuantity) AS issueQuantity, " +
+            "SUM(v.issueValue) AS issueValue " +
+            "FROM (");
+        sql.append(") v " +
+            "JOIN products p ON v.productId = p.id " +
+            "JOIN units u ON p.unit_id = u.id " +
+            "JOIN warehouses w ON v.warehouseId = w.id ");
+        sql.append(" GROUP BY w.id, w.name, p.id, p.product_code, p.product_name, u.name ");
         sql.append(" ORDER BY w.name, p.product_code ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {

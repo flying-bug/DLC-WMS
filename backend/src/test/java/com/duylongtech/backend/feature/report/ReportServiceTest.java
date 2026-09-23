@@ -65,6 +65,51 @@ class ReportServiceTest {
     }
 
     @Test
+    void warehouseReportsOnlyCoverAssignedWarehousesWhenNoWarehouseWasSelected() {
+        when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(List.of(3L, 7L));
+
+        reportService.getInventoryBalanceReport(null, null);
+        reportService.getStockLedgerReport(null, null, null, null);
+        reportService.getStockTransferReport(null, null, null, null, null);
+        reportService.getInventorySummaryReport(null, null, null, null);
+
+        verify(reportRepository).getInventoryBalanceReport(null, List.of(3L, 7L));
+        verify(reportRepository).getStockLedgerReport(List.of(3L, 7L), null, null, null);
+        verify(reportRepository).getStockTransferReport(List.of(3L, 7L), null, null, null, null);
+        verify(reportRepository).getInventorySummaryReport(List.of(3L, 7L), null, null, null);
+    }
+
+    @Test
+    void warehouseReportsAreUnrestrictedForManagers() {
+        when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(null);
+
+        reportService.getInventoryBalanceReport("RAM", null);
+
+        verify(reportRepository).getInventoryBalanceReport("RAM", null);
+    }
+
+    @Test
+    void warehouseReportsRejectWarehouseOutsideTheAssignment() {
+        when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(List.of(3L));
+
+        assertThrows(BusinessException.class, () -> reportService.getInventoryBalanceReport(null, 7L));
+        assertThrows(BusinessException.class, () -> reportService.getStockLedgerReport(7L, null, null, null));
+        assertThrows(BusinessException.class, () -> reportService.getStockTransferReport(7L, null, null, null, null));
+        assertThrows(BusinessException.class, () -> reportService.getInventorySummaryReport(7L, null, null, null));
+    }
+
+    @Test
+    void excelExportAppliesTheSameWarehouseScope() {
+        when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(List.of(3L));
+
+        assertThrows(BusinessException.class,
+                () -> reportService.exportReportToExcel("inventory-balance", 7L, null, null, null, null, null));
+
+        reportService.exportReportToExcel("inventory-balance", null, null, null, null, null, null);
+        verify(reportRepository).getInventoryBalanceReport(null, List.of(3L));
+    }
+
+    @Test
     void repairProfitRejectsAnInvertedDateRange() {
         LocalDateTime start = LocalDate.of(2026, 10, 1).atStartOfDay();
         LocalDateTime end = LocalDate.of(2026, 9, 30).atTime(23, 59, 59);

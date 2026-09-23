@@ -23,16 +23,32 @@ public class ReportService {
     private final ProductService productService;
     private final com.duylongtech.backend.feature.sales_order.SalesOrderRepository salesOrderRepository;
     private final WarehouseAccessGuard warehouseAccessGuard;
+
+    /**
+     * Các kho được đưa vào báo cáo: null = mọi kho (Manager/Kế toán), ngược lại chỉ các kho người dùng được
+     * phân công. Chọn một kho ngoài phạm vi thì báo lỗi thay vì trả về rỗng để người dùng biết lý do.
+     */
+    private List<Long> resolveWarehouseScope(Long warehouseId) {
+        List<Long> allowedWarehouseIds = warehouseAccessGuard.resolveAllowedWarehouseIds();
+        if (warehouseId == null) {
+            return allowedWarehouseIds;
+        }
+        if (allowedWarehouseIds != null && !allowedWarehouseIds.contains(warehouseId)) {
+            throw new BusinessException("Bạn không có quyền xem báo cáo của kho này");
+        }
+        return List.of(warehouseId);
+    }
+
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
-        return reportRepository.getInventoryBalanceReport(search, warehouseId);
+        return reportRepository.getInventoryBalanceReport(search, resolveWarehouseScope(warehouseId));
     }
     public List<StockLedgerReportResponse> getStockLedgerReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Stock Ledger Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
-        return reportRepository.getStockLedgerReport(warehouseId, startDate, endDate, search);
+        return reportRepository.getStockLedgerReport(resolveWarehouseScope(warehouseId), startDate, endDate, search);
     }
     public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status) {
         log.info("Fetching Stock Transfer Report. warehouseId={}, startDate={}, endDate={}, search={}, status={}", warehouseId, startDate, endDate, search, status);
-        return reportRepository.getStockTransferReport(warehouseId, startDate, endDate, search, status);
+        return reportRepository.getStockTransferReport(resolveWarehouseScope(warehouseId), startDate, endDate, search, status);
     }
     public List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType) {
         log.info("Fetching Debt Report. startDate={}, endDate={}, search={}, partnerType={}", startDate, endDate, search, partnerType);
@@ -40,7 +56,7 @@ public class ReportService {
     }
     public List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Inventory Summary Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
-        return reportRepository.getInventorySummaryReport(warehouseId, startDate, endDate, search);
+        return reportRepository.getInventorySummaryReport(resolveWarehouseScope(warehouseId), startDate, endDate, search);
     }
     public DashboardResponse getDashboardMetrics(String inventoryFlowRange, String categoryScope, String financeRange) {
         log.info("Fetching Dashboard Metrics. inventoryFlowRange={}, categoryScope={}, financeRange={}", inventoryFlowRange, categoryScope, financeRange);
@@ -80,17 +96,8 @@ public class ReportService {
             throw new BusinessException("Ngày bắt đầu không được sau ngày kết thúc");
         }
 
-        List<Long> allowedWarehouseIds = warehouseAccessGuard.resolveAllowedWarehouseIds();
-        List<Long> effectiveWarehouseIds = allowedWarehouseIds;
-        if (warehouseId != null) {
-            if (allowedWarehouseIds != null && !allowedWarehouseIds.contains(warehouseId)) {
-                throw new BusinessException("Bạn không có quyền xem báo cáo của kho này");
-            }
-            effectiveWarehouseIds = List.of(warehouseId);
-        }
-
         return reportRepository.getRepairProfitReport(
-                start, end, search, effectiveWarehouseIds);
+                start, end, search, resolveWarehouseScope(warehouseId));
     }
     public byte[] exportReportToExcel(String reportType, Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType, String status) {
         log.info("Exporting report to Excel. Type={}, warehouseId={}, startDate={}, endDate={}, search={}", reportType, warehouseId, startDate, endDate, search);
@@ -132,7 +139,7 @@ public class ReportService {
             // Retrieve data based on type
             if ("inventory-summary".equals(reportType)) {
                 reportTitle = "BAO CAO TONG HOP TON KHO (NHAP - XUAT - TON)";
-                List<InventorySummaryReportResponse> data = reportRepository.getInventorySummaryReport(warehouseId, startDate, endDate, search);
+                List<InventorySummaryReportResponse> data = getInventorySummaryReport(warehouseId, startDate, endDate, search);
                 
                 // Inventory Summary uses 2 header rows
                 org.apache.poi.ss.usermodel.Row header1 = sheet.createRow(3);
@@ -188,7 +195,7 @@ public class ReportService {
                 }
             } else if ("inventory-balance".equals(reportType)) {
                 reportTitle = "BAO CAO TON KHO HIEN TAI";
-                List<InventoryBalanceReportResponse> data = reportRepository.getInventoryBalanceReport(search, warehouseId);
+                List<InventoryBalanceReportResponse> data = getInventoryBalanceReport(search, warehouseId);
                 columns = new String[]{"Mã hàng", "Tên hàng", "Đơn vị tính", "Kho chứa", "Số lượng tồn", "Giá trị tồn"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
@@ -218,7 +225,7 @@ public class ReportService {
                 }
             } else if ("stock-ledger".equals(reportType)) {
                 reportTitle = "SO CHI TIET VAT TU HANG HOA";
-                List<StockLedgerReportResponse> data = reportRepository.getStockLedgerReport(warehouseId, startDate, endDate, search);
+                List<StockLedgerReportResponse> data = getStockLedgerReport(warehouseId, startDate, endDate, search);
                 columns = new String[]{"Ngày CT", "Số chứng từ", "Loại CT", "Mã hàng", "Tên hàng", "Kho", "ĐVT", "Đơn giá", "Số lượng nhập", "Số lượng xuất", "Tồn sau CT"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
@@ -255,7 +262,7 @@ public class ReportService {
                 reportTitle = "BAO CAO CHUYEN KHO NOI BO";
                 LocalDate startLd = startDate != null ? startDate.toLocalDate() : null;
                 LocalDate endLd = endDate != null ? endDate.toLocalDate() : null;
-                List<StockTransferReportResponse> data = reportRepository.getStockTransferReport(warehouseId, startLd, endLd, search, status);
+                List<StockTransferReportResponse> data = getStockTransferReport(warehouseId, startLd, endLd, search, status);
                 columns = new String[]{"Ngày CT", "Số chứng từ", "Mã hàng", "Tên hàng", "Kho chuyển", "Kho nhận", "ĐVT", "Số lượng", "Đơn giá", "Thành tiền", "Trạng thái"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);

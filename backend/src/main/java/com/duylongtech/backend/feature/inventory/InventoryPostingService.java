@@ -781,6 +781,14 @@ public class InventoryPostingService {
                     && doc.getReferenceId() != null;
             inventoryCostAllocationService.restoreAfterUnpost(doc, line, keepReserved);
 
+            // Trừ lại giá vốn đã cộng vào dòng SO lúc ghi sổ (fulfillReservation), đúng SO và kho như lúc ghi sổ.
+            Long soId = com.duylongtech.backend.enums.ReferenceType.resolveEffectiveSalesOrderId(
+                    doc.getSalesOrderId(), doc.getReferenceType(), doc.getReferenceId());
+            if (soId != null && line.getUnitCost() != null) {
+                salesOrderService.reverseFulfilledCost(soId, line.getVariantId(), effectiveWarehouseId,
+                        line.getUnitCost().multiply(qtyOut));
+            }
+
             // Trả lại trạng thái Serial = AVAILABLE
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
                 String[] rawSerials = line.getSerialNumbersText().split("[,;\\s\\n]+");

@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
-import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 
 @RestController
 @RequestMapping("/api/v1/reports")
@@ -20,13 +19,6 @@ import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 public class ReportController {
 
     private final ReportService reportService;
-    private final com.duylongtech.backend.feature.inventory.InventoryBalanceRepository inventoryBalanceRepository;
-
-    @GetMapping("/debug-balances")
-    @PreAuthorize("hasAuthority('report_balance:view') or hasRole('SUPER_ADMIN')")
-    public ResponseEntity<List<com.duylongtech.backend.feature.inventory.InventoryBalance>> debugBalances() {
-        return ResponseEntity.ok(inventoryBalanceRepository.findAll());
-    }
 
     @GetMapping("/inventory-balance")
     @PreAuthorize("hasAuthority('report_balance:view') or hasRole('SUPER_ADMIN')")

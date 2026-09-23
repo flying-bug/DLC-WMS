@@ -410,20 +410,8 @@ public class SalesOrderService {
         }
 
         // Cập nhật giá vốn FIFO vào SalesOrderLine
-        salesOrderRepository.findByIdWithDetails(salesOrderId).ifPresent(so -> {
-            boolean isUpdated = false;
-            for (SalesOrderLine line : so.getLines()) {
-                if (line.getVariantId().equals(variantId)) {
-                    BigDecimal currentCost = line.getCostAmount() != null ? line.getCostAmount() : BigDecimal.ZERO;
-                    line.setCostAmount(currentCost.add(costAmountFulfilled != null ? costAmountFulfilled : BigDecimal.ZERO));
-                    isUpdated = true;
-                    break;
-                }
-            }
-            if (isUpdated) {
-                salesOrderRepository.save(so);
-            }
-        });
+        adjustLineCost(salesOrderId, variantId, warehouseId,
+                costAmountFulfilled != null ? costAmountFulfilled : BigDecimal.ZERO);
 
         // Kiểm tra nếu tất cả reservations đều FULFILLED → SO = POSTED. Với SO đa kho, mỗi
         // phiếu xuất (1 kho) ghi sổ xong chỉ fulfill phần reservation của kho đó - so.markAsPosted()
@@ -440,6 +428,41 @@ public class SalesOrderService {
                 }
             });
         }
+    }
+
+    /**
+     * Bỏ ghi sổ phiếu xuất: trừ lại giá vốn đã cộng vào dòng SO lúc ghi sổ. Thiếu bước này thì ghi sổ, bỏ ghi
+     * sổ rồi ghi sổ lại sẽ cộng giá vốn hai lần và báo cáo lãi gộp bị thấp đi.
+     */
+    @Transactional
+    public void reverseFulfilledCost(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal costAmount) {
+        if (costAmount == null || costAmount.signum() == 0) {
+            return;
+        }
+        adjustLineCost(salesOrderId, variantId, warehouseId, costAmount.negate());
+    }
+
+    /**
+     * Cộng (hoặc trừ, khi delta âm) giá vốn FIFO vào dòng SO của sản phẩm. SO bán đa kho có thể có cùng sản phẩm
+     * ở 2 kho, nên ưu tiên dòng đúng kho xuất; ghi sổ và bỏ ghi sổ dùng chung quy tắc này để trừ đúng dòng đã cộng.
+     */
+    private void adjustLineCost(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal delta) {
+        salesOrderRepository.findByIdWithDetails(salesOrderId).ifPresent(so -> {
+            SalesOrderLine target = so.getLines().stream()
+                    .filter(line -> line.getVariantId().equals(variantId))
+                    .filter(line -> java.util.Objects.equals(
+                            line.getWarehouseId() != null ? line.getWarehouseId() : so.getWarehouseId(), warehouseId))
+                    .findFirst()
+                    .orElseGet(() -> so.getLines().stream()
+                            .filter(line -> line.getVariantId().equals(variantId))
+                            .findFirst().orElse(null));
+            if (target == null) {
+                return;
+            }
+            BigDecimal currentCost = target.getCostAmount() != null ? target.getCostAmount() : BigDecimal.ZERO;
+            target.setCostAmount(currentCost.add(delta).max(BigDecimal.ZERO));
+            salesOrderRepository.save(so);
+        });
     }
 
     /**
@@ -574,6 +597,8 @@ public class SalesOrderService {
         return response;
     }
 
+    // Gọi getSalesOrderById nội bộ không qua proxy nên @Transactional của nó không có tác dụng: transaction phải mở ở đây.
+    @Transactional(readOnly = true)
     public void sendQuoteEmail(Long id, com.duylongtech.backend.feature.system.EmailQuoteRequest req) {
         SalesOrderResponse soResponse = getSalesOrderById(id);
         emailService.sendSalesOrderQuoteEmail(req.getToEmail(), soResponse, req.getMessage());
