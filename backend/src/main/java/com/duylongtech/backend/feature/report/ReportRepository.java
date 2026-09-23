@@ -90,6 +90,21 @@ public class ReportRepository {
             """;
 
     /**
+     * Số lượng theo đơn vị gốc của dòng phiếu (alias idl). unit_cost luôn tính theo đơn vị gốc nên phải nhân với
+     * base_quantity; quantity_in/out là số theo đơn vị trên phiếu (vd. thùng) chỉ dùng khi không có quy đổi.
+     */
+    private static final String BASE_QTY_IN_SQL =
+            "(CASE WHEN COALESCE(idl.quantity_in, 0) > 0 AND COALESCE(idl.base_quantity, 0) > 0 "
+                    + "THEN idl.base_quantity ELSE COALESCE(idl.quantity_in, 0) END)";
+    private static final String BASE_QTY_OUT_SQL =
+            "(CASE WHEN COALESCE(idl.quantity_out, 0) > 0 AND COALESCE(idl.base_quantity, 0) > 0 "
+                    + "THEN idl.base_quantity ELSE COALESCE(idl.quantity_out, 0) END)";
+
+    /** Chuyển kho nội bộ không phải nhập/xuất thật; tính vào thì 1 lần chuyển bị đếm cả nhập lẫn xuất. */
+    private static final String EXCLUDE_INTERNAL_TRANSFER_SQL =
+            " AND COALESCE(idoc.issue_purpose, '') NOT IN ('TRANSFER_EXPORT', 'TRANSFER_IMPORT') ";
+
+    /**
      * Giới hạn truy vấn theo danh sách kho người dùng được xem. null = không giới hạn; danh sách rỗng
      * phải được chặn trước khi gọi (không có kho nào thì không truy vấn).
      */
@@ -674,13 +689,16 @@ public class ReportRepository {
         String sql = """
                 SELECT
                     idoc.doc_date AS documentDate,
-                    COALESCE(SUM(idl.quantity_in), 0) AS totalImportQty,
-                    COALESCE(SUM(idl.quantity_out), 0) AS totalExportQty
+                    COALESCE(SUM(""" + BASE_QTY_IN_SQL + """
+                    ), 0) AS totalImportQty,
+                    COALESCE(SUM(""" + BASE_QTY_OUT_SQL + """
+                    ), 0) AS totalExportQty
                 FROM inventory_documents idoc
                 JOIN inventory_document_lines idl ON idoc.id = idl.inventory_document_id
                 WHERE idoc.status = 'POSTED'
                   AND idoc.doc_date >= ?
                   AND idoc.doc_date <= ?
+                """ + EXCLUDE_INTERNAL_TRANSFER_SQL + """
                 GROUP BY idoc.doc_date
                 """;
 
@@ -1154,6 +1172,7 @@ public class ReportRepository {
         return count != null ? count : 0;
     }
 
+    // Chỉ tính tồn ở kho bán hàng (STANDARD): hàng nằm trong kho phế liệu không làm mất cảnh báo tồn thấp.
     private List<DashboardResponse.ConfiguredLowStockProductDto> getConfiguredLowStockProducts() {
         String sql = """
                 SELECT
@@ -1175,6 +1194,7 @@ public class ReportRepository {
                 LEFT JOIN units u ON p.unit_id = u.id
                 LEFT JOIN inventory_balances ib
                     ON ib.variant_id = pv.id
+                    AND ib.warehouse_id IN (SELECT w.id FROM warehouses w WHERE w.type = 'STANDARD')
                 LEFT JOIN serial_numbers sn ON sn.id = ib.serial_number_id
                 WHERE p.active = TRUE
                   AND pv.active = TRUE
@@ -1226,46 +1246,47 @@ public class ReportRepository {
     private Map<String, Object> getImportExportMetrics(LocalDate startOfMonth, LocalDate endOfMonth) {
         String sql = """
                 SELECT
-                    COALESCE(SUM(CASE WHEN idoc.doc_type = 'IN_PO' THEN idl.quantity_in * idl.unit_cost ELSE 0 END), 0) AS totalImport,
-                    COALESCE(SUM(CASE WHEN idoc.doc_type = 'EX_SO' THEN idl.quantity_out * idl.unit_cost ELSE 0 END), 0) AS totalExport
+                    COALESCE(SUM(CASE WHEN idoc.doc_type = 'IN_PO' THEN """ + BASE_QTY_IN_SQL + """
+                         * idl.unit_cost ELSE 0 END), 0) AS totalImport,
+                    COALESCE(SUM(CASE WHEN idoc.doc_type = 'EX_SO' THEN """ + BASE_QTY_OUT_SQL + """
+                         * idl.unit_cost ELSE 0 END), 0) AS totalExport
                 FROM inventory_documents idoc
                 JOIN inventory_document_lines idl ON idoc.id = idl.inventory_document_id
                 WHERE idoc.status = 'POSTED'
                   AND idoc.doc_date >= ?
                   AND idoc.doc_date <= ?
-                """;
+                """ + EXCLUDE_INTERNAL_TRANSFER_SQL;
         return jdbcTemplate.queryForMap(sql, startOfMonth, endOfMonth);
     }
 
+    /**
+     * balance_after là số dư lũy kế của đối tác sau mỗi bút toán, nên dư nợ hiện tại là dòng mới nhất của từng
+     * đối tác (giống getCustomerClosingDebtForMonth). Bản cũ cộng mọi dòng nên số dư bị nhân lên theo số giao dịch,
+     * và khi lỗi thì lặng lẽ lấy tổng tiền thu/chi thay cho công nợ.
+     */
     private Map<String, Object> getDebtMetrics() {
-        try {
-            String sql = """
+        String sql = """
+                SELECT
+                    COALESCE(SUM(CASE WHEN latest.is_customer = 1 AND latest.balance_after > 0 THEN latest.balance_after ELSE 0 END), 0) AS totalCustomerDebt,
+                    COALESCE(SUM(CASE WHEN latest.is_supplier = 1 AND latest.balance_after > 0 THEN latest.balance_after ELSE 0 END), 0) AS totalSupplierDebt
+                FROM (
                     SELECT
-                        COALESCE(SUM(CASE WHEN pt.is_customer = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalCustomerDebt,
-                        COALESCE(SUM(CASE WHEN pt.is_supplier = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalSupplierDebt
+                        pt.is_customer,
+                        pt.is_supplier,
+                        pl.balance_after,
+                        ROW_NUMBER() OVER (PARTITION BY pl.partner_id ORDER BY pl.created_at DESC, pl.id DESC) AS rn
                     FROM partner_ledger pl
-                    INNER JOIN partners pt ON pl.partner_id = pt.id
-                    """;
-            return jdbcTemplate.queryForMap(sql);
-        } catch (Exception primaryError) {
-            try {
-                String fallbackSql = """
-                        SELECT
-                            COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE status = 'POSTED' AND type = 'RECEIPT'), 0) AS totalCustomerDebt,
-                            COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE status = 'POSTED' AND type = 'VOUCHER'), 0) AS totalSupplierDebt
-                        """;
-                return jdbcTemplate.queryForMap(fallbackSql);
-            } catch (Exception ignored) {
-                Map<String, Object> zeros = new HashMap<>();
-                zeros.put("totalCustomerDebt", BigDecimal.ZERO);
-                zeros.put("totalSupplierDebt", BigDecimal.ZERO);
-                return zeros;
-            }
-        }
+                    JOIN partners pt ON pl.partner_id = pt.id
+                ) latest
+                WHERE latest.rn = 1
+                """;
+        return jdbcTemplate.queryForMap(sql);
     }
 
     private Integer getNewWarrantyTickets(LocalDate startOfMonth, LocalDate endOfMonth) {
-        String sql = "SELECT COUNT(id) FROM repairs WHERE received_date >= ? AND received_date <= ?";
+        // Chỉ đếm lệnh sửa chữa bảo hành (cùng điều kiện với getConfirmedWarrantyRepairs), không đếm mọi lệnh sửa.
+        String sql = "SELECT COUNT(id) FROM repairs WHERE received_date >= ? AND received_date <= ? "
+                + "AND (COALESCE(under_warranty, FALSE) = TRUE OR warranty_id IS NOT NULL)";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, startOfMonth, endOfMonth);
         return count != null ? count : 0;
     }

@@ -58,7 +58,32 @@ public class ReportService {
         log.info("Fetching Inventory Summary Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
         return reportRepository.getInventorySummaryReport(resolveWarehouseScope(warehouseId), startDate, endDate, search);
     }
+    /**
+     * Màn tổng quan chứa dòng tiền, công nợ và giá trị tồn toàn công ty. Frontend (workspaceScope.js) đã chặn Thủ kho
+     * / Thủ quỹ khỏi màn này nhưng họ vẫn có report_summary:view nên phải chặn cả ở API. Vai trò có phạm vi rộng
+     * (Quản lý, Kế toán, Super admin) luôn được xem kể cả khi kiêm vai trò Thủ kho / Thủ quỹ.
+     */
+    private static void ensureCanViewDashboard() {
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return;
+        }
+        java.util.Set<String> authorities = auth.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .collect(java.util.stream.Collectors.toSet());
+        boolean broadRole = authorities.contains("ROLE_SUPER_ADMIN") || authorities.contains("ROLE_MANAGER")
+                || authorities.contains("ROLE_ACCOUNTANT");
+        boolean scopedRole = authorities.contains("ROLE_WAREHOUSE_CONTROLLER")
+                || authorities.contains("ROLE_CASHIER_CONTROLLER");
+        if (scopedRole && !broadRole) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Màn tổng quan không thuộc phạm vi làm việc của Thủ kho / Thủ quỹ");
+        }
+    }
+
     public DashboardResponse getDashboardMetrics(String inventoryFlowRange, String categoryScope, String financeRange) {
+        ensureCanViewDashboard();
         log.info("Fetching Dashboard Metrics. inventoryFlowRange={}, categoryScope={}, financeRange={}", inventoryFlowRange, categoryScope, financeRange);
         DashboardResponse dashboard = reportRepository.getDashboardMetrics(inventoryFlowRange, categoryScope, financeRange);
         var stockAlerts = productService.getStockAlertSummary();

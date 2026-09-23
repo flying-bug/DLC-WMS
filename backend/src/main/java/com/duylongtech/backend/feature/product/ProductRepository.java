@@ -50,6 +50,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         Integer getOutOfStockCount();
     }
 
+    // Chỉ tính tồn ở kho bán hàng (STANDARD): hàng nằm trong kho phế liệu không được coi là còn hàng.
     @Query(value = """
             SELECT
                 COALESCE(SUM(CASE
@@ -75,6 +76,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                 JOIN products p ON p.id = pv.product_id
                 LEFT JOIN inventory_balances ib
                     ON ib.variant_id = pv.id
+                    AND ib.warehouse_id IN (SELECT w.id FROM warehouses w WHERE w.type = 'STANDARD')
                 LEFT JOIN serial_numbers sn ON sn.id = ib.serial_number_id
                 WHERE p.active = TRUE
                   AND pv.active = TRUE
