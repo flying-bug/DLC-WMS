@@ -48,7 +48,10 @@ const COLUMN_OPTIONS = [
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const totalFromPayload = (payload, fallback) => payload?.totalElements ?? fallback;
+const totalFromPayload = (payload, fallback) => payload?.page?.totalElements
+  ?? payload?.totalElements
+  ?? payload?.totalItems
+  ?? fallback;
 const formatDate = (value) => (value ? formatDateOnly(value) : 'Chưa có');
 
 function RepairListPage() {
@@ -100,8 +103,9 @@ function RepairListPage() {
       };
       const response = await repairApi.getRepairs(params);
       const payload = unwrap(response);
-      setRepairs(pageContent(payload));
-      setTotalItems(totalFromPayload(payload, 0));
+      const content = pageContent(payload);
+      setRepairs(content);
+      setTotalItems(totalFromPayload(payload, content.length));
       if (!silent) setSelectedIds([]);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không tải được danh sách phiếu sửa chữa.');
