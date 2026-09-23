@@ -138,7 +138,8 @@ function CreateStocktakePage() {
 
   // Input Change Handlers for Table Rows
   const handleCountQtyChange = (index, value) => {
-    const countVal = value === '' ? '' : Number(value);
+    // Số đếm thực tế không bao giờ âm: min="0" chỉ chặn nút tăng/giảm, gõ tay vẫn ra số âm.
+    const countVal = value === '' ? '' : Math.max(0, Number(value) || 0);
     setLines(prev => prev.map((line, idx) => {
       if (idx !== index) return line;
       const countNum = Number(countVal || 0);
@@ -431,7 +432,7 @@ function CreateStocktakePage() {
               if (sku && countQty !== undefined && countQty !== '') {
                 const idx = newLines.findIndex(l => l.sku === String(sku));
                 if (idx !== -1) {
-                  const countNum = Number(countQty);
+                  const countNum = Math.max(0, Number(countQty) || 0);
                   const diff = countNum - newLines[idx].bookQty;
                   newLines[idx] = {
                     ...newLines[idx],
@@ -731,16 +732,23 @@ function CreateStocktakePage() {
       isSaved ? (
         <span className={styles.numberCol}>{line.countQty}</span>
       ) : line.trackSerial ? (
-        <button
-          type="button"
-          className={styles.btnScanSerial}
-          onClick={() => openSerialModal(idx)}
-        >
-          <i className="bi bi-upc-scan"></i> {line.countQty} Quét Serial
-        </button>
+        <span className={styles.countCell}>
+          <span className={styles.countValue}>{line.countQty}</span>
+          <button
+            type="button"
+            className={styles.btnScanSerialIcon}
+            onClick={() => openSerialModal(idx)}
+            title="Quét serial để đếm số thực tế"
+            aria-label="Quét serial để đếm số thực tế"
+          >
+            <i className="bi bi-upc-scan"></i>
+          </button>
+        </span>
       ) : (
         <input
           type="number"
+          min="0"
+          step="1"
           style={{
             fontWeight: 600,
             color: 'var(--wms-text-strong)',

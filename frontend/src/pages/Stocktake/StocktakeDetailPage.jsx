@@ -6,7 +6,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as importApi from '../../api/inventoryImportApi';
-import * as XLSX from 'xlsx';
+import { loadXlsx } from '../../utils/lazyExcel';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
@@ -175,7 +175,8 @@ function StocktakeDetailPage() {
   };
 
   const handleCountQtyChange = (index, value) => {
-    const countVal = value === '' ? '' : Number(value);
+    // Số đếm thực tế không bao giờ âm: min="0" chỉ chặn nút tăng/giảm, gõ tay vẫn ra số âm.
+    const countVal = value === '' ? '' : Math.max(0, Number(value) || 0);
     setLines(prev => prev.map((line, idx) => {
       if (idx !== index) return line;
       const countNum = Number(countVal || 0);
@@ -329,7 +330,8 @@ function StocktakeDetailPage() {
     setSerialModal({ isOpen: false, lineIndex: null, loading: false, scanInput: '', systemSerials: [], scannedList: [], filterTab: 'ALL' });
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
+    const XLSX = await loadXlsx();
     if (lines.length === 0) {
       showToast('warning', 'Không có dữ liệu vật tư hàng hóa để xuất');
       return;
@@ -381,8 +383,9 @@ function StocktakeDetailPage() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await loadXlsx();
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];
@@ -754,12 +757,14 @@ function StocktakeDetailPage() {
     { title: 'TÊN HÀNG HÓA', width: '20%', render: (_, line, idx) => (
         <span>
           {line.itemName}
+          {/* Khi đang kiểm kê, nút quét ở cột THỰC TẾ là lối vào duy nhất - nhãn này chỉ để
+              đánh dấu hàng theo serial. Phiếu đã lưu thì không còn nút đó nên nhãn mở modal xem. */}
           {line.trackSerial && (
-            <span 
-              className={styles.serialBadge} 
-              style={{ cursor: 'pointer' }}
-              onClick={() => openSerialModal(idx)}
-              title="Bấm để xem chi tiết Serial"
+            <span
+              className={styles.serialBadge}
+              style={isSaved ? { cursor: 'pointer' } : undefined}
+              onClick={isSaved ? () => openSerialModal(idx) : undefined}
+              title={isSaved ? 'Bấm để xem chi tiết Serial' : 'Hàng quản lý theo serial'}
             >
               <i className="bi bi-upc-scan"></i> Serial
             </span>
@@ -771,11 +776,20 @@ function StocktakeDetailPage() {
     { title: 'SỔ SÁCH', align: 'center', render: (_, line) => <span className={styles.numberCol}>{line.bookQty}</span> },
     { title: 'THỰC TẾ', align: 'center', render: (_, line, idx) => (
         isSaved ? <span className={styles.numberCol}>{line.countQty}</span> : line.trackSerial ? (
-          <button type="button" className={styles.btnScanSerial} onClick={() => openSerialModal(idx)}>
-            <i className="bi bi-upc-scan"></i> {line.countQty} Quét Serial
-          </button>
+          <span className={styles.countCell}>
+            <span className={styles.countValue}>{line.countQty}</span>
+            <button
+              type="button"
+              className={styles.btnScanSerialIcon}
+              onClick={() => openSerialModal(idx)}
+              title="Quét serial để đếm số thực tế"
+              aria-label="Quét serial để đếm số thực tế"
+            >
+              <i className="bi bi-upc-scan"></i>
+            </button>
+          </span>
         ) : (
-          <input type="number" style={{ fontWeight: 600, color: 'var(--wms-text-strong)', background: 'var(--wms-bg-soft)', border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '4px 6px', width: '100%', textAlign: 'center' }} value={line.countQty} onChange={(e) => handleCountQtyChange(idx, e.target.value)} />
+          <input type="number" min="0" step="1" style={{ fontWeight: 600, color: 'var(--wms-text-strong)', background: 'var(--wms-bg-soft)', border: '1px solid var(--wms-border-strong)', borderRadius: '3px', padding: '4px 6px', width: '100%', textAlign: 'center' }} value={line.countQty} onChange={(e) => handleCountQtyChange(idx, e.target.value)} />
         )
       )
     },

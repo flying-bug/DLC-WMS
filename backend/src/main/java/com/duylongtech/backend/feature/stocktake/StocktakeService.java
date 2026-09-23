@@ -455,6 +455,10 @@ public class StocktakeService {
     private void mapLinesAndParticipants(Stocktake stocktake, StocktakeRequest req) {
         if (req.getLines() != null) {
             req.getLines().forEach(lineReq -> {
+                // Đếm thực tế không thể âm; chặn ở đây vì màn hình không phải nguồn duy nhất gọi API.
+                if (lineReq.getCountQty() != null && lineReq.getCountQty().signum() < 0) {
+                    throw new BusinessException("Số lượng kiểm kê thực tế không được âm");
+                }
                 StocktakeLine line = new StocktakeLine();
                 line.initLine(lineReq.getVariantId(), lineReq.getBookQty(), lineReq.getCountQty(), lineReq.getGoodQty(), lineReq.getBadQty(), lineReq.getLostQty(), lineReq.getAction());
                 line.updateSkipReason(lineReq.getSkipReason());

@@ -494,9 +494,52 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  /* Cột THỰC TẾ hẹp: không cho chữ "Quét Serial" gãy dòng giữa từ. */
+  white-space: nowrap;
 }
 .btnScanSerial:hover {
   background-color: #0369a1;
+}
+
+/* Ô THỰC TẾ của dòng quản lý theo serial: số đã đếm đứng cạnh nút quét gọn,
+   thay cho khối nút xanh chiếm trọn ô và làm gãy chữ. */
+.countCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.countValue {
+  min-width: 28px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--wms-text-strong);
+}
+
+.btnScanSerialIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btnScanSerialIcon:hover {
+  background-color: #0369a1;
+  border-color: #0369a1;
+  color: var(--color-white);
 }
 
 /* Modal Overlay & Card */
