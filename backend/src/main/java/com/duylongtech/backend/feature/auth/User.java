@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.auth;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -23,6 +24,8 @@ public class User {
     @Column(name = "user_code", unique = true, length = 50)
     private String userCode;
 
+    // Entity User bị trả thẳng ra JSON ở vài chỗ (vd. AuditLog.user) nên không bao giờ được lộ hash mật khẩu.
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 

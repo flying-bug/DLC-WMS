@@ -161,11 +161,14 @@ public class StocktakeService {
     }
 
     @Transactional(readOnly = true)
-    public List<SerialNumber> getAvailableSerials(Long warehouseId, Long variantId) {
+    public List<AvailableSerialResponse> getAvailableSerials(Long warehouseId, Long variantId) {
         if (warehouseId == null || variantId == null) {
             return new ArrayList<>();
         }
-        return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, SerialNumberStatus.AVAILABLE.name());
+        return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, SerialNumberStatus.AVAILABLE.name())
+                .stream()
+                .map(serial -> new AvailableSerialResponse(serial.getId(), serial.getSerialNumber()))
+                .toList();
     }
 
     public StocktakeResponse createStocktake(StocktakeRequest req) {

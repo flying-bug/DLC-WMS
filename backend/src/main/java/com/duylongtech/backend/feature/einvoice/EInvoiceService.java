@@ -106,6 +106,18 @@ public class EInvoiceService {
                 .orElse(null);
     }
 
+    // ─── Preview HTML ───────────────────────────────────────────────────────────
+    /**
+     * Render hóa đơn thành HTML để xem trực tuyến; null nếu không tìm thấy. Phải chạy trong transaction vì
+     * open-in-view tắt mà template đọc các quan hệ LAZY (salesOrder, inventoryDocument, dòng, sản phẩm).
+     */
+    @Transactional(readOnly = true)
+    public String renderPreviewHtml(String transactionUuid) {
+        return einvoiceRepository.findByTransactionUuid(transactionUuid)
+                .map(this::renderInvoiceHtml)
+                .orElse(null);
+    }
+
     // ─── Issue E-Invoice from Sales Order or Export Document (Khoản 1 Điều 9 NĐ 123) ──
     @Transactional
     public EInvoiceResponse issueInvoiceFromSalesOrder(EInvoiceIssueRequest request, Long currentUserId) {
@@ -737,11 +749,13 @@ public class EInvoiceService {
 
     // ─── Tiện ích đọc số tiền thành chữ Tiếng Việt ───────────────────────────────
     public static String convertMoneyToWords(BigDecimal totalAmount) {
-        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) == 0) {
+        if (totalAmount == null) {
             return "Không đồng chẵn.";
         }
+        if (totalAmount.signum() < 0) return "Số tiền âm.";
         long amount = totalAmount.longValue();
-        if (amount < 0) return "Số tiền âm.";
+        // Phần lẻ dưới 1 đồng bị bỏ, nên 0.99 cũng là "không đồng" chứ không phải chuỗi rỗng.
+        if (amount == 0) return "Không đồng chẵn.";
 
         String[] ones = {"", " một", " hai", " ba", " bốn", " năm", " sáu", " bảy", " tám", " chín"};
         String[] units = {"", " nghìn", " triệu", " tỷ", " nghìn tỷ", " triệu tỷ"};
@@ -757,11 +771,15 @@ public class EInvoiceService {
                 int o = chunk % 10;
 
                 StringBuilder chunkStr = new StringBuilder();
-                if (h > 0 || (amount > 999 && (t > 0 || o > 0))) {
+                boolean hasHigherGroup = amount > 999;
+                if (h > 0) {
                     chunkStr.append(ones[h]).append(" trăm");
+                } else if (hasHigherGroup) {
+                    // Nhóm không phải nhóm đầu mà thiếu hàng trăm vẫn đọc đủ: 1.005 = "một nghìn không trăm lẻ năm".
+                    chunkStr.append(" không trăm");
                 }
                 if (t > 1) {
-                    chunkStr.append(" mươi");
+                    chunkStr.append(ones[t]).append(" mươi");
                     if (o == 1) chunkStr.append(" mốt");
                     else if (o == 5) chunkStr.append(" lăm");
                     else chunkStr.append(ones[o]);
@@ -786,5 +804,122 @@ public class EInvoiceService {
             str = Character.toUpperCase(str.charAt(0)) + str.substring(1) + " đồng chẵn.";
         }
         return str;
+    }
+
+    private String renderInvoiceHtml(EInvoice inv) {
+        StringBuilder itemsHtml = new StringBuilder();
+        int idx = 1;
+
+        if (inv.getInventoryDocument() != null && inv.getInventoryDocument().getLines() != null && !inv.getInventoryDocument().getLines().isEmpty()) {
+            for (var line : inv.getInventoryDocument().getLines()) {
+                String itemName = "Sản phẩm";
+                String sku = "SP" + line.getId();
+                String unit = "Cái";
+
+                if (line.getVariantId() != null) {
+                    ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
+                    if (variant != null) {
+                        sku = variant.getSku() != null ? variant.getSku() : sku;
+                        String baseName = (variant.getProduct() != null && variant.getProduct().getProductName() != null)
+                                ? variant.getProduct().getProductName() : (variant.getVariantName() != null ? variant.getVariantName() : "Sản phẩm");
+                        String varDetail = (variant.getVariantName() != null && !variant.getVariantName().equalsIgnoreCase(baseName))
+                                ? " (" + variant.getVariantName() + ")" : "";
+                        itemName = baseName + varDetail;
+                        if (variant.getProduct() != null && variant.getProduct().getUnit() != null) {
+                            unit = variant.getProduct().getUnit().getName();
+                        }
+                    }
+                }
+
+                double qty = line.getQuantityOut() != null ? line.getQuantityOut().doubleValue() : 1.0;
+                double price = line.getUnitPrice() != null ? line.getUnitPrice().doubleValue() : 0.0;
+                double lineAmount = line.getLineAmount() != null ? line.getLineAmount().doubleValue() : (qty * price);
+
+                String serialNote = line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()
+                        ? String.format("<div style=\"font-size: 11px; color: #0284c7; font-weight: 600; margin-top: 3px;\">S/N: %s</div>", line.getSerialNumbersText()) : "";
+
+                itemsHtml.append(String.format("""
+                    <tr>
+                        <td class="text-center">%d</td>
+                        <td>
+                            <strong>%s</strong>
+                            <div style="font-size: 11px; color: #64748b;">Mã SP: %s</div>
+                            %s
+                        </td>
+                        <td class="text-center">%s</td>
+                        <td class="text-right">%,.0f</td>
+                        <td class="text-right">%,.0f đ</td>
+                        <td class="text-right"><strong>%,.0f đ</strong></td>
+                    </tr>
+                """, idx++, itemName, sku, serialNote, unit, qty, price, lineAmount));
+            }
+        } else if (inv.getSalesOrder() != null && inv.getSalesOrder().getLines() != null && !inv.getSalesOrder().getLines().isEmpty()) {
+            for (var sol : inv.getSalesOrder().getLines()) {
+                String itemName = "Sản phẩm";
+                String sku = "SP" + sol.getId();
+                String unit = "Cái";
+
+                if (sol.getVariant() != null) {
+                    ProductVariant variant = sol.getVariant();
+                    sku = variant.getSku() != null ? variant.getSku() : sku;
+                    String baseName = (variant.getProduct() != null && variant.getProduct().getProductName() != null)
+                            ? variant.getProduct().getProductName() : (variant.getVariantName() != null ? variant.getVariantName() : "Sản phẩm");
+                    String varDetail = (variant.getVariantName() != null && !variant.getVariantName().equalsIgnoreCase(baseName))
+                            ? " (" + variant.getVariantName() + ")" : "";
+                    itemName = baseName + varDetail;
+                    if (variant.getProduct() != null && variant.getProduct().getUnit() != null) {
+                        unit = variant.getProduct().getUnit().getName();
+                    }
+                }
+
+                double qty = sol.getQuantity() != null ? sol.getQuantity().doubleValue() : 1.0;
+                double price = sol.getUnitPrice() != null ? sol.getUnitPrice().doubleValue() : 0.0;
+                double lineAmount = sol.getLineAmount() != null ? sol.getLineAmount().doubleValue() : (qty * price);
+
+                itemsHtml.append(String.format("""
+                    <tr>
+                        <td class="text-center">%d</td>
+                        <td>
+                            <strong>%s</strong>
+                            <div style="font-size: 11px; color: #64748b;">Mã SP: %s</div>
+                        </td>
+                        <td class="text-center">%s</td>
+                        <td class="text-right">%,.0f</td>
+                        <td class="text-right">%,.0f đ</td>
+                        <td class="text-right"><strong>%,.0f đ</strong></td>
+                    </tr>
+                """, idx++, itemName, sku, unit, qty, price, lineAmount));
+            }
+        } else {
+            itemsHtml.append(String.format(com.duylongtech.backend.constant.EInvoiceTemplate.SUMMARY_ROW_TEMPLATE, inv.getInventoryDocument() != null ? ("phiếu xuất " + inv.getInventoryDocument().getDocCode())
+                 : (inv.getSalesOrder() != null ? ("đơn hàng " + inv.getSalesOrder().getSoCode()) : inv.getTransactionUuid()),
+                 inv.getSubTotalAmount() != null ? inv.getSubTotalAmount().doubleValue() : 0.0,
+                 inv.getSubTotalAmount() != null ? inv.getSubTotalAmount().doubleValue() : 0.0));
+        }
+
+        return String.format(com.duylongtech.backend.constant.EInvoiceTemplate.MAIN_TEMPLATE,
+            inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : inv.getTransactionUuid(),
+            DocumentStatus.CANCELED.name().equals(inv.getStatus()) ? "<div class=\"watermark\">HÓA ĐƠN ĐÃ HỦY</div>" : "",
+            inv.getTemplateCode(),
+            inv.getInvoiceSeries(),
+            inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "Chưa cấp số",
+            inv.getInvoiceDate(),
+            inv.getCqtCode() != null ? inv.getCqtCode() : "Hệ thống CQT đang xử lý",
+            inv.getBuyerName() != null ? inv.getBuyerName() : "Khách lẻ",
+            inv.getInventoryDocument() != null ? ("PXK: " + inv.getInventoryDocument().getDocCode() + (inv.getSalesOrder() != null ? " (Đơn: " + inv.getSalesOrder().getSoCode() + ")" : ""))
+                 : (inv.getSalesOrder() != null ? inv.getSalesOrder().getSoCode() : (inv.getTransactionUuid() != null ? inv.getTransactionUuid() : "—")),
+            inv.getBuyerLegalName() != null ? inv.getBuyerLegalName() : (inv.getBuyerName() != null ? inv.getBuyerName() : "Khách lẻ"),
+            inv.getBuyerTaxCode() != null && !inv.getBuyerTaxCode().isBlank() ? inv.getBuyerTaxCode() : "—",
+            inv.getBuyerPhone() != null ? inv.getBuyerPhone() : "—",
+            inv.getBuyerAddress() != null ? inv.getBuyerAddress() : "—",
+            inv.getPaymentMethod(),
+            inv.getCurrencyCode(),
+            itemsHtml.toString(),
+            inv.getSubTotalAmount(),
+            inv.getVatAmount(),
+            inv.getTotalAmount(),
+            inv.getTotalAmountInWords() != null ? inv.getTotalAmountInWords() : "",
+            inv.getIssuedAt() != null ? inv.getIssuedAt().toString() : "2026-08-18"
+        );
     }
 }

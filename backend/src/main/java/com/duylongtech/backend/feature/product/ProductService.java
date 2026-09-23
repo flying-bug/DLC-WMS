@@ -70,6 +70,7 @@ public class ProductService {
     private final CodeGeneratorService codeGeneratorService;
     private final ProductMapper productMapper;
 
+    @Transactional(readOnly = true)
     public Page<ProductResponse> getProducts(int page, int size, String search, Long categoryId, String productType, Long brandId, Long unitId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<Product> productPage = productRepository.searchProducts(search, categoryId, productType, brandId, unitId, pageable);
@@ -103,6 +104,7 @@ public class ProductService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findDetailsById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
@@ -326,11 +328,13 @@ public class ProductService {
         return getVariants(page, size, search, false);
     }
 
+    @Transactional(readOnly = true)
     public Page<ProductVariantResponse> getVariants(int page, int size, String search, boolean excludeServices) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         return productVariantRepository.searchVariants(search, excludeServices, pageable).map(this::convertVariantToDto);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductVariantResponse> getVariantsByProduct(Long productId) {
         ensureProductExists(productId);
         return productVariantRepository.findByProductIdOrderByIdAsc(productId)

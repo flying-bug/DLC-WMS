@@ -15,7 +15,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import com.duylongtech.backend.feature.product.SerialNumber;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -40,11 +39,11 @@ public class StocktakeController {
 
     @GetMapping("/available-serials")
     @PreAuthorize("hasAuthority('stocktake:view') or hasAuthority('stocktake:add')")
-    public ResponseEntity<ApiResponse<List<SerialNumber>>> getAvailableSerials(
+    public ResponseEntity<ApiResponse<List<AvailableSerialResponse>>> getAvailableSerials(
             @RequestParam Long warehouseId,
             @RequestParam Long variantId) {
-        List<SerialNumber> serials = stocktakeService.getAvailableSerials(warehouseId, variantId);
-        return ResponseEntity.ok(ApiResponse.<List<SerialNumber>>builder()
+        List<AvailableSerialResponse> serials = stocktakeService.getAvailableSerials(warehouseId, variantId);
+        return ResponseEntity.ok(ApiResponse.<List<AvailableSerialResponse>>builder()
                 .success(true)
                 .data(serials)
                 .userMessage("Lấy danh sách Serial khả dụng thành công")
