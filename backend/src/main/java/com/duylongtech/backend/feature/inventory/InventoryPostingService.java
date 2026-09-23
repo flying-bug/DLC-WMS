@@ -817,6 +817,18 @@ public class InventoryPostingService {
             });
         }
 
+        // 2a. Hủy bảo hành tự sinh lúc ghi sổ phiếu này (checkExportSlipUnpostable đã chặn nếu có lệnh sửa chữa).
+        // Ghi sổ lại phiếu thay thế sẽ sinh bảo hành mới gắn với phiếu mới; không hủy thì khách có 2 bảo hành.
+        List<Warranty> ownWarranties = warrantyRepository
+                .findByExportSlipIdAndWarrantyStatusNot(doc.getId(), WarrantyStatus.VOIDED.name());
+        for (Warranty warranty : ownWarranties) {
+            warranty.setWarrantyStatus(WarrantyStatus.VOIDED.name());
+            warranty.getLines().forEach(line -> line.setWarrantyStatus(WarrantyStatus.VOIDED.name()));
+            warranty.setNote((warranty.getNote() != null ? warranty.getNote() + ". " : "")
+                    + "Đã hủy do bỏ ghi sổ phiếu xuất " + doc.getDocCode());
+            warrantyRepository.save(warranty);
+        }
+
         // 2b. Hoàn tác công nợ khách hàng đã ghi lúc post (trước đây bị bỏ sót, khiến
         // "Dư nợ hiện tại" của khách hàng bị treo sai sau khi bỏ ghi sổ phiếu xuất)
         partnerLedgerService.reverseLedger("INVENTORY_EXPORT_SO", doc.getId(), "UNPOST_EXPORT_SO", doc.getDocCode(),

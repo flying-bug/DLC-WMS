@@ -25,6 +25,8 @@ import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.product.SerialNumber;
 import com.duylongtech.backend.feature.product.SerialNumberRepository;
 import com.duylongtech.backend.feature.repair.RepairRepository;
+import com.duylongtech.backend.enums.WarrantyStatus;
+import com.duylongtech.backend.feature.warranty.Warranty;
 import com.duylongtech.backend.feature.warranty.WarrantyRepository;
 
 @Service
@@ -170,7 +172,7 @@ public class DocumentDependencyService {
                 if (snOpt.isEmpty()) continue;
                 Long serialNumberId = snOpt.get().getId();
 
-                if (warrantyRepository.existsBySerialNumberId(serialNumberId)) {
+                if (warrantyRepository.existsOtherWarrantyForSerial(serialNumberId, docId)) {
                     conflictingSerials.add(cleanSn);
                     conflicts.add(String.format(
                             "Serial [%s] đã được đăng ký Bảo hành cho khách hàng - không thể bỏ ghi sổ!", cleanSn));
@@ -181,6 +183,16 @@ public class DocumentDependencyService {
                             "Serial [%s] đã có Lệnh sửa chữa liên quan - không thể bỏ ghi sổ!", cleanSn));
                 }
             }
+        }
+
+        // 3. Bảo hành tự sinh từ phiếu này sẽ bị hủy khi bỏ ghi sổ - chỉ được hủy khi chưa có lệnh sửa chữa nào
+        // dùng đến nó (hàng không serial không đi qua bước 2 nên phải chặn ở đây).
+        List<Warranty> ownWarranties = warrantyRepository
+                .findByExportSlipIdAndWarrantyStatusNot(docId, WarrantyStatus.VOIDED.name());
+        if (!ownWarranties.isEmpty()
+                && repairRepository.existsByWarrantyIdIn(ownWarranties.stream().map(Warranty::getId).toList())) {
+            ownWarranties.forEach(w -> conflictingDocs.add(w.getWarrantyCode()));
+            conflicts.add("Phiếu bảo hành sinh từ lần xuất này đã có Lệnh sửa chữa - không thể bỏ ghi sổ!");
         }
 
         if (!conflicts.isEmpty()) {

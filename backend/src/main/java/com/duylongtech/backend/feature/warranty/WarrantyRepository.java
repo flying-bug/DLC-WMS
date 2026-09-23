@@ -18,8 +18,17 @@ public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
 
     boolean existsByWarrantyCodeAndIdNot(String warrantyCode, Long id);
 
-    @Query("SELECT COUNT(w) > 0 FROM Warranty w JOIN w.lines wl WHERE wl.serialNumberId = :serialNumberId")
-    boolean existsBySerialNumberId(@Param("serialNumberId") Long serialNumberId);
+    /**
+     * Serial đã có bảo hành còn hiệu lực ngoài bảo hành tự sinh của chính phiếu xuất đang xét. Bảo hành tự sinh lúc
+     * ghi sổ phiếu đó sẽ bị hủy cùng khi bỏ ghi sổ nên không được tính là ràng buộc; bảo hành đã hủy cũng vậy.
+     */
+    @Query("SELECT COUNT(w) > 0 FROM Warranty w JOIN w.lines wl WHERE wl.serialNumberId = :serialNumberId "
+            + "AND w.warrantyStatus <> 'VOIDED' AND (w.exportSlipId IS NULL OR w.exportSlipId <> :exportSlipId)")
+    boolean existsOtherWarrantyForSerial(@Param("serialNumberId") Long serialNumberId,
+                                         @Param("exportSlipId") Long exportSlipId);
+
+    /** Bảo hành tự sinh khi ghi sổ phiếu xuất (chỉ luồng ghi sổ mới gán exportSlipId). */
+    List<Warranty> findByExportSlipIdAndWarrantyStatusNot(Long exportSlipId, String warrantyStatus);
 
     // Tách 2 bước để phân trang đúng: JOIN FETCH trên collection (w.lines) kết hợp
     // Pageable khiến Hibernate không phát được LIMIT/OFFSET ở SQL, phải load toàn bộ
