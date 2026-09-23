@@ -13,6 +13,11 @@ import * as exportApi from '../../api/inventoryExportApi';
 import styles from './WarehouseDocumentFormPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
+// Phiếu kho tự sinh từ lệnh lắp ráp / sửa chữa: số lượng và serial lấy theo lệnh, backend từ chối mọi lệnh sửa
+// (InventoryDocumentService.ensureEditable) nên thủ kho chỉ được ghi sổ, không sửa tại đây.
+const isManagedDocument = (document) =>
+  ['ASSEMBLY_ORDER', 'REPAIR'].includes(String(document?.referenceType || '').trim().toUpperCase());
+
 export default function WarehouseDocumentFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -180,6 +185,10 @@ export default function WarehouseDocumentFormPage() {
       if (l.trackSerial && act > 0) {
         const snCount = (l.serialList || []).length;
         if (snCount !== act) {
+          if (isManagedDocument(doc)) {
+            showToast('warning', `Dòng ${i + 1} (${l.productName}): Phiếu chưa đủ ${act} mã serial (hiện có ${snCount}). Serial của phiếu này được chọn trên lệnh lắp ráp / sửa chữa.`);
+            return false;
+          }
           setSelectedLineIdx(i);
           setSerialModalOpen(true);
           showToast('warning', `Dòng ${i + 1} (${l.productName}): Vui lòng quét đủ ${act} mã serial (hiện có ${snCount}).`);
@@ -241,13 +250,15 @@ export default function WarehouseDocumentFormPage() {
     try {
       setSaving(true);
       const payload = buildPayload();
+      // Phiếu tự sinh của lệnh kỹ thuật không được sửa: ghi sổ thẳng, không gửi lệnh cập nhật.
+      const shouldSave = documentChangedRef.current && !isManagedDocument(doc);
       if (isImport) {
-        if (documentChangedRef.current) {
+        if (shouldSave) {
           await importApi.updateImportSlip(doc.id, payload);
         }
         await importApi.postImportSlip(doc.id);
       } else {
-        if (documentChangedRef.current) {
+        if (shouldSave) {
           await exportApi.updateExportSlip(doc.id, payload);
         }
         await exportApi.postExportSlip(doc.id);
@@ -330,6 +341,8 @@ export default function WarehouseDocumentFormPage() {
   }
 
   const isPosted = doc.status === 'POSTED' || doc.status === 'COMPLETED';
+  const isManagedDoc = isManagedDocument(doc);
+  const isLinesEditable = !isPosted && !isManagedDoc;
   const isUnposted = doc.status === 'UNPOSTED';
   const isCancelled = doc.status === 'CANCELLED';
   const statusBadgeClass = isPosted ? styles.statusPosted : isUnposted ? styles.statusUnposted : isCancelled ? styles.statusCancelled : styles.statusDraft;
@@ -505,8 +518,18 @@ export default function WarehouseDocumentFormPage() {
             </div>
           </div>
 
+          {!isPosted && isManagedDoc && (
+            <div className={styles.scannerBar}>
+              <i className="bi bi-info-circle" style={{ color: 'var(--color-primary)', fontSize: '1.25rem' }}></i>
+              <span>
+                Phiếu tự động của lệnh {String(doc.referenceType).toUpperCase() === 'REPAIR' ? 'sửa chữa' : 'lắp ráp'}:
+                số lượng và serial theo lệnh, không sửa tại đây. Kiểm hàng rồi bấm Xác nhận Ghi sổ kho.
+              </span>
+            </div>
+          )}
+
           {/* SCANNER BAR */}
-          {!isPosted && (
+          {isLinesEditable && (
             <form onSubmit={handleScannerSubmit} className={styles.scannerBar}>
               <i className="bi bi-upc" style={{ color: 'var(--color-primary)', fontSize: '1.25rem' }}></i>
               <input
@@ -561,7 +584,7 @@ export default function WarehouseDocumentFormPage() {
                         {Number(l.expectedQty).toLocaleString('vi-VN')}
                       </td>
                       <td style={{ textAlign: 'right', background: 'var(--color-bg-subtle)' }}>
-                        {!isPosted ? (
+                        {isLinesEditable ? (
                           <input
                             type="number"
                             className={styles.qtyCellInput}
@@ -606,6 +629,7 @@ export default function WarehouseDocumentFormPage() {
                                     ? `Đã nhập đủ ${snCount} serial`
                                     : 'Nhập / quét serial cho mặt hàng này'
                               }
+                              disabled={isManagedDoc && !isPosted}
                               onClick={() => {
                                 setSelectedLineIdx(idx);
                                 setSerialModalOpen(true);
