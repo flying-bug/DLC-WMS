@@ -540,28 +540,28 @@ public class SalesOrderService {
     }
 
     private SalesOrderResponse toDetailResponse(SalesOrder so, List<StockReservation> reservations) {
+        // 1 truy vấn tổng hợp cho cả SO (mọi kho) thay vì 1 truy vấn mỗi dòng. Theo dõi theo (sản phẩm, kho)
+        // khi SO bán đa kho, nếu không cùng một sản phẩm ở 2 kho sẽ trừ nhầm số lượng của nhau.
+        SalesOrderFulfillment fulfillment = SalesOrderFulfillment.of(so.getLines(), so.getWarehouseId(),
+                inventoryDocumentLineRepository.sumExportedBySalesOrder(so.getId(), null));
+
         List<SalesOrderResponse.SalesOrderLineResponse> lineResponses = so.getLines().stream()
                 .map(line -> {
                     Long lineWh = line.getWarehouseId() != null ? line.getWarehouseId() : so.getWarehouseId();
                     BigDecimal available = lineWh != null ? inventoryBalanceRepository
                             .sumAvailableQuantityByWarehouseAndVariant(lineWh, line.getVariantId(), "GOOD") : BigDecimal.ZERO;
 
-                    BigDecimal exported = inventoryDocumentLineRepository
-                            .sumExportedQuantityBySalesOrderIdAndVariantId(so.getId(), line.getVariantId());
-                    if (exported == null) exported = BigDecimal.ZERO;
-                    BigDecimal remaining = line.getQuantity().subtract(exported);
-                    if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
-
+                    SalesOrderFulfillment.Group progress = fulfillment.forLine(line);
                     SalesOrderResponse.SalesOrderLineResponse lineResponse = salesOrderMapper.toLineResponse(line);
                     lineResponse.setAvailableQuantity(available != null ? available : BigDecimal.ZERO);
-                    lineResponse.setExportedQuantity(exported);
-                    lineResponse.setRemainingQuantity(remaining);
+                    // exportedQuantity = đã ghi sổ; remainingQuantity = còn có thể đưa vào phiếu mới (trừ cả phiếu nháp)
+                    lineResponse.setExportedQuantity(progress != null ? progress.getPosted() : BigDecimal.ZERO);
+                    lineResponse.setRemainingQuantity(progress != null ? progress.remainingToAllocate() : line.getQuantity());
                     return lineResponse;
                 })
                 .collect(Collectors.toList());
 
-        boolean isFullyExported = !lineResponses.isEmpty() && lineResponses.stream()
-                .allMatch(l -> l.getRemainingQuantity().compareTo(BigDecimal.ZERO) <= 0);
+        boolean isFullyExported = fulfillment.isFullyPosted();
 
         List<SalesOrderResponse.StockReservationResponse> reservationResponses = reservations.stream()
                 .map(salesOrderMapper::toReservationResponse)

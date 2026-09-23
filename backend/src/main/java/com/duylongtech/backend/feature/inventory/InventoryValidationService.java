@@ -39,6 +39,7 @@ import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
+import com.duylongtech.backend.feature.sales_order.SalesOrderFulfillment;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
@@ -197,22 +198,17 @@ public class InventoryValidationService {
         if (soId != null) {
             SalesOrder so = salesOrderRepository.findByIdWithDetails(soId).orElse(null);
             if (so != null && so.getLines() != null && req.getLines() != null) {
-                Map<Long, BigDecimal> orderedMap = so.getLines().stream()
-                        .collect(Collectors.toMap(SalesOrderLine::getVariantId, SalesOrderLine::getQuantity,
-                                (a, b) -> a));
+                // Đã phân bổ ở các phiếu khác (mọi kho, kể cả nháp), không tính phiếu đang sửa. Bản cũ gom
+                // theo variant bằng toMap((a,b)->a) nên SO bán cùng một sản phẩm ở 2 kho bị bỏ mất dòng thứ hai.
+                SalesOrderFulfillment fulfillment = SalesOrderFulfillment.of(so.getLines(), so.getWarehouseId(),
+                        inventoryDocumentLineRepository.sumExportedBySalesOrder(so.getId(), excludeDocId));
                 for (InventoryDocumentLineRequest lineReq : req.getLines()) {
                     if (lineReq.getVariantId() == null)
                         continue;
-                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
-                    if (orderedQty != null) {
-                        BigDecimal exportedAlready = inventoryDocumentLineRepository
-                                .sumExportedQuantityBySalesOrderIdAndVariantIdExcludingDoc(so.getId(),
-                                        lineReq.getVariantId(), excludeDocId);
-                        if (exportedAlready == null)
-                            exportedAlready = ZERO;
-                        BigDecimal remaining = orderedQty.subtract(exportedAlready);
-                        if (remaining.compareTo(ZERO) < 0)
-                            remaining = ZERO;
+                    Long lineWarehouseId = lineReq.getWarehouseId() != null ? lineReq.getWarehouseId() : req.getWarehouseId();
+                    SalesOrderFulfillment.Group group = fulfillment.forVariant(lineReq.getVariantId(), lineWarehouseId);
+                    if (group != null) {
+                        BigDecimal remaining = group.remainingToAllocate();
 
                         BigDecimal qtyOut = lineReq.getQuantityOut() != null ? lineReq.getQuantityOut() : ZERO;
                         if (qtyOut.compareTo(remaining) > 0) {

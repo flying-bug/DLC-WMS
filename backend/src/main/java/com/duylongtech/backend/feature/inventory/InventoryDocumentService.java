@@ -39,6 +39,7 @@ import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
+import com.duylongtech.backend.feature.sales_order.SalesOrderFulfillment;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrder;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderLine;
 import com.duylongtech.backend.feature.purchase_order.PurchaseOrderReceiving;
@@ -1192,16 +1193,26 @@ public class InventoryDocumentService {
             throw new BusinessException(SystemMessage.INV_ERR_002.getMessage());
         }
 
+        // Phần còn thiếu tính theo (sản phẩm, kho) và trừ cả phiếu nháp đã tạo, để bấm nút 2 lần không sinh
+        // ra hai phiếu cùng xuất một phần hàng.
+        SalesOrderFulfillment fulfillment = SalesOrderFulfillment.of(so.getLines(), so.getWarehouseId(),
+                inventoryDocumentLineRepository.sumExportedBySalesOrder(so.getId(), null));
+        Map<SalesOrderFulfillment.Group, BigDecimal> leftByGroup = new java.util.IdentityHashMap<>();
+
         Map<Long, List<SoLineRemaining>> linesByWarehouse = new java.util.LinkedHashMap<>();
         for (SalesOrderLine soLine : so.getLines()) {
-            BigDecimal exported = inventoryDocumentLineRepository
-                    .sumExportedQuantityBySalesOrderIdAndVariantId(so.getId(), soLine.getVariantId());
-            if (exported == null)
-                exported = ZERO;
-            BigDecimal remaining = soLine.getQuantity().subtract(exported);
+            SalesOrderFulfillment.Group progress = fulfillment.forLine(soLine);
+            if (progress == null) {
+                continue;
+            }
+            // Nhiều dòng SO có thể rơi vào cùng một nhóm (cùng sản phẩm, cùng kho): chia dần phần còn lại
+            // cho từng dòng thay vì cho mỗi dòng nhận trọn phần còn lại của nhóm.
+            BigDecimal groupLeft = leftByGroup.computeIfAbsent(progress, SalesOrderFulfillment.Group::remainingToAllocate);
+            BigDecimal remaining = soLine.getQuantity().min(groupLeft);
             if (remaining.compareTo(ZERO) <= 0) {
                 continue;
             }
+            leftByGroup.put(progress, groupLeft.subtract(remaining));
             Long lineWarehouseId = soLine.getWarehouseId() != null ? soLine.getWarehouseId() : so.getWarehouseId();
             linesByWarehouse.computeIfAbsent(lineWarehouseId, k -> new java.util.ArrayList<>())
                     .add(new SoLineRemaining(soLine, remaining));

@@ -14,11 +14,12 @@ public interface InventoryDocumentLineRepository extends JpaRepository<Inventory
     @Query("SELECT COUNT(l) > 0 FROM InventoryDocumentLine l WHERE l.serialNumberId = :serialId AND l.inventoryDocument.status IN ('DRAFT', 'SUBMITTED') AND (:excludeDocId IS NULL OR l.inventoryDocument.id <> :excludeDocId) AND l.inventoryDocument.docType = 'EX_SO'")
     boolean isSerialLockedInDrafts(@Param("serialId") Long serialId, @Param("excludeDocId") Long excludeDocId);
 
-    @Query("SELECT COALESCE(SUM(l.quantityOut), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.salesOrderId = :salesOrderId AND l.variantId = :variantId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED') AND (:excludeDocId IS NULL OR l.inventoryDocument.id <> :excludeDocId)")
-    BigDecimal sumExportedQuantityBySalesOrderIdAndVariantIdExcludingDoc(@Param("salesOrderId") Long salesOrderId, @Param("variantId") Long variantId, @Param("excludeDocId") Long excludeDocId);
-
-    @Query("SELECT COALESCE(SUM(l.quantityOut), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.salesOrderId = :salesOrderId AND l.variantId = :variantId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED')")
-    BigDecimal sumExportedQuantityBySalesOrderIdAndVariantId(@Param("salesOrderId") Long salesOrderId, @Param("variantId") Long variantId);
+    /**
+     * Tổng số lượng xuất của các phiếu chưa hủy thuộc 1 SO, theo (sản phẩm, kho, trạng thái phiếu).
+     * Mỗi dòng là [variantId, warehouseId, docStatus, tổng quantityOut]; excludeDocId để bỏ qua phiếu đang sửa.
+     */
+    @Query("SELECT l.variantId, l.warehouseId, l.inventoryDocument.status, COALESCE(SUM(l.quantityOut), 0) FROM InventoryDocumentLine l WHERE l.inventoryDocument.salesOrderId = :salesOrderId AND (l.inventoryDocument.status IS NULL OR l.inventoryDocument.status <> 'CANCELLED') AND (:excludeDocId IS NULL OR l.inventoryDocument.id <> :excludeDocId) GROUP BY l.variantId, l.warehouseId, l.inventoryDocument.status")
+    List<Object[]> sumExportedBySalesOrder(@Param("salesOrderId") Long salesOrderId, @Param("excludeDocId") Long excludeDocId);
 
     /**
      * Tổng số lượng nhập của các phiếu chưa hủy thuộc 1 PO, theo (sản phẩm, kho, trạng thái phiếu).

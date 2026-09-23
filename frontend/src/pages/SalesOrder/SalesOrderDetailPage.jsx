@@ -62,6 +62,9 @@ function SalesOrderDetailPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const [existingDraftExport, setExistingDraftExport] = useState(null);
+  const [draftExports, setDraftExports] = useState([]);
+  const [creatingExport, setCreatingExport] = useState(false);
+  const exportSectionRef = useRef(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
@@ -117,8 +120,10 @@ function SalesOrderDetailPage() {
       const res = await exportApi.getExportHistory({ referenceType: 'SALES_ORDER', referenceId: id });
       const docs = unwrap(res) || [];
       setExportDocs(docs);
-      const draft = docs.find(d => ['DRAFT', 'SUBMITTED'].includes(d.status));
-      setExistingDraftExport(draft || null);
+      // SO bán đa kho sinh mỗi kho một phiếu nháp, nên phải giữ cả danh sách chứ không chỉ phiếu đầu tiên.
+      const drafts = docs.filter(d => ['DRAFT', 'SUBMITTED'].includes(d.status));
+      setDraftExports(drafts);
+      setExistingDraftExport(drafts[0] || null);
     } catch (err) {
       console.error(err);
     }
@@ -236,52 +241,40 @@ function SalesOrderDetailPage() {
     setConfirmCancel(false);
   };
 
-  const handleCreateExport = () => {
-    const exportableLines = (so.lines || [])
-      .map(l => {
-        const rem = l.remainingQuantity !== undefined && l.remainingQuantity !== null
-          ? Number(l.remainingQuantity)
-          : Number(l.quantity || 1);
-        return {
-          variantId: String(l.variantId),
-          warehouseId: l.warehouseId,
-          warehouseName: l.warehouseName,
-          quantity: rem,
-          maxQuantity: rem,
-          orderedQuantity: l.quantity,
-          exportedQuantity: l.exportedQuantity || 0,
-          price: l.unitPrice || l.price || 0,
-          unitName: l.unitName || '',
-          vatPercent: l.vatRate || l.vatPercent || 0,
-          warrantyMonths: l.warrantyMonths || 0,
-          note: l.note || '',
-        };
-      })
-      .filter(l => l.quantity > 0);
+  // Backend tách phần còn thiếu theo kho của từng dòng SO và tạo 1 phiếu xuất nháp cho mỗi kho. Trước đây màn
+  // này tự gom mọi dòng vào 1 phiếu với kho ở đầu đơn, nên SO bán đa kho ra phiếu đòi xuất hàng từ kho không giữ hàng.
+  const handleCreateExport = async () => {
+    if (creatingExport) return;
+    setCreatingExport(true);
+    try {
+      const res = await soApi.createExportFromSO(so.id);
+      const docs = unwrap(res) || [];
+      await loadSo({ silent: true });
 
-    if (exportableLines.length === 0) {
+      if (docs.length === 1) {
+        navigate(`/export-slips/${docs[0].id}/edit`, { state: { returnUrl: `/sales-orders/${id}` } });
+        return;
+      }
+      if (docs.length > 1) {
+        showToast('success', `Đã tạo ${docs.length} phiếu xuất nháp cho ${docs.length} kho. Chọn phiếu cần xử lý ở mục "Các đợt giao hàng".`);
+        exportSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
       showToast('info', 'Đơn hàng này đã xuất kho đủ toàn bộ sản phẩm');
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tạo được phiếu xuất kho');
+    } finally {
+      setCreatingExport(false);
+    }
+  };
+
+  // Nhiều kho thì có nhiều phiếu nháp cùng lúc: đưa người dùng tới bảng danh sách thay vì mở đại phiếu đầu tiên.
+  const handleContinueExport = () => {
+    if (draftExports.length === 1) {
+      navigate(`/export-slips/${draftExports[0].id}/edit`, { state: { returnUrl: `/sales-orders/${id}` } });
       return;
     }
-
-    navigate('/export-slips/create', {
-      state: {
-        soData: {
-          soId: so.id,
-          soCode: so.soCode,
-          warehouseId: so.warehouseId,
-          partnerId: so.partnerId,
-          partnerName: so.partnerName,
-          partnerCode: so.partnerCode,
-          partnerPhone: so.partnerPhone,
-          partnerAddress: so.partnerAddress,
-          note: so.note || `Xuất kho theo đơn hàng ${so.soCode}`,
-          salespersonId: so.salespersonId,
-          lines: exportableLines,
-        },
-        returnUrl: `/sales-orders/${id}`,
-      }
-    });
+    exportSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleRecordPayment = async (e) => {
@@ -732,9 +725,10 @@ function SalesOrderDetailPage() {
                 {existingDraftExport ? (
                   <button
                     className={styles.btnWarning}
-                    onClick={() => navigate(`/export-slips/${existingDraftExport.id}/edit`)}
+                    onClick={handleContinueExport}
                   >
-                    <i className="bi bi-arrow-right-circle" /> Tiếp tục xuất kho
+                    <i className="bi bi-arrow-right-circle" />
+                    {draftExports.length > 1 ? ` Còn ${draftExports.length} phiếu xuất cần xử lý` : ' Tiếp tục xuất kho'}
                   </button>
                 ) : so.isFullyExported ? (
                   <button className={styles.btnSecondary} disabled title="Đơn hàng này đã xuất kho đủ 100%">
@@ -744,8 +738,9 @@ function SalesOrderDetailPage() {
                   <button
                     className={styles.btnPrimary}
                     onClick={handleCreateExport}
+                    disabled={creatingExport}
                   >
-                    <i className="bi bi-box-arrow-right" /> Tạo phiếu xuất kho
+                    <i className="bi bi-box-arrow-right" /> {creatingExport ? 'Đang tạo phiếu...' : 'Tạo phiếu xuất kho'}
                   </button>
                 )}
               </>
@@ -871,7 +866,7 @@ function SalesOrderDetailPage() {
         )}
 
         {/* ── Export Documents & Batch E-Invoices (Khoản 1 Điều 9 NĐ 123) ── */}
-        <div className={styles.card} style={{ marginTop: 20 }}>
+        <div className={styles.card} style={{ marginTop: 20 }} ref={exportSectionRef}>
           <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <i className="bi bi-truck" style={{ color: 'var(--color-info-hover)' }} /> Các đợt giao hàng & Hóa đơn điện tử tương ứng (Nghị định 123/2020/NĐ-CP)
@@ -881,9 +876,10 @@ function SalesOrderDetailPage() {
                 type="button"
                 className={styles.btnSecondary}
                 onClick={handleCreateExport}
+                disabled={creatingExport}
                 style={{ fontSize: 13, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
               >
-                <i className="bi bi-plus-circle" /> Tạo phiếu xuất đợt mới
+                <i className="bi bi-plus-circle" /> {creatingExport ? 'Đang tạo phiếu...' : 'Tạo phiếu xuất đợt mới'}
               </button>
             )}
           </div>

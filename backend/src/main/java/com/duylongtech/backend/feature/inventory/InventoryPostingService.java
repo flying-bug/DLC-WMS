@@ -326,9 +326,19 @@ public class InventoryPostingService {
             if (so != null) {
                 BigDecimal totalDebt = BigDecimal.ZERO;
                 for (InventoryDocumentLine line : doc.getLines()) {
+                    // SO bán đa kho có thể có cùng một sản phẩm ở 2 kho với giá khác nhau: ưu tiên dòng đúng kho
+                    // của phiếu, không lấy đại dòng đầu tiên.
+                    Long lineWarehouseId = line.getWarehouseId() != null ? line.getWarehouseId() : doc.getWarehouseId();
                     SalesOrderLine soLine = so.getLines().stream()
                             .filter(l -> l.getVariantId().equals(line.getVariantId()))
-                            .findFirst().orElse(null);
+                            .filter(l -> {
+                                Long soLineWh = l.getWarehouseId() != null ? l.getWarehouseId() : so.getWarehouseId();
+                                return java.util.Objects.equals(soLineWh, lineWarehouseId);
+                            })
+                            .findFirst()
+                            .orElseGet(() -> so.getLines().stream()
+                                    .filter(l -> l.getVariantId().equals(line.getVariantId()))
+                                    .findFirst().orElse(null));
 
                     if (soLine != null) {
                         BigDecimal qtyToExport = line.getQuantityOut();
