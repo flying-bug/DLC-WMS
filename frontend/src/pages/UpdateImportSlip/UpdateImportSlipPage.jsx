@@ -700,7 +700,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
           />
         );
       },
-      width: '30%',
+      width: '28%',
     },
     {
       title: 'ĐVT',
@@ -894,7 +894,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
             </div>
           );
         },
-        width: '6%',
+        width: '8%',
       }
     ] : []),
     ...(hasAnyDiscrepancy ? [
@@ -926,15 +926,15 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
   ];
 
   const linesSummaryRow = (
-    <tr style={{ backgroundColor: 'var(--color-bg)', fontWeight: 'bold' }}>
-      <td colSpan={3} style={{ borderRight: 'none' }}></td>
-      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalExpectedQuantity)}</td>
-      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
+    <tr className={styles.summaryRow}>
+      <td colSpan={3} className={styles.summaryLabel}>TỔNG CỘNG:</td>
+      <td className={styles.summaryValue}>{money(totalExpectedQuantity)}</td>
+      <td className={styles.summaryValue}>{money(totalQuantity)}</td>
       {hasAnyConversion && (
         <td colSpan={3} style={{ borderRight: 'none' }}></td>
       )}
       {hasAnyConversion && (
-        <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-success)' }}>
+        <td className={`${styles.summaryValue} ${styles.summarySuccess}`}>
           {Number(items.reduce((sum, it) => {
             const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
             const op = it.conversionOperator || 'MULTIPLY';
@@ -943,10 +943,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
           }, 0).toFixed(4))}
         </td>
       )}
-      <td style={{ textAlign: 'right', padding: '12px', color: 'var(--wms-danger)' }}>{money(totalRejectedQuantity)}</td>
+      <td className={`${styles.summaryValue} ${styles.summaryDanger}`}>{money(totalRejectedQuantity)}</td>
       <td colSpan={2} style={{ borderRight: 'none' }}></td>
       {showPricing && <td></td>}
-      {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}
+      {showPricing && <td className={styles.summaryValue}>{money(totalPrice)} đ</td>}
       {showPricing && <td style={{ borderRight: 'none' }}></td>}
       {hasAnyDiscrepancy && <td></td>}
       <td></td>
@@ -976,12 +976,14 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                 value={[
                   { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
                   { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+                  { value: 'ASSEMBLY', label: 'Nhập kho lắp ráp / tháo dỡ' },
                   { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
                   { value: 'OTHER', label: 'Khác' }
                 ].find(o => o.value === importType)}
                 options={[
                   { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
                   { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+                  { value: 'ASSEMBLY', label: 'Nhập kho lắp ráp / tháo dỡ' },
                   { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
                   { value: 'OTHER', label: 'Khác' }
                 ]}
@@ -1199,7 +1201,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                     </>
                   )}
 
-                  <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                  <div className={`misa-form-row ${styles.warehouseStaffRow}`} style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">Kho nhập <span className="required">*</span></label>
                       <Select
@@ -1225,7 +1227,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">
                         {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
-                        {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
+                        {(importType === 'PRODUCTION' || importType === 'ASSEMBLY') && 'Nhân viên phụ trách'}
                         {importType === 'RETURN' && 'Nhân viên nhận hàng'}
                         {importType === 'OTHER' && 'Nhân viên nhận hàng'}
                       </label>

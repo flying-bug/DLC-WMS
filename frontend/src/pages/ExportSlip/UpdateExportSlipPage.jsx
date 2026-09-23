@@ -845,7 +845,7 @@ function UpdateExportSlipPage() {
     },
     {
       title: 'Sản phẩm',
-      width: '29%',
+      width: '27%',
       minWidth: '210px',
       render: (_, item, index) => (
         <ProductGridSelect
@@ -1047,7 +1047,7 @@ function UpdateExportSlipPage() {
       },
       {
         title: '% VAT',
-        width: '6%',
+        width: '8%',
         minWidth: '60px',
         align: 'right',
         render: (_, item, index) => (
@@ -1080,17 +1080,17 @@ function UpdateExportSlipPage() {
   });
   
   const linesSummaryRow = (
-    <tr>
-      <td colSpan={showPricing ? (hasAnyConversion ? 11 : 7) : (hasAnyConversion ? 9 : 5)} style={{ textAlign: 'right', padding: '8px 16px', fontWeight: 'bold' }}>
-        Tổng số lượng
-      </td>
-      <td style={{ textAlign: 'right', padding: '8px 16px', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+    <tr className={styles.linesSummaryRow}>
+      <td colSpan={4} className={styles.linesSummaryLabel}>TỔNG CỘNG:</td>
+      <td className={styles.linesSummaryValue}>
         {qty(totalQuantity)}
       </td>
+      {hasAnyConversion && <td colSpan={4}></td>}
+      <td colSpan={2}></td>
       {showPricing && (
         <>
-          <td style={{ textAlign: 'right', padding: '8px 16px', fontWeight: 'bold' }}></td>
-          <td style={{ textAlign: 'right', padding: '8px 16px', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+          <td></td>
+          <td className={styles.linesSummaryValue}>
             {money(totalPrice)}
           </td>
           <td></td>
@@ -1105,7 +1105,7 @@ function UpdateExportSlipPage() {
   // valid as a React child" ngay khi mở màn sửa phiếu xuất kho ở giao diện mobile.
   const linesSummaryMobile = (
     <div style={{ padding: '12px', background: 'var(--color-bg)', fontWeight: 'bold' }}>
-      <div>Tổng số lượng: <span style={{ color: 'var(--color-primary)' }}>{qty(totalQuantity)}</span></div>
+      <div>Tổng cộng: <span style={{ color: 'var(--color-primary)' }}>{qty(totalQuantity)}</span></div>
       {showPricing && (
         <>
           <div>Tổng tiền hàng: {money(totalPrice)}</div>
@@ -1480,9 +1480,19 @@ function UpdateExportSlipPage() {
                 </div>
               </div>
               <div className={styles.tableActions}>
-                <button className={styles.actionLink} onClick={addItem}>
-                  <i className="bi bi-plus-circle"></i> Thêm dòng mới
-                </button>
+                <div className={styles.tableCount}>Tổng số: <strong>{items.length}</strong> bản ghi</div>
+                <div className={styles.tableActionButtons}>
+                  <button type="button" className={styles.btnTableAction} onClick={addItem}>
+                    <i className="bi bi-plus-lg"></i> Thêm dòng
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.btnTableAction}
+                    onClick={() => { setItems([{ ...emptyLine(form.warehouseId), isNew: false }]); setItemPage(1); }}
+                  >
+                    <i className="bi bi-trash"></i> Xóa hết dòng
+                  </button>
+                </div>
               </div>
             </div>
           </>
