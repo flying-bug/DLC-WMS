@@ -510,14 +510,6 @@ function AnalyticsDashboard() {
                         <h2 className={styles.pageTitle}>Tổng Quan Hoạt Động</h2>
                         <p className={styles.pageSubtitle}>Các chỉ số chính đang được lấy trực tiếp từ dữ liệu hệ thống.</p>
                     </div>
-                    <div className={styles.headerActions}>
-                        <button className="btn-misa-outline" onClick={() => navigate('/import-history')}>
-                            <i className="bi bi-box-arrow-in-down"></i> Phiếu nhập kho
-                        </button>
-                        <button className="btn-misa-primary" onClick={() => navigate('/export-slips')}>
-                            <i className="bi bi-box-arrow-up"></i> Phiếu xuất kho
-                        </button>
-                    </div>
                 </div>
 
                 {error ? <div className={styles.errorBanner}>{error}</div> : null}

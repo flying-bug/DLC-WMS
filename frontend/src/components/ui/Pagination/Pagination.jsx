@@ -17,7 +17,11 @@ const Pagination = ({
     const calculatedTotalPages = totalElements > 0
         ? Math.max(1, Math.ceil(totalElements / size))
         : 1;
-    const effectiveTotalPages = calculatedTotalPages;
+    const reportedTotalPages = Number.isFinite(Number(totalPages))
+        ? Math.max(1, Number(totalPages))
+        : 1;
+    const effectiveTotalPages = totalElements > 0 ? calculatedTotalPages : reportedTotalPages;
+    const pageButtonWidth = Math.max(32, String(effectiveTotalPages).length * 9 + 16);
 
     // Trang hiện tại (thường lưu trong session) có thể vượt số trang thực tế sau khi lọc/xóa bản ghi:
     // bảng hiển thị rỗng trong khi vẫn báo "trên tổng số N bản ghi". Tự lùi về trang cuối hợp lệ.
@@ -85,7 +89,7 @@ const Pagination = ({
                     <span>Trước</span>
                 </button>
                 
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
                     {getVisiblePages().map((p, index) => {
                         if (p === '...') {
                             return <span key={`dots-${index}`} className={styles.pageDots}>...</span>;
@@ -100,7 +104,7 @@ const Pagination = ({
                                 // page number even though the correct page's data had loaded.
                                 key={`input-page-${p}`}
                                 className={`${styles.pageBtn} ${styles.active}`}
-                                style={{ width: '32px', textAlign: 'center', padding: '0', border: 'none', outline: 'none' }}
+                                style={{ width: `${pageButtonWidth}px`, minWidth: `${pageButtonWidth}px`, textAlign: 'center', padding: '0 6px', border: 'none', outline: 'none', whiteSpace: 'nowrap', overflowWrap: 'normal', boxSizing: 'border-box' }}
                                 defaultValue={p + 1}
                                 title="Nhập số trang và nhấn Enter"
                                 onBlur={(e) => e.target.value = p + 1}
