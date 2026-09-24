@@ -103,7 +103,7 @@ function renderDeliveryDateBadge(po) {
       return (
         <div className={styles.dateCell}>
           <span className={styles.dateMain} style={{ color: 'var(--color-text-muted-2)' }}>—</span>
-          <span className={`${styles.badgePill}`} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }} title="Đã tất toán / đóng hụt">
+          <span className={`${styles.badgePill}`} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }} title="Đã tất toán / đóng thiếu hàng">
             <i className="bi bi-flag-fill" /> Đã tất toán
           </span>
         </div>
@@ -126,7 +126,7 @@ function renderDeliveryDateBadge(po) {
           <i className="bi bi-check2-all" /> Đã nhập
         </span>
       ) : isShortClosed ? (
-        <span className={`${styles.badgePill}`} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }} title="Đã tất toán / đóng hụt">
+        <span className={`${styles.badgePill}`} style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' }} title="Đã tất toán / đóng thiếu hàng">
           <i className="bi bi-flag-fill" /> Đã tất toán
         </span>
       ) : diffDays < 0 ? (
