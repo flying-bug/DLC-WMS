@@ -18,8 +18,6 @@ import lombok.Setter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -122,6 +120,7 @@ public class ImportOcrService {
     private final ProductVariantRepository productVariantRepository;
     private final VendorProductMappingRepository vendorProductMappingRepository;
     private final SystemSettingsService systemSettingsService;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @Value("${ai.provider:openai}")
     private String provider;
@@ -144,8 +143,12 @@ public class ImportOcrService {
     @Value("${ai.gemini.api-key:}")
     private String geminiApiKey;
 
-    @Value("${ai.gemini.model:gemini-2.0-flash}")
+    @Value("${ai.gemini.model:gemini-2.5-flash}")
     private String geminiModel;
+
+    /** Model dự phòng khi model chính quá tải (503), hết lượt (429), lỗi mạng hoặc trả JSON hỏng. Để trống = tắt. */
+    @Value("${ai.gemini.fallback-model:gemini-2.5-flash-lite}")
+    private String geminiFallbackModel;
 
     @Value("${ai.gemini.thinking-budget:0}")
     private int geminiThinkingBudget;
@@ -153,37 +156,62 @@ public class ImportOcrService {
     @Value("${ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}")
     private String geminiBaseUrl;
 
-    private static final String VISION_SYSTEM_PROMPT = """
-            Bạn là chuyên gia trích xuất dữ liệu chứng từ kho hàng Việt Nam.
-            Hãy đọc ảnh phiếu giao hàng/hóa đơn này và trích xuất dữ liệu dưới dạng JSON chính xác theo cấu trúc sau.
-            QUAN TRỌNG: Không trích xuất bất kỳ thông tin cá nhân nào (tên người giao/nhận, số CMND/CCCD, chữ ký).
-            Chỉ trích xuất thông tin doanh nghiệp và sản phẩm.
-            - Nếu ảnh KHÔNG phải hóa đơn / phiếu giao hàng / phiếu nhập-xuất kho (ví dụ ảnh chụp màn hình, tin nhắn, chữ bài hát, ảnh phong cảnh...), KHÔNG đọc nội dung ảnh, trả về NGAY {"items": []}.
-            - Tên sản phẩm (raw_product_name): Gộp thông tin ở cột "Mã hàng" (Loại hàng) và "Diễn giải" (Tên hàng) một cách THÔNG MINH. TUYỆT ĐỐI KHÔNG lặp từ nếu thông tin đã trùng lặp. Ví dụ: Nếu "Mã hàng" là "VGA" và "Diễn giải" là "VGA M200" thì kết quả chỉ là "VGA M200" chứ KHÔNG được ghép thành "VGA VGA M200". Nếu "Mã hàng" là "VGA" và "Diễn giải" là "M200" thì kết quả là "VGA M200".
-            - Số Serial/IMEI thường nằm ở cột diễn giải hoặc ngay dưới tên sản phẩm, có thể viết liền nhau phân cách bởi dấu phẩy, dấu chấm (.) hoặc khoảng trắng (VD: 1877.3227.3588...). Hãy phân tách chúng thành mảng. Tên sản phẩm KHÔNG bao gồm các chuỗi serial này.
+    /**
+     * Giới hạn token đầu ra. Thinking đã tắt nên toàn bộ dành cho JSON: đủ cho phiếu vài chục dòng kèm serial.
+     * Không đặt quá cao: khi model lặp chữ vô hạn, giới hạn này quyết định phải chờ bao lâu mới bị cắt.
+     */
+    private static final int MAX_OUTPUT_TOKENS = 4096;
 
-            Cấu trúc JSON (Nếu thông tin nào không thấy, để null. Chỉ trả về JSON, không giải thích gì thêm):
-            {
-              "supplier_name": "Tên công ty nhà cung cấp",
-              "supplier_tax_code": "Mã số thuế nếu có",
-              "supplier_code": "Mã nhà cung cấp/khách hàng nếu có ghi trên chứng từ",
-              "invoice_code": "Số hóa đơn/phiếu giao hàng",
-              "invoice_date": "YYYY-MM-DD",
-              "items": [
-                {
-                  "raw_product_name": "Tên sản phẩm đúng như trên chứng từ",
-                  "raw_sku": "Mã SKU hoặc mã hàng nếu có",
-                  "category": "Danh mục sản phẩm dự đoán (VD: Điện thoại, Linh kiện, Bánh kẹo...)",
-                  "warranty": "Thời gian bảo hành nếu có (VD: '12 tháng', '1 năm', '24T', '3 năm' ...)",
-                  "vat_percent": "Phần trăm thuế VAT nếu có (VD: 8, 10, 0, 5 ... Nếu không thấy thì null)",
-                  "quantity": 10,
-                  "unit_price": 1500000,
-                  "unit": "Cái",
-                  "serial_numbers": ["SN123", "SN124"] // Danh sách số serial (đã được tách từ chuỗi)
-                }
-              ]
-            }
+    /** Không bắt đầu lần gọi AI mới khi đã chờ quá mốc này (tính từ lần gọi đầu), tránh treo phiên quét quá lâu. */
+    private static final long VISION_TOTAL_BUDGET_MS = 60_000L;
+
+    // Cấu trúc JSON do responseSchema của Gemini quy định (structured output), nên prompt chỉ mô tả ý nghĩa trường.
+    private static final String VISION_SYSTEM_PROMPT = """
+            Bạn là chuyên gia trích xuất dữ liệu chứng từ kho hàng Việt Nam. Đọc ảnh phiếu giao hàng / hóa đơn và trả về JSON.
+            QUAN TRỌNG: Không trích xuất thông tin cá nhân (tên người giao/nhận, số CMND/CCCD, chữ ký). Chỉ lấy thông tin doanh nghiệp và sản phẩm.
+            - Nếu ảnh KHÔNG phải hóa đơn / phiếu giao hàng / phiếu nhập-xuất kho (ảnh chụp màn hình, tin nhắn, bài hát, phong cảnh...), không đọc nội dung, trả về {"items": []}.
+            - supplier_name, supplier_tax_code, supplier_code: tên công ty nhà cung cấp, mã số thuế, mã nhà cung cấp/khách hàng ghi trên chứng từ.
+            - invoice_code: số hóa đơn / số phiếu. invoice_date: ngày chứng từ dạng YYYY-MM-DD.
+            - raw_product_name: gộp cột "Mã hàng" (loại hàng) và "Diễn giải" (tên hàng) một cách thông minh, KHÔNG lặp từ. Ví dụ "VGA" + "VGA M200" -> "VGA M200"; "VGA" + "M200" -> "VGA M200". Không đưa serial vào tên.
+            - raw_sku: mã SKU / mã hàng nếu có. category: danh mục dự đoán ngắn gọn (VD: Linh kiện, Điện thoại). unit: đơn vị tính.
+            - quantity, unit_price, vat_percent: số thuần (không dấu phân cách nghìn, không ký hiệu tiền tệ).
+            - warranty_months: số tháng bảo hành (36T -> 36, 3 năm -> 36, 1 năm -> 12).
+            - serial_numbers: các số Serial/IMEI, thường nằm ở cột diễn giải hoặc ngay dưới tên sản phẩm, có thể viết liền nhau phân cách bởi dấu phẩy, dấu chấm hoặc khoảng trắng (VD: 1877.3227.3588) - tách thành từng phần tử.
+            - Không thấy thông tin thì để null. Giá trị ngắn gọn đúng như trên chứng từ, không giải thích, không lặp lại.
             """;
+
+    /** Schema structured output của Gemini: bắt buộc JSON đúng cấu trúc, tránh JSON hỏng / thừa chữ. */
+    private static final Map<String, Object> VISION_RESPONSE_SCHEMA = buildVisionResponseSchema();
+
+    private static Map<String, Object> buildVisionResponseSchema() {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("type", "OBJECT");
+        Map<String, Object> itemProps = new LinkedHashMap<>();
+        itemProps.put("raw_product_name", Map.of("type", "STRING"));
+        itemProps.put("raw_sku", Map.of("type", "STRING", "nullable", true));
+        itemProps.put("category", Map.of("type", "STRING", "nullable", true));
+        itemProps.put("unit", Map.of("type", "STRING", "nullable", true));
+        itemProps.put("quantity", Map.of("type", "NUMBER", "nullable", true));
+        itemProps.put("unit_price", Map.of("type", "NUMBER", "nullable", true));
+        itemProps.put("vat_percent", Map.of("type", "NUMBER", "nullable", true));
+        itemProps.put("warranty_months", Map.of("type", "INTEGER", "nullable", true));
+        itemProps.put("serial_numbers", Map.of("type", "ARRAY", "items", Map.of("type", "STRING")));
+        item.put("properties", itemProps);
+        item.put("required", List.of("raw_product_name"));
+
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("type", "OBJECT");
+        Map<String, Object> props = new LinkedHashMap<>();
+        props.put("supplier_name", Map.of("type", "STRING", "nullable", true));
+        props.put("supplier_tax_code", Map.of("type", "STRING", "nullable", true));
+        props.put("supplier_code", Map.of("type", "STRING", "nullable", true));
+        props.put("invoice_code", Map.of("type", "STRING", "nullable", true));
+        props.put("invoice_date", Map.of("type", "STRING", "nullable", true));
+        props.put("items", Map.of("type", "ARRAY", "items", item));
+        root.put("properties", props);
+        root.put("required", List.of("items"));
+        return root;
+    }
 
     private final Map<String, OcrSessionData> ocrSessions = new ConcurrentHashMap<>();
     private final Map<String, SseEmitter> ocrSessionEmitters = new ConcurrentHashMap<>();
@@ -448,19 +476,23 @@ public class ImportOcrService {
             String base64Image = Base64.getEncoder().encodeToString(processedBytes);
             String effectiveMimeType = (mimeType != null && !mimeType.isBlank()) ? mimeType : "image/jpeg";
 
-            // 3. Gọi Vision AI
+            // 3. Gọi Vision AI (đã kiểm JSON hợp lệ, tự thử lại / chuyển model dự phòng khi lỗi tạm thời)
             long aiStart = System.currentTimeMillis();
-            String rawJson = callVisionAi(base64Image, effectiveMimeType);
+            JsonNode ocrResult = callVisionAi(base64Image, effectiveMimeType);
             long aiDuration = System.currentTimeMillis() - aiStart;
 
-            // 4. Parse JSON response
-            JsonNode ocrResult = objectMapper.readTree(rawJson);
-
-            // 5. Match Supplier
-            SupplierMatch supplierMatch = matchSupplier(ocrResult);
-
-            // 6. Match Items
-            List<OcrItemLine> itemLines = matchItems(ocrResult, supplierMatch.matchedId);
+            // 4-5. Khớp nhà cung cấp và sản phẩm. Chạy trong transaction chỉ đọc: hàm này chạy cả trên luồng nền
+            // của phiên quét (không có transaction), mà ProductVariant.product là LAZY. Mở sau khi AI trả lời để
+            // không giữ kết nối DB trong lúc chờ AI.
+            org.springframework.transaction.support.TransactionTemplate readOnlyTx =
+                    new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+            readOnlyTx.setReadOnly(true);
+            MatchResult matched = readOnlyTx.execute(status -> {
+                SupplierMatch supplier = matchSupplier(ocrResult);
+                return new MatchResult(supplier, matchItems(ocrResult, supplier.matchedId));
+            });
+            SupplierMatch supplierMatch = matched.supplier();
+            List<OcrItemLine> itemLines = matched.items();
             long totalDuration = System.currentTimeMillis() - startTime;
 
             log.info("[OCR] Completed scan in {} ms (Vision AI: {} ms, Matching: {} ms, Items: {})",
@@ -480,11 +512,16 @@ public class ImportOcrService {
                     .build();
         } catch (BusinessException e) {
             throw e;
+        } catch (VisionAiException e) {
+            log.error("OCR scan failed after {} ms: {}", (System.currentTimeMillis() - startTime), e.getMessage());
+            throw new BusinessException(e.userMessage());
         } catch (Exception e) {
             log.error("OCR scan failed after {} ms: {}", (System.currentTimeMillis() - startTime), e.getMessage(), e);
             throw new BusinessException(String.format(SystemMessage.OCR_ERR_002.getMessage(), e.getMessage()));
         }
     }
+
+    private record MatchResult(SupplierMatch supplier, List<OcrItemLine> items) {}
 
     /**
      * Tự động nén và thu nhỏ ảnh ở Server nếu dung lượng vượt quá 1MB (bảo vệ khi upload qua Mobile QR hoặc API ngoài)
@@ -565,7 +602,43 @@ public class ImportOcrService {
     // Vision AI Call
     // =========================================================================
 
-    private String callVisionAi(String base64Image, String mimeType) throws Exception {
+    /**
+     * Lỗi khi gọi Vision AI. {@code tryNextModel}: lỗi tạm thời / riêng của model (quá tải, hết lượt, JSON hỏng...)
+     * nên thử lại hoặc chuyển model dự phòng; false: lỗi cấu hình (sai API key...) - thử model khác cũng vô ích.
+     */
+    static final class VisionAiException extends Exception {
+        private final boolean tryNextModel;
+        private final boolean retrySameModel;
+        private final String userMessage;
+
+        VisionAiException(String message, String userMessage, boolean tryNextModel, boolean retrySameModel, Throwable cause) {
+            super(message, cause);
+            this.userMessage = userMessage;
+            this.tryNextModel = tryNextModel;
+            this.retrySameModel = retrySameModel;
+        }
+
+        String userMessage() {
+            return userMessage;
+        }
+
+        boolean tryNextModel() {
+            return tryNextModel;
+        }
+
+        boolean retrySameModel() {
+            return retrySameModel;
+        }
+    }
+
+    private static final String MSG_AI_BUSY =
+            "Dịch vụ AI đang quá tải hoặc tạm hết lượt xử lý. Vui lòng chụp / gửi lại ảnh sau ít phút.";
+    private static final String MSG_AI_UNREADABLE =
+            "AI không đọc được chứng từ trong ảnh này. Vui lòng chụp lại rõ nét, đủ sáng, thẳng góc.";
+    private static final String MSG_AI_CONFIG =
+            "Chưa cấu hình đúng API Key hoặc model AI cho tính năng quét chứng từ. Vui lòng liên hệ quản trị viên.";
+
+    private JsonNode callVisionAi(String base64Image, String mimeType) throws VisionAiException {
         boolean hasGeminiKey = (geminiApiKey != null && !geminiApiKey.isBlank());
         boolean hasOpenAiKey = (openAiApiKey != null && !openAiApiKey.isBlank());
 
@@ -574,7 +647,7 @@ public class ImportOcrService {
             if (!hasGeminiKey) {
                 throw new BusinessException("Chưa cấu hình GEMINI_API_KEY. Vui lòng thêm API Key vào biến môi trường GEMINI_API_KEY hoặc file cấu hình.");
             }
-            return callGeminiVision(base64Image, mimeType);
+            return callGeminiWithFallback(base64Image, mimeType);
         }
         if ("openai".equals(selectedProvider)) {
             if (!hasOpenAiKey) {
@@ -583,7 +656,7 @@ public class ImportOcrService {
             return callOpenAiVision(base64Image, mimeType);
         }
         if (hasGeminiKey) {
-            return callGeminiVision(base64Image, mimeType);
+            return callGeminiWithFallback(base64Image, mimeType);
         }
         if (hasOpenAiKey) {
             return callOpenAiVision(base64Image, mimeType);
@@ -591,32 +664,66 @@ public class ImportOcrService {
         throw new BusinessException("Không tìm thấy API Key cho AI (GEMINI_API_KEY hoặc OPENAI_API_KEY). Vui lòng cấu hình API Key để sử dụng tính năng quét chứng từ.");
     }
 
-    private String callOpenAiVision(String base64Image, String mimeType) throws Exception {
-        Map<String, Object> textContent = new LinkedHashMap<>();
-        textContent.put("type", "input_text");
-        textContent.put("text", VISION_SYSTEM_PROMPT);
+    /**
+     * Model chính: tối đa 2 lần (lần 2 chỉ khi lỗi tạm thời như 503 / lỗi 5xx, chờ ngắn trước khi gọi lại).
+     * Sau đó chuyển model dự phòng 1 lần. 429 (hết lượt của model) và 404 (model không còn) chuyển thẳng sang
+     * dự phòng vì hạn mức / tính sẵn có tính riêng theo từng model.
+     */
+    private JsonNode callGeminiWithFallback(String base64Image, String mimeType) throws VisionAiException {
+        List<String> models = new ArrayList<>();
+        models.add(geminiModel);
+        if (geminiFallbackModel != null && !geminiFallbackModel.isBlank()
+                && !geminiFallbackModel.trim().equalsIgnoreCase(geminiModel)) {
+            models.add(geminiFallbackModel.trim());
+        }
 
-        Map<String, Object> imageContent = new LinkedHashMap<>();
-        imageContent.put("type", "input_image");
-        imageContent.put("image_url", "data:" + mimeType + ";base64," + base64Image);
-
-        Map<String, Object> request = new LinkedHashMap<>();
-        request.put("model", openAiModel);
-        request.put("input", List.of(textContent, imageContent));
-        request.put("max_tokens", 3072);
-
-        String rawResponse = restClient.post()
-                .uri(openAiBaseUrl + "/responses")
-                .header("Authorization", "Bearer " + openAiApiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(String.class);
-
-        return extractOpenAiText(rawResponse);
+        long start = System.currentTimeMillis();
+        VisionAiException last = null;
+        for (int m = 0; m < models.size(); m++) {
+            String model = models.get(m);
+            int maxAttempts = m == 0 ? 2 : 1;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                if (last != null && System.currentTimeMillis() - start > VISION_TOTAL_BUDGET_MS) {
+                    throw last;
+                }
+                try {
+                    return callGeminiVision(base64Image, mimeType, model);
+                } catch (VisionAiException e) {
+                    last = e;
+                    if (!e.tryNextModel) {
+                        throw e;
+                    }
+                    boolean retrySame = e.retrySameModel && attempt < maxAttempts;
+                    log.warn("[OCR] Gemini {} attempt {} failed: {}{}", model, attempt, e.getMessage(),
+                            retrySame ? " - retrying" : (m + 1 < models.size() ? " - switching to " + models.get(m + 1) : ""));
+                    if (!retrySame) {
+                        break;
+                    }
+                    sleepQuietly(1500L);
+                }
+            }
+        }
+        throw last;
     }
 
-    private String callGeminiVision(String base64Image, String mimeType) throws Exception {
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** Model 2.5 tắt được thinking bằng budget 0 (Pro thì tối thiểu 128). Thinking bật ăn mất token đầu ra -> JSON bị cắt. */
+    private Integer thinkingBudgetFor(String model) {
+        String lower = model.toLowerCase(Locale.ROOT);
+        if (!lower.contains("2.5") && !lower.contains("thinking") && geminiThinkingBudget <= 0) {
+            return null;
+        }
+        return lower.contains("pro") ? Math.max(128, geminiThinkingBudget) : Math.max(0, geminiThinkingBudget);
+    }
+
+    private JsonNode callGeminiVision(String base64Image, String mimeType, String model) throws VisionAiException {
         Map<String, Object> textPart = Map.of("text", VISION_SYSTEM_PROMPT);
 
         Map<String, Object> inlineData = new LinkedHashMap<>();
@@ -629,61 +736,154 @@ public class ImportOcrService {
         content.put("parts", List.of(textPart, imagePart));
 
         Map<String, Object> generationConfig = new LinkedHashMap<>();
-        generationConfig.put("maxOutputTokens", 2048);
+        generationConfig.put("maxOutputTokens", MAX_OUTPUT_TOKENS);
         generationConfig.put("temperature", 0.1);
         generationConfig.put("responseMimeType", "application/json");
-
-        // Bắt buộc gửi thinkingBudget = 0 đối với các model 2.5 / thinking để tắt suy luận ngầm
-        boolean isThinkingModel = geminiModel != null && (geminiModel.contains("2.5") || geminiModel.contains("thinking"));
-        if (isThinkingModel || geminiThinkingBudget > 0) {
-            Map<String, Object> thinkingConfig = new LinkedHashMap<>();
-            thinkingConfig.put("thinkingBudget", geminiThinkingBudget);
-            generationConfig.put("thinkingConfig", thinkingConfig);
+        generationConfig.put("responseSchema", VISION_RESPONSE_SCHEMA);
+        Integer thinkingBudget = thinkingBudgetFor(model);
+        if (thinkingBudget != null) {
+            generationConfig.put("thinkingConfig", Map.of("thinkingBudget", thinkingBudget));
         }
 
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("contents", List.of(content));
         request.put("generationConfig", generationConfig);
 
-        String modelPath = geminiModel.startsWith("models/") ? geminiModel : "models/" + geminiModel;
-        log.info("[OCR] Calling Gemini model: {} with thinkingBudget: {}...", modelPath, generationConfig.get("thinkingConfig"));
+        String modelPath = model.startsWith("models/") ? model : "models/" + model;
+        log.info("[OCR] Calling Gemini model: {} (thinkingBudget: {})", modelPath, thinkingBudget);
 
+        String rawResponse;
         try {
-            String rawResponse = restClient.post()
+            rawResponse = restClient.post()
                     .uri(geminiBaseUrl + "/" + modelPath + ":generateContent?key=" + geminiApiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
                     .body(String.class);
-
-            return extractGeminiText(rawResponse);
         } catch (org.springframework.web.client.RestClientResponseException e) {
-            log.error("[OCR] Gemini API error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
-            // Fallback retry nếu 400 do generationConfig
-            if (e.getStatusCode().value() == 400) {
-                if (generationConfig.containsKey("thinkingConfig") || generationConfig.containsKey("responseMimeType")) {
-                    log.warn("[OCR] Retrying Gemini call with standard generationConfig...");
-                    Map<String, Object> fallbackConfig = new LinkedHashMap<>();
-                    fallbackConfig.put("maxOutputTokens", 3072);
-                    request.put("generationConfig", fallbackConfig);
-                    String retryResponse = restClient.post()
-                            .uri(geminiBaseUrl + "/" + modelPath + ":generateContent?key=" + geminiApiKey)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .body(request)
-                            .retrieve()
-                            .body(String.class);
-                    return extractGeminiText(retryResponse);
-                }
-            }
-            throw new RuntimeException("Gemini Vision AI error (" + e.getStatusCode() + "): " + e.getResponseBodyAsString(), e);
+            throw classifyHttpError(model, e.getStatusCode().value(), e.getResponseBodyAsString(), e);
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // Timeout / mất kết nối: model khác có thể trả lời kịp, gọi lại chính model này thì lại chờ 45s.
+            throw new VisionAiException("Gemini " + model + " network error: " + e.getMessage(), MSG_AI_BUSY, true, false, e);
         }
+        return parseGeminiResponse(model, rawResponse);
     }
 
-    private String extractOpenAiText(String rawResponse) throws Exception {
-        JsonNode root = objectMapper.readTree(rawResponse);
+    static VisionAiException classifyHttpError(String model, int status, String body, Exception cause) {
+        String brief = "Gemini " + model + " HTTP " + status + ": " + abbreviate(body, 300);
+        if (status == 401 || status == 403) {
+            return new VisionAiException(brief, MSG_AI_CONFIG, false, false, cause);
+        }
+        if (status == 400 && body != null && body.contains("API_KEY")) {
+            return new VisionAiException(brief, MSG_AI_CONFIG, false, false, cause);
+        }
+        if (status == 429 || status == 404 || status == 400) {
+            // Hết lượt / model không còn / model không nhận cấu hình: chuyển model dự phòng, không gọi lại model này.
+            return new VisionAiException(brief, status == 429 ? MSG_AI_BUSY : MSG_AI_CONFIG, true, false, cause);
+        }
+        // 500 / 503 / 504: quá tải tạm thời, gọi lại sau chút là thường được.
+        return new VisionAiException(brief, MSG_AI_BUSY, true, status >= 500, cause);
+    }
+
+    private JsonNode parseGeminiResponse(String model, String rawResponse) throws VisionAiException {
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(rawResponse);
+        } catch (Exception e) {
+            throw new VisionAiException("Gemini " + model + " returned non-JSON envelope", MSG_AI_UNREADABLE, true, true, e);
+        }
+        JsonNode candidate = root.path("candidates").path(0);
+        String finishReason = candidate.path("finishReason").asText("");
+        StringBuilder text = new StringBuilder();
+        for (JsonNode part : candidate.path("content").path("parts")) {
+            if (part.path("thought").asBoolean(false)) {
+                continue;
+            }
+            String t = part.path("text").asText();
+            if (t != null && !t.isBlank()) text.append(t);
+        }
+        if (text.length() == 0) {
+            String blockReason = root.path("promptFeedback").path("blockReason").asText("");
+            throw new VisionAiException("Gemini " + model + " returned no text (finishReason=" + finishReason
+                    + (blockReason.isBlank() ? "" : ", blockReason=" + blockReason) + ")", MSG_AI_UNREADABLE, true, true, null);
+        }
+        return parseVisionJson("Gemini " + model, text.toString(), finishReason);
+    }
+
+    /**
+     * JSON AI trả về phải là object. Bị cắt (MAX_TOKENS - thường do AI lặp chữ vô hạn) hoặc hỏng thì coi là lỗi tạm
+     * thời để gọi lại / chuyển model; ghi một đoạn nội dung thô vào log để tra cứu.
+     */
+    private JsonNode parseVisionJson(String source, String text, String finishReason) throws VisionAiException {
+        String cleaned = cleanJsonBlock(text.trim());
+        try {
+            JsonNode node = objectMapper.readTree(cleaned);
+            if (node != null && node.isObject()) {
+                return node;
+            }
+        } catch (Exception ignored) {
+            // xử lý bên dưới
+        }
+        throw new VisionAiException(source + " returned invalid JSON (finishReason=" + finishReason + ", "
+                + cleaned.length() + " chars): " + abbreviate(cleaned, 300), MSG_AI_UNREADABLE, true, true, null);
+    }
+
+    private static String abbreviate(String value, int max) {
+        if (value == null) return "";
+        String oneLine = value.replaceAll("\\s+", " ");
+        return oneLine.length() <= max ? oneLine : oneLine.substring(0, max) + "...";
+    }
+
+    /** OpenAI Responses API: input là danh sách message, giới hạn là max_output_tokens, bật chế độ JSON. */
+    private JsonNode callOpenAiVision(String base64Image, String mimeType) throws VisionAiException {
+        Map<String, Object> textContent = new LinkedHashMap<>();
+        textContent.put("type", "input_text");
+        textContent.put("text", VISION_SYSTEM_PROMPT);
+
+        Map<String, Object> imageContent = new LinkedHashMap<>();
+        imageContent.put("type", "input_image");
+        imageContent.put("image_url", "data:" + mimeType + ";base64," + base64Image);
+
+        Map<String, Object> message = new LinkedHashMap<>();
+        message.put("role", "user");
+        message.put("content", List.of(textContent, imageContent));
+
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("model", openAiModel);
+        request.put("input", List.of(message));
+        request.put("max_output_tokens", MAX_OUTPUT_TOKENS);
+        request.put("temperature", 0.1);
+        request.put("text", Map.of("format", Map.of("type", "json_object")));
+
+        String rawResponse;
+        try {
+            rawResponse = restClient.post()
+                    .uri(openAiBaseUrl + "/responses")
+                    .header("Authorization", "Bearer " + openAiApiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            String brief = "OpenAI HTTP " + status + ": " + abbreviate(e.getResponseBodyAsString(), 300);
+            throw new VisionAiException(brief, status == 401 || status == 403 ? MSG_AI_CONFIG : MSG_AI_BUSY, false, false, e);
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            throw new VisionAiException("OpenAI network error: " + e.getMessage(), MSG_AI_BUSY, false, false, e);
+        }
+        return parseVisionJson("OpenAI", extractOpenAiText(rawResponse), "");
+    }
+
+    private String extractOpenAiText(String rawResponse) throws VisionAiException {
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(rawResponse);
+        } catch (Exception e) {
+            throw new VisionAiException("OpenAI returned non-JSON envelope", MSG_AI_UNREADABLE, false, false, e);
+        }
         String outputText = root.path("output_text").asText();
         if (outputText != null && !outputText.isBlank()) {
-            return cleanJsonBlock(outputText.trim());
+            return outputText;
         }
         StringBuilder text = new StringBuilder();
         for (JsonNode outputItem : root.path("output")) {
@@ -692,19 +892,7 @@ public class ImportOcrService {
                 if (t != null && !t.isBlank()) text.append(t);
             }
         }
-        return cleanJsonBlock(text.toString().trim());
-    }
-
-    private String extractGeminiText(String rawResponse) throws Exception {
-        JsonNode root = objectMapper.readTree(rawResponse);
-        StringBuilder text = new StringBuilder();
-        for (JsonNode candidate : root.path("candidates")) {
-            for (JsonNode part : candidate.path("content").path("parts")) {
-                String t = part.path("text").asText();
-                if (t != null && !t.isBlank()) text.append(t);
-            }
-        }
-        return cleanJsonBlock(text.toString().trim());
+        return text.toString();
     }
 
     /** Loại bỏ markdown code fence nếu AI trả về ```json...``` */
@@ -773,10 +961,33 @@ public class ImportOcrService {
     // Smart Matching - Product Items
     // =========================================================================
 
-    private List<OcrItemLine> matchItems(JsonNode ocrResult, Long matchedSupplierId) {
-        JsonNode items = ocrResult.path("items");
-        if (!items.isArray()) return List.of();
+    /** Ngưỡng tự khớp và ngưỡng hiện gợi ý theo điểm tương đồng tên hàng (0..1). */
+    private static final double AUTO_MATCH_SCORE = 0.6;
+    private static final double SUGGESTION_SCORE = 0.25;
 
+    /** Hàng hóa đang kinh doanh, chuẩn hóa sẵn để khớp tên hàng trên chứng từ (nạp một lần cho mỗi lần quét). */
+    record CatalogEntry(ProductVariant variant, String productName, String text, Map<String, Integer> tokens,
+                                String skuKey, String barcodeKey) {}
+
+    private List<CatalogEntry> loadCatalog() {
+        return productVariantRepository.findAllActiveWithProduct().stream()
+                .map(v -> {
+                    String productName = v.getProduct() != null ? v.getProduct().getProductName() : "";
+                    // SKU không đưa vào từ khóa (làm loãng điểm); SKU được so riêng trong nameScore.
+                    String combined = (productName == null ? "" : productName) + " "
+                            + (v.getVariantName() == null ? "" : v.getVariantName());
+                    return new CatalogEntry(v, productName, matchText(combined), weightedTokens(combined),
+                            v.getSku() == null ? null : v.getSku().trim().toUpperCase(Locale.ROOT),
+                            v.getBarcode() == null ? null : v.getBarcode().trim().toLowerCase(Locale.ROOT));
+                })
+                .toList();
+    }
+
+    List<OcrItemLine> matchItems(JsonNode ocrResult, Long matchedSupplierId) {
+        JsonNode items = ocrResult.path("items");
+        if (!items.isArray() || items.isEmpty()) return List.of();
+
+        List<CatalogEntry> catalog = loadCatalog();
         List<OcrItemLine> result = new ArrayList<>();
 
         for (JsonNode item : items) {
@@ -786,8 +997,11 @@ public class ImportOcrService {
             BigDecimal unitPrice = decimalOrNull(item, "unit_price");
             String unit = textOrNull(item, "unit");
             String category = textOrNull(item, "category");
-            String warrantyStr = textOrNull(item, "warranty");
-            Integer warrantyMonths = parseWarrantyToMonths(warrantyStr);
+            // Schema mới trả thẳng số tháng; "warranty" dạng chữ còn giữ cho câu trả lời không theo schema (OpenAI).
+            BigDecimal warrantyNumber = decimalOrNull(item, "warranty_months");
+            Integer warrantyMonths = warrantyNumber != null && warrantyNumber.signum() >= 0
+                    ? Integer.valueOf(warrantyNumber.intValue()) // Integer, không int: nhánh kia có thể null
+                    : parseWarrantyToMonths(textOrNull(item, "warranty"));
             BigDecimal vatPercent = decimalOrNull(item, "vat_percent");
 
             List<String> serials = new ArrayList<>();
@@ -800,7 +1014,7 @@ public class ImportOcrService {
                 }
             }
 
-            VariantMatch match = matchVariant(rawName, rawSku, matchedSupplierId);
+            VariantMatch match = matchVariant(rawName, rawSku, matchedSupplierId, catalog);
 
             result.add(OcrItemLine.builder()
                     .rawProductName(rawName)
@@ -844,94 +1058,122 @@ public class ImportOcrService {
     private record VariantMatch(Long variantId, String sku, String variantName, String productName,
                                 double confidence, List<VariantSuggestion> suggestions) {}
 
-    private VariantMatch matchVariant(String rawName, String rawSku, Long supplierId) {
-        // Step 1: Exact SKU/Barcode match
-        if (rawSku != null && !rawSku.isBlank()) {
-            Optional<ProductVariant> bySku = productVariantRepository.findBySku(rawSku.trim());
-            if (bySku.isPresent()) {
-                ProductVariant v = bySku.get();
-                return new VariantMatch(v.getId(), v.getSku(), v.getVariantName(),
-                        v.getProduct().getProductName(), 1.0, List.of());
-            }
-            Optional<ProductVariant> byBarcode = productVariantRepository.findByBarcode(rawSku.trim());
-            if (byBarcode.isPresent()) {
-                ProductVariant v = byBarcode.get();
-                return new VariantMatch(v.getId(), v.getSku(), v.getVariantName(),
-                        v.getProduct().getProductName(), 1.0, List.of());
-            }
-        }
+    private static VariantMatch exactMatch(CatalogEntry entry, double confidence) {
+        ProductVariant v = entry.variant();
+        return new VariantMatch(v.getId(), v.getSku(), v.getVariantName(), entry.productName(), confidence, List.of());
+    }
 
-        // Step 2: Vendor mapping history (learning from past confirmations)
-        if (supplierId != null && rawName != null) {
-            String normalizedName = normalize(rawName);
-            Optional<VendorProductMapping> mapping =
-                    vendorProductMappingRepository.findByPartnerIdAndVendorProductName(supplierId, normalizedName);
-            if (mapping.isPresent()) {
-                Optional<ProductVariant> v = productVariantRepository.findById(mapping.get().getProductVariantId());
-                if (v.isPresent()) {
-                    ProductVariant variant = v.get();
-                    return new VariantMatch(variant.getId(), variant.getSku(), variant.getVariantName(),
-                            variant.getProduct().getProductName(), 0.95, List.of());
+    private VariantMatch matchVariant(String rawName, String rawSku, Long supplierId, List<CatalogEntry> catalog) {
+        // Step 1: Khớp chính xác SKU / mã vạch (không phân biệt hoa thường, bỏ khoảng trắng thừa)
+        if (rawSku != null && !rawSku.isBlank()) {
+            String skuKey = rawSku.trim().toUpperCase(Locale.ROOT);
+            String barcodeKey = rawSku.trim().toLowerCase(Locale.ROOT);
+            for (CatalogEntry entry : catalog) {
+                if (skuKey.equals(entry.skuKey()) || barcodeKey.equals(entry.barcodeKey())) {
+                    return exactMatch(entry, 1.0);
                 }
             }
         }
 
-        // Step 3: Fuzzy search by product name
-        if (rawName != null && !rawName.isBlank()) {
-            Page<ProductVariant> candidates = productVariantRepository.searchVariants(rawName.trim(), false, PageRequest.of(0, 20));
-            String normalizedRaw = normalize(rawName);
-
-            List<ScoredVariant> scored = candidates.getContent().stream()
-                    .map(v -> {
-                        String combinedName = normalize(v.getProduct().getProductName() + " " + v.getVariantName());
-                        double score = similarity(normalizedRaw, combinedName);
-                        return new ScoredVariant(v, score);
-                    })
-                    .sorted(Comparator.comparingDouble(ScoredVariant::score).reversed())
-                    .toList();
-
-            if (!scored.isEmpty() && scored.get(0).score >= 0.6) {
-                ScoredVariant best = scored.get(0);
-                ProductVariant v = best.variant;
-
-                List<VariantSuggestion> suggestions = scored.stream()
-                        .skip(1)
-                        .limit(3)
-                        .filter(s -> s.score >= 0.4)
-                        .map(s -> VariantSuggestion.builder()
-                                .variantId(s.variant.getId())
-                                .sku(s.variant.getSku())
-                                .variantName(s.variant.getVariantName())
-                                .productName(s.variant.getProduct().getProductName())
-                                .similarity(Math.round(s.score * 100.0) / 100.0)
-                                .build())
-                        .toList();
-
-                return new VariantMatch(v.getId(), v.getSku(), v.getVariantName(),
-                        v.getProduct().getProductName(), Math.round(best.score * 100.0) / 100.0, suggestions);
-            }
-
-            // Có kết quả nhưng confidence thấp -> chỉ trả suggestions
-            if (!scored.isEmpty()) {
-                List<VariantSuggestion> suggestions = scored.stream()
-                        .limit(5)
-                        .map(s -> VariantSuggestion.builder()
-                                .variantId(s.variant.getId())
-                                .sku(s.variant.getSku())
-                                .variantName(s.variant.getVariantName())
-                                .productName(s.variant.getProduct().getProductName())
-                                .similarity(Math.round(s.score * 100.0) / 100.0)
-                                .build())
-                        .toList();
-                return new VariantMatch(null, null, null, null, 0.0, suggestions);
+        // Step 2: Lịch sử khớp tay với nhà cung cấp này (học từ các lần người dùng xác nhận)
+        if (supplierId != null && rawName != null) {
+            Optional<VendorProductMapping> mapping =
+                    vendorProductMappingRepository.findByPartnerIdAndVendorProductName(supplierId, normalize(rawName));
+            if (mapping.isPresent()) {
+                Long mappedId = mapping.get().getProductVariantId();
+                for (CatalogEntry entry : catalog) {
+                    if (entry.variant().getId().equals(mappedId)) {
+                        return exactMatch(entry, 0.95);
+                    }
+                }
             }
         }
 
-        // No match found
-        return new VariantMatch(null, null, null, null, 0.0, List.of());
+        // Step 3: So khớp tên theo từ khóa trên toàn bộ danh mục (không cần tên trong kho chứa trọn tên trên chứng từ)
+        if (rawName == null || rawName.isBlank() || catalog.isEmpty()) {
+            return new VariantMatch(null, null, null, null, 0.0, List.of());
+        }
+        String rawText = matchText(rawName);
+        Map<String, Integer> rawTokens = weightedTokens(rawName);
+        List<ScoredVariant> scored = catalog.stream()
+                .map(entry -> new ScoredVariant(entry, nameScore(rawText, rawTokens, entry)))
+                .filter(s -> s.score >= SUGGESTION_SCORE)
+                .sorted(Comparator.comparingDouble(ScoredVariant::score).reversed())
+                .limit(6)
+                .toList();
+
+        if (!scored.isEmpty() && scored.get(0).score >= AUTO_MATCH_SCORE) {
+            ScoredVariant best = scored.get(0);
+            VariantMatch bestMatch = exactMatch(best.entry, Math.round(best.score * 100.0) / 100.0);
+            return new VariantMatch(bestMatch.variantId(), bestMatch.sku(), bestMatch.variantName(),
+                    bestMatch.productName(), bestMatch.confidence(), toSuggestions(scored.stream().skip(1).limit(3)));
+        }
+        // Không đủ chắc để tự khớp: chỉ trả gợi ý cho người dùng chọn
+        return new VariantMatch(null, null, null, null, 0.0, toSuggestions(scored.stream().limit(5)));
     }
 
-    private record ScoredVariant(ProductVariant variant, double score) {}
+    private static List<VariantSuggestion> toSuggestions(java.util.stream.Stream<ScoredVariant> stream) {
+        return stream.map(s -> VariantSuggestion.builder()
+                        .variantId(s.entry.variant().getId())
+                        .sku(s.entry.variant().getSku())
+                        .variantName(s.entry.variant().getVariantName())
+                        .productName(s.entry.productName())
+                        .similarity(Math.round(s.score * 100.0) / 100.0)
+                        .build())
+                .toList();
+    }
+
+    private record ScoredVariant(CatalogEntry entry, double score) {}
+
+    /**
+     * Điểm giống nhau giữa tên trên chứng từ và một hàng trong kho: Dice có trọng số trên từ khóa. Từ có chữ số
+     * (mã model, dung lượng: 13400f, 16gb, ddr5...) nặng gấp 3 từ chung (ram, ssd, intel) vì phân biệt hàng tốt hơn.
+     * Tên này chứa trọn tên kia vẫn được tối thiểu 0.7 như trước.
+     */
+    static double nameScore(String rawText, Map<String, Integer> rawTokens, CatalogEntry entry) {
+        // Tên trên chứng từ có ghi đúng mã SKU của hàng trong kho
+        if (entry.skuKey() != null && rawTokens.containsKey(entry.skuKey().toLowerCase(Locale.ROOT))) {
+            return 0.95;
+        }
+        double best = 0;
+        if (!rawText.isEmpty() && !entry.text().isEmpty()
+                && (rawText.contains(entry.text()) || entry.text().contains(rawText))) {
+            best = Math.max(0.7, (double) Math.min(rawText.length(), entry.text().length())
+                    / Math.max(rawText.length(), entry.text().length()));
+        }
+        int rawWeight = rawTokens.values().stream().mapToInt(Integer::intValue).sum();
+        int entryWeight = entry.tokens().values().stream().mapToInt(Integer::intValue).sum();
+        if (rawWeight == 0 || entryWeight == 0) {
+            return best;
+        }
+        int shared = 0;
+        for (Map.Entry<String, Integer> token : rawTokens.entrySet()) {
+            if (entry.tokens().containsKey(token.getKey())) {
+                shared += token.getValue();
+            }
+        }
+        return Math.max(best, 2.0 * shared / (rawWeight + entryWeight));
+    }
+
+    /** Chuỗi so khớp: bỏ dấu (kể cả đ), chữ thường, dính số với đơn vị (16 GB -> 16gb), ký tự đặc biệt thành khoảng trắng. */
+    static String matchText(String value) {
+        if (value == null) return "";
+        String s = Normalizer.normalize(value.replace('đ', 'd').replace('Đ', 'D'), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT);
+        s = s.replaceAll("(\\d)\\s+(gb|tb|mb|ghz|mhz|hz|w|inch)\\b", "$1$2");
+        return s.replaceAll("[^a-z0-9]+", " ").trim();
+    }
+
+    static Map<String, Integer> weightedTokens(String value) {
+        Map<String, Integer> tokens = new HashMap<>();
+        for (String token : matchText(value).split(" ")) {
+            if (token.isEmpty()) continue;
+            boolean distinctive = token.length() >= 3 && token.chars().anyMatch(Character::isDigit);
+            tokens.put(token, distinctive ? 3 : 1);
+        }
+        return tokens;
+    }
 
     // =========================================================================
     // String Similarity (Jaro-Winkler based)

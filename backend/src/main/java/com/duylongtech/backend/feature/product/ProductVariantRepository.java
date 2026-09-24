@@ -27,6 +27,12 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     long countByProductId(Long productId);
 
+    /** Danh mục hàng hóa đang kinh doanh (kèm product) để OCR khớp tên hàng trên chứng từ trong bộ nhớ. */
+    @Query("SELECT v FROM ProductVariant v JOIN FETCH v.product p "
+            + "WHERE (v.active IS NULL OR v.active = true) AND (p.active IS NULL OR p.active = true) "
+            + "AND (p.productType IS NULL OR p.productType NOT IN ('Dịch vụ', 'Dich vu'))")
+    List<ProductVariant> findAllActiveWithProduct();
+
     @Query(value = "SELECT v FROM ProductVariant v " +
             "JOIN FETCH v.product p " +
             "LEFT JOIN FETCH p.brand " +

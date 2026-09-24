@@ -62,7 +62,7 @@ spring:
         api-key: ${GEMINI_API_KEY:not-configured}
         chat:
           options:
-            model: ${GEMINI_MODEL:gemini-2.0-flash}
+            model: ${GEMINI_MODEL:gemini-2.5-flash}
             temperature: 0.2
 
 backup:
@@ -99,7 +99,9 @@ ai:
   gemini:
     enabled: ${GEMINI_ENABLED:true}
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-2.0-flash}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    # Model dự phòng cho OCR khi model chính quá tải / hết lượt / trả JSON hỏng. Để trống để tắt.
+    fallback-model: ${GEMINI_FALLBACK_MODEL:gemini-2.5-flash-lite}
     thinking-budget: ${GEMINI_THINKING_BUDGET:0}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
 

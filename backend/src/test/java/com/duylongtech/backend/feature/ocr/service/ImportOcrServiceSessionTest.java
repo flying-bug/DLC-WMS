@@ -33,7 +33,8 @@ class ImportOcrServiceSessionTest {
                 mock(PartnerRepository.class),
                 mock(ProductVariantRepository.class),
                 mock(VendorProductMappingRepository.class),
-                settings);
+                settings,
+                mock(org.springframework.transaction.PlatformTransactionManager.class));
     }
 
     private static byte[] png(int width, int height) throws Exception {
