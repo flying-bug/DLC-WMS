@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AssemblyOrderRepository extends JpaRepository<AssemblyOrder, Long> {
+
+    /** Tra theo mã cho Trợ lý AI (getDocumentDetail). */
+    Optional<AssemblyOrder> findFirstByOrderCode(String orderCode);
     boolean existsByOrderCode(String orderCode);
 
     @Query("SELECT o.orderCode FROM AssemblyOrder o WHERE o.orderCode LIKE CONCAT(:prefix, '%')")

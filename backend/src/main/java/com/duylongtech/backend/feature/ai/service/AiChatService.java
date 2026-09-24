@@ -180,6 +180,15 @@ public class AiChatService {
             case LOW_STOCK, WAREHOUSE_LIST, WAREHOUSE_STOCK -> accessPolicy.canViewAny(STOCK_PERMISSIONS);
             case PRODUCT -> accessPolicy.canView("product:view");
             case PARTNER -> accessPolicy.canView("customer:view") || accessPolicy.canView("supplier:view");
+            // Chứng từ: cùng quyền với nhánh gated(...) tương ứng ở trên; thiếu quyền thì đi đường cũ để trả ACCESS_DENIED.
+            case IMPORT -> accessPolicy.canView("import:view");
+            case EXPORT -> accessPolicy.canView("export:view");
+            case TRANSFER -> accessPolicy.canView("transfer:view");
+            case PURCHASE_ORDER -> accessPolicy.canView("purchase_order:view");
+            case SALES_ORDER -> accessPolicy.canView("sales_order:view");
+            case REPAIR -> accessPolicy.canView("repair:view");
+            case WARRANTY -> accessPolicy.canView("warranty:view");
+            case ASSEMBLY -> accessPolicy.canViewAny("assembly:view", "assembly_config:view");
             case GENERAL -> true;
             default -> false;
         };

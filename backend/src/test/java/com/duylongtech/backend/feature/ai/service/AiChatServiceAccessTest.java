@@ -226,12 +226,25 @@ class AiChatServiceAccessTest {
     }
 
     @Test
-    void agentIsSkippedForModulesItDoesNotCoverYet() {
+    void agentAnswersDocumentQuestionsWhenTheUserMayReadThatModule() {
         loginWith("ROLE_ACCOUNTANT", "ai_chat:view", "purchase_order:view");
         when(agent.isAvailable()).thenReturn(true);
+        AiChatResponse fromAgent = AiChatResponse.builder().intent("AGENT_ANSWER").answer("PO0001 đang DRAFT").build();
+        when(agent.answer(any(), any())).thenReturn(java.util.Optional.of(fromAgent));
 
-        service.chat("Đơn mua hàng PO0001 đang ở trạng thái nào?");
+        AiChatResponse response = service.chat("Đơn mua hàng PO0001 đang ở trạng thái nào?");
 
+        assertEquals("AGENT_ANSWER", response.getIntent());
+    }
+
+    @Test
+    void agentIsNotConsultedForADocumentModuleTheUserMayNotRead() {
+        loginWith("ROLE_CASHIER_CONTROLLER", "ai_chat:view", "payment:view");
+        when(agent.isAvailable()).thenReturn(true);
+
+        AiChatResponse response = service.chat("Đơn mua hàng PO0001 đang ở trạng thái nào?");
+
+        assertEquals("ACCESS_DENIED", response.getIntent());
         org.mockito.Mockito.verify(agent, org.mockito.Mockito.never()).answer(any(), any());
     }
 }

@@ -45,6 +45,10 @@ public class AiToolSupport {
      */
     public Map<String, Object> begin(String tool, String args, String label, String... permissions) {
         AiAgentRun run = AiAgentRun.current();
+        if (run != null && run.isExpired()) {
+            log.warn("[AI-AGENT] time budget exceeded tool={} user={} elapsedMs={}", tool, currentUser(), run.elapsedMillis());
+            return error("Đã hết thời gian xử lý câu hỏi này. Không gọi thêm công cụ nào nữa: hãy trả lời ngay bằng dữ liệu đã có và nói rõ phần còn thiếu.");
+        }
         if (run != null && !run.tryRecord(tool)) {
             log.warn("[AI-AGENT] tool budget exceeded tool={} user={}", tool, currentUser());
             return error("Đã vượt số lần gọi công cụ cho một câu hỏi. Hãy trả lời dựa trên dữ liệu đã có và nói rõ phần còn thiếu.");
@@ -109,6 +113,15 @@ public class AiToolSupport {
         List<Long> allowed = accessPolicy.allowedWarehouseIds();
         List<Warehouse> all = warehouseRepository.findAll();
         return allowed == null ? all : all.stream().filter(w -> allowed.contains(w.getId())).toList();
+    }
+
+    /** Nhãn "mã - tên" của mọi kho theo id, để hiển thị kho trên chứng từ (chứng từ chỉ lưu warehouseId). */
+    public Map<Long, String> warehouseLabels() {
+        Map<Long, String> labels = new LinkedHashMap<>();
+        for (Warehouse warehouse : warehouseRepository.findAll()) {
+            labels.put(warehouse.getId(), warehouse.getCode() + " - " + warehouse.getName());
+        }
+        return labels;
     }
 
     /** Tìm kho theo mã hoặc tên (bỏ dấu, không phân biệt hoa thường) trong TẤT CẢ kho, để phân biệt "không có" và "không được xem". */

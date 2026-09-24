@@ -14,6 +14,9 @@ import java.util.Optional;
 import com.duylongtech.backend.feature.partner.Partner;
 
 public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
+
+    /** Tra theo mã cho Trợ lý AI (getDocumentDetail). */
+    Optional<Warranty> findFirstByWarrantyCode(String warrantyCode);
     boolean existsByWarrantyCode(String warrantyCode);
 
     boolean existsByWarrantyCodeAndIdNot(String warrantyCode, Long id);

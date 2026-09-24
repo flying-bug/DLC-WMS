@@ -1,14 +1,22 @@
 package com.duylongtech.backend.feature.ai.agent;
 
 import com.duylongtech.backend.feature.ai.agent.tool.AiToolSupport;
+import com.duylongtech.backend.feature.ai.agent.tool.DocumentTools;
 import com.duylongtech.backend.feature.ai.agent.tool.PartnerTools;
 import com.duylongtech.backend.feature.ai.agent.tool.ProductTools;
 import com.duylongtech.backend.feature.ai.agent.tool.StockTools;
 import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
 import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
 import com.duylongtech.backend.feature.ai.service.AiAccessPolicy;
+import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import com.duylongtech.backend.feature.partner.PartnerRepository;
+import com.duylongtech.backend.feature.purchase_order.PurchaseOrderRepository;
+import com.duylongtech.backend.feature.repair.RepairRepository;
+import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
+import com.duylongtech.backend.feature.warehouse.StockTransferRepository;
+import com.duylongtech.backend.feature.warranty.WarrantyRepository;
 import com.duylongtech.backend.feature.product.Product;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
@@ -37,6 +45,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -73,6 +83,8 @@ class AiAgentServiceTest {
         private final String toolArguments;
         private final String finalText;
         private RuntimeException failure;
+        /** Mô phỏng nhà cung cấp chậm: chờ trước khi yêu cầu gọi công cụ. */
+        private long delayBeforeToolMillis;
 
         ScriptedChatModel(String toolName, String toolArguments, String finalText) {
             this.toolName = toolName;
@@ -94,6 +106,13 @@ class AiAgentServiceTest {
             }
             boolean hasToolResult = prompt.getInstructions().stream().anyMatch(m -> m instanceof ToolResponseMessage);
             if (!hasToolResult && toolName != null) {
+                if (delayBeforeToolMillis > 0) {
+                    try {
+                        Thread.sleep(delayBeforeToolMillis);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
                 AssistantMessage request = AssistantMessage.builder()
                         .content("")
                         .toolCalls(List.of(new AssistantMessage.ToolCall("call-1", "function", toolName, toolArguments)))
@@ -140,7 +159,11 @@ class AiAgentServiceTest {
         service = new AiAgentService(properties, modelProvider, provider,
                 new ProductTools(variantRepository, support),
                 new StockTools(mock(InventoryBalanceRepository.class), support),
-                new PartnerTools(mock(PartnerRepository.class), support));
+                new PartnerTools(mock(PartnerRepository.class), support),
+                new DocumentTools(mock(InventoryDocumentRepository.class), mock(StockTransferRepository.class),
+                        mock(AssemblyOrderRepository.class), mock(PurchaseOrderRepository.class),
+                        mock(SalesOrderRepository.class), mock(RepairRepository.class), mock(WarrantyRepository.class),
+                        variantRepository, mock(PartnerRepository.class), support));
     }
 
     private static void loginAs(String... authorities) {
@@ -210,6 +233,38 @@ class AiAgentServiceTest {
     }
 
     @Test
+    void systemPromptCarriesTodaysDateSoRelativeDatesResolveCorrectly() {
+        loginAs("product:view");
+        build(new ScriptedChatModel(null, null, "Xin chào."));
+
+        service.answer("Phiếu nhập tháng này", List.of());
+        service.answer("Phiếu xuất hôm nay", List.of());
+
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        for (Prompt prompt : model.prompts) {
+            Message system = prompt.getInstructions().get(0);
+            assertTrue(system instanceof SystemMessage);
+            assertTrue(system.getText().contains(today), "mỗi câu hỏi phải mang ngày hôm nay: " + system.getText());
+        }
+    }
+
+    @Test
+    void onceTheTimeBudgetIsSpentToolsAreRefusedAndTheModelMustAnswerWithWhatItHas() {
+        loginAs("product:view");
+        properties.setTimeoutSeconds(1);
+        ScriptedChatModel slow = new ScriptedChatModel("searchProducts", "{\"keyword\":\"ram\"}", "Hết thời gian, chưa tra được.");
+        slow.delayBeforeToolMillis = 1100;
+        build(slow);
+
+        Optional<AiChatResponse> answer = service.answer("Tìm RAM", List.of());
+
+        assertTrue(answer.isPresent());
+        assertTrue(model.toolResultSeenByModel().contains("hết thời gian"), model.toolResultSeenByModel());
+        verify(variantRepository, never()).searchVariants(anyString(), anyBoolean(), any(Pageable.class));
+        assertNull(AiAgentRun.current());
+    }
+
+    @Test
     void modelFailureFallsBackToTheClassicAnswer() {
         loginAs("product:view");
         ScriptedChatModel failing = new ScriptedChatModel(null, null, "x");
@@ -236,7 +291,7 @@ class AiAgentServiceTest {
         when(noModel.getIfAvailable()).thenReturn(null);
         // Builder có sẵn (Spring AI luôn tạo) nhưng không có ChatModel -> vẫn phải coi là không khả dụng
         when(none.getIfAvailable()).thenAnswer(inv -> ChatClient.builder(model));
-        AiAgentService withoutModel = new AiAgentService(properties, noModel, none, null, null, null);
+        AiAgentService withoutModel = new AiAgentService(properties, noModel, none, null, null, null, null);
         assertFalse(withoutModel.isAvailable());
     }
 }

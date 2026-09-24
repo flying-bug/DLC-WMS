@@ -51,8 +51,15 @@ spring:
       audio:
         speech: none
         transcription: none
+    # Không thử lại khi gọi mô hình lỗi: mặc định Spring AI thử lại 10 lần, chờ tới 3 phút giữa các lần, người dùng phải
+    # đợi rất lâu. Agent lỗi thì chatbot đã tự quay về đường trả lời cũ. (Chỉ Gemini dùng cơ chế này; OpenAI xem max-retries.)
+    retry:
+      max-attempts: 0
     openai:
       api-key: ${OPENAI_API_KEY:not-configured}
+      # Lời gọi mô hình bị treo phải lỗi trong hạn của một câu hỏi (ai.agent.timeout-seconds) để quay về đường cũ.
+      timeout: ${AI_AGENT_TIMEOUT_SECONDS:30}s
+      max-retries: 0
       chat:
         options:
           model: ${OPENAI_MODEL:gpt-4o-mini}
@@ -90,6 +97,8 @@ ai:
     enabled: ${AI_AGENT_ENABLED:false}
     max-tool-calls: ${AI_AGENT_MAX_TOOL_CALLS:6}
     max-rows: ${AI_AGENT_MAX_ROWS:10}
+    history-turns: ${AI_AGENT_HISTORY_TURNS:6}
+    timeout-seconds: ${AI_AGENT_TIMEOUT_SECONDS:30}
   provider: ${AI_PROVIDER:gemini}
   openai:
     enabled: ${OPENAI_ENABLED:false}

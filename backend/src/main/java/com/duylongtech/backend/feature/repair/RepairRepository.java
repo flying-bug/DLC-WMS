@@ -16,6 +16,9 @@ import com.duylongtech.backend.feature.warranty.Warranty;
 
 public interface RepairRepository extends JpaRepository<Repair, Long> {
 
+    /** Tra theo mã cho Trợ lý AI (getDocumentDetail). */
+    Optional<Repair> findFirstByRepairCode(String repairCode);
+
     boolean existsByRepairCode(String repairCode);
 
     boolean existsByRepairCodeAndIdNot(String repairCode, Long id);
