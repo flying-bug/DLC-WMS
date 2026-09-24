@@ -610,11 +610,13 @@ function StocktakeDetailPage() {
           reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
           lines: diffLackLines.map(l => {
             const rawSerials = l.serials || [];
-            const missingSerials = rawSerials
-              .filter(s => s.scanStatus === 'MISSING' || !s.scanStatus)
+            // Chỉ các serial báo thiếu. Không lấy dự phòng cả danh sách: trong đó có serial đã quét thấy (còn trong kho),
+            // xuất chúng là trừ nhầm hàng còn. Không có serial thiếu thì để trống cho thủ kho chọn.
+            const serialList = rawSerials
+              .filter(s => s.scanStatus === 'MISSING')
               .map(s => (typeof s === 'string' ? s : s.serialNumber))
               .filter(Boolean);
-            const serialList = missingSerials.length > 0 ? missingSerials : rawSerials.map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean);
+            const missingSerials = serialList;
             return {
               variantId: l.variantId,
               sku: l.sku,
@@ -647,11 +649,12 @@ function StocktakeDetailPage() {
           reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
           lines: diffSurplusLines.map(l => {
             const rawSerials = l.serials || [];
-            const surplusSerials = rawSerials
-              .filter(s => s.scanStatus === 'UNEXPECTED' || !s.scanStatus)
+            // Chỉ các serial báo thừa (không lấy cả danh sách: serial khớp sổ đã có trong kho, nhập lại là trùng).
+            const serialList = rawSerials
+              .filter(s => s.scanStatus === 'UNEXPECTED')
               .map(s => (typeof s === 'string' ? s : s.serialNumber))
               .filter(Boolean);
-            const serialList = surplusSerials.length > 0 ? surplusSerials : rawSerials.map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean);
+            const surplusSerials = serialList;
             return {
               variantId: l.variantId,
               sku: l.sku,

@@ -220,6 +220,8 @@ function CreateExportSlipPage({ mode: propMode }) {
         warehouseId: String(line.warehouseId || stocktakeData.warehouseId || ''),
         quantity: line.quantity || 1,
         price: line.price || 0,
+        // Đúng các serial kiểm kê báo thiếu: không mang sang thì thủ kho phải chọn lại và dễ xuất nhầm chiếc còn trong kho.
+        serialNumbers: line.serialNumbers || line.serials || [],
         note: line.note || `Hàng thiếu từ kiểm kê ${stocktakeData.code}`,
       })) : [{ ...emptyLine(), isNew: false }];
     }
