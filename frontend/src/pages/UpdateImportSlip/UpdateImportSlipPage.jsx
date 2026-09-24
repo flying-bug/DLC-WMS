@@ -1539,10 +1539,9 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Ghi sổ phiếu nhập kho thành công!' : 'Cập nhật phiếu nhập kho thành công!'}
-        message="Phiếu nhập kho đã được lưu và cập nhật thành công. Bạn có thể chọn cách in phiếu dưới đây."
+        message="Phiếu nhập kho đã được lưu và cập nhật thành công. Bạn có thể in phiếu dưới đây."
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
-        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
         onViewList={() => navigate(returnUrl || '/import-history', { replace: true })}
         onClose={goBack}
       />

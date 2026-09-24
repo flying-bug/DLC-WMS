@@ -16,7 +16,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
 
   const slips = Array.isArray(slipOrSlips) ? slipOrSlips : [slipOrSlips];
 
-  const printWindow = window.open('', '_blank', 'width=900,height=800');
+  const printWindow = options.printWindow || window.open('', '_blank', 'width=900,height=800');
   if (!printWindow) {
     if (options.onError) {
         options.onError('Trình duyệt đã chặn cửa sổ in (popup). Vui lòng cho phép mở popup để in phiếu.');

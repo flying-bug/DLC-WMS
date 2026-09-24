@@ -638,7 +638,7 @@ function CreateImportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate), variantId: filteredProducts[0]?.id || '' }]);
+    setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate)]);
     setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
@@ -1745,10 +1745,9 @@ function CreateImportSlipPage() {
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Lưu & ghi sổ phiếu nhập kho thành công!' : 'Lưu tạm phiếu nhập kho thành công!'}
-        message="Phiếu nhập kho đã được ghi nhận vào hệ thống thành công. Bạn có thể chọn cách in phiếu dưới đây."
+        message="Phiếu nhập kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu dưới đây."
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
-        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
         onViewList={() => navigate(returnUrl || '/import-history', { replace: true })}
         onCreateNew={() => window.location.reload()}
         onClose={goBack}

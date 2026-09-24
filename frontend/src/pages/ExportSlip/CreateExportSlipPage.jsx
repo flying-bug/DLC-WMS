@@ -636,7 +636,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate), variantId: products[0]?.id || '' }]);
+    setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''), vatConfig.defaultVatRate)]);
     setItemPage(page => Math.ceil((items.length + 1) / itemPageSize) || page);
   };
 
@@ -1645,10 +1645,9 @@ function CreateExportSlipPage({ mode: propMode }) {
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Lưu & ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!'}
-        message="Phiếu xuất kho đã được ghi nhận vào hệ thống thành công. Bạn có thể chọn cách in phiếu dưới đây."
+        message="Phiếu xuất kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu dưới đây."
         docCode={savedSlip?.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
-        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
         onViewList={() => navigate(returnUrl || '/export-slips', { replace: true })}
         onCreateNew={() => window.location.reload()}
         onClose={goBack}

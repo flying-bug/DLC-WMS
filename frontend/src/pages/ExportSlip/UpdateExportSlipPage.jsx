@@ -1619,10 +1619,9 @@ function UpdateExportSlipPage() {
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Ghi sổ phiếu xuất kho thành công!' : 'Cập nhật phiếu xuất kho thành công!'}
-        message="Phiếu xuất kho đã được lưu và cập nhật thành công. Bạn có thể chọn cách in phiếu dưới đây."
+        message="Phiếu xuất kho đã được lưu và cập nhật thành công. Bạn có thể in phiếu dưới đây."
         docCode={savedSlip?.docCode || form.docCode}
         onPrintSummary={() => handlePrint('SUMMARY')}
-        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
         onViewList={() => navigate(returnUrl || '/export-slips', { replace: true })}
         onClose={goBack}
       />
