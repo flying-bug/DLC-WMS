@@ -107,6 +107,16 @@ public class GlobalExceptionHandler {
                         exposeErrorDetails ? causeMsg : null));
     }
 
+    /**
+     * Kết nối SSE (phiên quét OCR, realtime) hết hạn chờ là bình thường, client tự kết nối lại. Không đi vào handler
+     * RuntimeException bên dưới: nó ghi log ERROR và cố ghi JSON vào luồng text/event-stream đã gửi header, sinh
+     * thêm lỗi HttpMessageNotWritableException. Trả void = đã xử lý, không ghi body.
+     */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestTimeoutException.class)
+    public void handleAsyncRequestTimeout() {
+        log.debug("Async request (SSE) timed out, client will reconnect");
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
         ApiResponse<Void> body = ApiResponse.error(SystemMessage.INTERNAL_ERROR.getCode(), SystemMessage.INTERNAL_ERROR.getMessage(),

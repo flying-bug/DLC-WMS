@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -172,7 +171,7 @@ public class RealtimeSessionService {
                         .name(eventName)
                         .data(payload));
             }
-        } catch (IOException | IllegalStateException ex) {
+        } catch (Exception ex) {
             log.debug("Closing realtime connection {} after send failure: {}", connection.connectionId, ex.getMessage());
             removeConnection(connection.connectionId);
         }
@@ -181,7 +180,13 @@ public class RealtimeSessionService {
     private void removeConnection(String connectionId) {
         ClientConnection removed = connections.remove(connectionId);
         if (removed != null) {
-            removed.emitter.complete();
+            try {
+                removed.emitter.complete();
+            } catch (Exception ex) {
+                // Kết nối đã hỏng (client ngắt): Tomcat ném lỗi khi complete(). Nuốt tại đây, nếu không lỗi thoát
+                // khỏi send() và làm dừng vòng gửi của sendToMatching, các client còn lại không nhận được sự kiện.
+                log.debug("Realtime connection {} already closed: {}", connectionId, ex.getMessage());
+            }
         }
     }
 
