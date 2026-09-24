@@ -199,7 +199,6 @@ const ProductCategoryPage = () => {
         { title: 'Mã Danh Mục', width: '160px', render: (_, item) => <span className={styles.link}>{item.code}</span> },
         { title: 'Tên Danh Mục', width: '220px', render: (_, item) => <span style={{ fontWeight: 600 }}>{item.name}</span> },
         { title: 'Mô Tả', width: '200px', render: (_, item) => <span className={styles.noteText} style={{ whiteSpace: 'pre-wrap' }}>{item.description || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>---</span>}</span> },
-        { title: 'Danh Mục Cha', width: '200px', render: (_, item) => <span className={styles.noteText}>{item.parentName || <span style={{ color: 'var(--color-text-placeholder)', fontStyle: 'italic' }}>Không có</span>}</span> },
         {
             title: 'Trạng Thái',
             width: '140px',
