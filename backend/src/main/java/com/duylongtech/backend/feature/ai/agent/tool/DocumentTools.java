@@ -34,6 +34,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -59,6 +60,7 @@ import java.util.stream.Collectors;
  * hẳn trường tiền chứ không trả 0.
  */
 @Component
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class DocumentTools {
 

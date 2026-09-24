@@ -7,6 +7,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -16,6 +17,7 @@ import java.util.Map;
 
 /** Công cụ tra cứu khách hàng / nhà cung cấp (chỉ đọc). Cần customer:view và/hoặc supplier:view tương ứng. */
 @Component
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class PartnerTools {
 

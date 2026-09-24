@@ -22,6 +22,11 @@ import java.util.Optional;
  * Phần dùng chung của các công cụ (tool) cho AI Agent. Mọi kiểm tra quyền dựa trên người đang đăng nhập
  * (SecurityContext), KHÔNG lấy danh tính hay quyền từ tham số mô hình truyền vào. Mô hình chỉ nhận lại văn bản lỗi
  * khi bị từ chối, để nó giải thích cho người dùng thay vì đoán số liệu.
+ *
+ * Mỗi lớp công cụ mang {@code @Transactional(readOnly = true)}: mỗi lần gọi công cụ có transaction ngắn riêng (đọc được
+ * quan hệ LAZY) và trả kết nối DB về pool ngay khi công cụ xong, không giữ kết nối trong lúc chờ mô hình. Spring AI gọi
+ * công cụ qua proxy của bean nên annotation có hiệu lực. Kết quả trả về chỉ được chứa giá trị thường (chuỗi, số, ngày đã
+ * định dạng), không chứa entity: nó được chuyển thành JSON sau khi transaction đã đóng.
  */
 @Component
 @RequiredArgsConstructor

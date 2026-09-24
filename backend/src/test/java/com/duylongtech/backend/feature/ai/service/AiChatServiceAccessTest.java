@@ -25,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.Arrays;
 import java.util.List;
@@ -72,7 +73,7 @@ class AiChatServiceAccessTest {
                 productVariantRepository, partnerRepository, mock(WarrantyRepository.class),
                 mock(RepairRepository.class), mock(StockTransferRepository.class), mock(AssemblyOrderRepository.class),
                 purchaseOrderRepository, salesOrderRepository, inventoryDocumentRepository, aiModelClient,
-                new AiAccessPolicy(warehouseAccessGuard), agent);
+                new AiAccessPolicy(warehouseAccessGuard), agent, mock(PlatformTransactionManager.class));
     }
 
     @AfterEach

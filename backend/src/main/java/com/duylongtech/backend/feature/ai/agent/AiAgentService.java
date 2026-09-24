@@ -34,6 +34,9 @@ import java.util.Optional;
  *
  * Giới hạn thời gian có hai lớp: {@link AiAgentRun} chặn công cụ sau {@code ai.agent.timeout-seconds} để mô hình trả lời
  * ngay; timeout HTTP của nhà cung cấp (xem AiAgentModelConfig và spring.ai.openai.timeout) cắt lời gọi mô hình bị treo.
+ *
+ * Không được gọi {@link #answer} trong một transaction: nó sẽ giữ kết nối DB suốt thời gian chờ mô hình. Mỗi công cụ tự mở
+ * transaction chỉ-đọc ngắn của nó (xem AiToolSupport).
  */
 @Service
 @RequiredArgsConstructor

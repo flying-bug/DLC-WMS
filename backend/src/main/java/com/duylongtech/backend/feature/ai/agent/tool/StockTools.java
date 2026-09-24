@@ -8,6 +8,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
  * được giao, giá trị tồn chỉ hiện với vai trò được xem giá.
  */
 @Component
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class StockTools {
 

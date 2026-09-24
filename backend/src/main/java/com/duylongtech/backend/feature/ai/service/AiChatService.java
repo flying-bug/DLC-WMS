@@ -32,7 +32,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.text.Normalizer;
@@ -41,6 +42,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -97,13 +99,17 @@ public class AiChatService {
     private final AiModelClient aiModelClient;
     private final AiAccessPolicy accessPolicy;
     private final com.duylongtech.backend.feature.ai.agent.AiAgentService aiAgentService;
+    private final PlatformTransactionManager transactionManager;
 
-    @Transactional(readOnly = true)
     public AiChatResponse chat(String rawMessage) {
         return chat(rawMessage, List.of());
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * KHÔNG đặt @Transactional ở đây: gọi mô hình AI mất tới ai.agent.timeout-seconds, transaction bao cả hàm sẽ giữ một
+     * kết nối DB (Hikari) suốt thời gian chờ. Dữ liệu được đọc trong transaction chỉ-đọc ngắn riêng ({@link #readOnly}, mỗi
+     * công cụ của agent cũng vậy) và đã đóng trước khi gọi mô hình.
+     */
     public AiChatResponse chat(String rawMessage, List<AiChatMessageDto> history) {
         String message = rawMessage == null ? "" : rawMessage.trim();
         String normalized = normalize(message);
@@ -139,7 +145,7 @@ public class AiChatService {
             case OUT_OF_SCOPE -> enhance(message, history, answerIrrelevantQuestion());
             case GREETING -> enhance(message, history, answerGreeting());
             case GUIDE -> enhance(message, history, answerGuideQuestion(contextualNormalized));
-            case OVERVIEW -> enhance(message, history, answerSystemOverview());
+            case OVERVIEW -> enhance(message, history, readOnly(this::answerSystemOverview));
             case LOW_STOCK -> gated(message, history, "tồn kho", STOCK_PERMISSIONS, this::answerLowStock);
             case WAREHOUSE_LIST -> gated(message, history, "kho", STOCK_PERMISSIONS, this::answerWarehouseList);
             case WAREHOUSE_STOCK -> gated(message, history, "tồn kho", STOCK_PERMISSIONS,
@@ -199,12 +205,22 @@ public class AiChatService {
         return aiModelClient.enhanceAnswer(userQuestion, history, groundedResponse);
     }
 
+    /**
+     * Đọc dữ liệu cho câu trả lời trong một transaction chỉ-đọc ngắn (quan hệ LAZY vẫn đọc được), trả kết nối về pool
+     * trước khi {@link #enhance} gọi mô hình AI. Câu trả lời tĩnh (chào hỏi, hướng dẫn...) không cần bọc.
+     */
+    private AiChatResponse readOnly(Supplier<AiChatResponse> query) {
+        TransactionTemplate readOnlyTx = new TransactionTemplate(transactionManager);
+        readOnlyTx.setReadOnly(true);
+        return readOnlyTx.execute(status -> query.get());
+    }
+
     private AiChatResponse gated(String userQuestion, List<AiChatMessageDto> history, String label,
-                                 String[] requiredPermissions, java.util.function.Supplier<AiChatResponse> answer) {
+                                 String[] requiredPermissions, Supplier<AiChatResponse> answer) {
         if (!accessPolicy.canViewAny(requiredPermissions)) {
             return answerAccessDenied(label);
         }
-        return enhance(userQuestion, history, answer.get());
+        return enhance(userQuestion, history, readOnly(answer));
     }
 
     /** Không truy vấn dữ liệu và không gọi mô hình AI: từ chối thẳng, không lộ gì về dữ liệu. */
@@ -245,7 +261,8 @@ public class AiChatService {
         // Hỏi chung chung ("đối tác") thì chỉ trả loại mà người hỏi được xem.
         boolean customerOnly = wantsCustomer || (!wantsSupplier && !canSupplier);
         boolean supplierOnly = wantsSupplier || (!wantsCustomer && !canCustomer);
-        return enhance(message, history, answerPartnerSearch(contextualMessage, contextualNormalized, customerOnly, supplierOnly));
+        return enhance(message, history,
+                readOnly(() -> answerPartnerSearch(contextualMessage, contextualNormalized, customerOnly, supplierOnly)));
     }
 
     private static final int MAX_CONTEXT_CHARS = 200;
