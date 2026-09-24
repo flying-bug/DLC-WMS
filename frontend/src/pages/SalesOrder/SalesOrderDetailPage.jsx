@@ -26,8 +26,8 @@ const formatMoneyInput = (value) => {
   const digits = digitsOnly(value);
   return digits ? Number(digits).toLocaleString('vi-VN') : '';
 };
-const fmtDate = (v) => (v ? formatDateOnly(v) : '—');
-const fmtDateTime = (v) => (v ? formatDateTime(v) : '—');
+const fmtDate = (v) => (v ? formatDateOnly(v) : '');
+const fmtDateTime = (v) => (v ? formatDateTime(v) : '');
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Nháp', bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', icon: 'bi-pencil-square' },
@@ -338,21 +338,21 @@ function SalesOrderDetailPage() {
       || matchingOrderLine?.warehouseName
       || matchingReservation?.warehouseName
       || (isOrderWarehouse ? so.warehouseName : null)
-      || '—';
+      || '';
   };
 
   const linesColumns = [
     { title: '#', width: '50px', render: (_, __, idx) => idx + 1 },
     { title: 'SKU', render: (_, line) => <span className={styles.skuBadge}>{line.sku || `#${line.variantId}`}</span> },
-    { title: 'Tên sản phẩm', render: (_, line) => line.variantName || '—' },
-    { title: 'Kho xuất', width: '140px', render: (_, line) => <span style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? `Kho #${line.warehouseId}` : '—')}</span> },
-    { title: 'ĐVT', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || '—'}</span> },
+    { title: 'Tên sản phẩm', render: (_, line) => line.variantName || '' },
+    { title: 'Kho xuất', width: '140px', render: (_, line) => <span style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? `Kho #${line.warehouseId}` : '')}</span> },
+    { title: 'ĐVT', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || ''}</span> },
     { title: 'Số lượng', align: 'center', render: (_, line) => Number(line.quantity).toLocaleString('vi-VN') },
     { title: 'BH (T)', align: 'center', render: (_, line) => line.warrantyMonths || 0 },
     { title: 'Đơn giá', align: 'right', render: (_, line) => money(line.unitPrice) },
     { title: 'Thành tiền', align: 'right', render: (_, line) => <span style={{ fontWeight: 600, color: 'var(--wms-primary-hover)' }}>{money(line.lineAmount)}</span> },
     { title: '% VAT', align: 'center', render: (_, line) => line.vatRate || 0 },
-    { title: 'Ghi chú', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.note || '—'}</span> },
+    { title: 'Ghi chú', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.note || ''}</span> },
   ];
 
   const renderLinesSummaryDesktop = () => (
@@ -391,7 +391,7 @@ function SalesOrderDetailPage() {
 
   const reservationsColumns = [
     { title: 'SKU', render: (_, r) => <span className={styles.skuBadge}>{r.sku || `#${r.variantId}`}</span> },
-    { title: 'Sản phẩm', render: (_, r) => r.variantName || '—' },
+    { title: 'Sản phẩm', render: (_, r) => r.variantName || '' },
     { title: 'Kho', render: (_, r) => r.warehouseName || `Kho #${r.warehouseId}` },
     { title: 'Số lượng giữ', align: 'center', render: (_, r) => <span style={{ fontWeight: 600 }}>{Number(r.quantityReserved).toLocaleString('vi-VN')}</span> },
     { title: 'Trạng thái', render: (_, r) => {
@@ -558,7 +558,7 @@ function SalesOrderDetailPage() {
                       border: `1px solid ${isCanceled ? 'var(--wms-danger-border, var(--wms-border-base))' : 'var(--wms-success-border, var(--wms-border-base))'}`
                     }}
                     onClick={() => handleOpenEInvoicePreview(inv)}
-                    title={isCanceled ? `HĐĐT ${inv.invoiceNumber} (Đã hủy: ${inv.cancelReason || '—'}). Nhấn để xem chi tiết` : 'Nhấn để xem HĐĐT'}
+                    title={isCanceled ? `HĐĐT ${inv.invoiceNumber} (Đã hủy${inv.cancelReason ? `: ${inv.cancelReason}` : ''}). Nhấn để xem chi tiết` : 'Nhấn để xem HĐĐT'}
                   >
                     <i className={`bi ${isCanceled ? 'bi-x-circle-fill' : 'bi-file-earmark-check-fill'}`} style={{ marginRight: 5, color: isCanceled ? 'var(--wms-danger)' : 'var(--wms-success)' }} />
                     HĐĐT: {inv.invoiceNumber || 'Đã cấp'} ({inv.invoiceSeries}) {isCanceled ? '• Đã hủy' : ''}
@@ -664,7 +664,7 @@ function SalesOrderDetailPage() {
                               )}
                             </div>
                             <div style={{ fontSize: 11, color: isCanceled ? 'var(--wms-danger)' : 'var(--wms-text-muted)', marginTop: 2 }}>
-                              {isCanceled ? `Đã hủy: ${inv.cancelReason || '—'}` : `${formatDateOnly(inv.invoiceDate)} • ${money(inv.totalAmount)}`}
+                              {isCanceled ? (inv.cancelReason ? `Đã hủy: ${inv.cancelReason}` : 'Đã hủy') : `${formatDateOnly(inv.invoiceDate)} • ${money(inv.totalAmount)}`}
                             </div>
                           </div>
 
@@ -791,14 +791,14 @@ function SalesOrderDetailPage() {
           <div className={styles.card}>
             <div className={styles.cardTitle}><i className="bi bi-person" /> Khách hàng</div>
             <div className={styles.infoRows}>
-              <div className={styles.infoRow}><span className={styles.infoLabel}>Mã KH:</span><span className={styles.infoValue}>{so.partnerCode || '—'}</span></div>
-              <div className={styles.infoRow}><span className={styles.infoLabel}>Tên KH:</span><span className={`${styles.infoValue} ${styles.highlight}`}>{so.partnerName || '—'}</span></div>
-              <div className={styles.infoRow}><span className={styles.infoLabel}>Mã số thuế:</span><span className={styles.infoValue} style={{ fontFamily: 'monospace', fontWeight: 600 }}>{so.partnerTaxCode || '—'}</span></div>
-              <div className={styles.infoRow}><span className={styles.infoLabel}>Điện thoại:</span><span className={styles.infoValue}>{so.partnerPhone || '—'}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Mã KH:</span><span className={styles.infoValue}>{so.partnerCode || ''}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Tên KH:</span><span className={`${styles.infoValue} ${styles.highlight}`}>{so.partnerName || ''}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Mã số thuế:</span><span className={styles.infoValue} style={{ fontFamily: 'monospace', fontWeight: 600 }}>{so.partnerTaxCode || ''}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Điện thoại:</span><span className={styles.infoValue}>{so.partnerPhone || ''}</span></div>
               {so.partnerEmail && (
                 <div className={styles.infoRow}><span className={styles.infoLabel}>Email:</span><span className={styles.infoValue}>{so.partnerEmail}</span></div>
               )}
-              <div className={styles.infoRow}><span className={styles.infoLabel}>Địa chỉ giao hàng:</span><span className={styles.infoValue}>{so.deliveryAddress || so.partnerAddress || '—'}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Địa chỉ giao hàng:</span><span className={styles.infoValue}>{so.deliveryAddress || so.partnerAddress || ''}</span></div>
             </div>
           </div>
 
@@ -1044,7 +1044,7 @@ function SalesOrderDetailPage() {
                             <tr key={idx} style={{ borderBottom: '1px solid var(--wms-bg-hover)' }}>
                               <td style={{ padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
                               <td style={{ padding: '6px 8px' }}>
-                                <strong>{line.variantName || line.sku || '-'}</strong>
+                                <strong>{line.variantName || line.sku || ''}</strong>
                                 {line.sku && <div style={{ fontSize: 11, color: 'var(--wms-text-muted)' }}>SKU: {line.sku}</div>}
                               </td>
                               <td style={{ padding: '6px 8px', textAlign: 'center' }}>{line.unitName || ''}</td>

@@ -132,7 +132,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
         <div style={{
           padding: '16px 20px', borderBottom: '1px solid var(--wms-border-base)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: 'linear-gradient(to right, var(--wms-success), var(--wms-success-hover))', color: 'var(--color-white)'
+          background: 'var(--brand-gradient)', color: 'var(--color-white)'
         }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -153,7 +153,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
               <div>Chứng từ tham chiếu: <strong>{exportDoc ? `PXK: ${exportDoc.docCode}` : `Đơn hàng: ${so?.soCode}`}</strong></div>
               <div>Tiền hàng (chưa thuế): <strong>{Number(calcSubTotal).toLocaleString('vi-VN')} đ</strong></div>
               <div>Tiền thuế VAT: <strong style={{ color: 'var(--wms-danger)' }}>{Number(calcVat).toLocaleString('vi-VN')} đ</strong></div>
-              <div>Tổng cộng thanh toán: <strong style={{ color: 'var(--wms-success)', fontSize: '14px' }}>{Number(calcTotal).toLocaleString('vi-VN')} đ</strong></div>
+              <div>Tổng cộng thanh toán: <strong style={{ color: 'var(--color-primary)', fontSize: '14px' }}>{Number(calcTotal).toLocaleString('vi-VN')} đ</strong></div>
             </div>
 
             {/* Chi tiết mặt hàng & S/N */}
@@ -187,9 +187,9 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onClick={() => handleSelectBuyerType('COMPANY')}
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                  border: buyerType === 'COMPANY' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
-                  background: buyerType === 'COMPANY' ? 'var(--wms-success-soft)' : 'var(--color-surface, var(--color-white))',
-                  color: buyerType === 'COMPANY' ? 'var(--wms-success-deep, var(--wms-success-hover))' : 'var(--wms-text-muted)',
+                  border: buyerType === 'COMPANY' ? '2px solid var(--color-primary)' : '1px solid var(--wms-border-strong)',
+                  background: buyerType === 'COMPANY' ? 'var(--color-primary-soft)' : 'var(--color-surface, var(--color-white))',
+                  color: buyerType === 'COMPANY' ? 'var(--color-primary)' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -201,9 +201,9 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onClick={() => handleSelectBuyerType('INDIVIDUAL')}
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                  border: buyerType === 'INDIVIDUAL' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
-                  background: buyerType === 'INDIVIDUAL' ? 'var(--wms-success-soft)' : 'var(--color-surface, var(--color-white))',
-                  color: buyerType === 'INDIVIDUAL' ? 'var(--wms-success-deep, var(--wms-success-hover))' : 'var(--wms-text-muted)',
+                  border: buyerType === 'INDIVIDUAL' ? '2px solid var(--color-primary)' : '1px solid var(--wms-border-strong)',
+                  background: buyerType === 'INDIVIDUAL' ? 'var(--color-primary-soft)' : 'var(--color-surface, var(--color-white))',
+                  color: buyerType === 'INDIVIDUAL' ? 'var(--color-primary)' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -215,9 +215,9 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                 onClick={() => handleSelectBuyerType('ANONYMOUS')}
                 style={{
                   padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                  border: buyerType === 'ANONYMOUS' ? '2px solid var(--wms-success)' : '1px solid var(--wms-border-strong)',
-                  background: buyerType === 'ANONYMOUS' ? 'var(--wms-success-soft)' : 'var(--color-surface, var(--color-white))',
-                  color: buyerType === 'ANONYMOUS' ? 'var(--wms-success-deep, var(--wms-success-hover))' : 'var(--wms-text-muted)',
+                  border: buyerType === 'ANONYMOUS' ? '2px solid var(--color-primary)' : '1px solid var(--wms-border-strong)',
+                  background: buyerType === 'ANONYMOUS' ? 'var(--color-primary-soft)' : 'var(--color-surface, var(--color-white))',
+                  color: buyerType === 'ANONYMOUS' ? 'var(--color-primary)' : 'var(--wms-text-muted)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -247,7 +247,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
                     onClick={handleLookupTax}
                     disabled={lookingUpTax || !buyerTaxCode?.trim()}
                     style={{
-                      padding: '0 12px', background: 'var(--color-info-hover)', color: 'var(--color-white)', border: 'none',
+                      padding: '0 12px', background: 'var(--color-primary)', color: 'var(--color-white)', border: 'none',
                       borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                       display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap'
                     }}
@@ -377,7 +377,7 @@ export default function IssueInvoiceModal({ isOpen, onClose, so, exportDoc, onCo
               type="submit"
               disabled={loading}
               style={{
-                padding: '8px 18px', background: 'var(--wms-success)', border: 'none',
+                padding: '8px 18px', background: 'var(--brand-gradient)', border: 'none',
                 borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--color-white)',
                 display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}

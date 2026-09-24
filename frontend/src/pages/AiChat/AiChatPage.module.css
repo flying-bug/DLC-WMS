@@ -216,10 +216,10 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--color-success-alt) 0%, var(--wms-success) 100%);
+    background: var(--brand-gradient);
     color: var(--color-white);
     margin-top: 4px;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    box-shadow: var(--shadow-primary-soft);
     font-size: 16px;
 }
 
@@ -290,16 +290,16 @@
 
 .assistantBubble {
     background: var(--color-white);
-    border-left: 3.5px solid var(--color-success-alt);
     border-color: var(--wms-border-base);
+    border-left: 3.5px solid var(--color-primary);
 }
 
 .userRow .messageBubble {
-    background: linear-gradient(135deg, var(--color-success-alt) 0%, var(--wms-success) 100%);
-    border-color: var(--wms-success);
+    background: var(--brand-gradient);
+    border-color: var(--color-primary);
     color: var(--color-white);
     border-radius: 18px 18px 4px 18px;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    box-shadow: var(--shadow-primary-soft);
 }
 
 .messageBubble p {
@@ -370,7 +370,7 @@
     position: absolute;
     left: 14px;
     top: 8px;
-    color: var(--color-success-alt);
+    color: var(--color-primary);
     font-weight: bold;
     font-size: 20px;
     line-height: 1;
@@ -399,14 +399,14 @@
 .skuBadge {
     display: inline-flex;
     align-items: center;
-    background: var(--wms-success-soft);
-    color: var(--wms-success-hover);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
     padding: 2px 8px;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
     font-family: monospace;
-    border: 1px solid var(--wms-success-border);
+    border: 1px solid var(--color-info-border-soft);
     margin: 0 4px;
 }
 
@@ -457,9 +457,9 @@
     font-weight: 600;
     padding: 3px 9px;
     border-radius: 6px;
-    background: linear-gradient(135deg, var(--wms-success-soft) 0%, #d1fae5 100%);
-    color: var(--wms-success-hover);
-    border: 1px solid #6ee7b7;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    border: 1px solid var(--color-info-border-soft);
 }
 
 .typingBubble {
