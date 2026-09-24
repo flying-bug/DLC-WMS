@@ -52,9 +52,6 @@ const BrandListPage = () => {
     const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
     const [pageSize, setPageSize] = useSessionState('pageSize', 10);
     
-    // Selection
-    const [selectedIds, setSelectedIds] = useState([]);
-    
     // Modals & Toast
     const [modalConfig, setModalConfig] = useState({ isOpen: false, data: null });
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -91,7 +88,6 @@ const BrandListPage = () => {
                 data = data.filter(b => b.status === filters.status);
             }
             setBrands(data);
-            if (!silent) setSelectedIds([]);
         } catch (error) {
             console.error('Lỗi tải danh sách thương hiệu:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách thương hiệu');
@@ -141,15 +137,6 @@ const BrandListPage = () => {
         showToast('success', 'Xuất Excel thành công!');
     };
 
-    const handleSelectAll = (e) => {
-        setSelectedIds(e.target.checked ? paginatedRows.map(row => row.id) : []);
-    };
-
-    const handleSelectRow = (e, id) => {
-        e.stopPropagation();
-        setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
-    };
-
     const handleDeleteClick = (e, brand) => {
         e.stopPropagation();
         guard('brand:delete', () => setDeleteConfirm({ isOpen: true, brand }));
@@ -177,31 +164,7 @@ const BrandListPage = () => {
         }
     };
 
-    const tableColumns = [
-        {
-            key: 'checkbox',
-            dataIndex: 'id',
-            title: (
-                <input 
-                    type="checkbox" 
-                    className={styles.checkbox} 
-                    checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length} 
-                    onChange={handleSelectAll} 
-                />
-            ),
-            width: '40px',
-            align: 'center',
-            render: (_, item) => (
-                <input 
-                    type="checkbox" 
-                    className={styles.checkbox} 
-                    checked={selectedIds.includes(item.id)} 
-                    onChange={(e) => handleSelectRow(e, item.id)} 
-                    onClick={(e) => e.stopPropagation()} 
-                />
-            )
-        }
-    ];
+    const tableColumns = [];
 
     if (columns.code) {
         tableColumns.push({

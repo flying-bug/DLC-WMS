@@ -55,6 +55,19 @@ const DEFAULT_COLUMNS = {
     salePrice: true
 };
 
+const LOW_STOCK_MAX_QTY = 5;
+
+const loadProductColumns = () => {
+    try {
+        const saved = JSON.parse(localStorage.getItem('dlc_product_columns') || '{}');
+        const supportedColumns = { ...saved };
+        delete supportedColumns.stockQty;
+        return { ...DEFAULT_COLUMNS, ...supportedColumns };
+    } catch {
+        return DEFAULT_COLUMNS;
+    }
+};
+
 const defaultVariantData = {
     id: null,
     sku: '',
@@ -264,11 +277,10 @@ const ProductPage = () => {
     const showPricing = canViewPricing();
     const guard = usePermissionGuard();
     const [products, setProducts] = useState([]);
-    const [columns, setColumns] = useState(() => {
-        const saved = localStorage.getItem('dlc_product_columns');
-        return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
-    });
+    const [columns, setColumns] = useState(loadProductColumns);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [selectedProductIds, setSelectedProductIds] = useState([]);
+    const [selectedProductsById, setSelectedProductsById] = useState({});
 
     const handleColumnChange = (colId) => {
         setColumns(prev => {
@@ -890,10 +902,13 @@ const ProductPage = () => {
             const typeQuery = typeFilter ? `&productType=${encodeURIComponent(typeFilter)}` : '';
             const brandQuery = brandFilter ? `&brandId=${brandFilter}` : '';
             const unitQuery = unitFilter ? `&unitId=${unitFilter}` : '';
+            const loadAllForStockFilter = stockFilter !== 'ALL';
+            const requestPage = loadAllForStockFilter ? 0 : page;
+            const requestSize = loadAllForStockFilter ? 10000 : size;
 
-            const [productsResult, stockSummaryResult] = await Promise.allSettled([
-                axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}${typeQuery}${brandQuery}${unitQuery}`),
-                axiosClient.get('/products/stock-alert-summary')
+            const [productsResult, stockCountsResult] = await Promise.allSettled([
+                axiosClient.get(`/products?page=${requestPage}&size=${requestSize}${searchQuery}${categoryQuery}${typeQuery}${brandQuery}${unitQuery}`),
+                axiosClient.get('/products?page=0&size=10000')
             ]);
 
             if (productsResult.status === 'rejected') throw productsResult.reason;
@@ -901,23 +916,46 @@ const ProductPage = () => {
             const res = productsResult.value;
             const payload = res.data?.data ?? res.data;
             const content = payload?.content || [];
-            const responseTotalElements = payload?.page?.totalElements
+            let visibleContent = content;
+            let responseTotalElements = payload?.page?.totalElements
                 ?? payload?.totalElements
                 ?? payload?.totalItems
                 ?? content.length;
-            const responseTotalPages = payload?.page?.totalPages
+            let responseTotalPages = payload?.page?.totalPages
                 ?? payload?.totalPages
                 ?? Math.max(1, Math.ceil(responseTotalElements / size));
-            setProducts(content);
+
+            if (loadAllForStockFilter) {
+                visibleContent = content.filter(product => {
+                    if (!isStockTrackedProduct(product) || product.active === false) return false;
+                    const qty = Number(product.stockQty || 0);
+                    if (stockFilter === 'OUT_OF_STOCK') return qty <= 0;
+                    return qty > 0 && qty <= LOW_STOCK_MAX_QTY;
+                });
+
+                responseTotalElements = visibleContent.length;
+                responseTotalPages = Math.max(1, Math.ceil(responseTotalElements / size));
+                const fromIndex = page * size;
+                visibleContent = visibleContent.slice(fromIndex, fromIndex + size);
+            }
+
+            setProducts(visibleContent);
             setTotalPages(responseTotalPages);
             setTotalElements(responseTotalElements);
 
-            if (stockSummaryResult.status === 'fulfilled') {
-                const summary = stockSummaryResult.value.data || {};
-                setLowStockCount(Number(summary.lowStockCount || 0));
-                setOutOfStockCount(Number(summary.outOfStockCount || 0));
+            if (stockCountsResult.status === 'fulfilled') {
+                const stockPayload = stockCountsResult.value.data?.data ?? stockCountsResult.value.data;
+                const stockProducts = stockPayload?.content || [];
+                const trackedProducts = stockProducts.filter(product =>
+                    isStockTrackedProduct(product) && product.active !== false
+                );
+                setLowStockCount(trackedProducts.filter(product => {
+                    const qty = Number(product.stockQty || 0);
+                    return qty > 0 && qty <= LOW_STOCK_MAX_QTY;
+                }).length);
+                setOutOfStockCount(trackedProducts.filter(product => Number(product.stockQty || 0) <= 0).length);
             } else {
-                console.error('Lỗi lấy tổng hợp cảnh báo tồn kho:', stockSummaryResult.reason);
+                console.error('Lỗi lấy dữ liệu tổng hợp tồn kho:', stockCountsResult.reason);
             }
         } catch (error) {
             console.error('Lỗi lấy danh sách hàng hóa:', error);
@@ -925,7 +963,7 @@ const ProductPage = () => {
         } finally {
             if (!silent) setLoading(false);
         }
-    }, [page, size, searchTerm, categoryFilter, typeFilter, brandFilter, unitFilter]);
+    }, [page, size, searchTerm, categoryFilter, typeFilter, brandFilter, unitFilter, stockFilter]);
   useRealtimeRefresh(['PRODUCT','INVENTORY_BALANCE'], fetchProducts);
 
     useEffect(() => {
@@ -941,6 +979,11 @@ const ProductPage = () => {
         }, 0);
         return () => window.clearTimeout(timeoutId);
     }, [fetchProducts]);
+
+    useEffect(() => {
+        setSelectedProductIds([]);
+        setSelectedProductsById({});
+    }, [searchTerm, categoryFilter, typeFilter, brandFilter, unitFilter, stockFilter]);
 
     const buildInitialFormData = (overrides = {}) => ({
         ...defaultFormData,
@@ -1458,8 +1501,64 @@ const ProductPage = () => {
         return getVietnamTimestamp();
     };
 
+    const exportSelectedProductsToExcel = async (selectedProducts) => {
+        const ExcelJS = await loadExcelJs();
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Danh sach san pham');
+        const headers = [
+            'STT', 'Mã sản phẩm', 'Tên sản phẩm', 'Loại', 'Danh mục',
+            'Thương hiệu', 'Đơn vị tính', ...(showPricing ? ['Giá bán'] : []),
+            'Tồn kho', 'Trạng thái', 'Mô tả'
+        ];
+
+        worksheet.addRow(headers);
+        selectedProducts.forEach((product, index) => {
+            worksheet.addRow([
+                index + 1,
+                product.productCode || '',
+                product.productName || '',
+                product.productType || '',
+                product.categoryName || '',
+                product.brandName || '',
+                product.unitName || '',
+                ...(showPricing ? [Number(product.salePrice || 0)] : []),
+                Number(product.stockQty || 0),
+                product.active === false ? 'Ngừng sử dụng' : 'Đang sử dụng',
+                product.description || ''
+            ]);
+        });
+
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+        worksheet.columns.forEach((column, index) => {
+            column.width = index === 2 ? 36 : index === headers.length - 1 ? 40 : 18;
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(
+            new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+            `DLC_WMS_Danh_Sach_San_Pham_Da_Chon_${buildTimestamp()}.xlsx`
+        );
+    };
+
     const handleExportExcel = async () => {
         try {
+            if (selectedProductIds.length > 0) {
+                const selectedProducts = selectedProductIds
+                    .map(id => selectedProductsById[id])
+                    .filter(Boolean);
+                if (selectedProducts.length === 0) {
+                    showToast('warning', 'Không tìm thấy dòng sản phẩm đã chọn.');
+                    return;
+                }
+                await exportSelectedProductsToExcel(selectedProducts);
+                showToast('success', `Đã xuất Excel ${selectedProducts.length} sản phẩm đã chọn.`);
+                return;
+            }
+
             const res = await axiosClient.get('/products/export', {
                 params: {
                     search: searchTerm || undefined,
@@ -1502,31 +1601,70 @@ const ProductPage = () => {
         }).format(value);
     };
 
-    const getFilteredProducts = () => {
-        if (stockFilter === 'ALL') return products;
-        return products.filter((product) => {
-            if (!isStockTrackedProduct(product)) return false;
+    const filteredProducts = products;
+    const visibleProductIds = filteredProducts.map(product => String(product.id));
+    const allVisibleSelected = visibleProductIds.length > 0
+        && visibleProductIds.every(id => selectedProductIds.includes(id));
+    const someVisibleSelected = visibleProductIds.some(id => selectedProductIds.includes(id));
 
-            const qty = Number(product.stockQty || 0);
-            const minQty = Number(product.minStockQty || 0);
-            if (stockFilter === 'OUT_OF_STOCK') return qty <= 0;
-            if (stockFilter === 'LOW_STOCK') return qty > 0 && minQty > 0 && qty <= minQty;
-            return true;
+    const handleSelectAllProducts = (event) => {
+        const shouldSelect = event.target.checked;
+        setSelectedProductIds(previous => {
+            const next = new Set(previous);
+            visibleProductIds.forEach(id => shouldSelect ? next.add(id) : next.delete(id));
+            return Array.from(next);
+        });
+        setSelectedProductsById(previous => {
+            const next = { ...previous };
+            filteredProducts.forEach(product => {
+                const id = String(product.id);
+                if (shouldSelect) next[id] = product;
+                else delete next[id];
+            });
+            return next;
         });
     };
 
-    const filteredProducts = getFilteredProducts();
+    const handleSelectProduct = (product, checked) => {
+        const normalizedId = String(product.id);
+        setSelectedProductIds(previous => checked
+            ? Array.from(new Set([...previous, normalizedId]))
+            : previous.filter(id => id !== normalizedId));
+        setSelectedProductsById(previous => {
+            const next = { ...previous };
+            if (checked) next[normalizedId] = product;
+            else delete next[normalizedId];
+            return next;
+        });
+    };
 
     const getTableColumns = () => {
         const tableCols = [];
 
         tableCols.push({
-            title: <input type="checkbox" className={styles.checkbox} />,
+            title: (
+                <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={allVisibleSelected}
+                    ref={(element) => {
+                        if (element) element.indeterminate = someVisibleSelected && !allVisibleSelected;
+                    }}
+                    onChange={handleSelectAllProducts}
+                    aria-label="Chọn tất cả sản phẩm trên trang"
+                />
+            ),
             align: 'center',
             width: '40px',
             render: (_, item) => (
                 <div onClick={(event) => event.stopPropagation()}>
-                    <input type="checkbox" className={styles.checkbox} />
+                    <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selectedProductIds.includes(String(item.id))}
+                        onChange={(event) => handleSelectProduct(item, event.target.checked)}
+                        aria-label={`Chọn sản phẩm ${item.productName}`}
+                    />
                 </div>
             )
         });
@@ -1808,7 +1946,9 @@ const ProductPage = () => {
                         <button
                             className={styles.iconBtn}
                             onClick={handleExportExcel}
-                            title="Xuất tệp Excel"
+                            title={selectedProductIds.length > 0
+                                ? `Xuất ${selectedProductIds.length} dòng đã chọn ra Excel`
+                                : 'Xuất tệp Excel'}
                         >
                             <i className="bi bi-file-earmark-excel"></i>
                         </button>
@@ -3105,8 +3245,7 @@ const ProductPage = () => {
                                 { id: 'category', label: 'Danh mục' },
                                 { id: 'brand', label: 'Thương hiệu' },
                                 { id: 'unit', label: 'Đơn vị tính' },
-                                { id: 'salePrice', label: 'Giá bán' },
-                                { id: 'stockQty', label: 'Tồn kho' }
+                                { id: 'salePrice', label: 'Giá bán' }
                             ].map(col => (
                                 <label key={col.id} className={styles.checkboxLabel}>
                                     <input
