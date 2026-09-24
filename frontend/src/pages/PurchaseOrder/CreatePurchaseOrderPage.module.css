@@ -152,8 +152,20 @@
 }
 
 .linesTableWrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   width: 100%;
+}
+
+.linesTableWrap :global(table) {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.linesTableWrap :global(table th),
+.linesTableWrap :global(table td) {
+  box-sizing: border-box;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .linesTable {

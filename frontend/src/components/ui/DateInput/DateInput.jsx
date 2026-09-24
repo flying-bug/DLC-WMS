@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { formatDateOnly, maskDateText, parseDisplayDate } from '../../../utils/dateFormat';
 
@@ -40,6 +40,31 @@ export default function DateInput({
 
   const shown = draft ?? formatDateOnly(toIsoValue(value));
 
+  const syncPickerPosition = useCallback(() => {
+    const picker = pickerRef.current;
+    const text = textRef.current;
+    if (!picker || !text) return;
+
+    const rect = text.getBoundingClientRect();
+    Object.assign(picker.style, {
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    syncPickerPosition();
+    window.addEventListener('resize', syncPickerPosition);
+    window.addEventListener('scroll', syncPickerPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', syncPickerPosition);
+      window.removeEventListener('scroll', syncPickerPosition, true);
+    };
+  }, [syncPickerPosition]);
+
   const emit = (isoValue) => {
     if (!onChange) return;
     const target = { name, id, value: isoValue, type: 'date' };
@@ -59,10 +84,10 @@ export default function DateInput({
 
   const openPicker = () => {
     const picker = pickerRef.current;
-    const text = textRef.current;
-    if (!picker || !text) return;
-    const rect = text.getBoundingClientRect();
-    Object.assign(picker.style, { left: `${rect.left}px`, top: `${rect.bottom}px` });
+    if (!picker || !textRef.current) return;
+    syncPickerPosition();
+    // Buộc trình duyệt áp dụng vị trí mới trước khi mở lịch native lần đầu.
+    picker.getBoundingClientRect();
     if (typeof picker.showPicker === 'function') {
       picker.showPicker();
     } else {

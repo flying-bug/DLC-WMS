@@ -54,6 +54,14 @@
   font-weight: 500;
 }
 
+.singleLineText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
+
 .placeholderText {
   color: var(--color-text-placeholder);
 }

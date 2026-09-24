@@ -15,35 +15,35 @@ import { parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import styles from './PurchaseOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
-const unwrap      = (res) => res?.data?.data ?? res?.data;
+const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const money       = (v)   => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
-const fmtDate     = (v)   => (v ? formatDateOnly(v) : '—');
-const fmtDateTime = (v)   => (v ? formatDateTime(v) : '—');
+const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
+const fmtDate = (v) => (v ? formatDateOnly(v) : '');
+const fmtDateTime = (v) => (v ? formatDateTime(v) : '');
 
 const STATUS_CONFIG = {
-  DRAFT:     { label: 'Nháp',       bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', icon: 'bi-pencil-square' },
-  APPROVED:  { label: 'Đã duyệt',   bg: 'var(--color-success-bg)', color: '#16a34a', icon: 'bi-check-circle-fill' },
-  POSTED:    { label: 'Ghi sổ',     bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
-  CANCELLED: { label: 'Đã hủy',     bg: '#fef2f2', color: 'var(--wms-danger)', icon: 'bi-x-circle-fill' },
+  DRAFT: { label: 'Nháp', bg: 'var(--wms-bg-hover)', color: 'var(--wms-text-muted)', icon: 'bi-pencil-square' },
+  APPROVED: { label: 'Đã duyệt', bg: 'var(--color-success-bg)', color: '#16a34a', icon: 'bi-check-circle-fill' },
+  POSTED: { label: 'Ghi sổ', bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
+  CANCELLED: { label: 'Đã hủy', bg: '#fef2f2', color: 'var(--wms-danger)', icon: 'bi-x-circle-fill' },
 };
 
 function PurchaseOrderDetailPage() {
   const navigate = useNavigate();
-  const { id }   = useParams();
+  const { id } = useParams();
 
-  const [po,              setPo]              = useState(null);
-  const [importSlips,     setImportSlips]     = useState([]);
-  const [users,           setUsers]           = useState([]);
-  const [warehouses,      setWarehouses]      = useState([]);
-  const [loading,         setLoading]         = useState(true);
-  const [toast,           setToast]           = useState({ isVisible: false, type: 'info', message: '' });
-  const [confirmApprove,  setConfirmApprove]  = useState(false);
-  const [confirmCancel,   setConfirmCancel]   = useState(false);
-  const [confirmShortClose,       setConfirmShortClose]       = useState(false);
+  const [po, setPo] = useState(null);
+  const [importSlips, setImportSlips] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+  const [confirmApprove, setConfirmApprove] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmShortClose, setConfirmShortClose] = useState(false);
   const [confirmRevertShortClose, setConfirmRevertShortClose] = useState(false);
-  const [showWarehousePicker,     setShowWarehousePicker]     = useState(false);
-  const [pickerWarehouses,        setPickerWarehouses]        = useState([]);
+  const [showWarehousePicker, setShowWarehousePicker] = useState(false);
+  const [pickerWarehouses, setPickerWarehouses] = useState([]);
 
   const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
@@ -184,7 +184,7 @@ function PurchaseOrderDetailPage() {
     setConfirmShortClose(false);
     try {
       await poApi.shortClosePurchaseOrder(id);
-      showToast('success', 'Đã tất toán (đóng hụt) đơn mua hàng.');
+      showToast('success', 'Đã tất toán (đóng thiếu hàng) đơn mua hàng.');
       loadPo();
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không thể tất toán đơn hàng');
@@ -228,9 +228,9 @@ function PurchaseOrderDetailPage() {
   const linesColumns = [
     { title: '#', width: '40px', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
     { title: 'Sản phẩm', render: (_, line) => <span style={{ fontWeight: 500 }}>{line.variantName || line.productName || `#${line.variantId}`}</span> },
-    { title: 'SKU', width: '80px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.sku || '—'}</span> },
-    { title: 'Kho nhận dự kiến', width: '160px', render: (_, line) => <span style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? warehouseById.get(line.warehouseId)?.name : null) || '—'}</span> },
-    { title: 'ĐVT', width: '80px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || '—'}</span> },
+    { title: 'SKU', width: '80px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12 }}>{line.sku || ''}</span> },
+    { title: 'Kho nhận dự kiến', width: '160px', render: (_, line) => <span style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? warehouseById.get(line.warehouseId)?.name : null) || ''}</span> },
+    { title: 'ĐVT', width: '80px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || ''}</span> },
     { title: 'Số lượng', align: 'right', width: '100px', render: (_, line) => <span style={{ fontWeight: 600 }}>{Number(line.quantity).toLocaleString('vi-VN')}</span> },
     { title: 'Đơn giá', align: 'right', width: '130px', render: (_, line) => money(line.unitPrice) },
     { title: 'VAT %', align: 'center', width: '70px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.vatRate || 0}%</span> },
@@ -259,9 +259,9 @@ function PurchaseOrderDetailPage() {
   const importSlipsColumns = [
     { title: 'Mã phiếu nhập', render: (_, slip) => <span style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }} onClick={() => navigate(`/import-slips/${slip.id}/edit`)}>{slip.docCode}</span> },
     { title: 'Ngày nhập', render: (_, slip) => fmtDateTime(slip.createdAt) },
-    { title: 'Kho', render: (_, slip) => slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '—' },
+    { title: 'Kho', render: (_, slip) => slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '' },
     { title: 'Người tạo', render: (_, slip) => slip.createdByName || userById.get(slip.createdBy)?.fullName || userById.get(slip.createdBy)?.username || `#${slip.createdBy}` },
-    { title: 'Ghi chú', render: (_, slip) => <span style={{ color: 'var(--wms-text-muted)' }}>{slip.note || '—'}</span> }
+    { title: 'Ghi chú', render: (_, slip) => <span style={{ color: 'var(--wms-text-muted)' }}>{slip.note || ''}</span> }
   ];
 
   return (
@@ -327,7 +327,7 @@ function PurchaseOrderDetailPage() {
           </span>
           {po.isShortClosed && (
             <span className={styles.statusBadge} style={{ background: '#fff7ed', color: '#c2410c' }}>
-              <i className="bi bi-flag-fill" /> Đã tất toán (đóng hụt)
+              <i className="bi bi-flag-fill" /> Đã tất toán (đóng thiếu hàng)
             </span>
           )}
         </div>
@@ -341,15 +341,15 @@ function PurchaseOrderDetailPage() {
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Mã NCC</span>
-              <span className={styles.infoValue}>{po.partnerCode || '—'}</span>
+              <span className={styles.infoValue}>{po.partnerCode || ''}</span>
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Tên NCC</span>
-              <span className={styles.infoValue} style={{ fontWeight: 600 }}>{po.partnerName || '—'}</span>
+              <span className={styles.infoValue} style={{ fontWeight: 600 }}>{po.partnerName || ''}</span>
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Điện thoại</span>
-              <span className={styles.infoValue}>{po.partnerPhone || '—'}</span>
+              <span className={styles.infoValue}>{po.partnerPhone || ''}</span>
             </div>
           </div>
 
@@ -369,7 +369,7 @@ function PurchaseOrderDetailPage() {
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Hạn công nợ</span>
               <span className={styles.infoValue}>
-                {fmtDate(po.paymentDueDate) || '—'}
+                {po.paymentDueDate ? fmtDate(po.paymentDueDate) : ''}
                 {(() => {
                   const isPaid = po.paymentStatus === 'PAID';
                   if (!po.paymentDueDate) {
@@ -389,7 +389,7 @@ function PurchaseOrderDetailPage() {
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Ngày giao hàng DK</span>
               <span className={styles.infoValue}>
-                {fmtDate(po.expectedDeliveryDate) || '—'}
+                {po.expectedDeliveryDate ? fmtDate(po.expectedDeliveryDate) : ''}
                 {(() => {
                   const isDone = po.isFullyImported || po.status === 'POSTED';
                   if (!po.expectedDeliveryDate) {
@@ -452,7 +452,7 @@ function PurchaseOrderDetailPage() {
           <div className={styles.cardTitle}>
             <i className="bi bi-list-ul" /> Danh sách hàng hóa
           </div>
-          <div style={{ overflowX: 'auto', padding: '0 12px 12px' }}>
+          <div className={styles.detailLinesTable}>
             <ResponsiveTable
               columns={linesColumns}
               data={po.lines || []}
@@ -486,7 +486,7 @@ function PurchaseOrderDetailPage() {
             </div>
           );
         })()}
-        
+
         {/* ── Linked Import Slips ── */}
         {(po.status === 'APPROVED' || po.status === 'POSTED') && (
           <div className={styles.card} style={{ marginTop: 20 }}>

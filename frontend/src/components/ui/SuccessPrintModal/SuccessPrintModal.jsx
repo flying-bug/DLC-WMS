@@ -6,11 +6,9 @@ const SuccessPrintModal = ({
   title = "Lưu và ghi sổ thành công!",
   message = "Phiếu đã được ghi sổ vào hệ thống thành công.",
   docCode = "",
-  printBtnText = "In phiếu tổng hợp",
-  printSplitBtnText = "In tách theo từng kho",
+  printBtnText = "In phiếu",
   onPrint,
   onPrintSummary,
-  onPrintSplit,
   onViewList,
   onCreateNew,
   onClose,
@@ -20,11 +18,6 @@ const SuccessPrintModal = ({
   const handlePrintSummary = () => {
     if (onPrintSummary) onPrintSummary();
     else if (onPrint) onPrint('SUMMARY');
-  };
-
-  const handlePrintSplit = () => {
-    if (onPrintSplit) onPrintSplit();
-    else if (onPrint) onPrint('SPLIT_BY_WAREHOUSE');
   };
 
   return (
@@ -52,11 +45,6 @@ const SuccessPrintModal = ({
               </button>
             )}
 
-            {onPrintSplit && (
-              <button className={styles.btnPrintSplit} onClick={handlePrintSplit}>
-                <i className="bi bi-files"></i> {printSplitBtnText}
-              </button>
-            )}
           </div>
 
           {onViewList && (

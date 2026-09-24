@@ -15,6 +15,7 @@ const ProductGridSelect = ({
   hideStock = false,
   forceInStockOnly = false,
   fullWidthPopover = false,
+  singleLine = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -153,7 +154,7 @@ const ProductGridSelect = ({
       : selectedProduct.productName;
 
     if (displayMode === 'code') {
-      return <span className={styles.selectedText}>{code}</span>;
+      return <span className={`${styles.selectedText} ${singleLine ? styles.singleLineText : ''}`}>{code}</span>;
     }
     if (displayMode === 'code-name') {
       return <span className={styles.selectedText}>{code} - {name}</span>;

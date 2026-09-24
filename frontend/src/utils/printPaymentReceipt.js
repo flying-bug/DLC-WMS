@@ -33,6 +33,7 @@ export function printPaymentReceipt(paymentOrPayments, options = {}) {
     const isReceipt = payment.type === 'RECEIPT';
     const typeTitle = isReceipt ? 'THU' : 'CHI';
     const docCode = payment.code || '';
+    const resolvedPartnerName = payment.partnerName || partnerName;
     
     // Determine the date to display
     const d = payment.createdAt ? new Date(payment.createdAt) : new Date();
@@ -87,7 +88,7 @@ export function printPaymentReceipt(paymentOrPayments, options = {}) {
 
         <table style="width: 100%; margin-bottom: 20px; line-height: 1.8; font-size: 15px;">
           <tr>
-            <td>Họ và tên người ${isReceipt ? 'nộp' : 'nhận'} tiền: <span style="font-weight: bold;">${escapeHtml(partnerName)}</span></td>
+            <td>Họ và tên người ${isReceipt ? 'nộp' : 'nhận'} tiền: <span style="font-weight: bold;">${escapeHtml(resolvedPartnerName)}</span></td>
           </tr>
           <tr>
             <td>Địa chỉ: ${escapeHtml(payment.partnerAddress || '.........................................................................................................................................')}</td>
@@ -122,7 +123,7 @@ export function printPaymentReceipt(paymentOrPayments, options = {}) {
           <tr>
             <td></td>
             <td></td>
-            <td>${partnerName !== '..........................................................' ? escapeHtml(partnerName) : ''}</td>
+            <td>${resolvedPartnerName !== '..........................................................' ? escapeHtml(resolvedPartnerName) : ''}</td>
             <td>${escapeHtml(salespersonName)}</td>
             <td></td>
           </tr>

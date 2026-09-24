@@ -70,7 +70,6 @@ function TransferHistoryPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
 
   const [selectedSlip, setSelectedSlip] = useState(null);
-  const [selectedIds, setSelectedIds] = useState([]);
   const DEFAULT_FILTERS = useMemo(() => {
     const range = getDateRangePreset('THIS_YEAR');
     return {
@@ -127,7 +126,6 @@ function TransferHistoryPage() {
       const data = unwrap(response) || [];
       setSlips(data);
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
-      if (!silent) setSelectedIds([]);
     } catch (err) {
       setError(err.response?.data?.userMessage || 'Không tải được danh sách phiếu chuyển kho');
     } finally {
@@ -176,15 +174,6 @@ function TransferHistoryPage() {
     ]);
     exportToExcel(headers, data, 'Danh_sach_phieu_chuyen_kho');
     showToast('success', 'Xuất Excel thành công!');
-  };
-
-  const handleSelectAll = (e) => {
-    setSelectedIds(e.target.checked ? rows.map(row => row.id) : []);
-  };
-
-  const handleSelectRow = (e, id) => {
-    e.stopPropagation();
-    setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
   };
 
   const totalItems = rows.length;
@@ -273,14 +262,6 @@ function TransferHistoryPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ width: '40px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      className={styles.checkbox}
-                      checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length}
-                      onChange={handleSelectAll}
-                    />
-                  </th>
                   {columns.date && <th style={{ width: '130px' }}>Ngày Ghi Nhận</th>}
                   {columns.transferCode && <th style={{ width: '160px' }}>Số Phiếu</th>}
                   {columns.fromWarehouse && <th style={{ width: '150px' }}>Kho Xuất</th>}
@@ -293,13 +274,13 @@ function TransferHistoryPage() {
               <tbody>
                 {loading && paginatedRows.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
+                    <td colSpan="7" className={styles.textCenter} style={{ padding: '40px' }}>
                       <div className={styles.emptyState}>Đang tải dữ liệu...</div>
                     </td>
                   </tr>
                 ) : paginatedRows.length === 0 ? (
                   <tr>
-                    <td colSpan="8">
+                    <td colSpan="7">
                       <div className={styles.emptyState}>
                         <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
                         <div className={styles.emptyText}>Không tìm thấy phiếu chuyển nào</div>
@@ -309,15 +290,6 @@ function TransferHistoryPage() {
                 ) : (
                   paginatedRows.map(slip => (
                     <tr key={slip.id}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={selectedIds.includes(slip.id)}
-                          onChange={(e) => handleSelectRow(e, slip.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
                       {columns.date && <td>{slip.date}</td>}
                       {columns.transferCode && (
                         <td style={{ whiteSpace: 'nowrap' }}>

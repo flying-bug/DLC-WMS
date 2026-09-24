@@ -7,6 +7,7 @@ import RowActionMenu from '../../components/ui/RowActionMenu/RowActionMenu';
 import Toast from '../../components/ui/Toast/Toast';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { printExportSlip } from '../../utils/printExportSlip';
+import { printStocktakeReports } from '../../utils/printStocktakeReports';
 import { getDateRangePreset } from '../../utils/datePresets';
 import { formatDateOnly } from '../../utils/dateFormat';
 import {
@@ -44,6 +45,7 @@ export default function WarehouseWorkspacePage() {
   // Master Data State
   const [masterList, setMasterList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
   const selectedItemRef = useRef(selectedItem);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(false);
@@ -103,6 +105,7 @@ export default function WarehouseWorkspacePage() {
       if (!silent) {
         setLoadingMaster(true);
         setSelectedItem(null);
+        setSelectedItems([]);
         setDetailLines([]);
         setOpenDropdownId(null);
         setPage(1);
@@ -247,16 +250,50 @@ export default function WarehouseWorkspacePage() {
     }
   };
 
-  const handlePrint = (slip) => {
-    const s = slip || selectedItem;
-    if (!s) {
-      showToast('info', 'Vui lòng chọn một chứng từ để in');
+  const handlePrint = async (slip) => {
+    const slips = slip
+      ? [slip]
+      : selectedItems.length > 0
+        ? selectedItems
+        : selectedItem
+          ? [selectedItem]
+          : [];
+    if (slips.length === 0) {
+      showToast('info', 'Vui lòng chọn ít nhất một chứng từ để in');
       return;
     }
-    if (activeTab === 'imports') {
-      printImportSlip({ ...s, lines: detailLines });
-    } else {
-      printExportSlip({ ...s, lines: detailLines });
+
+    const printWindow = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWindow) {
+      showToast('error', 'Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup để in phiếu.');
+      return;
+    }
+
+    try {
+      const documents = await Promise.all(slips.map(async (item) => {
+        if (slips.length === 1 && item.id === selectedItem?.id && detailLines.length > 0) {
+          return { ...item, lines: detailLines };
+        }
+        const response = activeTab === 'imports'
+          ? await importApi.getImportDetail(item.id)
+          : activeTab === 'exports'
+            ? await exportApi.getExportDetail(item.id)
+            : await stocktakeApi.getStocktakeDetail(item.id);
+        const detail = response.data?.data || response.data || {};
+        return { ...item, ...detail, lines: detail.lines || [] };
+      }));
+
+      if (activeTab === 'imports') {
+        printImportSlip(documents, { printWindow, onError: (message) => showToast('error', message) });
+      } else if (activeTab === 'exports') {
+        printExportSlip(documents, { printWindow, onError: (message) => showToast('error', message) });
+      } else {
+        printStocktakeReports(documents, { printWindow, onError: (message) => showToast('error', message) });
+      }
+    } catch (error) {
+      printWindow.close();
+      console.error('Error loading documents for printing:', error);
+      showToast('error', 'Không thể tải đủ dữ liệu để in chứng từ');
     }
   };
 
@@ -719,20 +756,21 @@ export default function WarehouseWorkspacePage() {
           <div className={styles.headerRightActions}>
             <button
               type="button"
-              className={styles.btnSecondary}
+              className={`${styles.btnSecondary} ${styles.iconOnlyButton}`}
               onClick={fetchMasterData}
               title="Tải lại dữ liệu"
+              aria-label="Tải lại dữ liệu"
             >
-              <i className="bi bi-arrow-repeat"></i> Nạp lại
+              <i className="bi bi-arrow-repeat"></i>
             </button>
             <button
               type="button"
               className={styles.btnSecondary}
-              onClick={() => handlePrint(selectedItem)}
-              title="In chứng từ đang chọn"
-              disabled={!selectedItem}
+              onClick={() => handlePrint()}
+              title={selectedItems.length > 0 ? `In ${selectedItems.length} chứng từ đã chọn` : 'In chứng từ đang chọn'}
+              disabled={!selectedItem && selectedItems.length === 0}
             >
-              <i className="bi bi-printer"></i> In phiếu
+              <i className="bi bi-printer"></i> In phiếu{selectedItems.length > 1 ? ` (${selectedItems.length})` : ''}
             </button>
           </div>
         </div>
@@ -802,6 +840,9 @@ export default function WarehouseWorkspacePage() {
             masterData={masterList}
             selectedItem={selectedItem}
             onSelectItem={setSelectedItem}
+            selectionMode="multiple"
+            selectedItems={selectedItems}
+            onSelectedItemsChange={setSelectedItems}
             onRowDoubleClick={handleOpenForm}
             masterLoading={loadingMaster}
             detailTitle="Danh sách hàng hóa chi tiết"

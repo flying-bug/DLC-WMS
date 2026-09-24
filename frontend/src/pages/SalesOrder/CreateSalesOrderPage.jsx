@@ -92,7 +92,6 @@ function CreateSalesOrderPage() {
     address: '',
   });
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [isPaymentUserEdited, setIsPaymentUserEdited] = useState(false);
   const [lines, setLines] = useState([emptyLine()]);
 
   const selectedSerialLine = serialModalLineIndex !== null ? lines[serialModalLineIndex] : null;
@@ -389,12 +388,6 @@ function CreateSalesOrderPage() {
   const totalVatAmount = lines.reduce((sum, l) => sum + (Number(l.quantity || 0) * Number(l.unitPrice || 0) * Number(l.vatRate || 0) / 100), 0);
   const grandTotal = subTotalAmount + totalVatAmount;
 
-  useEffect(() => {
-    if (mode === 'direct' && !isPaymentUserEdited) {
-      setPaymentAmount(Math.round(grandTotal).toString());
-    }
-  }, [grandTotal, mode, isPaymentUserEdited]);
-
   // ── Save ──
   const buildPayload = () => {
     const firstWh = lines[0]?.warehouseId || form.warehouseId;
@@ -528,7 +521,12 @@ function CreateSalesOrderPage() {
       focusField('so-docDate');
       return false;
     }
-    const paid = Number(paymentAmount || 0);
+    if (paymentAmount === '') {
+      showToast('error', 'Vui lòng nhập số tiền khách trả');
+      focusField('so-paymentAmount');
+      return false;
+    }
+    const paid = Number(paymentAmount);
     if (Number.isNaN(paid) || paid < 0) {
       showToast('error', 'Số tiền khách trả không hợp lệ');
       focusField('so-paymentAmount');
@@ -760,8 +758,9 @@ function CreateSalesOrderPage() {
   };
 
   const linesColumns = [
-    { title: '#', width: '36px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
-    { title: 'Mã hàng', width: '130px', render: (_, line, idx) => {
+    { title: '#', width: '44px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)', display: 'inline-block', whiteSpace: 'nowrap' }}>{idx + 1}</span> },
+    {
+      title: 'Mã hàng', width: '140px', render: (_, line, idx) => {
         const effectiveWh = line.warehouseId || null;
         const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
         return (
@@ -777,11 +776,13 @@ function CreateSalesOrderPage() {
             }}
             displayMode="code"
             placeholder="Chọn mã"
+            singleLine
           />
         );
-      } 
+      }
     },
-    { title: 'Tên hàng', minWidth: '180px', render: (_, line, idx) => {
+    {
+      title: 'Tên hàng', minWidth: '180px', render: (_, line, idx) => {
         const effectiveWh = line.warehouseId || null;
         const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
         return (
@@ -813,7 +814,8 @@ function CreateSalesOrderPage() {
         );
       }
     },
-    { title: 'Kho xuất', width: '115px', render: (_, line, idx) => (
+    {
+      title: 'Kho xuất', width: '115px', render: (_, line, idx) => (
         <WarehouseGridSelect
           id={`so-line-wh-${idx}`}
           warehouses={warehouses}
@@ -826,12 +828,13 @@ function CreateSalesOrderPage() {
       )
     },
     { title: 'ĐVT', width: '55px', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12.5 }}>{line.unitName || '—'}</span> },
-    { title: 'SL / Tồn', width: '110px', align: 'center', render: (_, line, idx) => {
+    {
+      title: 'SL / Tồn', width: '110px', align: 'center', render: (_, line, idx) => {
         const effectiveWh = line.warehouseId || null;
         const availableQty = line.variantId
           ? (effectiveWh
-              ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
-              : (inventoryMap.get(String(line.variantId)) || 0))
+            ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
+            : (inventoryMap.get(String(line.variantId)) || 0))
           : 0;
         return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
@@ -869,7 +872,8 @@ function CreateSalesOrderPage() {
         );
       }
     },
-    { title: 'BH (T)', width: '68px', align: 'center', render: (_, line, idx) => (
+    {
+      title: 'BH (T)', width: '68px', align: 'center', render: (_, line, idx) => (
         <input
           id={`so-line-warranty-${idx}`}
           type="text"
@@ -889,7 +893,8 @@ function CreateSalesOrderPage() {
         />
       )
     },
-    { title: 'Đơn giá', width: '125px', align: 'right', render: (_, line, idx) => (
+    {
+      title: 'Đơn giá', width: '125px', align: 'right', render: (_, line, idx) => (
         <input
           id={`so-line-price-${idx}`}
           inputMode="numeric"
@@ -901,13 +906,15 @@ function CreateSalesOrderPage() {
         />
       )
     },
-    { title: 'Thành tiền', width: '130px', align: 'right', render: (_, line) => (
+    {
+      title: 'Thành tiền', width: '130px', align: 'right', render: (_, line) => (
         <span style={{ fontWeight: 600, color: '#0075c0', fontSize: 13, whiteSpace: 'nowrap' }}>
           {money(Number(line.quantity) * Number(line.unitPrice))} đ
         </span>
       )
     },
-    { title: '% VAT', width: '76px', align: 'center', render: (_, line, idx) => (
+    {
+      title: '% VAT', width: '90px', align: 'center', render: (_, line, idx) => (
         <select
           id={`so-line-vat-${idx}`}
           className={styles.lineInput}
@@ -1074,7 +1081,7 @@ function CreateSalesOrderPage() {
                   )}
 
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Ghi chú / Diễn giải</label>
+                    <label className={styles.label}>Ghi chú</label>
                     <textarea
                       className={styles.textarea}
                       rows={2}
@@ -1119,13 +1126,12 @@ function CreateSalesOrderPage() {
                   {mode === 'direct' ? (
                     <div className={styles.fieldRow}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <label className={styles.label} style={{ marginBottom: 0 }}>Khách trả</label>
+                        <label className={styles.label} style={{ marginBottom: 0 }}>Khách trả <span className={styles.required}>*</span></label>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
                             type="button"
                             style={{ fontSize: 11, padding: '2px 6px', background: 'var(--wms-bg-hover)', border: '1px solid var(--wms-border-strong)', borderRadius: 4, cursor: 'pointer' }}
                             onClick={() => {
-                              setIsPaymentUserEdited(false);
                               setPaymentAmount(Math.round(grandTotal).toString());
                             }}
                           >
@@ -1135,7 +1141,6 @@ function CreateSalesOrderPage() {
                             type="button"
                             style={{ fontSize: 11, padding: '2px 6px', background: 'var(--wms-bg-hover)', border: '1px solid var(--wms-border-strong)', borderRadius: 4, cursor: 'pointer' }}
                             onClick={() => {
-                              setIsPaymentUserEdited(true);
                               setPaymentAmount('0');
                             }}
                           >
@@ -1148,11 +1153,11 @@ function CreateSalesOrderPage() {
                         inputMode="numeric"
                         type="text"
                         className={styles.input}
+                        required
+                        aria-required="true"
+                        placeholder="Nhập số tiền khách trả"
                         value={formatMoneyInput(paymentAmount)}
-                        onChange={e => {
-                          setIsPaymentUserEdited(true);
-                          setPaymentAmount(digitsOnly(e.target.value));
-                        }}
+                        onChange={e => setPaymentAmount(digitsOnly(e.target.value))}
                       />
                     </div>
                   ) : (
@@ -1204,15 +1209,13 @@ function CreateSalesOrderPage() {
                     >
                       <i className="bi bi-plus-lg" /> Thêm dòng
                     </button>
-                    {lines.length > 1 && (
-                      <button
-                        type="button"
-                        className={styles.btnTableAction}
-                        onClick={() => setLines([emptyLine()])}
-                      >
-                        <i className="bi bi-trash" /> Xóa hết dòng
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className={styles.btnTableAction}
+                      onClick={() => setLines([emptyLine(vatConfig.defaultVatRate)])}
+                    >
+                      <i className="bi bi-trash" /> Xóa hết dòng
+                    </button>
                   </div>
                   <div className={styles.tableCount}>
                     Tổng số: <strong style={{ color: 'var(--wms-text-strong)' }}>{lines.length}</strong> dòng sản phẩm
@@ -1244,7 +1247,7 @@ function CreateSalesOrderPage() {
                     <>
                       <div className={styles.summaryRow} style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed var(--wms-border-strong)' }}>
                         <span>Khách trả:</span>
-                        <strong style={{ color: '#166534' }}>{money(Number(paymentAmount || 0))} đ</strong>
+                        <strong style={{ color: '#166534' }}>{paymentAmount === '' ? '' : `${money(Number(paymentAmount))} đ`}</strong>
                       </div>
                       <div className={styles.summaryRow}>
                         <span>Còn nợ:</span>

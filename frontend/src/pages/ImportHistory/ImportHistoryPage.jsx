@@ -67,6 +67,7 @@ const IMPORT_PURPOSE_LABELS = {
   STOCKTAKE_ADD: 'Hàng thừa từ kiểm kê',
   RETURN: 'Hàng bán bị trả lại',
   PRODUCTION: 'Nhập kho sản xuất',
+  ASSEMBLY: 'Nhập kho lắp ráp / tháo dỡ',
   SCRAP: 'Nhập phế liệu',
   OTHER: 'Khác'
 };
@@ -155,6 +156,18 @@ function ImportHistoryPage() {
   const customerById = useMemo(() => new Map(customers.map(item => [item.id, item])), [customers]);
   const assemblyOrderById = useMemo(() => new Map(assemblyOrders.map(item => [item.id, item])), [assemblyOrders]);
   const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
+
+  const isAssemblyImport = (slip) => String(slip?.referenceType || '').toUpperCase() === 'ASSEMBLY_ORDER';
+  const getImportPurposeLabel = (slip) => {
+    if (isAssemblyImport(slip)) {
+      const assemblyOrder = assemblyOrderById.get(slip.referenceId)
+        || assemblyOrderById.get(Number(slip.referenceId));
+      return assemblyOrder?.orderType === 'DISASSEMBLY'
+        ? 'Tháo dỡ'
+        : 'Lắp ráp';
+    }
+    return IMPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác';
+  };
 
   const loadLookups = useCallback(async () => {
     const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
@@ -255,14 +268,16 @@ function ImportHistoryPage() {
         partnerLabel = supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'Chưa chọn');
       } else if (slip.issuePurpose === 'RETURN' || slip.issuePurpose === 'SCRAP') {
         partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `KH #${slip.partnerId}` : 'Chưa chọn');
-      } else if (slip.issuePurpose === 'PRODUCTION') {
-        partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+      } else if (isAssemblyImport(slip) || slip.issuePurpose === 'PRODUCTION') {
+        partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode
+          || assemblyOrderById.get(Number(slip.referenceId))?.orderCode
+          || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
       }
 
       return {
         ...slip,
         date: formatDate(slip.docDate),
-        issuePurposeLabel: IMPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác',
+        issuePurposeLabel: getImportPurposeLabel(slip),
         partner: partnerLabel,
         warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
         purchaserName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
@@ -684,18 +699,18 @@ function ImportHistoryPage() {
               <div className={styles.modalBody}>
                 <div className={styles.detailGrid}>
                   <div className={styles.infoGrid}>
-                    {(selectedSlip.partnerId || selectedSlip.issuePurpose === 'PURCHASE' || selectedSlip.issuePurpose === 'PRODUCTION' || selectedSlip.issuePurpose === 'RETURN') && (
+                    {(selectedSlip.partnerId || selectedSlip.issuePurpose === 'PURCHASE' || isAssemblyImport(selectedSlip) || selectedSlip.issuePurpose === 'PRODUCTION' || selectedSlip.issuePurpose === 'RETURN') && (
                       <div className={styles.infoBlock}>
                         <span className={styles.infoLabel}>
                           <i className="bi bi-shop"></i>
-                          {selectedSlip.issuePurpose === 'PRODUCTION'
-                            ? 'Lệnh sản xuất'
+                          {isAssemblyImport(selectedSlip) || selectedSlip.issuePurpose === 'PRODUCTION'
+                            ? 'Lệnh lắp ráp / tháo dỡ'
                             : selectedSlip.issuePurpose === 'RETURN' || selectedSlip.issuePurpose === 'SCRAP'
                             ? 'Khách hàng'
                             : 'Nhà cung cấp'}
                         </span>
                         <span className={styles.infoValue}>
-                          {selectedSlip.issuePurpose === 'PRODUCTION'
+                          {isAssemblyImport(selectedSlip) || selectedSlip.issuePurpose === 'PRODUCTION'
                             ? assemblyOrderById.get(selectedSlip.referenceId)?.orderCode || 'Chưa chọn'
                             : selectedSlip.issuePurpose === 'RETURN' || selectedSlip.issuePurpose === 'SCRAP'
                             ? customerById.get(selectedSlip.partnerId)?.name || 'Chưa chọn'
@@ -716,7 +731,7 @@ function ImportHistoryPage() {
                     <div className={styles.infoBlock}>
                       <span className={styles.infoLabel}>
                         <i className="bi bi-person-badge"></i>
-                        {selectedSlip.issuePurpose === 'PRODUCTION'
+                        {isAssemblyImport(selectedSlip) || selectedSlip.issuePurpose === 'PRODUCTION'
                           ? 'Nhân viên phụ trách'
                           : selectedSlip.issuePurpose === 'RETURN'
                           ? 'Nhân viên bán hàng'
@@ -784,7 +799,7 @@ function ImportHistoryPage() {
                 </div>
 
                 {(() => {
-                  const isAssembly = selectedSlip.issuePurpose === 'PRODUCTION' && selectedSlip.referenceType === 'ASSEMBLY_ORDER';
+                  const isAssembly = isAssemblyImport(selectedSlip);
                   const displayVatAndTotal = showPricing && !isAssembly;
 
                   // Cột quy đổi đơn vị (ĐVC/Tỷ lệ CĐ/Phép tính/SL ĐVC) chỉ có ý nghĩa khi ít

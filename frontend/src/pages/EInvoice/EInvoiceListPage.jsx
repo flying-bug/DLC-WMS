@@ -53,9 +53,17 @@ export default function EInvoiceListPage() {
       });
       const data = res.data?.data;
       if (data) {
-        setInvoices(data.content || []);
-        setTotalElements(data.totalElements || 0);
-        setTotalPages(data.totalPages || 1);
+        const content = data.content || [];
+        const responseTotalElements = data.page?.totalElements
+          ?? data.totalElements
+          ?? data.totalItems
+          ?? content.length;
+        const responseTotalPages = data.page?.totalPages
+          ?? data.totalPages
+          ?? Math.max(1, Math.ceil(responseTotalElements / size));
+        setInvoices(content);
+        setTotalElements(responseTotalElements);
+        setTotalPages(responseTotalPages);
       }
     } catch {
       showToast('error', 'Không thể tải danh sách hóa đơn điện tử');

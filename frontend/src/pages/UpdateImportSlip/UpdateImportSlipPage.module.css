@@ -10,7 +10,7 @@
 .pageBody {
   flex: 1;
   padding: 16px 20px;
-  overflow-y: auto;
+  overflow: visible;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -212,6 +212,46 @@ textarea.formInput {
      trong ô sẽ bị bóp méo/gãy dòng giữa chừng. overflow-x: auto để bảng tự
      cuộn ngang khi tổng min-width các cột vượt quá chiều rộng khả dụng. */
   overflow-x: auto;
+}
+
+.summaryRow {
+  background-color: var(--wms-bg-soft);
+  font-weight: 700;
+}
+
+.summaryRow td {
+  padding: 12px 16px !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.summaryLabel,
+.summaryValue {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryLabel {
+  color: var(--wms-text-strong);
+}
+
+.summarySuccess {
+  color: var(--wms-success);
+}
+
+.summaryDanger {
+  color: var(--wms-danger);
+}
+
+.warehouseStaffRow {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px !important;
+}
+
+.warehouseStaffRow > :global(.misa-form-group) {
+  min-width: 0;
 }
 
 .table {
@@ -634,6 +674,10 @@ textarea.formInput {
 }
 
 @media (max-width: 640px) {
+  .warehouseStaffRow {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
   .itemPaginationBar {
     flex-wrap: wrap;
   }

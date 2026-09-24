@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
@@ -18,7 +18,6 @@ import usePermissionGuard from '../../hooks/usePermissionGuard';
 const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const SupplierDetailPage = () => {
-    const navigate = useNavigate();
     const goBack = useGoBack('/suppliers');
     const { id } = useParams();
     const guard = usePermissionGuard();
@@ -34,7 +33,7 @@ const SupplierDetailPage = () => {
     const [paymentError, setPaymentError] = useState(null);
     
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -119,14 +118,31 @@ const SupplierDetailPage = () => {
         }
     }, [id]);
 
-    const handleDelete = async () => {
+    const handleToggleStatus = async () => {
+        const nextStatus = supplier.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED';
         try {
-            await axiosClient.delete(`/suppliers/${id}`);
-            setIsDeleteModalOpen(false);
-            navigate('/suppliers', { replace: true, state: { toastMessage: `Đã xóa nhà cung cấp ${supplier.name}`, toastType: 'success' } });
+            await axiosClient.put(`/suppliers/${id}`, {
+                code: supplier.code,
+                name: supplier.name,
+                phone: supplier.phone || null,
+                email: supplier.email || null,
+                address: supplier.address || null,
+                taxCode: supplier.taxCode || null,
+                groupType: supplier.groupType || 'RETAIL',
+                bankName: supplier.bankName || null,
+                bankAccountNumber: supplier.bankAccountNumber || null,
+                bankBeneficiaryName: supplier.bankBeneficiaryName || null,
+                contactName: supplier.contactName || null,
+                status: nextStatus,
+            });
+            setIsStatusModalOpen(false);
+            showToast('success', nextStatus === 'INACTIVE'
+                ? `Đã vô hiệu hóa nhà cung cấp ${supplier.name}`
+                : `Đã kích hoạt lại nhà cung cấp ${supplier.name}`);
+            fetchSupplier({ silent: true });
         } catch (error) {
-            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa nhà cung cấp');
-            setIsDeleteModalOpen(false);
+            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi cập nhật trạng thái nhà cung cấp');
+            setIsStatusModalOpen(false);
         }
     };
 
@@ -160,9 +176,10 @@ const SupplierDetailPage = () => {
                 <div className={styles.pageTitleContainer}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <button 
-                            className={styles.backButton}
+                            className={styles.iconBtn}
                             onClick={goBack}
                             title="Quay lại danh sách"
+                            type="button"
                         >
                             <i className="bi bi-arrow-left"></i>
                         </button>
@@ -175,9 +192,15 @@ const SupplierDetailPage = () => {
                         <button className={styles.btnOutline} onClick={() => guard('supplier:edit', () => setIsEditModalOpen(true))}>
                             <i className="bi bi-pencil"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => guard('supplier:delete', () => setIsDeleteModalOpen(true))}>
-                            <i className="bi bi-trash"></i> Xóa
-                        </button>
+                        {supplier.status === 'APPROVED' ? (
+                            <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => guard('supplier:edit', () => setIsStatusModalOpen(true))}>
+                                <i className="bi bi-slash-circle"></i> Vô hiệu hóa
+                            </button>
+                        ) : (
+                            <button className={styles.btnOutline} style={{ color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }} onClick={() => guard('supplier:edit', () => setIsStatusModalOpen(true))}>
+                                <i className="bi bi-check2-circle"></i> Kích hoạt
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -246,7 +269,7 @@ const SupplierDetailPage = () => {
                             <div style={{ borderTop: '1px solid var(--color-border)', margin: '16px 0' }}></div>
                             <div>
                                 <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Dư nợ hiện tại</div>
-                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(supplier?.currentDebt || 0)} ₫</h2>
+                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(debtBalance)} ₫</h2>
                             </div>
                         </div>
                     </div>
@@ -327,14 +350,14 @@ const SupplierDetailPage = () => {
             )}
 
             <ConfirmModal
-                isOpen={isDeleteModalOpen}
-                title="Xác nhận xóa"
-                message={<span>Bạn có chắc chắn muốn xóa nhà cung cấp <strong>{supplier?.name}</strong> {supplier?.code ? `(${supplier.code})` : ''} không? Hành động này không thể hoàn tác.</span>}
-                onConfirm={handleDelete}
-                onCancel={() => setIsDeleteModalOpen(false)}
-                confirmText="Xóa"
+                isOpen={isStatusModalOpen}
+                title={supplier?.status === 'APPROVED' ? 'Xác nhận vô hiệu hóa' : 'Xác nhận kích hoạt'}
+                message={<span>Bạn có chắc chắn muốn {supplier?.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt lại'} nhà cung cấp <strong>{supplier?.name}</strong> {supplier?.code ? `(${supplier.code})` : ''} không?</span>}
+                onConfirm={handleToggleStatus}
+                onCancel={() => setIsStatusModalOpen(false)}
+                confirmText={supplier?.status === 'APPROVED' ? 'Vô hiệu hóa' : 'Kích hoạt'}
                 cancelText="Hủy"
-                confirmButtonClass="btn-misa-danger"
+                confirmButtonClass={supplier?.status === 'APPROVED' ? 'btn-misa-danger' : 'btn-misa-primary'}
             />
 
             <Toast {...toast} onClose={hideToast} />

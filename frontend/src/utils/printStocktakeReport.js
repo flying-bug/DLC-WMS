@@ -13,7 +13,7 @@ export function printStocktakeReport(options = {}) {
     onError = null,
   } = options;
 
-  const printWindow = window.open('', '_blank', 'width=1000,height=800');
+  const printWindow = options.printWindow || window.open('', '_blank', 'width=1000,height=800');
   if (!printWindow) {
     if (onError) {
       onError('Trình duyệt đã chặn cửa sổ in (popup). Vui lòng cho phép mở popup để in phiếu.');

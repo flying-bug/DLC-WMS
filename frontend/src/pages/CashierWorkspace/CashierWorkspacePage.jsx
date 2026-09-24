@@ -27,6 +27,7 @@ export default function CashierWorkspacePage() {
   // Master State
   const [rawList, setRawList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
   const selectedItemRef = useRef(selectedItem);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(true);
@@ -94,6 +95,7 @@ export default function CashierWorkspacePage() {
       if (!silent) {
         setLoadingMaster(true);
         setSelectedItem(null);
+        setSelectedItems([]);
         setDetailData([]);
         setPage(1);
       }
@@ -126,6 +128,7 @@ export default function CashierWorkspacePage() {
   // Reset page when activeTab changes
   useEffect(() => {
     setPage(1);
+    setSelectedItems([]);
   }, [activeTab]);
 
   // Ở tab sổ quỹ tiền mặt / tiền gửi, hình thức thanh toán đã cố định theo tab nên không lọc thêm.
@@ -296,13 +299,18 @@ export default function CashierWorkspacePage() {
 
   // Handle Print Receipt / Voucher
   const handlePrint = (slip) => {
-    const item = slip || selectedItem;
-    if (!item) {
-      showToast('info', 'Vui lòng chọn một phiếu để in');
+    const items = slip
+      ? [slip]
+      : selectedItems.length > 0
+        ? selectedItems
+        : selectedItem
+          ? [selectedItem]
+          : [];
+    if (items.length === 0) {
+      showToast('info', 'Vui lòng chọn ít nhất một phiếu để in');
       return;
     }
-    printPaymentReceipt(item, {
-      partnerName: item.partnerName || 'Chưa rõ',
+    printPaymentReceipt(items, {
       onError: (msg) => showToast('error', msg),
     });
   };
@@ -567,11 +575,11 @@ export default function CashierWorkspacePage() {
             <button
               type="button"
               className={styles.btnPrint}
-              disabled={!selectedItem}
+              disabled={!selectedItem && selectedItems.length === 0}
               onClick={() => handlePrint()}
-              title="In phiếu đang chọn"
+              title={selectedItems.length > 0 ? `In ${selectedItems.length} phiếu đã chọn` : 'In phiếu đang chọn'}
             >
-              <i className="bi bi-printer"></i> In phiếu
+              <i className="bi bi-printer"></i> In phiếu{selectedItems.length > 1 ? ` (${selectedItems.length})` : ''}
             </button>
 
             {selectedItem && selectedItem.status === 'DRAFT' && (
@@ -600,11 +608,12 @@ export default function CashierWorkspacePage() {
 
             <button
               type="button"
-              className={styles.btnSecondary}
+              className={`${styles.btnSecondary} ${styles.iconOnlyButton}`}
               onClick={fetchMasterData}
               title="Tải lại dữ liệu"
+              aria-label="Tải lại dữ liệu"
             >
-              <i className="bi bi-arrow-repeat"></i> Nạp lại
+              <i className="bi bi-arrow-repeat"></i>
             </button>
           </div>
         </div>
@@ -782,6 +791,9 @@ export default function CashierWorkspacePage() {
               masterData={filteredList}
               selectedItem={selectedItem}
               onSelectItem={setSelectedItem}
+              selectionMode="multiple"
+              selectedItems={selectedItems}
+              onSelectedItemsChange={setSelectedItems}
               onRowDoubleClick={(item) => handlePrint(item)}
               masterLoading={loadingMaster}
               detailTitle={

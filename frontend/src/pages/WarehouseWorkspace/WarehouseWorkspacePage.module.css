@@ -207,6 +207,14 @@
   cursor: not-allowed;
 }
 
+.iconOnlyButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
 /* MASTER DETAIL WRAPPER */
 .workspaceLayoutWrapper {
   flex: 1;

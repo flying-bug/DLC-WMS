@@ -16,8 +16,11 @@ import useSessionState from '../../hooks/useSessionState';
 
 const STATUS_LABELS = {
     ACTIVE: { label: 'Đang sử dụng', code: 'success' },
+    APPROVED: { label: 'Đang sử dụng', code: 'success' },
     INACTIVE: { label: 'Ngừng sử dụng', code: 'danger' },
 };
+
+const isActiveStatus = (status) => status === 'ACTIVE' || status === 'APPROVED';
 
 const UnitPage = () => {
     const [units, setUnits] = useState([]);
@@ -115,7 +118,7 @@ const UnitPage = () => {
 
     const handleToggleStatus = async (item) => {
         if (!guard('unit:edit')) return;
-        const newStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+        const newStatus = isActiveStatus(item.status) ? 'INACTIVE' : 'ACTIVE';
         try {
             await axiosClient.put(`/units/` + item.id, { ...item, status: newStatus });
             showToast('success', 'Cập nhật trạng thái thành công!');
@@ -216,7 +219,7 @@ const UnitPage = () => {
                 title="Chỉnh sửa" 
                 onClick={(e) => handleEditClick(e, item)}
             ></i>
-            {item.status === 'ACTIVE' ? (
+            {isActiveStatus(item.status) ? (
                 <i 
                     className="bi bi-slash-circle" 
                     style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
@@ -290,9 +293,6 @@ const UnitPage = () => {
                             title="Xuất tệp Excel"
                         >
                             <i className="bi bi-file-earmark-excel"></i>
-                        </button>
-                        <button className={styles.btnPrimary} onClick={() => { setCurrentPage(1); fetchUnits(); }}>
-                            <i className="bi bi-funnel"></i> Lọc dữ liệu
                         </button>
                     </div>
                 </div>

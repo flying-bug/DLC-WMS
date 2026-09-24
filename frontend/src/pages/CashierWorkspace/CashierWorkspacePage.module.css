@@ -302,6 +302,14 @@
   color: var(--color-text-strong, var(--wms-text-title));
 }
 
+.iconOnlyButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
 .btnReceipt {
   display: inline-flex;
   align-items: center;

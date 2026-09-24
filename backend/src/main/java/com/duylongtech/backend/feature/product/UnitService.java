@@ -6,12 +6,14 @@ import com.duylongtech.backend.feature.product.Unit;
 import com.duylongtech.backend.feature.product.UnitRepository;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.enums.EntityStatus;
 import com.duylongtech.backend.feature.product.UnitMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Locale;
 import com.duylongtech.backend.feature.product.Product;
 import com.duylongtech.backend.feature.product.Unit;
 import com.duylongtech.backend.feature.product.UnitMapper;
@@ -63,6 +65,9 @@ public class UnitService {
         }
 
         unit.updateDetails(dto.getName(), dto.getDescription());
+        if (dto.getStatus() != null) {
+            unit.changeStatus(resolveStatus(dto.getStatus()));
+        }
 
         Unit updatedUnit = unitRepository.save(unit);
         return unitMapper.toResponse(updatedUnit);
@@ -75,5 +80,19 @@ public class UnitService {
         }
         // Có thể thay bằng soft delete nếu cần: unit.setStatus(com.duylongtech.backend.enums.EntityStatus.INACTIVE.name())
         unitRepository.deleteById(id);
+    }
+
+    private EntityStatus resolveStatus(String status) {
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        // Dữ liệu cũ dùng APPROVED với cùng ý nghĩa ACTIVE.
+        if ("APPROVED".equals(normalized)) {
+            normalized = EntityStatus.ACTIVE.name();
+        }
+
+        try {
+            return EntityStatus.valueOf(normalized);
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(SystemMessage.UNIT_INVALID_STATUS);
+        }
     }
 }

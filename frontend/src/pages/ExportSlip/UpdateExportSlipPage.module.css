@@ -291,6 +291,27 @@
   overflow-x: auto;
 }
 
+.linesSummaryRow {
+  background-color: var(--wms-bg-soft);
+  font-weight: 700;
+}
+
+.linesSummaryRow td {
+  padding: 12px 16px !important;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.linesSummaryLabel,
+.linesSummaryValue {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.linesSummaryValue {
+  color: var(--color-primary);
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -546,29 +567,39 @@
 .tableActions {
   padding: 16px;
   display: flex;
-  gap: 24px;
+  flex-direction: column;
+  gap: 10px;
   background: white;
 }
 
-.actionLink {
-  color: var(--color-primary-bright);
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+.tableCount {
+  color: var(--wms-text-muted);
+  font-size: 13px;
 }
 
-.actionLink:hover {
-  background-color: var(--color-primary-soft);
-  text-decoration: none;
+.tableActionButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.btnTableAction {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border-muted);
+  background-color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wms-text-body);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+
+.btnTableAction:hover {
+  background-color: var(--wms-bg-hover);
+  border-color: var(--wms-text-subtle);
 }
 
 .table thead th {

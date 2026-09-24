@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
@@ -8,8 +8,7 @@ import Modal from '../../components/ui/Modal/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import styles from './AuditLogPage.module.css';
 import { formatDateTime as formatVietnamDateTime } from '../../utils/dateFormat';
-import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-import DateInput from '../../components/ui/DateInput/DateInput';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 
 
 const formatDateTime = (isoString) => isoString ? formatVietnamDateTime(isoString, { withSeconds: false }) : '';
@@ -128,6 +127,22 @@ function AuditLogPage() {
     const [selectedLog, setSelectedLog] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
     const [detailError, setDetailError] = useState('');
+
+    const auditFilters = useMemo(() => ({
+        preset: 'CUSTOM',
+        fromDate: fromDateInput,
+        toDate: toDateInput,
+        module: selectedModule,
+    }), [fromDateInput, toDateInput, selectedModule]);
+
+    const resetFilters = () => {
+        setSearchTerm('');
+        setDebouncedSearch('');
+        setFromDateInput('');
+        setToDateInput('');
+        setSelectedModule('');
+        setPage(0);
+    };
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -258,44 +273,26 @@ function AuditLogPage() {
                         </div>
                     </div>
 
-                    <div className={styles.filterSelectGroup}>
-                        <div className={styles.dateFilterField}>
-                            <label htmlFor="audit-from-date">Từ:</label>
-                            <DateInput
-                                id="audit-from-date"
-                                className={styles.filterSelect}
-                                value={fromDateInput}
-                                onChange={(e) => { setFromDateInput(e.target.value); setPage(0); }}
-                            />
-                        </div>
-                        <div className={styles.dateFilterField}>
-                            <label htmlFor="audit-to-date">Đến:</label>
-                            <DateInput
-                                id="audit-to-date"
-                                className={styles.filterSelect}
-                                value={toDateInput}
-                                onChange={(e) => { setToDateInput(e.target.value); setPage(0); }}
-                            />
-                        </div>
-                        <SearchableSelect
-                            className={styles.filterSelect}
-                            value={selectedModule}
-                            onChange={(e) => { setSelectedModule(e.target.value); setPage(0); }}
-                            aria-label="Lọc theo phân hệ"
-                        >
-                            <option value="">Tất cả phân hệ</option>
-                            {Object.entries(MODULE_LABELS).map(([key, label]) => (
-                                <option key={key} value={key}>{label}</option>
-                            ))}
-                        </SearchableSelect>
-                    </div>
-
                     <div className={styles.filterActions}>
-                        <button type="button" className={styles.iconBtn} onClick={() => {
-                            setSearchTerm(''); setDebouncedSearch(''); setFromDateInput(''); setToDateInput(''); setSelectedModule(''); setPage(0);
-                        }} title="Làm mới" aria-label="Làm mới bộ lọc">
+                        <button type="button" className={styles.iconBtn} onClick={resetFilters} title="Làm mới" aria-label="Làm mới bộ lọc">
                             <i className="bi bi-arrow-clockwise"></i>
                         </button>
+                        <FilterPopover
+                            filters={auditFilters}
+                            onApply={(newFilters) => {
+                                setFromDateInput(newFilters.fromDate || '');
+                                setToDateInput(newFilters.toDate || '');
+                                setSelectedModule(newFilters.module || '');
+                                setPage(0);
+                            }}
+                            onReset={resetFilters}
+                            customSelects={[{
+                                key: 'module',
+                                label: 'Phân hệ',
+                                defaultOption: 'Tất cả phân hệ',
+                                options: Object.entries(MODULE_LABELS).map(([value, label]) => ({ value, label })),
+                            }]}
+                        />
                         <button type="button" className={styles.iconBtn} onClick={handleExport} title="Xuất Excel" aria-label="Xuất nhật ký ra Excel">
                             <i className="bi bi-file-earmark-excel"></i>
                         </button>

@@ -901,9 +901,16 @@ const ProductPage = () => {
             const res = productsResult.value;
             const payload = res.data?.data ?? res.data;
             const content = payload?.content || [];
+            const responseTotalElements = payload?.page?.totalElements
+                ?? payload?.totalElements
+                ?? payload?.totalItems
+                ?? content.length;
+            const responseTotalPages = payload?.page?.totalPages
+                ?? payload?.totalPages
+                ?? Math.max(1, Math.ceil(responseTotalElements / size));
             setProducts(content);
-            setTotalPages(payload?.totalPages || 0);
-            setTotalElements(payload?.totalElements ?? content.length);
+            setTotalPages(responseTotalPages);
+            setTotalElements(responseTotalElements);
 
             if (stockSummaryResult.status === 'fulfilled') {
                 const summary = stockSummaryResult.value.data || {};

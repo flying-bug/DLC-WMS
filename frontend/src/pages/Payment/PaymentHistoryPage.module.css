@@ -12,10 +12,30 @@
   margin-bottom: 20px;
 }
 
-.breadcrumb {
-  color: var(--color-text-muted);
+.contextBackButton {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
   font-size: 13px;
-  margin-bottom: 6px;
+  font-weight: 600;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.contextBackButton:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.contextBackButton:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 
 .title {

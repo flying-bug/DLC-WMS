@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import useGoBack from '../../hooks/useGoBack';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { getCustomerById, deactivateCustomer, activateCustomer, getCustomerSalesHistory, getCustomerWarranties, getCustomerReceipts } from '../../api/customerApi';
+import { getPartnerDebtBalance } from '../../api/paymentApi';
 import CustomerModal from './components/CustomerModal';
 import SalesHistoryTab from './components/SalesHistoryTab';
 import WarrantyTab from './components/WarrantyTab';
@@ -27,6 +28,7 @@ const CustomerDetailPage = () => {
     const guard = usePermissionGuard();
 
     const [customer, setCustomer] = useState(null);
+    const [currentDebt, setCurrentDebt] = useState(0);
     const [activeTab, setActiveTab] = useState(TABS.SALES);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -48,7 +50,16 @@ const CustomerDetailPage = () => {
     const fetchCustomerInfo = useCallback(async () => {
         try {
             const res = await getCustomerById(id);
-            setCustomer(res.data?.data || res.data);
+            const customerData = res.data?.data || res.data;
+            setCustomer(customerData);
+
+            try {
+                const debtRes = await getPartnerDebtBalance(id);
+                setCurrentDebt(Number(debtRes.data?.data ?? debtRes.data ?? 0));
+            } catch (debtError) {
+                console.warn('Không thể tải công nợ từ phân hệ thu chi, sử dụng dữ liệu khách hàng:', debtError);
+                setCurrentDebt(Number(customerData?.currentDebt || 0));
+            }
         } catch (err) {
             const errCode = err.response?.data?.errorCode || '';
             const errMsg = err.response?.data?.userMessage || '';
@@ -261,18 +272,15 @@ const CustomerDetailPage = () => {
                             <h2 className={styles.detailTitle}>Tổng quan tài chính</h2>
                         </div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 24px 24px 24px' }}>
-                            <div style={{ 
-                                backgroundColor: 'var(--color-bg-subtle)', 
-                                padding: '24px', 
-                                borderRadius: '12px', 
-                                border: '1px solid var(--color-border)',
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between'
-                            }}>
+                            <button
+                                type="button"
+                                className={styles.debtSummaryCard}
+                                onClick={() => navigate(`/payments/history/${id}?mode=RECEIPT`)}
+                                title="Xem chi tiết công nợ khách hàng"
+                            >
                                 <div>
-                                    <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Dư nợ hiện tại</div>
-                                    <h2 style={{ margin: 0, fontSize: '28px', color: 'var(--color-danger)' }}>{formatCurrency(customer?.currentDebt || 0)} <span style={{ fontSize: '20px', color: 'var(--color-text-muted)' }}>₫</span></h2>
+                                    <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Công nợ hiện tại</div>
+                                    <h2 style={{ margin: 0, fontSize: '28px', color: 'var(--color-danger)' }}>{formatCurrency(currentDebt)} <span style={{ fontSize: '20px', color: 'var(--color-text-muted)' }}>₫</span></h2>
                                 </div>
                                 <div style={{ 
                                     width: '56px', 
@@ -287,7 +295,7 @@ const CustomerDetailPage = () => {
                                 }}>
                                     <i className="bi bi-cash-coin"></i>
                                 </div>
-                            </div>
+                            </button>
                         </div>
                     </div>
                 </div>
