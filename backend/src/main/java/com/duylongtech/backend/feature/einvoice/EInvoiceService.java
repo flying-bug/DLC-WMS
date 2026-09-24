@@ -171,6 +171,13 @@ public class EInvoiceService {
         // Nếu xuất HĐ toàn bộ đơn hàng (không theo phiếu xuất riêng)
         if (exportDoc == null && so != null) {
             final String soCode = so.getSoCode();
+            // Thời điểm lập HĐ bán hàng hóa là thời điểm chuyển giao hàng (Khoản 1 Điều 9 NĐ 123), nên chỉ xuất HĐ gộp
+            // khi đơn đã xuất kho đủ (POSTED). Đơn mới duyệt / đang giao dở thì xuất theo từng phiếu xuất đã ghi sổ.
+            if (!DocumentStatus.POSTED.name().equals(so.getStatus())) {
+                throw new BusinessException(String.format(
+                        "Đơn bán hàng %s chưa xuất kho đủ hàng nên chưa thể xuất hóa đơn điện tử cho toàn bộ đơn. Theo Khoản 1 Điều 9 Nghị định 123/2020/NĐ-CP, hóa đơn được lập tại thời điểm chuyển giao hàng hóa: vui lòng xuất hóa đơn theo từng phiếu xuất kho đã ghi sổ, hoặc chờ đơn xuất kho đủ.",
+                        soCode));
+            }
             // 1. Kiểm tra nếu đơn hàng đã có HĐĐT cấp đơn hàng
             einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(so.getId(), DocumentStatus.CANCELED.name()).ifPresent(existing -> {
                 throw new BusinessException(String.format(
@@ -231,7 +238,9 @@ public class EInvoiceService {
                 BigDecimal vatRate = expLine.getVatRate() != null ? expLine.getVatRate()
                         : (expLine.getVatPercent() != null ? expLine.getVatPercent() : BigDecimal.ZERO);
 
-                BigDecimal lineSubTotal = expLine.getLineAmount() != null ? expLine.getLineAmount() : qty.multiply(price);
+                // Tiền trước thuế = SL x đơn giá. Không lấy lineAmount của dòng phiếu xuất vì lineAmount đã gồm VAT,
+                // cộng VAT lần nữa bên dưới sẽ tính thuế 2 lần.
+                BigDecimal lineSubTotal = qty.multiply(price);
                 BigDecimal lineVat = lineSubTotal.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
                 BigDecimal lineTotal = lineSubTotal.add(lineVat);
 

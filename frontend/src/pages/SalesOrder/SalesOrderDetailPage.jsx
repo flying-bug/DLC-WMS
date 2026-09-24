@@ -693,7 +693,8 @@ function SalesOrderDetailPage() {
           </div>
 
           <div className={styles.headerActions}>
-            {!activeSoLevelInvoice && activeExportLevelInvoices.length === 0 && ['APPROVED', 'POSTED'].includes(so.status) && (
+            {/* HĐ gộp cả đơn chỉ khi đơn đã xuất kho đủ (POSTED); đơn đang giao dở thì xuất theo từng phiếu xuất. */}
+            {!activeSoLevelInvoice && activeExportLevelInvoices.length === 0 && so.status === 'POSTED' && (
               <button
                 className={styles.btnPrimary}
                 onClick={() => setIssueModalTarget({ so, exportDoc: null })}
