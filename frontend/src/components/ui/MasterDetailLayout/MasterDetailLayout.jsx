@@ -27,7 +27,10 @@ export default function MasterDetailLayout({
   pageSize,
   setPageSize,
   sharedPagination = false,
-  showDetailSummary = true
+  showDetailSummary = true,
+  selectionMode = 'single',
+  selectedItems = [],
+  onSelectedItemsChange,
 }) {
   const [detailVisible, setDetailVisible] = useState(true);
   // Bảng master chỉ hỗ trợ chọn 1 dòng tại một thời điểm (selectedItem là giá trị đơn),
@@ -65,6 +68,38 @@ export default function MasterDetailLayout({
     const startIdx = (safeCurrentPage - 1) * currentPageSize;
     return masterData.slice(startIdx, startIdx + currentPageSize);
   }, [masterData, safeCurrentPage, currentPageSize]);
+
+  const selectedRowIds = useMemo(
+    () => new Set(selectedItems.map((item) => String(item.id ?? item.docCode ?? item.code))),
+    [selectedItems]
+  );
+  const currentPageRowIds = paginatedMasterData.map((item) => String(item.id ?? item.docCode ?? item.code));
+  const allCurrentPageSelected = currentPageRowIds.length > 0 && currentPageRowIds.every((id) => selectedRowIds.has(id));
+  const someCurrentPageSelected = currentPageRowIds.some((id) => selectedRowIds.has(id));
+
+  const toggleSelectedRow = (row) => {
+    if (!onSelectedItemsChange) return;
+    const rowId = String(row.id ?? row.docCode ?? row.code);
+    const isSelected = selectedRowIds.has(rowId);
+    const nextItems = isSelected
+      ? selectedItems.filter((item) => String(item.id ?? item.docCode ?? item.code) !== rowId)
+      : [...selectedItems, row];
+    onSelectedItemsChange(nextItems);
+    if (!isSelected && onSelectItem) onSelectItem(row);
+  };
+
+  const toggleCurrentPage = () => {
+    if (!onSelectedItemsChange) return;
+    if (allCurrentPageSelected) {
+      const pageIds = new Set(currentPageRowIds);
+      onSelectedItemsChange(selectedItems.filter((item) => !pageIds.has(String(item.id ?? item.docCode ?? item.code))));
+      return;
+    }
+
+    const nextById = new Map(selectedItems.map((item) => [String(item.id ?? item.docCode ?? item.code), item]));
+    paginatedMasterData.forEach((item) => nextById.set(String(item.id ?? item.docCode ?? item.code), item));
+    onSelectedItemsChange([...nextById.values()]);
+  };
 
   // Detail pagination (internal only)
   const [detailPage, setDetailPage] = useState(1);
@@ -113,17 +148,34 @@ export default function MasterDetailLayout({
               {
                 key: 'radioSelect',
                 dataIndex: 'radioSelect',
-                title: <span aria-hidden="true" />,
+                title: selectionMode === 'multiple' ? (
+                  <input
+                    type="checkbox"
+                    checked={allCurrentPageSelected}
+                    ref={(element) => {
+                      if (element) element.indeterminate = someCurrentPageSelected && !allCurrentPageSelected;
+                    }}
+                    onChange={toggleCurrentPage}
+                    aria-label="Chọn tất cả phiếu trên trang"
+                    title="Chọn tất cả phiếu trên trang"
+                    style={{ cursor: 'pointer' }}
+                  />
+                ) : <span aria-hidden="true" />,
                 width: '40px',
                 align: 'center',
                 render: (_, row) => {
-                  const isSelected = selectedItem && (selectedItem.id === row.id || selectedItem.docCode === row.docCode);
+                  const isSelected = selectionMode === 'multiple'
+                    ? selectedRowIds.has(String(row.id ?? row.docCode ?? row.code))
+                    : selectedItem && (selectedItem.id === row.id || selectedItem.docCode === row.docCode);
                   return (
                     <input
-                      type="radio"
-                      name={rowSelectName}
+                      type={selectionMode === 'multiple' ? 'checkbox' : 'radio'}
+                      name={selectionMode === 'multiple' ? undefined : rowSelectName}
                       checked={isSelected}
-                      onChange={() => onSelectItem && onSelectItem(row)}
+                      onChange={() => selectionMode === 'multiple'
+                        ? toggleSelectedRow(row)
+                        : onSelectItem && onSelectItem(row)}
+                      aria-label={selectionMode === 'multiple' ? `Chọn phiếu ${row.docCode || row.code || row.id}` : undefined}
                       style={{ cursor: 'pointer' }}
                       onClick={(e) => e.stopPropagation()}
                     />
