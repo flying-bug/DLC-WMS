@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import useGoBack from '../../hooks/useGoBack';
-import { useReactToPrint } from 'react-to-print';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as repairApi from '../../api/repairApi';
@@ -16,7 +15,7 @@ import QuickProductModal from './components/QuickProductModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import RepairSerialModal from './components/RepairSerialModal';
-import RepairQuotationTemplate from './components/RepairQuotationTemplate';
+import { printRepairQuotation } from '../../utils/printRepairQuotation';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import * as exportApi from '../../api/inventoryExportApi';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
@@ -116,11 +115,16 @@ function RepairFormPage() {
     });
   };
 
-  const printRef = useRef(null);
-  const handlePrintQuote = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Bao-Gia-SC-${repair?.repairCode || 'REP'}`,
-  });
+  const handlePrintQuote = () => {
+    const customer = customers.find(c => String(c.id) === String(repair?.partnerId)) || {};
+    printRepairQuotation(repair, {
+      customer,
+      preparedBy: getAuthFullName(),
+      resolveUnitName: (line) => variants.find(v => String(v.id) === String(line.componentVariantId))?.unitName
+        || line.componentVariant?.unitName,
+      onError: (message) => showToast('error', message),
+    });
+  };
 
   const handleGoBack = useGoBack('/repairs');
 
@@ -1658,6 +1662,11 @@ function RepairFormPage() {
             )}
           </div>
           <div className={styles.footerRight}>
+            {!isNew && repair && repair.repairStatus !== 'CANCELLED' && (
+              <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
+                <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
+              </button>
+            )}
             {!isNew && repair && repair.repairStatus === 'DRAFT' && (
               <>
 
@@ -1681,9 +1690,6 @@ function RepairFormPage() {
                     Hủy đơn
                   </button>
                 )}
-                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: 'var(--color-primary-bright)', borderColor: 'var(--color-primary-bright)' }} onClick={handlePrintQuote}>
-                  <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
-                </button>
                 {canTechnicianActions && (
                   <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('WAITING_FOR_APPROVAL')} style={{ marginRight: '8px', backgroundColor: 'var(--color-warning)', color: '#000', borderColor: 'var(--color-warning)' }}>
                     Gửi xin duyệt
@@ -1782,9 +1788,6 @@ function RepairFormPage() {
           actionType={serialModalData.actionType}
         />
       )}
-      <div style={{ display: 'none' }}>
-        <RepairQuotationTemplate ref={printRef} repair={repair} />
-      </div>
       {rejectModal.isOpen && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 10000,
