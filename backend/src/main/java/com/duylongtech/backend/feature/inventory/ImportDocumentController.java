@@ -115,8 +115,10 @@ public class ImportDocumentController {
 
     @GetMapping("/ocr-session/init")
     @Operation(summary = "Khởi tạo phiên quét OCR từ Desktop")
-    public ApiResponse<String> initOcrSession() {
-        return ApiResponse.success(importOcrService.initSession());
+    @PreAuthorize("hasAuthority('import:add')")
+    public ApiResponse<String> initOcrSession(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.duylongtech.backend.security.UserDetailsImpl currentUser) {
+        return ApiResponse.success(importOcrService.initSession(currentUser.getId()));
     }
 
     @GetMapping("/ocr-session/{sessionId}")

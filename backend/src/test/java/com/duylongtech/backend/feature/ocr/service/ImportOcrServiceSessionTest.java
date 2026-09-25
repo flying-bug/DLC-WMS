@@ -53,7 +53,7 @@ class ImportOcrServiceSessionTest {
 
     @Test
     void newSessionIsPendingUntilPhoneJoins() {
-        String id = service.initSession();
+        String id = service.initSession(1L);
         assertEquals("PENDING", service.getSessionState(id).getStatus());
 
         service.joinSession(id);
@@ -70,7 +70,7 @@ class ImportOcrServiceSessionTest {
 
     @Test
     void everyUploadBecomesItsOwnNumberedPageWithAPreview() throws Exception {
-        String id = service.initSession();
+        String id = service.initSession(1L);
         MockMultipartFile photo = new MockMultipartFile("file", "a.png", "image/png", png(2400, 1200));
 
         service.scanDocumentForSession(id, photo, null);
@@ -92,7 +92,7 @@ class ImportOcrServiceSessionTest {
 
     @Test
     void previewSentByThePhoneIsPreferredOverServerThumbnail() throws Exception {
-        String id = service.initSession();
+        String id = service.initSession(1L);
         MockMultipartFile photo = new MockMultipartFile("file", "a.png", "image/png", png(400, 300));
         MockMultipartFile thumb = new MockMultipartFile("preview", "p.jpg", "image/jpeg", new byte[] {1, 2, 3});
 
@@ -105,7 +105,7 @@ class ImportOcrServiceSessionTest {
 
     @Test
     void pdfHasNoPreviewButIsStillAPage() throws Exception {
-        String id = service.initSession();
+        String id = service.initSession(1L);
         MockMultipartFile pdf = new MockMultipartFile("file", "a.pdf", "application/pdf", new byte[] {'%', 'P', 'D', 'F'});
 
         service.scanDocumentForSession(id, pdf, null);
@@ -127,7 +127,7 @@ class ImportOcrServiceSessionTest {
 
     @Test
     void rejectsEmptyOrNonImageUploads() {
-        String id = service.initSession();
+        String id = service.initSession(1L);
 
         assertThrows(BusinessException.class,
                 () -> service.scanDocumentForSession(id, new MockMultipartFile("file", new byte[0]), null));

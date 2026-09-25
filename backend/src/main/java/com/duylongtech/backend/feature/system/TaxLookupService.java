@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.system;
 
+import com.duylongtech.backend.utils.HttpTimeouts;
 import com.duylongtech.backend.feature.system.TaxLookupResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import com.duylongtech.backend.feature.system.TaxLookupService;
 @Service
 public class TaxLookupService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(HttpTimeouts.requestFactory(HttpTimeouts.SHORT_READ_TIMEOUT));
 
     /**
      * Tra cứu thông tin doanh nghiệp từ Mã số thuế

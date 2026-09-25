@@ -71,6 +71,16 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * Phiên đăng nhập đang hiệu lực (claim "sid" trong JWT). Mỗi lần đăng nhập sinh giá trị mới nên token
+     * của phiên trước mất hiệu lực: một tài khoản chỉ dùng được ở một nơi. Chỉ ghi qua
+     * {@link UserRepository#updateCurrentSessionId}, không ghi khi save() entity để việc sửa hồ sơ
+     * (entity đọc từ trước) không ghi đè phiên mới.
+     */
+    @JsonIgnore
+    @Column(name = "current_session_id", length = 64, insertable = false, updatable = false)
+    private String currentSessionId;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "USER_ROLES",

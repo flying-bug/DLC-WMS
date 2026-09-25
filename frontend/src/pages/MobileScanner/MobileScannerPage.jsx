@@ -88,7 +88,7 @@ export default function MobileScannerPage() {
       setMessage('Đã gửi ảnh! Vui lòng nhìn lên màn hình máy tính.');
     } catch (err) {
       setStatus('error');
-      setMessage('Gửi thất bại. Vui lòng thử lại.');
+      setMessage(err?.response?.data?.userMessage || 'Gửi thất bại. Vui lòng thử lại.');
       console.error('Mobile OCR error:', err);
     } finally {
       setPending((n) => n - 1);

@@ -33,6 +33,7 @@ public enum SystemMessage {
     TOO_MANY_OTP_ATTEMPTS("AUTH14", "Bạn đã nhập sai OTP quá 5 lần. Mã OTP này đã bị vô hiệu hóa vì lý do bảo mật, vui lòng yêu cầu mã mới."),
     OTP_REQUEST_TOO_FAST("AUTH15", "Vui lòng chờ ít nhất 60 giây trước khi yêu cầu gửi lại mã OTP mới."),
     ROLE_REQUIRED("AUTH16", "Vui lòng chọn ít nhất một vai trò (role) cho nhân viên."),
+    SESSION_REPLACED("AUTH17", "Bạn đã đăng nhập ở một nơi khác."),
 
     // Unit & Product
     UNIT_NOT_FOUND("UNIT01", "Không tìm thấy đơn vị tính."),
@@ -238,6 +239,8 @@ public enum SystemMessage {
     OCR_ERR_001("OCR_001", "Không có AI provider nào được bật. Hãy cấu hình OPENAI_ENABLED hoặc GEMINI_ENABLED."),
     OCR_ERR_002("OCR_002", "Không thể trích xuất dữ liệu từ chứng từ: %s"),
     OCR_ERR_003("OCR_003", "Mã quét không hợp lệ hoặc đã hết hạn."),
+    OCR_ERR_004("OCR_004", "Máy chủ đang bận xử lý ảnh. Vui lòng gửi lại sau ít phút."),
+    OCR_ERR_005("OCR_005", "Đang có quá nhiều phiên quét. Vui lòng thử lại sau ít phút."),
 
     // Inventory
     INV_ERR_001("INV_001", "Đơn bán hàng này đã xuất kho đủ toàn bộ sản phẩm"),

@@ -1,17 +1,50 @@
-import { useEffect, useEffectEvent, useRef } from 'react';
-import { getBaseURL } from '../../api/axiosClient';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import axiosClient, { getBaseURL } from '../../api/axiosClient';
 import { AUTH_EVENT, emitDataChanged, emitNotificationReceived, emitSystemHealthReceived, emitUserUpdated, forceLogout, getAuthToken } from '../../auth/session';
+
+const RECONNECT_DELAY_MS = 5000;
 
 function RealtimeSessionBridge() {
     const eventSourceRef = useRef(null);
     const hasOpenedRef = useRef(false);
     const hiddenAtRef = useRef(null);
+    const reconnectTimerRef = useRef(null);
+    const [reconnectRequest, setReconnectRequest] = useState(0);
 
     const closeConnection = useEffectEvent(() => {
+        if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+        }
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
             eventSourceRef.current = null;
         }
+    });
+
+    // EventSource tự kết nối lại khi mất mạng, nhưng bỏ hẳn nếu server trả lỗi HTTP (401 khi phiên đã bị thay,
+    // 502 khi backend đang khởi động lại...). Gọi thử một API: 401 thì axiosClient đăng xuất kèm đúng lý do
+    // (vd. "Bạn đã đăng nhập ở một nơi khác."), còn lại thì mở lại kết nối realtime.
+    const scheduleReconnect = useEffectEvent((token) => {
+        if (reconnectTimerRef.current) {
+            return;
+        }
+        reconnectTimerRef.current = setTimeout(async () => {
+            reconnectTimerRef.current = null;
+            if (getAuthToken() !== token) {
+                return;
+            }
+            try {
+                await axiosClient.get('/users/me');
+            } catch (error) {
+                if (error.response?.status === 401) {
+                    return;
+                }
+            }
+            if (getAuthToken() === token) {
+                setReconnectRequest((count) => count + 1);
+            }
+        }, RECONNECT_DELAY_MS);
     });
 
     const openConnection = useEffectEvent(() => {
@@ -67,6 +100,10 @@ function RealtimeSessionBridge() {
         });
 
         eventSource.addEventListener('force-logout', (event) => {
+            // Sự kiện đến muộn trên kết nối của token cũ (tab này đã đăng nhập lại) thì bỏ qua.
+            if (getAuthToken() !== token) {
+                return;
+            }
             try {
                 const payload = JSON.parse(event.data);
                 forceLogout(payload?.message || 'Phien dang nhap cua ban da het hieu luc.');
@@ -79,6 +116,10 @@ function RealtimeSessionBridge() {
         eventSource.onerror = () => {
             if (!getAuthToken()) {
                 closeConnection();
+                return;
+            }
+            if (eventSource.readyState === EventSource.CLOSED && eventSourceRef.current === eventSource) {
+                scheduleReconnect(token);
             }
         };
 
@@ -113,6 +154,12 @@ function RealtimeSessionBridge() {
             closeConnection();
         };
     }, []);
+
+    useEffect(() => {
+        if (reconnectRequest > 0) {
+            openConnection();
+        }
+    }, [reconnectRequest]);
 
     return null;
 }

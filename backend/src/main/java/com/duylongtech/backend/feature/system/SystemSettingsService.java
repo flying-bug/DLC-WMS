@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.system;
 
+import com.duylongtech.backend.utils.HttpTimeouts;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.system.SystemSetting;
 import com.duylongtech.backend.feature.system.SystemSettingRepository;
@@ -108,7 +109,8 @@ public class SystemSettingsService {
     public void exchangeOAuthCode(String code, String redirectUri) throws Exception {
         String clientId = env.getProperty("google.client-id");
 
-        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate(
+                HttpTimeouts.requestFactory(HttpTimeouts.SHORT_READ_TIMEOUT));
         org.springframework.util.MultiValueMap<String, String> body = new org.springframework.util.LinkedMultiValueMap<>();
         body.add("code", code);
         body.add("client_id", clientId);

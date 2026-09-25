@@ -85,9 +85,18 @@ public class ImportOcrService {
         private volatile String status; // PENDING (chưa ai quét QR), CONNECTED (điện thoại đã mở liên kết)
         private final List<OcrPage> pages = new java.util.concurrent.CopyOnWriteArrayList<>();
         private final long createdAt = System.currentTimeMillis();
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        private Long ownerUserId; // người dùng Desktop đã tạo phiên
+        private static final java.util.concurrent.atomic.AtomicLong SEQUENCE = new java.util.concurrent.atomic.AtomicLong();
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        private final long sequence = SEQUENCE.incrementAndGet(); // thứ tự tạo (createdAt có thể trùng mili-giây)
     }
 
     private static final int MAX_PAGES_PER_SESSION = 20;
+    /** Tổng số phiên quét đang mở trên server: mỗi phiên giữ ảnh thu nhỏ và kết quả trong bộ nhớ. */
+    private static final int MAX_ACTIVE_SESSIONS = 200;
+    /** Mỗi người chỉ giữ vài phiên gần nhất: mở lại cửa sổ quét thì phiên cũ nhất bị đóng. */
+    private static final int MAX_SESSIONS_PER_USER = 3;
     private static final int PREVIEW_MAX_DIMENSION = 900;
     private static final int PREVIEW_MAX_BYTES = 400 * 1024;
     private static final long MAX_UPLOAD_BYTES = 15L * 1024 * 1024;
@@ -98,13 +107,15 @@ public class ImportOcrService {
 
     // Với hàng đợi có đệm, ThreadPoolExecutor không bao giờ tăng quá corePoolSize (maximumPoolSize vô nghĩa),
     // nên phải đặt core = số luồng thật sự cần; nếu không, nhiều trang gửi cùng lúc sẽ xếp hàng sau 2 luồng.
+    // Hàng đợi đầy thì từ chối (AbortPolicy) thay vì chạy OCR ngay trên luồng request: endpoint nhận ảnh không cần
+    // đăng nhập, để luồng Tomcat chờ AI tới 60s thì gửi ảnh dồn dập có thể làm cạn luồng và treo cả server.
     private final java.util.concurrent.ExecutorService ocrExecutor = createOcrExecutor();
 
     private static java.util.concurrent.ExecutorService createOcrExecutor() {
         java.util.concurrent.ThreadPoolExecutor executor = new java.util.concurrent.ThreadPoolExecutor(
                 6, 6, 60L, java.util.concurrent.TimeUnit.SECONDS,
                 new java.util.concurrent.LinkedBlockingQueue<>(50),
-                new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+                new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
         executor.allowCoreThreadTimeOut(true);
         return executor;
     }
@@ -244,14 +255,41 @@ public class ImportOcrService {
     }
 
     /**
-     * Khởi tạo session quét từ Desktop
+     * Khởi tạo session quét từ Desktop (người dùng đã đăng nhập).
      */
-    public String initSession() {
+    public synchronized String initSession(Long ownerUserId) {
+        closeOldestSessionsOf(ownerUserId, MAX_SESSIONS_PER_USER - 1);
+        if (ocrSessions.size() >= MAX_ACTIVE_SESSIONS) {
+            throw new BusinessException(SystemMessage.OCR_ERR_005);
+        }
         String sessionId = UUID.randomUUID().toString();
         OcrSessionData data = new OcrSessionData();
         data.setStatus("PENDING");
+        data.setOwnerUserId(ownerUserId);
         ocrSessions.put(sessionId, data);
         return sessionId;
+    }
+
+    /** Chỉ giữ lại {@code keep} phiên mới nhất của người dùng, đóng các phiên cũ hơn. */
+    private void closeOldestSessionsOf(Long ownerUserId, int keep) {
+        List<Map.Entry<String, OcrSessionData>> owned = ocrSessions.entrySet().stream()
+                .filter(entry -> Objects.equals(entry.getValue().getOwnerUserId(), ownerUserId))
+                .sorted(java.util.Comparator.comparingLong(
+                        (Map.Entry<String, OcrSessionData> entry) -> entry.getValue().getSequence()).reversed())
+                .toList();
+        owned.stream().skip(Math.max(keep, 0)).forEach(entry -> closeSession(entry.getKey()));
+    }
+
+    private void closeSession(String sessionId) {
+        ocrSessions.remove(sessionId);
+        SseEmitter emitter = ocrSessionEmitters.remove(sessionId);
+        if (emitter != null) {
+            try {
+                emitter.complete();
+            } catch (Exception e) {
+                log.debug("[OCR] Session stream {} already closed: {}", sessionId, e.getMessage());
+            }
+        }
     }
 
     /**
@@ -381,6 +419,18 @@ public class ImportOcrService {
         pushPage(sessionId, page);
 
         // Gọi bất đồng bộ (chạy nền) để trả response nhanh cho Mobile
+        try {
+            submitPageScan(sessionId, page, imageBytes, mimeType);
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            log.warn("[OCR] Executor full, rejecting page {} of session {}", page.getIndex(), sessionId);
+            page.setErrorMessage(SystemMessage.OCR_ERR_004.getMessage());
+            page.setStatus("ERROR");
+            pushPage(sessionId, page);
+            throw new BusinessException(SystemMessage.OCR_ERR_004);
+        }
+    }
+
+    private void submitPageScan(String sessionId, OcrPage page, byte[] imageBytes, String mimeType) {
         ocrExecutor.execute(() -> {
             try {
                 OcrImportResponse result = scanDocumentBytes(imageBytes, mimeType);

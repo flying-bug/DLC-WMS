@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.ai.service;
 
+import com.duylongtech.backend.utils.HttpTimeouts;
 import com.duylongtech.backend.feature.ai.dto.VoiceCommandResponse;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,7 +34,9 @@ import com.duylongtech.backend.feature.warranty.Warranty;
 @SuppressWarnings("deprecation")
 public class VoiceCommandService {
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RestClient restClient = RestClient.builder().build();
+    private final RestClient restClient = RestClient.builder()
+            .requestFactory(HttpTimeouts.requestFactory(HttpTimeouts.LONG_READ_TIMEOUT))
+            .build();
 
     @Value("${ai.provider:openai}")
     private String provider;

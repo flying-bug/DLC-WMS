@@ -188,7 +188,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
         setShowQR(true);
       }
     } catch (err) {
-      alert('Không thể tạo mã QR. Vui lòng thử lại.');
+      alert(err?.response?.data?.userMessage || 'Không thể tạo mã QR. Vui lòng thử lại.');
     } finally {
       setQrLoading(false);
     }
