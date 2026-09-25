@@ -522,6 +522,11 @@ public class InventoryDocumentService {
         if (isRepairInventoryDocument(doc)) {
             return updateRepairImportReceipt(doc, req);
         }
+        // Phiếu nhập tự sinh của lệnh lắp ráp / tháo dỡ được tạo không kèm serial: thủ kho nhập serial thành phẩm
+        // (hoặc linh kiện thu hồi) trước khi ghi sổ; mã hàng, số lượng, kho và giá vốn giữ theo lệnh.
+        if (isManagedInventoryDocument(doc)) {
+            return updateManagedImportSerials(doc, req);
+        }
         ensureEditable(doc);
         if (req.getWarehouseId() != null && !req.getWarehouseId().equals(doc.getWarehouseId())
                 && doc.getPurchaseOrderId() != null) {
@@ -1800,6 +1805,57 @@ public class InventoryDocumentService {
         doc.setRecipientName(req.getRecipientName());
         doc.setRecipientAddress(req.getRecipientAddress());
         doc.setSalespersonId(req.getSalespersonId());
+        doc.setUpdatedAt(LocalDateTime.now());
+        return toResponse(inventoryDocumentRepository.save(doc));
+    }
+
+    /**
+     * Phiếu nhập tự sinh của lệnh lắp ráp / tháo dỡ: giá vốn thành phẩm đã được tính theo phiếu xuất linh kiện của cùng
+     * lệnh (AssemblyOrderWorkflowService.synchronizeReservedCosts), nên chỉ cho ghi serial, ngày, ghi chú; không đổi
+     * mã hàng, số lượng, kho hay đơn giá, không thêm/xóa dòng.
+     */
+    private InventoryDocumentResponse updateManagedImportSerials(InventoryDocument doc, InventoryDocumentRequest req) {
+        String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
+        if (!EDITABLE_STATUSES.contains(status)) {
+            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
+        }
+        if (!java.util.Objects.equals(doc.getWarehouseId(), req.getWarehouseId())) {
+            throw new BusinessException("Không được thay đổi kho của phiếu nhập lắp ráp");
+        }
+        if (req.getLines() == null || req.getLines().size() != doc.getLines().size()) {
+            throw new BusinessException("Không được thêm hoặc xóa dòng trên phiếu nhập lắp ráp");
+        }
+
+        for (int i = 0; i < doc.getLines().size(); i++) {
+            InventoryDocumentLine existing = doc.getLines().get(i);
+            InventoryDocumentLineRequest requested = req.getLines().get(i);
+            BigDecimal requestedQuantity = requested.getBaseQuantity() != null
+                    && requested.getBaseQuantity().compareTo(ZERO) > 0
+                    ? requested.getBaseQuantity()
+                    : requested.getQuantityIn();
+            BigDecimal existingQuantity = existing.getBaseQuantity() != null
+                    && existing.getBaseQuantity().compareTo(ZERO) > 0
+                    ? existing.getBaseQuantity()
+                    : existing.getQuantityIn();
+            Long requestedWarehouseId = requested.getWarehouseId() != null ? requested.getWarehouseId() : req.getWarehouseId();
+            Long existingWarehouseId = existing.getWarehouseId() != null ? existing.getWarehouseId() : doc.getWarehouseId();
+            if (!java.util.Objects.equals(existing.getVariantId(), requested.getVariantId())
+                    || !java.util.Objects.equals(existingWarehouseId, requestedWarehouseId)
+                    || requestedQuantity == null
+                    || existingQuantity == null
+                    || existingQuantity.compareTo(requestedQuantity) != 0) {
+                throw new BusinessException("Không được thay đổi mã hàng, kho hoặc số lượng của phiếu nhập lắp ráp");
+            }
+
+            existing.setSerialNumberId(requested.getSerialNumberId());
+            existing.setSerialNumbersText(formatSerialNumbers(requested.getSerialNumbers()));
+            existing.setNote(requested.getNote());
+        }
+
+        doc.setDocDate(req.getDocDate());
+        doc.setNote(req.getNote());
+        doc.setRecipientName(req.getRecipientName());
+        doc.setRecipientAddress(req.getRecipientAddress());
         doc.setUpdatedAt(LocalDateTime.now());
         return toResponse(inventoryDocumentRepository.save(doc));
     }
