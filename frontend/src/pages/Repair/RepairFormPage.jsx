@@ -1079,10 +1079,12 @@ function RepairFormPage() {
   const currentStatus = repair?.repairStatus || 'DRAFT';
   const isEditable = isNew || EDITABLE_STATUSES.includes(currentStatus);
   const showRepairCols = ['UNDER_REPAIR', 'DONE'].includes(currentStatus);
-  const isFifoCostFinalized = ['CONFIRMED', 'WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'].includes(currentStatus);
+  // Tồn khả dụng chỉ cần khi lập báo giá (chọn linh kiện); không hiển thị giá vốn FIFO ở màn sửa chữa.
+  const showAvailableCol = !['CONFIRMED', 'WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'].includes(currentStatus);
   const lines = isNew ? pendingLines : (repair?.lines || []);
   const fees = isNew ? pendingFees : (repair?.fees || []);
-  const detailTableColSpan = 11
+  const detailTableColSpan = 10
+    + (showAvailableCol ? 1 : 0)
     + (visibleColumns.description ? 1 : 0)
     + (showRepairCols && visibleColumns.serialNumber ? 1 : 0);
 
@@ -1331,7 +1333,7 @@ function RepairFormPage() {
                   <th style={{ whiteSpace: 'nowrap' }}>Hạng mục (Linh kiện / Dịch vụ)</th>
                   <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Số lượng</th>
                   <th style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{isFifoCostFinalized ? 'Giá vốn FIFO' : 'Tồn khả dụng'}</th>
+                  {showAvailableCol && <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Tồn khả dụng</th>}
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá / Phí</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '80px' }}>% VAT</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
@@ -1396,15 +1398,11 @@ function RepairFormPage() {
                       ) : Number(line.quantity || 0)}
                     </td>
                     <td>{variants.find(v => String(v.id) === String(line.componentVariantId))?.unitName || line.componentVariant?.unitName || line._unitName || '-'}</td>
-                    <td align="right" style={{ whiteSpace: 'nowrap' }}>
-                      {['ADD', 'REPLACE'].includes(line.actionType)
-                        ? (isFifoCostFinalized
-                          ? (line.fifoUnitCost != null
-                            ? <span title={`Tổng giá vốn: ${money(line.fifoCostAmount)} đ`}>{money(line.fifoUnitCost)} đ</span>
-                            : 'Chưa chốt')
-                          : formatQuantity(line.availableQuantity || 0))
-                        : '-'}
-                    </td>
+                    {showAvailableCol && (
+                      <td align="right" style={{ whiteSpace: 'nowrap' }}>
+                        {['ADD', 'REPLACE'].includes(line.actionType) ? formatQuantity(line.availableQuantity || 0) : '-'}
+                      </td>
+                    )}
                     <td align="right">
                       {isEditable ? (
                         <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} placeholder="0" value={line.isFreeWarranty ? 0 : (line.unitPrice ? money(line.unitPrice) : '')} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', Number(e.target.value.replace(/\D/g, '')))} />
