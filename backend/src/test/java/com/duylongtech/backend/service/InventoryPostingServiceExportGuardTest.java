@@ -13,6 +13,7 @@ import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.inventory.InventoryCostLayerRepository;
 import com.duylongtech.backend.feature.inventory.InventoryCostAllocationService;
 import com.duylongtech.backend.feature.inventory.InventoryDocument;
+import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentLineRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentMapper;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
@@ -43,12 +44,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -63,6 +67,10 @@ import static org.mockito.Mockito.when;
 class InventoryPostingServiceExportGuardTest {
 
     private final InventoryDocumentRepository inventoryDocumentRepository = mock(InventoryDocumentRepository.class);
+    private final WarehouseAccessGuard warehouseAccessGuard = mock(WarehouseAccessGuard.class);
+    private final StocktakeLockGuard stocktakeLockGuard = mock(StocktakeLockGuard.class);
+
+    private static final String NOT_ASSIGNED = "Bạn không được phân công phụ trách kho này";
 
     private InventoryPostingService newService() {
         return new InventoryPostingService(
@@ -97,9 +105,9 @@ class InventoryPostingServiceExportGuardTest {
                 mock(AppNotificationService.class),
                 mock(DocumentDependencyService.class),
                 mock(AuditLogService.class),
-                mock(WarehouseAccessGuard.class),
+                warehouseAccessGuard,
                 mock(ApplicationEventPublisher.class),
-                mock(StocktakeLockGuard.class)
+                stocktakeLockGuard
         );
     }
 
@@ -129,5 +137,51 @@ class InventoryPostingServiceExportGuardTest {
                         "readOnly=true silently risks dropped writes and no rollback on failure");
         assertTrue(annotation.rollbackFor().length > 0 || annotation.rollbackForClassName().length > 0,
                 "postExport should roll back on failure like its sibling postImport does");
+    }
+
+    @Test
+    void postExportChecksAccessToEveryLineWarehouseNotOnlyTheHeader() {
+        InventoryDocument doc = exportWithLineInOtherWarehouse(DocumentStatus.DRAFT);
+        when(inventoryDocumentRepository.findExportByIdWithLines(7L)).thenReturn(Optional.of(doc));
+        doThrow(new BusinessException(NOT_ASSIGNED))
+                .when(warehouseAccessGuard).checkAccess(2L);
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> newService().postExport(7L));
+
+        assertEquals(NOT_ASSIGNED, ex.getMessage());
+        verify(warehouseAccessGuard).checkAccess(1L);
+        verify(inventoryDocumentRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void unpostExportChecksAccessToEveryLineWarehouseNotOnlyTheHeader() {
+        InventoryDocument doc = exportWithLineInOtherWarehouse(DocumentStatus.POSTED);
+        when(inventoryDocumentRepository.findExportByIdWithLines(7L)).thenReturn(Optional.of(doc));
+        doThrow(new BusinessException(NOT_ASSIGNED))
+                .when(warehouseAccessGuard).checkAccess(2L);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> newService().unpostExport(7L, "sai kho", 1L));
+
+        assertEquals(NOT_ASSIGNED, ex.getMessage());
+        verify(inventoryDocumentRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    /** Phiếu đứng tên kho 1 nhưng có một dòng xuất từ kho 2. */
+    private static InventoryDocument exportWithLineInOtherWarehouse(DocumentStatus status) {
+        InventoryDocument doc = new InventoryDocument();
+        doc.setId(7L);
+        doc.setWarehouseId(1L);
+        InventoryDocumentLine sameWarehouse = new InventoryDocumentLine();
+        sameWarehouse.setVariantId(10L);
+        sameWarehouse.setQuantityOut(BigDecimal.ONE);
+        InventoryDocumentLine otherWarehouse = new InventoryDocumentLine();
+        otherWarehouse.setVariantId(11L);
+        otherWarehouse.setWarehouseId(2L);
+        otherWarehouse.setQuantityOut(BigDecimal.ONE);
+        doc.addExportLine(sameWarehouse);
+        doc.addExportLine(otherWarehouse);
+        doc.updateStatus(status.name());
+        return doc;
     }
 }

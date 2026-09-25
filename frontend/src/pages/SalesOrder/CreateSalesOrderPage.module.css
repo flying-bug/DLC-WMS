@@ -641,3 +641,43 @@
     padding: 0 14px;
   }
 }
+
+/* Gợi ý khi kho bán tại quầy thiếu hàng nhưng kho khác còn */
+.stockHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--status-warning-border);
+  border-radius: 6px;
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.stockHintIcon {
+  font-size: 16px;
+  margin-top: 1px;
+}
+
+.stockHintBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.stockHintList {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.stockHint .btnTableAction {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .stockHint {
+    flex-wrap: wrap;
+  }
+}

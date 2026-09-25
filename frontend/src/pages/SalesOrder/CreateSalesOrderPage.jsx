@@ -11,16 +11,24 @@ import Toast from '../../components/ui/Toast/Toast';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import WarehouseGridSelect from '../../components/ui/WarehouseGridSelect/WarehouseGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import CustomerModal from '../Customer/components/CustomerModal';
 import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
 import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
+import { getMyWarehouses } from '../../api/warehouseApi';
 import * as businessSettingsApi from '../../api/businessSettingsApi';
 import styles from './CreateSalesOrderPage.module.css';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import { findBestMatch } from '../../utils/fuzzyMatch';
+import {
+  findDirectShortages,
+  isActiveWarehouse,
+  moveLinesToWarehouse,
+  resolveDefaultDirectWarehouse,
+} from './utils/directSaleWarehouse';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
@@ -50,6 +58,15 @@ const customSelectStyles = {
 };
 
 const emptyLine = (defaultVat = 8) => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: defaultVat, serialNumbers: [], note: '', showNote: false });
+
+// Kho bán tại quầy lần trước, để lần sau mở lại đúng kho
+const DIRECT_WAREHOUSE_KEY = 'dlc_direct_sale_warehouse';
+const readSavedDirectWarehouse = () => {
+  try { return localStorage.getItem(DIRECT_WAREHOUSE_KEY); } catch { return null; }
+};
+const saveDirectWarehouse = (warehouseId) => {
+  try { localStorage.setItem(DIRECT_WAREHOUSE_KEY, String(warehouseId)); } catch { /* không lưu được thì thôi */ }
+};
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -93,6 +110,12 @@ function CreateSalesOrderPage() {
   });
   const [paymentAmount, setPaymentAmount] = useState('');
   const [lines, setLines] = useState([emptyLine()]);
+  // Kho bán tại quầy: mọi dòng của chế độ 'direct' xuất từ kho này (chế độ đơn hàng vẫn chọn kho theo dòng)
+  const [directWarehouseId, setDirectWarehouseId] = useState(null);
+  const [pendingDirectWarehouseId, setPendingDirectWarehouseId] = useState(null);
+
+  // Kho thực sự xuất của một dòng theo chế độ đang mở
+  const lineWarehouseId = (line) => (mode === 'direct' ? directWarehouseId : line?.warehouseId) || null;
 
   const selectedSerialLine = serialModalLineIndex !== null ? lines[serialModalLineIndex] : null;
   const selectedSerialProduct = selectedSerialLine ? variants.find(v => String(v.id) === String(selectedSerialLine.variantId)) : null;
@@ -102,8 +125,10 @@ function CreateSalesOrderPage() {
 
   const handleOpenSerialModal = (idx) => {
     const line = lines[idx];
-    if (!line.warehouseId) {
-      showToast('warning', 'Vui lòng chọn kho xuất cho sản phẩm này trước khi chọn Serial.');
+    if (!lineWarehouseId(line)) {
+      showToast('warning', mode === 'direct'
+        ? 'Vui lòng chọn kho bán trước khi chọn Serial.'
+        : 'Vui lòng chọn kho xuất cho sản phẩm này trước khi chọn Serial.');
       return;
     }
     setSerialModalLineIndex(idx);
@@ -114,13 +139,14 @@ function CreateSalesOrderPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [warehouseRes, customerRes, variantRes, balanceRes, codeRes, vatRes] = await Promise.allSettled([
+        const [warehouseRes, customerRes, variantRes, balanceRes, codeRes, vatRes, myWarehouseRes] = await Promise.allSettled([
           soApi.getWarehouses({ size: 100 }),
           soApi.getCustomers({ isCustomer: true, status: 'APPROVED', size: 1000 }),
           soApi.getProducts({ size: 500 }),
           soApi.getInventoryBalance({}),
           !isEdit ? soApi.getNextSoCode() : Promise.resolve(null),
           businessSettingsApi.getDefaultVat(),
+          !isEdit ? getMyWarehouses() : Promise.resolve(null),
         ]);
         let whList = [];
         if (vatRes.status === 'fulfilled') {
@@ -130,6 +156,14 @@ function CreateSalesOrderPage() {
         if (warehouseRes.status === 'fulfilled') {
           whList = pageContent(unwrap(warehouseRes.value));
           setWarehouses(whList);
+        }
+        if (!isEdit) {
+          const myWhList = myWarehouseRes.status === 'fulfilled' ? (unwrap(myWarehouseRes.value) || []) : [];
+          setDirectWarehouseId(resolveDefaultDirectWarehouse(
+            whList.filter(isActiveWarehouse),
+            Array.isArray(myWhList) ? myWhList : [],
+            readSavedDirectWarehouse(),
+          ));
         }
         if (customerRes.status === 'fulfilled') {
           setCustomers(pageContent(unwrap(customerRes.value)));
@@ -265,14 +299,14 @@ function CreateSalesOrderPage() {
       return;
     }
     const currentLine = lines[idx];
-    const currentWh = currentLine?.warehouseId || (warehouses.length > 0 ? warehouses[0].id : null);
+    const currentWh = lineWarehouseId(currentLine) || (warehouses.length > 0 ? warehouses[0].id : null);
 
     // Tìm dòng đã tồn tại cùng sản phẩm (ưu tiên cùng kho hoặc chưa gán kho)
     const existingIndex = lines.findIndex((l, i) => {
       if (i === idx) return false;
       if (String(l.variantId) !== String(selected.id)) return false;
-      if (currentLine?.warehouseId && l.warehouseId) {
-        return String(l.warehouseId) === String(currentLine.warehouseId);
+      if (lineWarehouseId(currentLine) && lineWarehouseId(l)) {
+        return String(lineWarehouseId(l)) === String(lineWarehouseId(currentLine));
       }
       return true;
     });
@@ -354,6 +388,41 @@ function CreateSalesOrderPage() {
     updateLine(idx, 'warehouseId', newWhId);
   };
 
+  const applyDirectWarehouse = (newWhId) => {
+    setDirectWarehouseId(newWhId);
+    saveDirectWarehouse(newWhId);
+    setLines(prev => prev.map(l => ({ ...l, warehouseId: newWhId, serialNumbers: [] })));
+  };
+
+  // Serial gắn với kho, nên đổi kho bán khi đã chọn serial thì hỏi lại trước khi xóa
+  const handleDirectWarehouseChange = (newWhId) => {
+    if (!newWhId || String(newWhId) === String(directWarehouseId)) return;
+    const hasSerials = lines.some(l => (l.serialNumbers?.length || 0) > 0);
+    if (hasSerials) {
+      setPendingDirectWarehouseId(newWhId);
+      return;
+    }
+    applyDirectWarehouse(newWhId);
+  };
+
+  const switchMode = (nextMode) => {
+    if (nextMode === mode) return;
+    if (nextMode === 'direct' && directWarehouseId) {
+      // Dòng lấy từ kho khác (do chọn ở chế độ đơn hàng) được chuyển về kho bán
+      const movedCount = lines.filter(l => l.variantId && l.warehouseId
+        && String(l.warehouseId) !== String(directWarehouseId)).length;
+      setLines(prev => moveLinesToWarehouse(prev, directWarehouseId));
+      if (movedCount > 0) {
+        const wh = warehouses.find(w => String(w.id) === String(directWarehouseId));
+        showToast('info', `Bán trực tiếp chỉ xuất từ một kho: ${movedCount} dòng đã chuyển về kho bán ${wh?.code || ''}.`.trim());
+      }
+    } else if (nextMode !== 'direct') {
+      // Giữ nguyên các dòng, gán sẵn kho bán để chỉnh lại kho từng dòng ở chế độ đơn hàng
+      setLines(prev => prev.map(l => ({ ...l, warehouseId: directWarehouseId || l.warehouseId })));
+    }
+    setMode(nextMode);
+  };
+
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await soApi.getProducts({ size: 500 });
@@ -413,20 +482,18 @@ function CreateSalesOrderPage() {
   };
 
   const buildDirectPayload = () => {
-    const firstWh = lines.find(l => l.warehouseId)?.warehouseId || form.warehouseId || (warehouses[0]?.id ? Number(warehouses[0].id) : 1);
     const combinedNote = serializeNoteWithAttachments(form.note, attachments);
     return {
       partnerId: form.partnerId ? Number(form.partnerId) : undefined,
       customerPhone: directCustomer.phone.trim() || undefined,
       customerName: directCustomer.name.trim() || undefined,
       customerAddress: directCustomer.address.trim() || undefined,
-      warehouseId: Number(firstWh),
+      warehouseId: Number(directWarehouseId),
       checkoutDate: form.soDate,
       paymentAmount: Number(paymentAmount || 0),
       note: combinedNote || undefined,
       lines: lines.map(l => ({
         variantId: Number(l.variantId),
-        warehouseId: l.warehouseId ? Number(l.warehouseId) : Number(firstWh),
         quantity: Number(l.quantity),
         unitPrice: Number(l.unitPrice),
         vatRate: Number(l.vatRate || 0),
@@ -521,6 +588,11 @@ function CreateSalesOrderPage() {
       focusField('so-docDate');
       return false;
     }
+    if (!directWarehouseId) {
+      showToast('error', 'Vui lòng chọn kho bán');
+      focusField('so-direct-warehouse');
+      return false;
+    }
     if (paymentAmount === '') {
       showToast('error', 'Vui lòng nhập số tiền khách trả');
       focusField('so-paymentAmount');
@@ -547,13 +619,6 @@ function CreateSalesOrderPage() {
       if (!lines[i].variantId) {
         showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`);
         focusField(`so-line-product-${i}`);
-        return false;
-      }
-      if (!lines[i].warehouseId) {
-        const prod = variants.find(item => String(item.id) === String(lines[i].variantId));
-        const prodLabel = prod ? (prod.productName || prod.variantName || `ID #${prod.id}`) : `sản phẩm`;
-        showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho xuất cho "${prodLabel}"`);
-        focusField(`so-line-wh-${i}`);
         return false;
       }
       const qty = Number(lines[i].quantity);
@@ -689,6 +754,14 @@ function CreateSalesOrderPage() {
     return map;
   }, [inventoryBalances]);
 
+  const activeWarehouses = useMemo(() => warehouses.filter(isActiveWarehouse), [warehouses]);
+
+  // Dòng mà kho bán không đủ hàng nhưng kho khác còn: bán tại quầy không lấy được, gợi ý tạo đơn
+  // (đơn hàng cho chọn kho theo dòng và tách phiếu xuất riêng cho từng kho)
+  const directShortages = useMemo(() => (mode === 'direct'
+    ? findDirectShortages({ lines, warehouseId: directWarehouseId, warehouses: activeWarehouses, inventoryMap, variants })
+    : []), [mode, directWarehouseId, lines, inventoryMap, activeWarehouses, variants]);
+
   const renderSubRow = (line, idx) => {
     const prod = variants.find(v => String(v.id) === String(line.variantId));
     const isSerialProduct = Boolean(prod?.trackSerial);
@@ -761,8 +834,7 @@ function CreateSalesOrderPage() {
     { title: '#', width: '44px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)', display: 'inline-block', whiteSpace: 'nowrap' }}>{idx + 1}</span> },
     {
       title: 'Mã hàng', width: '140px', render: (_, line, idx) => {
-        const effectiveWh = line.warehouseId || null;
-        const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
+        const lineInventoryMap = getWarehouseInventoryMap(lineWarehouseId(line));
         return (
           <ProductGridSelect
             id={`so-line-code-${idx}`}
@@ -783,8 +855,7 @@ function CreateSalesOrderPage() {
     },
     {
       title: 'Tên hàng', minWidth: '180px', render: (_, line, idx) => {
-        const effectiveWh = line.warehouseId || null;
-        const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
+        const lineInventoryMap = getWarehouseInventoryMap(lineWarehouseId(line));
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <div style={{ flex: 1 }}>
@@ -814,7 +885,8 @@ function CreateSalesOrderPage() {
         );
       }
     },
-    {
+    // Bán tại quầy chọn một kho bán cho cả phiếu, không chọn theo dòng
+    ...(mode === 'direct' ? [] : [{
       title: 'Kho xuất', width: '115px', render: (_, line, idx) => (
         <WarehouseGridSelect
           id={`so-line-wh-${idx}`}
@@ -826,11 +898,11 @@ function CreateSalesOrderPage() {
           hasWarning={!line.warehouseId}
         />
       )
-    },
+    }]),
     { title: 'ĐVT', width: '55px', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12.5 }}>{line.unitName || '—'}</span> },
     {
       title: 'SL / Tồn', width: '110px', align: 'center', render: (_, line, idx) => {
-        const effectiveWh = line.warehouseId || null;
+        const effectiveWh = lineWarehouseId(line);
         const availableQty = line.variantId
           ? (effectiveWh
             ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
@@ -964,14 +1036,14 @@ function CreateSalesOrderPage() {
             <button
               type="button"
               className={`${styles.modeTab} ${mode === 'direct' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('direct')}
+              onClick={() => switchMode('direct')}
             >
               <i className="bi bi-cash-coin" /> Bán hàng trực tiếp
             </button>
             <button
               type="button"
               className={`${styles.modeTab} ${mode === 'quote' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('quote')}
+              onClick={() => switchMode('quote')}
             >
               <i className="bi bi-file-earmark-text" /> Tạo đơn báo giá
             </button>
@@ -1123,6 +1195,21 @@ function CreateSalesOrderPage() {
                     />
                   </div>
 
+                  {mode === 'direct' && (
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Kho bán <span className={styles.required}>*</span></label>
+                      <WarehouseGridSelect
+                        id="so-direct-warehouse"
+                        warehouses={activeWarehouses}
+                        value={directWarehouseId}
+                        onChange={handleDirectWarehouseChange}
+                        placeholder="Chọn kho bán"
+                        displayMode="code-name"
+                        hasWarning={!directWarehouseId}
+                      />
+                    </div>
+                  )}
+
                   {mode === 'direct' ? (
                     <div className={styles.fieldRow}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -1189,6 +1276,27 @@ function CreateSalesOrderPage() {
                   Tổng: <strong style={{ color: 'var(--wms-text-strong)' }}>{lines.length}</strong> sản phẩm | SL: <strong style={{ color: 'var(--wms-text-strong)' }}>{totalQuantity}</strong>
                 </span>
               </div>
+
+              {directShortages.length > 0 && (
+                <div className={styles.stockHint}>
+                  <i className={`bi bi-exclamation-triangle ${styles.stockHintIcon}`} />
+                  <div className={styles.stockHintBody}>
+                    <strong>Kho bán không đủ hàng, nhưng kho khác còn:</strong>
+                    <ul className={styles.stockHintList}>
+                      {directShortages.map(item => (
+                        <li key={item.idx}>
+                          Dòng {item.idx + 1} · {item.name}: kho bán còn {money(item.have)}/{money(item.need)}.{' '}
+                          {item.others.map(o => `Kho ${o.code} còn ${money(o.qty)}`).join(', ')}.
+                        </li>
+                      ))}
+                    </ul>
+                    <span>Bán tại quầy chỉ xuất từ một kho. Muốn lấy hàng ở kho khác thì tạo đơn báo giá và chọn kho cho từng dòng.</span>
+                  </div>
+                  <button type="button" className={styles.btnTableAction} onClick={() => switchMode('quote')}>
+                    <i className="bi bi-arrow-left-right" /> Chuyển sang Tạo đơn báo giá
+                  </button>
+                </div>
+              )}
 
               <div className={styles.linesTableWrap}>
                 <ResponsiveTable
@@ -1293,6 +1401,18 @@ function CreateSalesOrderPage() {
       </div>
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
 
+      <ConfirmModal
+        isOpen={pendingDirectWarehouseId !== null}
+        title="Đổi kho bán"
+        message="Serial đã chọn thuộc kho bán hiện tại nên sẽ bị xóa khi đổi sang kho khác. Bạn có muốn đổi kho bán không?"
+        confirmText="Đổi kho"
+        onConfirm={() => {
+          applyDirectWarehouse(pendingDirectWarehouseId);
+          setPendingDirectWarehouseId(null);
+        }}
+        onCancel={() => setPendingDirectWarehouseId(null)}
+      />
+
       <QuickAddProductModal
         isOpen={showQuickAddProduct}
         onClose={() => {
@@ -1354,13 +1474,13 @@ function CreateSalesOrderPage() {
           targetQuantity={Number(selectedSerialLine.quantity || 0)}
           initialSerials={selectedSerialLine.serialNumbers || []}
           mode="export"
-          warehouseId={selectedSerialLine?.warehouseId}
+          warehouseId={lineWarehouseId(selectedSerialLine)}
           variantId={selectedSerialProduct.id}
           onValidateSerial={async (serialValue) => {
             try {
               const response = await exportApi.resolveScan({
                 code: serialValue,
-                warehouseId: selectedSerialLine?.warehouseId,
+                warehouseId: lineWarehouseId(selectedSerialLine),
               });
               const scanResult = unwrap(response);
               if (!scanResult.serialNumber) {

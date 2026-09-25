@@ -209,6 +209,7 @@ public enum SystemMessage {
     CHK_ERR_007("CHK_007", "Dòng %s: Số lượng phải lớn hơn 0"),
     CHK_ERR_008("CHK_008", "Phải có ít nhất 1 dòng sản phẩm"),
     CHK_ERR_009("CHK_009", "Dữ liệu bán hàng trực tiếp không hợp lệ"),
+    CHK_ERR_010("CHK_010", "Dòng %s: Bán hàng trực tiếp chỉ xuất từ một kho — hàng ở kho khác cần tạo đơn hàng"),
 
     // Email
     EMAIL_ERR_001("EMAIL_001", "Lỗi khi gửi email báo giá: %s"),

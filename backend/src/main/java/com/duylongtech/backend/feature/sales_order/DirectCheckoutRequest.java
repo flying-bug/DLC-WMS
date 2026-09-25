@@ -36,6 +36,7 @@ public class DirectCheckoutRequest {
         @NotNull(message = "Sản phẩm không được để trống")
         private Long variantId;
 
+        /** Không bắt buộc; nếu gửi thì phải trùng kho bán (warehouseId của phiếu). */
         private Long warehouseId;
 
         @NotNull(message = "Số lượng không được để trống")

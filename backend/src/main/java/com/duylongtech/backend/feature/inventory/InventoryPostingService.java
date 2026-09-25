@@ -154,7 +154,7 @@ public class InventoryPostingService {
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse postExport(Long id) {
         InventoryDocument doc = findExportOrThrow(id);
-        warehouseAccessGuard.checkAccess(doc.getWarehouseId());
+        exportWarehouseIds(doc).forEach(warehouseAccessGuard::checkAccess);
         if (!doc.isPostable()) {
             throw new BusinessException(SystemMessage.INV_ERR_046.getMessage());
         }
@@ -741,7 +741,8 @@ public class InventoryPostingService {
     @Transactional(rollbackFor = Exception.class)
     public InventoryDocumentResponse unpostExport(Long id, String reason, Long currentUserId) {
         InventoryDocument doc = findExportOrThrow(id);
-        warehouseAccessGuard.checkAccess(doc.getWarehouseId());
+        java.util.Set<Long> touchedWarehouseIds = exportWarehouseIds(doc);
+        touchedWarehouseIds.forEach(warehouseAccessGuard::checkAccess);
         if (!DocumentStatus.POSTED.name().equalsIgnoreCase(doc.getStatus())) {
             throw new BusinessException("Chỉ có thể bỏ ghi sổ chứng từ đang ở trạng thái ĐÃ GHI SỔ (POSTED).");
         }
@@ -753,7 +754,9 @@ public class InventoryPostingService {
         }
 
         Long warehouseId = doc.getWarehouseId();
-        stocktakeLockGuard.assertWarehouseNotLocked(warehouseId, doc.getReferenceType(), doc.getReferenceId());
+        for (Long touchedWarehouseId : touchedWarehouseIds) {
+            stocktakeLockGuard.assertWarehouseNotLocked(touchedWarehouseId, doc.getReferenceType(), doc.getReferenceId());
+        }
 
         // 1. Hoàn tác tồn kho (cộng lại số lượng đã xuất)
         for (InventoryDocumentLine line : doc.getLines()) {
@@ -1047,6 +1050,21 @@ public class InventoryPostingService {
         }
         return inventoryDocumentRepository.findExportByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
+    }
+
+    /**
+     * Mọi kho mà phiếu xuất làm thay đổi tồn: kho đầu phiếu và kho riêng của từng dòng. Ghi sổ/bỏ ghi sổ
+     * trừ/cộng tồn theo kho của dòng, nên chỉ kiểm tra kho đầu phiếu sẽ cho thủ kho kho A động vào tồn kho B.
+     */
+    private java.util.Set<Long> exportWarehouseIds(InventoryDocument doc) {
+        java.util.Set<Long> ids = new java.util.LinkedHashSet<>();
+        ids.add(doc.getWarehouseId());
+        for (InventoryDocumentLine line : doc.getLines()) {
+            if (line.getWarehouseId() != null) {
+                ids.add(line.getWarehouseId());
+            }
+        }
+        return ids;
     }
 
     public InventoryDocument findImportOrThrow(Long id) {

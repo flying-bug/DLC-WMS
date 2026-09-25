@@ -109,6 +109,11 @@ public class DirectCheckoutService {
             if (line.getUnitPrice() == null || line.getUnitPrice().compareTo(ZERO) < 0) {
                 throw new BusinessException(String.format(SystemMessage.CHK_ERR_006.getMessage(), rowNumber));
             }
+            // Khách nhận hàng ngay tại quầy nên mọi dòng phải lấy từ kho bán. Hàng nằm ở kho khác
+            // đi qua đơn hàng thường, nơi phiếu xuất được tách riêng cho thủ kho từng kho.
+            if (line.getWarehouseId() != null && !line.getWarehouseId().equals(request.getWarehouseId())) {
+                throw new BusinessException(String.format(SystemMessage.CHK_ERR_010.getMessage(), rowNumber));
+            }
         }
     }
 
@@ -165,10 +170,9 @@ public class DirectCheckoutService {
         for (DirectCheckoutRequest.Line reqLine : request.getLines()) {
             BigDecimal qty = reqLine.getQuantity();
             BigDecimal vatRate = reqLine.getVatRate() != null ? reqLine.getVatRate() : ZERO;
-            Long lineWh = reqLine.getWarehouseId() != null ? reqLine.getWarehouseId() : request.getWarehouseId();
 
             SalesOrderLine line = new SalesOrderLine();
-            line.initLine(reqLine.getVariantId(), qty, reqLine.getUnitPrice(), vatRate, lineWh, reqLine.getWarrantyMonths(), reqLine.getNote());
+            line.initLine(reqLine.getVariantId(), qty, reqLine.getUnitPrice(), vatRate, request.getWarehouseId(), reqLine.getWarrantyMonths(), reqLine.getNote());
             order.addLine(line);
         }
 
@@ -202,10 +206,9 @@ public class DirectCheckoutService {
 
         List<InventoryDocumentLineRequest> exportLines = new ArrayList<>();
         for (DirectCheckoutRequest.Line reqLine : request.getLines()) {
-            Long lineWh = reqLine.getWarehouseId() != null ? reqLine.getWarehouseId() : request.getWarehouseId();
             InventoryDocumentLineRequest line = new InventoryDocumentLineRequest();
             line.setVariantId(reqLine.getVariantId());
-            line.setWarehouseId(lineWh);
+            line.setWarehouseId(request.getWarehouseId());
             line.setQuantityOut(reqLine.getQuantity());
             line.setUnitPrice(reqLine.getUnitPrice());
             line.setUnitCost(ZERO);
