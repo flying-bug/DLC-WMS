@@ -151,6 +151,7 @@ public class RepairWorkflowService {
                 } else {
                     repair.startRepair();
                 }
+                notifyTechnicianApproved(repair, needsInventory);
             };
             case WAITING_FOR_EXPORT -> (repair, note) -> repair.waitForExport();
             case UNDER_REPAIR -> (repair, note) -> repair.startRepair();
@@ -320,14 +321,24 @@ public class RepairWorkflowService {
             );
         }
 
-        notificationService.createNotification(
-                "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa được duyệt",
-                "Lệnh sửa chữa " + repair.getRepairCode() + " đã được kế toán duyệt.",
-                "REPAIR_CONFIRMED", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
-        );
-
         // REMOVE-only repairs do not need an export before the technician starts.
         return !stockOutLines.isEmpty();
+    }
+
+    /**
+     * Báo KTV lệnh đã được duyệt. Gửi ở mọi lệnh được duyệt, kể cả lệnh chỉ có dịch vụ (không qua kho):
+     * trước đây thông báo nằm cuối handleConfirm, sau nhánh return sớm của lệnh không có linh kiện,
+     * nên KTV không nhận được.
+     */
+    private void notifyTechnicianApproved(Repair repair, boolean waitingForExport) {
+        String nextStep = waitingForExport
+                ? " Chờ thủ kho xuất linh kiện rồi bắt đầu sửa chữa."
+                : " Có thể bắt đầu sửa chữa.";
+        notificationService.createNotification(
+                "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa được duyệt",
+                "Lệnh sửa chữa " + repair.getRepairCode() + " đã được kế toán duyệt." + nextStep,
+                "REPAIR_CONFIRMED", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
+        );
     }
 
     // =====================================================================
