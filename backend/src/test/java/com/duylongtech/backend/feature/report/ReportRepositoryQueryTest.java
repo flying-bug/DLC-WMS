@@ -3,6 +3,7 @@ package com.duylongtech.backend.feature.report;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -94,10 +95,29 @@ class ReportRepositoryQueryTest {
         assertEquals("%RAM%", jdbcTemplate.args[12]);
     }
 
+    @Test
+    void dashboardWarrantyRepairsOnlyIncludeWaitingForApproval() {
+        CapturingJdbcTemplate jdbcTemplate = new CapturingJdbcTemplate();
+        ReportRepository repository = new ReportRepository(jdbcTemplate);
+
+        ReflectionTestUtils.invokeMethod(repository, "getPendingApprovalWarrantyRepairs");
+
+        assertTrue(jdbcTemplate.sql.contains("r.repair_status = 'WAITING_FOR_APPROVAL'"));
+        assertFalse(jdbcTemplate.sql.contains("r.repair_status = 'CONFIRMED'"));
+    }
+
     private static final class CapturingJdbcTemplate extends JdbcTemplate {
         private String sql;
         private Object[] args;
         private boolean called;
+
+        @Override
+        public <T> List<T> query(String sql, RowMapper<T> rowMapper) {
+            this.called = true;
+            this.sql = sql;
+            this.args = new Object[0];
+            return List.of();
+        }
 
         @Override
         public <T> List<T> query(String sql, RowMapper<T> rowMapper, Object... args) {

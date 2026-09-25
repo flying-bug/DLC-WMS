@@ -141,6 +141,7 @@ public class InventoryDocumentService {
     private static final String IMPORT_DOC_TYPE = "IN_PO";
     private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final Set<String> STOCKTAKE_REFERENCE_TYPES = Set.of("STOCKTAKE", "STOCK_TAKE", "STOCKTAKE_ADJUSTMENT");
     private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(),
             DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name(), DocumentStatus.UNPOSTED.name());
     private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.UNPOSTED.name());
@@ -155,6 +156,7 @@ public class InventoryDocumentService {
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
     public static final String ISSUE_PURPOSE_TRANSFER_IN = "TRANSFER_IMPORT"; // Nhập kho từ chuyển về
     public static final String ISSUE_PURPOSE_INVENTORY_ADJUSTMENT = "INVENTORY_ADJUSTMENT"; // Xử lý chênh lệch kiểm kê
+    public static final String ISSUE_PURPOSE_STOCKTAKE_ADD = "STOCKTAKE_ADD"; // Nhập hàng thừa từ kiểm kê
     public static final String ISSUE_PURPOSE_PURCHASE = "PURCHASE"; // Nhập hàng từ nhà cung cấp / đơn mua hàng
 
     // Các trạng thái coi là "còn mở" khi chống tạo trùng phiếu nhập bù
@@ -260,13 +262,13 @@ public class InventoryDocumentService {
                 }
             } else {
                 if (canRepair && canAssembly) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "MULTI_TECH";
                 } else if (canRepair) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "REPAIR";
                 } else {
-                    issuePurpose = "ASSEMBLY";
+                    // issuePurpose preserved
                     referenceType = "ASSEMBLY_ORDER";
                 }
             }
@@ -367,13 +369,13 @@ public class InventoryDocumentService {
                 }
             } else {
                 if (canRepair && canAssembly) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "MULTI_TECH";
                 } else if (canRepair) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "REPAIR";
                 } else {
-                    issuePurpose = "ASSEMBLY";
+                    // issuePurpose preserved
                     referenceType = "ASSEMBLY_ORDER";
                 }
             }
@@ -550,7 +552,8 @@ public class InventoryDocumentService {
     }
 
     private InventoryDocument buildBaseDocument(InventoryDocumentRequest req, String docType, String docCode) {
-        String issuePurpose = normalizeOptionalReference(req.getIssuePurpose());
+        String referenceType = normalizeOptionalReference(req.getReferenceType());
+        String issuePurpose = resolveIssuePurpose(docType, referenceType, req.getIssuePurpose());
         if (issuePurpose != null && EXPORT_DOC_TYPE.equals(docType)) {
             // Kiểm tra issuePurpose có thuộc danh sách hợp lệ toàn bộ không
             // (bao gồm cả TRANSFER_EXPORT được dùng nội bộ bởi module Chuyển kho)
@@ -570,8 +573,8 @@ public class InventoryDocumentService {
         } else {
             doc.initImportDocument(docCode);
         }
-        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
-        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
+        doc.setIssuePurpose(issuePurpose);
+        doc.setReferenceType(referenceType);
         doc.setReferenceId(req.getReferenceId());
         doc.setWarehouseId(req.getWarehouseId());
         doc.setSourceWarehouseId(req.getSourceWarehouseId());
@@ -593,10 +596,12 @@ public class InventoryDocumentService {
     private void updateBaseDocument(Long id, InventoryDocument doc, InventoryDocumentRequest req,
             String duplicateMessage,
             boolean importDocument) {
-        String issuePurpose = normalizeOptionalReference(req.getIssuePurpose());
+        String referenceType = normalizeOptionalReference(req.getReferenceType());
+        String issuePurpose = resolveIssuePurpose(importDocument ? IMPORT_DOC_TYPE : EXPORT_DOC_TYPE,
+                referenceType, req.getIssuePurpose());
         if (issuePurpose != null && !importDocument) {
-            // Khi cập nhật phiếu, cũng chỉ cho phép 2 mục đích thủ công
-            if (!VALID_MANUAL_EXPORT_PURPOSES.contains(issuePurpose)) {
+            boolean stocktakeAdjustment = isStocktakeReference(referenceType);
+            if (!(stocktakeAdjustment ? VALID_ALL_EXPORT_PURPOSES : VALID_MANUAL_EXPORT_PURPOSES).contains(issuePurpose)) {
                 throw new BusinessException(SystemMessage.INV_ERR_039.getMessage());
             }
         }
@@ -618,8 +623,8 @@ public class InventoryDocumentService {
         doc.setPurchaseOrderId(poId);
         doc.setSalesOrderId(soId);
         doc.setPartnerId(req.getPartnerId());
-        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
-        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
+        doc.setIssuePurpose(issuePurpose);
+        doc.setReferenceType(referenceType);
         doc.setReferenceId(req.getReferenceId());
         doc.setDocDate(req.getDocDate());
         doc.updateStatus(importDocument
@@ -1115,8 +1120,28 @@ public class InventoryDocumentService {
     }
 
     private String normalizeOptionalReference(String value) {
-        String normalized = trimToNull(value);
-        return normalized != null ? normalized.toUpperCase(Locale.ROOT) : null;
+        return normalizeCode(value);
+    }
+
+    static String resolveIssuePurpose(String docType, String referenceType, String requestedPurpose) {
+        if (isStocktakeReference(referenceType)) {
+            return IMPORT_DOC_TYPE.equals(docType)
+                    ? ISSUE_PURPOSE_STOCKTAKE_ADD
+                    : ISSUE_PURPOSE_INVENTORY_ADJUSTMENT;
+        }
+        return normalizeCode(requestedPurpose);
+    }
+
+    private static boolean isStocktakeReference(String referenceType) {
+        String normalized = normalizeCode(referenceType);
+        return normalized != null && STOCKTAKE_REFERENCE_TYPES.contains(normalized);
+    }
+
+    private static String normalizeCode(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim().toUpperCase(Locale.ROOT);
     }
 
     private String normalizeEditableImportStatus(String status, String fallback) {

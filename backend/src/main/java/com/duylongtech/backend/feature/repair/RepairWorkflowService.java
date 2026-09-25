@@ -242,6 +242,11 @@ public class RepairWorkflowService {
         if (stockOutLines.isEmpty() && removeLines.isEmpty()) {
             // Không có linh kiện cần xuất/nhập -> chỉ phí dịch vụ, không cần qua kho
             log.info("[Repair {}] Không có linh kiện ADD/REPLACE/REMOVE, không cần qua kho", repair.getRepairCode());
+            notificationService.createNotification(
+                    "ROLE_TECHNICIAN", repair.getCreatedBy(), "Lệnh sửa chữa được duyệt",
+                    "Lệnh sửa chữa " + repair.getRepairCode() + " đã được kế toán duyệt.",
+                    "REPAIR_CONFIRMED", "REPAIR", repair.getId(), "/repairs/" + repair.getId(), null
+            );
             return false;
         }
 

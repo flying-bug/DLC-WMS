@@ -785,7 +785,7 @@ public class AiChatService {
                             1. Tạo Đơn bán hàng (SO): Chọn Khách hàng, sản phẩm và số lượng. Hệ thống tự động kiểm tra và Giữ chỗ tồn kho (Stock Reservation).
                             2. Lập Phiếu xuất kho: Hệ thống tự động chọn các mã Serial sẵn có trong kho theo nguyên tắc FIFO.
                             3. Quét Serial kiểm tra: Đối chiếu mã Serial thực tế tại quầy xuất hàng.
-                            4. Ghi sổ xuất kho (Post): Hệ thống khóa Serial sang SOLD (chống race condition), trừ tồn kho On-hand, trừ lớp giá vốn FIFO, tự động KÍCH HOẠT BẢO HÀNH ĐIỆN TỬ và ghi nhận công nợ khách hàng.
+                            4. Ghi sổ xuất kho (Post): Hệ thống khóa Serial sang SOLD (chống race condition), trừ tồn kho On-hand, trừ lớp giá vốn, tự động KÍCH HOẠT BẢO HÀNH ĐIỆN TỬ và ghi nhận công nợ khách hàng.
                             5. In phiếu xuất kho & Phiếu bảo hành giao cho khách hàng.
                             """.trim())
                     .sources(List.of(source("process", "SALES_ORDERS, INVENTORY_DOCUMENTS, WARRANTIES", "Quy trình xuất kho và kích hoạt bảo hành điện tử")))
