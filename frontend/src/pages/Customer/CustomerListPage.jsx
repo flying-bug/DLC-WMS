@@ -40,9 +40,6 @@ const CustomerListPage = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     
-    // Selection
-    const [selectedIds, setSelectedIds] = useState([]);
-    
     // Modals & Toast
     const [modalConfig, setModalConfig] = useState({ isOpen: false, data: null });
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -73,7 +70,6 @@ const CustomerListPage = () => {
                 setTotalPages(Math.max(1, Math.ceil(total / currentSize)));
                 setTotalElements(total);
             }
-            if (!silent) setSelectedIds([]);
         } catch (error) {
             console.error('Lỗi tải danh sách khách hàng:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách khách hàng');
@@ -103,7 +99,7 @@ const CustomerListPage = () => {
             setLoading(true);
             await exportCustomersToExcel(
                 { keyword: filters.search, status: filters.status, groupType: filters.groupType }, 
-                selectedIds
+                []
             );
             showToast('success', 'Đã xuất Excel thành công.');
         } catch (err) {
@@ -111,15 +107,6 @@ const CustomerListPage = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleSelectAll = (e) => {
-        setSelectedIds(e.target.checked ? customers.map(row => row.id) : []);
-    };
-
-    const handleSelectRow = (e, id) => {
-        e.stopPropagation();
-        setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
     };
 
     const handleToggleStatus = (e, customer) => {
@@ -149,29 +136,6 @@ const CustomerListPage = () => {
     };
 
     const columns = [
-        {
-            key: 'checkbox',
-            dataIndex: 'id',
-            title: (
-                <input 
-                    type="checkbox" 
-                    className={styles.checkbox} 
-                    checked={customers.length > 0 && selectedIds.length === customers.length} 
-                    onChange={handleSelectAll} 
-                />
-            ),
-            width: '40px',
-            align: 'center',
-            render: (_, item) => (
-                <input 
-                    type="checkbox" 
-                    className={styles.checkbox} 
-                    checked={selectedIds.includes(item.id)} 
-                    onChange={(e) => handleSelectRow(e, item.id)} 
-                    onClick={(e) => e.stopPropagation()} 
-                />
-            )
-        },
         {
             title: 'Mã Khách Hàng',
             dataIndex: 'code',
@@ -330,12 +294,6 @@ const CustomerListPage = () => {
                         </button>
                     </div>
                 </div>
-
-                {selectedIds.length > 0 && (
-                    <div className={styles.bulkActionsToolbar}>
-                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} khách hàng</div>
-                    </div>
-                )}
 
                 <div className={styles.tableContainer}>
                     <ResponsiveTable

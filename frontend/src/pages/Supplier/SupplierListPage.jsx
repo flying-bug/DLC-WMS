@@ -33,9 +33,6 @@ const SupplierListPage = () => {
     const [currentPage, setCurrentPage] = useSessionState('currentPage', 1);
     const [pageSize, setPageSize] = useSessionState('pageSize', 10);
     
-    // Selection
-    const [selectedIds, setSelectedIds] = useState([]);
-    
     // Modals & Toast
     const [modalConfig, setModalConfig] = useState({ isOpen: false, data: null });
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -58,7 +55,6 @@ const SupplierListPage = () => {
                 data = data.filter(s => s.status === filters.status);
             }
             setSuppliers(data);
-            if (!silent) setSelectedIds([]);
         } catch (error) {
             console.error('Lỗi tải danh sách nhà cung cấp:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách nhà cung cấp');
@@ -107,15 +103,6 @@ const SupplierListPage = () => {
         showToast('success', 'Xuất Excel thành công!');
     };
 
-    const handleSelectAll = (e) => {
-        setSelectedIds(e.target.checked ? paginatedRows.map(row => row.id) : []);
-    };
-
-    const handleSelectRow = (e, id) => {
-        e.stopPropagation();
-        setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
-    };
-
     const handleDeleteClick = (e, supplier) => {
         e.stopPropagation();
         guard('supplier:delete', () => setDeleteConfirm({ isOpen: true, supplier }));
@@ -144,29 +131,6 @@ const SupplierListPage = () => {
     };
 
     const columns = [
-        {
-            key: 'checkbox',
-            dataIndex: 'id',
-            title: (
-                <input 
-                    type="checkbox" 
-                    className={styles.checkbox} 
-                    checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length} 
-                    onChange={handleSelectAll} 
-                />
-            ),
-            width: '40px',
-            align: 'center',
-            render: (_, item) => (
-                <input 
-                    type="checkbox" 
-                    className={styles.checkbox} 
-                    checked={selectedIds.includes(item.id)} 
-                    onChange={(e) => handleSelectRow(e, item.id)} 
-                    onClick={(e) => e.stopPropagation()} 
-                />
-            )
-        },
         {
             title: 'Mã NCC',
             dataIndex: 'code',
