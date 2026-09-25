@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.einvoice;
 
+import com.duylongtech.backend.utils.HttpTimeouts;
 import com.duylongtech.backend.enums.DocumentStatus;
 
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ public class XInvoiceProvider implements EInvoiceProvider {
     @Value("${einvoice.xinvoice.auth-token:demo-auth-token}")
     private String authToken;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(HttpTimeouts.requestFactory(HttpTimeouts.LONG_READ_TIMEOUT));
 
     @Override
     public String getProviderName() {

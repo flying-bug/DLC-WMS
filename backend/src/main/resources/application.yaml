@@ -64,6 +64,11 @@ spring:
           options:
             model: ${GEMINI_MODEL:gemini-2.5-flash}
             temperature: 0.2
+    # Mặc định Spring AI thử lại 10 lần với thời gian chờ tăng dần tới vài phút, giữ luồng request suốt thời gian đó.
+    retry:
+      max-attempts: ${AI_AGENT_RETRY_MAX_ATTEMPTS:3}
+      backoff:
+        max-interval: ${AI_AGENT_RETRY_MAX_INTERVAL:10s}
 
 backup:
   path: ${BACKUP_PATH:/tmp/backups}

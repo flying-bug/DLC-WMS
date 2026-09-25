@@ -7,6 +7,7 @@ import com.duylongtech.backend.feature.auth.LoginRequest;
 import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.auth.JwtResponse;
 import com.duylongtech.backend.security.JwtUtils;
+import com.duylongtech.backend.utils.HttpTimeouts;
 import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.exception.BusinessException;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import com.duylongtech.backend.feature.auth.AuthService;
 import com.duylongtech.backend.feature.auth.ChangePasswordRequest;
@@ -66,7 +68,7 @@ public class AuthService {
                 .collect(Collectors.toList());
 
         String role = roles.stream().findFirst().orElse("ROLE_USER");
-        String jwt = jwtUtils.generateJwtToken(userDetails.getUsername(), role);
+        String jwt = jwtUtils.generateJwtToken(userDetails.getUsername(), role, startNewSession(userDetails.getId()));
 
         String fullName = userRepository.findByUsername(userDetails.getUsername())
                 .map(User::getFullName)
@@ -84,7 +86,8 @@ public class AuthService {
     }
 
     public JwtResponse loginWithGoogle(String token) {
-        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate(
+                HttpTimeouts.requestFactory(HttpTimeouts.SHORT_READ_TIMEOUT));
         String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + token;
         try {
             @SuppressWarnings("unchecked")
@@ -115,7 +118,7 @@ public class AuthService {
                     .collect(Collectors.toList());
 
             String role = roles.stream().findFirst().orElse("ROLE_USER");
-            String jwt = jwtUtils.generateJwtToken(user.getUsername(), role);
+            String jwt = jwtUtils.generateJwtToken(user.getUsername(), role, startNewSession(user.getId()));
 
             return JwtResponse.builder()
                     .token(jwt)
@@ -132,6 +135,18 @@ public class AuthService {
             }
             throw new BusinessException(String.format(SystemMessage.AUTH_ERR_001.getMessage(), e.getMessage()));
         }
+    }
+
+    /**
+     * Mỗi tài khoản chỉ có một phiên: đăng nhập mới làm token của phiên trước mất hiệu lực, nơi đang dùng
+     * phiên cũ bị đăng xuất ngay kèm thông báo "Bạn đã đăng nhập ở một nơi khác."
+     */
+    private String startNewSession(Long userId) {
+        String sessionId = UUID.randomUUID().toString();
+        userRepository.updateCurrentSessionId(userId, sessionId);
+        realtimeSessionService.forceLogoutOtherSessions(userId, sessionId, "SESSION_REPLACED",
+                SystemMessage.SESSION_REPLACED.getMessage());
+        return sessionId;
     }
 
     private static final int MAX_OTP_ATTEMPTS = 5;
@@ -207,6 +222,7 @@ public class AuthService {
 
         user.changePassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        userRepository.updateCurrentSessionId(user.getId(), null); // token đang dùng ở mọi nơi hết hiệu lực
         realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_RESET", "Mật khẩu của bạn vừa được thay đổi. Vui lòng đăng nhập lại.");
 
         // Xóa sạch OTP sau khi đổi pass thành công
@@ -224,6 +240,7 @@ public class AuthService {
 
         user.changePassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        userRepository.updateCurrentSessionId(user.getId(), null); // token đang dùng ở mọi nơi hết hiệu lực
         realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_CHANGED", "Mat khau cua ban vua duoc thay doi. Vui long dang nhap lai.");
     }
 }

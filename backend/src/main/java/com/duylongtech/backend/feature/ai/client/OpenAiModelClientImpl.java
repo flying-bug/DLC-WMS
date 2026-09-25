@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.ai.client;
 
+import com.duylongtech.backend.utils.HttpTimeouts;
 import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
 import com.duylongtech.backend.feature.ai.dto.AiChatResponse;
 import com.duylongtech.backend.feature.ai.dto.AiSourceResponse;
@@ -27,7 +28,9 @@ import com.duylongtech.backend.feature.ai.client.OpenAiModelClient;
 @RequiredArgsConstructor
 public class OpenAiModelClientImpl implements AiModelClient, OpenAiModelClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RestClient restClient = RestClient.builder().build();
+    private final RestClient restClient = RestClient.builder()
+            .requestFactory(HttpTimeouts.requestFactory(HttpTimeouts.LONG_READ_TIMEOUT))
+            .build();
 
     @Value("${ai.provider:openai}")
     private String provider;

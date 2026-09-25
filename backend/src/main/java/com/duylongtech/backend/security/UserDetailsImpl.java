@@ -20,14 +20,21 @@ public class UserDetailsImpl implements UserDetails {
     private String password;
     private boolean enabled;
     private Collection<? extends GrantedAuthority> authorities;
+    private String sessionId;
 
     public UserDetailsImpl(Long id, String username, String password, boolean enabled,
             Collection<? extends GrantedAuthority> authorities) {
+        this(id, username, password, enabled, authorities, null);
+    }
+
+    public UserDetailsImpl(Long id, String username, String password, boolean enabled,
+            Collection<? extends GrantedAuthority> authorities, String sessionId) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.enabled = enabled;
         this.authorities = authorities;
+        this.sessionId = sessionId;
     }
 
     public static UserDetailsImpl build(User user) {
@@ -73,7 +80,8 @@ public class UserDetailsImpl implements UserDetails {
                 user.getUsername(),
                 user.getPasswordHash(),
                 enabled,
-                authorities);
+                authorities,
+                user.getCurrentSessionId());
     }
 
     @Override
@@ -83,6 +91,11 @@ public class UserDetailsImpl implements UserDetails {
 
     public Long getId() {
         return id;
+    }
+
+    /** Phiên đăng nhập hiện hành của tài khoản (đọc từ DB), null nếu mọi phiên đã bị thu hồi. */
+    public String getSessionId() {
+        return sessionId;
     }
 
     @Override
