@@ -46,6 +46,14 @@ export default function WarehouseWorkspacePage() {
   const [masterList, setMasterList] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
+  // Đổi tab (phiếu nhập <-> phiếu xuất) thì bỏ chọn ngay trong lượt render này: nếu để effect chi tiết chạy với phiếu
+  // của tab cũ, nó gọi API của tab mới bằng id phiếu kia ("Không tìm thấy phiếu nhập/xuất kho", có thể hiện nhầm dòng).
+  const [selectionTab, setSelectionTab] = useState(activeTab);
+  if (selectionTab !== activeTab) {
+    setSelectionTab(activeTab);
+    setSelectedItem(null);
+    setSelectedItems([]);
+  }
   const selectedItemRef = useRef(selectedItem);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(false);
@@ -192,31 +200,34 @@ export default function WarehouseWorkspacePage() {
   useEffect(() => {
     if (!selectedItem?.id) {
       setDetailLines([]);
-      return;
+      setLoadingDetail(false);
+      return undefined;
     }
+    // Chọn phiếu khác (hoặc đổi tab) trước khi phản hồi cũ về thì bỏ phản hồi đó, không ghi đè chi tiết phiếu đang chọn.
+    let cancelled = false;
     const fetchDetail = async () => {
       try {
         setLoadingDetail(true);
+        let res = null;
         if (activeTab === 'imports') {
-          const res = await importApi.getImportDetail(selectedItem.id);
-          const data = res.data?.data || res.data;
-          setDetailLines(data.lines || []);
+          res = await importApi.getImportDetail(selectedItem.id);
         } else if (activeTab === 'exports') {
-          const res = await exportApi.getExportDetail(selectedItem.id);
-          const data = res.data?.data || res.data;
-          setDetailLines(data.lines || []);
+          res = await exportApi.getExportDetail(selectedItem.id);
         } else if (activeTab === 'stocktakes') {
-          const res = await stocktakeApi.getStocktakeDetail(selectedItem.id);
+          res = await stocktakeApi.getStocktakeDetail(selectedItem.id);
+        }
+        if (res && !cancelled) {
           const data = res.data?.data || res.data;
           setDetailLines(data.lines || []);
         }
       } catch (err) {
-        console.error('Error fetching detail:', err);
+        if (!cancelled) console.error('Error fetching detail:', err);
       } finally {
-        setLoadingDetail(false);
+        if (!cancelled) setLoadingDetail(false);
       }
     };
     fetchDetail();
+    return () => { cancelled = true; };
   }, [selectedItem, activeTab]);
 
   // Handle Unpost
