@@ -10,6 +10,7 @@ import * as paymentApi from '../../api/paymentApi';
 import styles from './PaymentHistoryPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
+import { ledgerEntityTypeLabel } from '../../utils/ledgerEntityType';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
@@ -32,7 +33,7 @@ const entityTypeLabel = (type) => {
     case 'PAYMENT_VOUCHER':
       return { text: 'Phiếu chi', className: styles.typeVoucher, icon: 'bi-arrow-up-circle' };
     default:
-      return { text: type || 'Chứng từ', className: styles.typeDefault, icon: 'bi-file-text' };
+      return { text: type ? ledgerEntityTypeLabel(type) : 'Chứng từ', className: styles.typeDefault, icon: 'bi-file-text' };
   }
 };
 
