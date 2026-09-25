@@ -599,8 +599,16 @@ public class InventoryDocumentService {
             String duplicateMessage,
             boolean importDocument) {
         String issuePurpose = normalizeOptionalReference(req.getIssuePurpose());
-        if (issuePurpose != null && !importDocument) {
-            // Khi cập nhật phiếu, cũng chỉ cho phép 2 mục đích thủ công
+        // Phiếu xuất do hệ thống sinh (chuyển kho, xử lý kiểm kê): thủ kho vẫn sửa số lượng/serial trước khi ghi
+        // sổ, nhưng mục đích và chứng từ gốc giữ nguyên - luồng chuyển kho dựa vào chúng để sinh phiếu nhập kho đích.
+        boolean systemExport = !importDocument && doc.getIssuePurpose() != null
+                && !VALID_MANUAL_EXPORT_PURPOSES.contains(doc.getIssuePurpose());
+        if (systemExport) {
+            if (issuePurpose != null && !issuePurpose.equals(doc.getIssuePurpose())) {
+                throw new BusinessException(SystemMessage.INV_ERR_039.getMessage());
+            }
+        } else if (issuePurpose != null && !importDocument) {
+            // Khi cập nhật phiếu, cũng chỉ cho phép các mục đích thủ công
             if (!VALID_MANUAL_EXPORT_PURPOSES.contains(issuePurpose)) {
                 throw new BusinessException(SystemMessage.INV_ERR_039.getMessage());
             }
@@ -623,9 +631,11 @@ public class InventoryDocumentService {
         doc.setPurchaseOrderId(poId);
         doc.setSalesOrderId(soId);
         doc.setPartnerId(req.getPartnerId());
-        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
-        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
-        doc.setReferenceId(req.getReferenceId());
+        if (!systemExport) {
+            doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
+            doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
+            doc.setReferenceId(req.getReferenceId());
+        }
         doc.setDocDate(req.getDocDate());
         doc.updateStatus(importDocument
                 ? normalizeEditableImportStatus(req.getStatus(), doc.getStatus())
