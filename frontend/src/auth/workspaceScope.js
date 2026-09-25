@@ -15,6 +15,7 @@ const CASHIER_SCOPE = ['/cashier-workspace', '/reports', '/customers', '/supplie
 
 // Kế toán làm việc ở chế độ Kế toán: không vào bàn làm việc của Thủ kho / Thủ quỹ.
 const ACCOUNTANT_DENIED = ['/warehouse-workspace', '/cashier-workspace'];
+const TECHNICIAN_DENIED = ['/main-dashboard'];
 
 const normalizeRole = (role) => String(role || '').toUpperCase().replace(/^ROLE_/, '');
 
@@ -23,6 +24,7 @@ const matches = (pathname, prefixes) =>
 
 export function isPathAllowedForRoles(pathname, roles = []) {
     const roleSet = new Set(roles.map(normalizeRole));
+    if (roleSet.has('TECHNICIAN') && matches(pathname, TECHNICIAN_DENIED)) return false;
     if (['SUPER_ADMIN', 'MANAGER'].some(role => roleSet.has(role))) return true;
 
     const scopes = [];

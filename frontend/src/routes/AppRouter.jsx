@@ -87,8 +87,8 @@ const getDefaultAuthenticatedPath = () => {
     // và bị đưa thẳng tới /main-dashboard thay vì bàn làm việc của họ.
     if (roles.some(role => ['WAREHOUSE_CONTROLLER', 'ROLE_WAREHOUSE_CONTROLLER'].includes(role))) return '/warehouse-workspace';
     if (roles.some(role => ['CASHIER_CONTROLLER', 'ROLE_CASHIER_CONTROLLER'].includes(role))) return '/cashier-workspace';
-    if (hasPermission('report_summary:view')) return ROUTES.MAIN_DASHBOARD;
     if (roles.some(role => ['TECHNICIAN', 'ROLE_TECHNICIAN'].includes(role))) return '/dashboard';
+    if (hasPermission('report_summary:view')) return ROUTES.MAIN_DASHBOARD;
     return '/dashboard';
 };
 

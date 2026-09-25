@@ -61,6 +61,13 @@ const isWarehouseProduct = (item) => {
 const isWarehouseLine = (line) => !line?.productType || isWarehouseProduct(line);
 const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
 const filterWarehouseLines = (lines) => (lines || []).filter(isWarehouseLine);
+const BASE_IMPORT_TYPE_OPTIONS = [
+  { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
+  { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+  { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+  { value: 'OTHER', label: 'Khác' }
+];
+const STOCKTAKE_IMPORT_OPTION = { value: 'STOCKTAKE_ADD', label: 'Nhập điều chỉnh kiểm kê' };
 
 // Đồng bộ với .misa-input/.misa-select (global.css): height 38px (--height-control) và bo góc 6px
 // (--radius-control) để các ô react-select (Kho, Khách hàng/NCC...) thẳng hàng với input thường trong cùng 1 dòng.
@@ -150,7 +157,10 @@ function CreateImportSlipPage() {
   const poData = location.state?.poData || null;
   const returnUrl = location.state?.returnUrl || null;
   const searchParams = new URLSearchParams(location.search);
-  const initialType = searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : (poData ? 'PURCHASE' : 'PURCHASE'));
+  const initialType = stocktakeData ? 'STOCKTAKE_ADD' : (searchParams.get('type')?.toUpperCase() || 'PURCHASE');
+  const importTypeOptions = stocktakeData
+    ? [...BASE_IMPORT_TYPE_OPTIONS, STOCKTAKE_IMPORT_OPTION]
+    : BASE_IMPORT_TYPE_OPTIONS;
 
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -701,7 +711,7 @@ function CreateImportSlipPage() {
           note: item.note,
         };
       }),
-      issuePurpose: importType,
+      issuePurpose: form.referenceType === 'STOCKTAKE' ? 'STOCKTAKE_ADD' : importType,
       recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
       salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
       referenceType: (importType === 'PRODUCTION' || importType === 'SCRAP') && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
@@ -1084,18 +1094,8 @@ function CreateImportSlipPage() {
           <span style={{ color: 'var(--color-border-muted)', fontSize: '20px' }}>|</span>
           <div style={{ width: '280px' }}>
             <Select
-              value={[
-                { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
-                { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
-                { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
-                { value: 'OTHER', label: 'Khác' }
-              ].find(o => o.value === importType)}
-              options={[
-                { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
-                { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
-                { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
-                { value: 'OTHER', label: 'Khác' }
-              ]}
+              value={importTypeOptions.find(o => o.value === importType)}
+              options={importTypeOptions}
               onChange={(option) => {
                 setImportType(option.value);
                 setForm(prev => ({
@@ -1117,6 +1117,7 @@ function CreateImportSlipPage() {
                 control: (base, state) => ({ ...customSelectStyles.control(base, state), fontWeight: 'bold' })
               }}
               isSearchable={false}
+              isDisabled={Boolean(stocktakeData)}
             />
           </div>
         </div>
@@ -1339,7 +1340,7 @@ function CreateImportSlipPage() {
                     {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
                     {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
                     {importType === 'RETURN' && 'Nhân viên nhận hàng'}
-                    {importType === 'OTHER' && 'Nhân viên nhận hàng'}
+                    {(importType === 'OTHER' || importType === 'STOCKTAKE_ADD') && 'Nhân viên nhận hàng'}
                   </label>
                   <Select
                     inputId="import-purchaser"
@@ -1360,7 +1361,7 @@ function CreateImportSlipPage() {
                 </div>
               </div>
 
-              {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') && (
+              {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER' || importType === 'STOCKTAKE_ADD') && (
                 <div className="misa-form-row" style={{ marginTop: '12px' }}>
                   <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                     <label className="misa-label">Người giao hàng</label>

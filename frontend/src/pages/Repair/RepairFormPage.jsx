@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import useGoBack from '../../hooks/useGoBack';
-import { useReactToPrint } from 'react-to-print';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as repairApi from '../../api/repairApi';
@@ -16,7 +15,7 @@ import QuickProductModal from './components/QuickProductModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import RepairSerialModal from './components/RepairSerialModal';
-import RepairQuotationTemplate from './components/RepairQuotationTemplate';
+import { printRepairQuotation } from '../../utils/printRepairQuotation';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import * as exportApi from '../../api/inventoryExportApi';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
@@ -29,6 +28,7 @@ import DateInput from '../../components/ui/DateInput/DateInput';
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const formatQuantity = (value) => Number(value || 0).toLocaleString('vi-VN', { maximumFractionDigits: 4 });
+const FIFO_COST_ROLES = new Set(['ACCOUNTANT', 'ROLE_ACCOUNTANT', 'MANAGER', 'ROLE_MANAGER', 'SUPER_ADMIN', 'ROLE_SUPER_ADMIN']);
 const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const customSelectStyles = {
@@ -116,11 +116,11 @@ function RepairFormPage() {
     });
   };
 
-  const printRef = useRef(null);
-  const handlePrintQuote = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Bao-Gia-SC-${repair?.repairCode || 'REP'}`,
-  });
+  const handlePrintQuote = () => {
+    if (repair) {
+      printRepairQuotation(repair);
+    }
+  };
 
   const handleGoBack = useGoBack('/repairs');
 
@@ -562,7 +562,7 @@ function RepairFormPage() {
       repairApi.getRepairById(id).then((res) => {
         const data = res.data?.data;
         if (data) setRepair(data);
-      }).catch(() => {});
+      }).catch(() => { });
       showToast('info', notif.message || 'Trạng thái lệnh sửa chữa vừa được cập nhật.');
     };
     window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
@@ -628,7 +628,8 @@ function RepairFormPage() {
         expectedDate: formData.expectedDate || null,
         responsiblePerson: formData.responsiblePerson || null,
         // Ghi chú chẩn đoán không còn trên UI, truyền null hoặc giữ nguyên
-        diagnosisNote: null
+        diagnosisNote: null,
+        internalNotes: formData.internalNotes || null
       };
 
       if (isNew) {
@@ -678,9 +679,8 @@ function RepairFormPage() {
     if (isNew) return;
     try {
       await axiosClient.patch(`/repairs/${id}/internal-notes`, { notes: formData.internalNotes });
-      showToast('success', 'Đã lưu ghi chú nội bộ');
     } catch (e) {
-      showToast('error', 'Không thể lưu ghi chú');
+      // Silent fail — ghi chú nội bộ không nên chặn luồng làm việc
     }
   };
 
@@ -1080,6 +1080,8 @@ function RepairFormPage() {
   const isEditable = isNew || EDITABLE_STATUSES.includes(currentStatus);
   const showRepairCols = ['UNDER_REPAIR', 'DONE'].includes(currentStatus);
   const isFifoCostFinalized = ['CONFIRMED', 'WAITING_FOR_EXPORT', 'UNDER_REPAIR', 'DONE'].includes(currentStatus);
+  const canViewFifoCost = isFifoCostFinalized
+    && getAuthRoles().some(role => FIFO_COST_ROLES.has(String(role || '').toUpperCase()));
   const lines = isNew ? pendingLines : (repair?.lines || []);
   const fees = isNew ? pendingFees : (repair?.fees || []);
   const detailTableColSpan = 11
@@ -1331,7 +1333,7 @@ function RepairFormPage() {
                   <th style={{ whiteSpace: 'nowrap' }}>Hạng mục (Linh kiện / Dịch vụ)</th>
                   <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Số lượng</th>
                   <th style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{isFifoCostFinalized ? 'Giá vốn FIFO' : 'Tồn khả dụng'}</th>
+                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{canViewFifoCost ? 'Giá vốn' : 'Tồn khả dụng'}</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá / Phí</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '80px' }}>% VAT</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
@@ -1398,7 +1400,7 @@ function RepairFormPage() {
                     <td>{variants.find(v => String(v.id) === String(line.componentVariantId))?.unitName || line.componentVariant?.unitName || line._unitName || '-'}</td>
                     <td align="right" style={{ whiteSpace: 'nowrap' }}>
                       {['ADD', 'REPLACE'].includes(line.actionType)
-                        ? (isFifoCostFinalized
+                        ? (canViewFifoCost
                           ? (line.fifoUnitCost != null
                             ? <span title={`Tổng giá vốn: ${money(line.fifoCostAmount)} đ`}>{money(line.fifoUnitCost)} đ</span>
                             : 'Chưa chốt')
@@ -1617,8 +1619,10 @@ function RepairFormPage() {
               <label className="misa-label" style={{ fontSize: '14px', marginBottom: '8px' }}>Ghi chú nội bộ</label>
               <textarea
                 className="misa-textarea"
-                style={{ width: '100%', minHeight: '110px', fontSize: '14px', padding: '12px', lineHeight: '1.6', borderRadius: '6px' }}
+                style={{ width: '100%', minHeight: '110px', fontSize: '14px', padding: '12px', lineHeight: '1.6', borderRadius: '6px',
+                  ...((['DONE', 'CANCELLED'].includes(currentStatus)) && { backgroundColor: 'var(--wms-bg-soft)', cursor: 'default', color: 'var(--wms-text-muted)' }) }}
                 placeholder="Ghi chú dành riêng cho nội bộ cửa hàng..."
+                disabled={['DONE', 'CANCELLED'].includes(currentStatus)}
                 value={formData.internalNotes || ''}
                 onChange={(e) => handleFormChange('internalNotes', e.target.value)}
                 onBlur={() => handleUpdateInternalNotes()}
@@ -1784,9 +1788,6 @@ function RepairFormPage() {
           actionType={serialModalData.actionType}
         />
       )}
-      <div style={{ display: 'none' }}>
-        <RepairQuotationTemplate ref={printRef} repair={repair} />
-      </div>
       {rejectModal.isOpen && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 10000,

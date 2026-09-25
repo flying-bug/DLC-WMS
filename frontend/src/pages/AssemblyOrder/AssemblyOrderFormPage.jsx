@@ -713,11 +713,11 @@ function AssemblyOrderFormPage() {
                     const parentProd = products.find(p => String(p.id) === String(v.productId));
                     return (v.productType || (parentProd?.productType)) === 'Hàng hóa';
                 });
-                
+
                 return (
-                    <ProductGridSelect 
+                    <ProductGridSelect
                         products={filteredVariants}
-                        value={line.componentVariantId} 
+                        value={line.componentVariantId}
                         hideStock={true}
                         placeholder="Chọn linh kiện thu hồi"
                         displayMode="code-name"
@@ -942,7 +942,7 @@ function AssemblyOrderFormPage() {
                                 </div>
                                 {fifoTotalCost != null && (
                                     <div className={styles.summaryItem}>
-                                        <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Tổng giá vốn FIFO</span>
+                                        <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Tổng giá vốn</span>
                                         <span className={styles.summaryValue}>{fifoTotalCost.toLocaleString('vi-VN')} đ</span>
                                     </div>
                                 )}
@@ -1047,7 +1047,7 @@ function AssemblyOrderFormPage() {
                         </>
                     )}
                 </div>
-                
+
                 <div className={styles.actionButtons} style={{ margin: 0, marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {orderDetail && ['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(orderDetail.status) && (
                         <button className="btn-misa-draft" style={{ backgroundColor: '#fff', color: 'var(--color-text)', border: '1px solid var(--color-border-muted)' }} type="button" onClick={() => {
@@ -1076,7 +1076,7 @@ function AssemblyOrderFormPage() {
                             <i className="bi bi-save"></i> Lưu tạm
                         </button>
                     )}
-                    
+
                     {canEdit && canSubmit && (
                         <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'PENDING_APPROVAL')} disabled={saving}>
                             <i className="bi bi-check-circle"></i> {saving ? 'Đang gửi...' : form.status === 'REJECTED' ? 'Gửi lại duyệt' : 'Gửi duyệt'}

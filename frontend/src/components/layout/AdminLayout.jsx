@@ -10,6 +10,7 @@ import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeC
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
 import ErrorBoundary from '../ErrorBoundary';
 import { ROUTES } from '../../constants';
+import { isPathAllowedForRoles } from '../../auth/workspaceScope';
 
 import styles from './AdminLayout.module.css';
 
@@ -214,6 +215,8 @@ const AdminLayout = ({ children }) => {
     });
 
     const checkItemPermission = (item) => {
+        if (!isPathAllowedForRoles(item.path, userRoles)) return false;
+
         // Lọc menu sidebar theo Chế độ làm việc (Persona / Workspace Mode)
         if (workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
             const allowedWarehouseModules = ['warehouse', 'catalog'];
