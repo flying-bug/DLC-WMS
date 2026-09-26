@@ -1,5 +1,7 @@
 import React, { useState, Fragment } from 'react';
 import styles from './ResponsiveTable.module.css';
+import SortableHeader from '../SortableHeader/SortableHeader';
+import { ariaSortOf } from '../../../utils/clientSort';
 
 // Columns that carry a selection control / row index rather than actual row content
 // (checkbox, radio, STT/#) should never become the mobile card's title - they're
@@ -24,6 +26,8 @@ const getTitleColumnIndex = (columns) => {
  * ResponsiveTable Component
  * Render standard HTML <table> on Desktop / Tablet (>= 768px).
  * Automatically converts rows into a clean Card List on Mobile (< 768px).
+ * Sorting (optional): give a column `sortKey` and pass `sort` + `onSort` (see hooks/useClientSort.js);
+ * its header becomes a button that cycles descending -> ascending -> off.
  */
 const ResponsiveTable = ({
     columns = [],
@@ -38,7 +42,9 @@ const ResponsiveTable = ({
     expandable, // { expandedRowRender: (row) => JSX, rowExpandable: (row) => boolean }
     subRowRender, // (row, idx) => JSX (always visible sub-row)
     rowClassName, // (row) => string
-    keyField = 'id' // Default key field for rows
+    keyField = 'id', // Default key field for rows
+    sort, // { key, direction: 'asc' | 'desc' } | null - current sort, see hooks/useClientSort.js
+    onSort // (sortKey) => void - makes columns with `sortKey` clickable
 }) => {
     const [expandedRowKeys, setExpandedRowKeys] = useState([]);
     const titleColIdx = getTitleColumnIndex(columns);
@@ -76,15 +82,21 @@ const ResponsiveTable = ({
                     <thead>
                         <tr>
                             {expandable && <th style={{ width: 40 }} />}
-                            {columns.map((col, idx) => (
-                                <th
-                                    key={col.key || col.dataIndex || idx}
-                                    style={{ width: col.width, textAlign: col.align || 'left' }}
-                                    className={col.hideOnTablet ? styles.hideTablet : ''}
-                                >
-                                    {col.title}
-                                </th>
-                            ))}
+                            {columns.map((col, idx) => {
+                                const sortable = Boolean(col.sortKey && onSort);
+                                return (
+                                    <th
+                                        key={col.key || col.dataIndex || idx}
+                                        style={{ width: col.width, textAlign: col.align || 'left' }}
+                                        className={col.hideOnTablet ? styles.hideTablet : ''}
+                                        aria-sort={sortable ? ariaSortOf(sort, col.sortKey) : undefined}
+                                    >
+                                        {sortable
+                                            ? <SortableHeader label={col.title} sortKey={col.sortKey} sort={sort} onSort={onSort} align={col.align} />
+                                            : col.title}
+                                    </th>
+                                );
+                            })}
                             {actions && <th style={{ width: '100px', textAlign: 'center' }}>Thao tác</th>}
                         </tr>
                     </thead>

@@ -26,6 +26,9 @@ import { canViewPricing } from '../../auth/session';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import { EXPORT_PURPOSE_OPTIONS, DOCUMENT_STATUS_OPTIONS as STATUS_OPTIONS } from '../../utils/documentFilterOptions';
 import useSessionState from '../../hooks/useSessionState';
+import useClientSort from '../../hooks/useClientSort';
+import SortableHeader from '../../components/ui/SortableHeader/SortableHeader';
+import { ariaSortOf } from '../../utils/clientSort';
 
 
 const DEFAULT_COLUMNS = {
@@ -104,6 +107,13 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
   ? `${item.productName} - ${item.variantName}`
   : item?.productName || '';
 
+// Cột bấm được để sắp xếp: lấy giá trị GỐC (ngày ISO, mã) chứ không phải chuỗi đã định dạng để hiển thị.
+// Trùng ngày thì phiếu tạo sau đứng trước khi giảm dần.
+const SORT_COLUMNS = {
+  date: { get: (row) => row.docDate, type: 'date' },
+  docCode: { get: (row) => row.docCode, type: 'text' },
+};
+
 function ExportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -154,19 +164,6 @@ function ExportSlipPage() {
     return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
   });
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [sortConfig, setSortConfig] = useState(null);
-
-  const handleSort = (key) => {
-    if (sortConfig && sortConfig.key === key) {
-      if (sortConfig.direction === 'asc') {
-        setSortConfig({ key, direction: 'desc' });
-      } else {
-        setSortConfig(null);
-      }
-    } else {
-      setSortConfig({ key, direction: 'asc' });
-    }
-  };
 
   const toggleColumn = (colId) => {
     setColumns(prev => {
@@ -313,10 +310,12 @@ function ExportSlipPage() {
       };
     });
 
+  const { sortedRows, sort, toggleSort } = useClientSort(rows, SORT_COLUMNS, { onChange: () => setCurrentPage(1) });
+
   const handleExport = () => {
     const dataToExport = selectedIds.length > 0 
-      ? rows.filter(r => selectedIds.includes(r.id)) 
-      : rows;
+      ? sortedRows.filter(r => selectedIds.includes(r.id))
+      : sortedRows;
 
     if (dataToExport.length === 0) {
       showToast('warning', 'Không có dữ liệu để xuất Excel');
@@ -367,21 +366,6 @@ function ExportSlipPage() {
     setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
   };
 
-
-  const sortedRows = useMemo(() => {
-    if (!sortConfig) return rows;
-    return [...rows].sort((a, b) => {
-      let aVal = a[sortConfig.key];
-      let bVal = b[sortConfig.key];
-      if (sortConfig.key === 'date') {
-        aVal = new Date(a.docDate || 0).getTime();
-        bVal = new Date(b.docDate || 0).getTime();
-      }
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [rows, sortConfig]);
 
   const totalItems = sortedRows.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -497,8 +481,8 @@ function ExportSlipPage() {
                   <th style={{ width: '40px', textAlign: 'center' }}>
                     <input type="checkbox" className={styles.checkbox} checked={rows.length > 0 && selectedIds.length === rows.length} onChange={handleSelectAll} />
                   </th>
-                  {columns.date && <th style={{ width: '130px', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('date')}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>Ngày Xuất</span><i className={`bi bi-arrow-${sortConfig?.key === 'date' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`} style={{ color: sortConfig?.key === 'date' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.9rem' }}></i></div></th>}
-                  {columns.docCode && <th style={{ width: '160px', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('docCode')}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>Số Phiếu</span><i className={`bi bi-arrow-${sortConfig?.key === 'docCode' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`} style={{ color: sortConfig?.key === 'docCode' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.9rem' }}></i></div></th>}
+                  {columns.date && <th style={{ width: '130px' }} aria-sort={ariaSortOf(sort, 'date')}><SortableHeader label="Ngày Xuất" sortKey="date" sort={sort} onSort={toggleSort} /></th>}
+                  {columns.docCode && <th style={{ width: '160px' }} aria-sort={ariaSortOf(sort, 'docCode')}><SortableHeader label="Số Phiếu" sortKey="docCode" sort={sort} onSort={toggleSort} /></th>}
                   {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
                   {columns.partner && <th style={{ width: '200px' }}>Khách Hàng / LSX</th>}
                   {columns.warehouse && <th style={{ width: '120px' }}>Kho Xuất</th>}

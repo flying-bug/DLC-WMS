@@ -18,6 +18,9 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import useSessionState from '../../hooks/useSessionState';
+import useClientSort from '../../hooks/useClientSort';
+import SortableHeader from '../../components/ui/SortableHeader/SortableHeader';
+import { ariaSortOf } from '../../utils/clientSort';
 
 
 const DEFAULT_COLUMNS = {
@@ -54,6 +57,13 @@ const sumQuantity = (lines = []) => lines.reduce((sum, line) => sum + Number(lin
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
   ? `${item.productName} - ${item.variantName}`
   : item?.productName || '';
+
+// Cột bấm được để sắp xếp: lấy giá trị GỐC (ngày ISO, mã) chứ không phải chuỗi đã định dạng để hiển thị.
+// Trùng ngày thì phiếu tạo sau đứng trước khi giảm dần.
+const SORT_COLUMNS = {
+  date: { get: (row) => row.transferDate, type: 'date' },
+  transferCode: { get: (row) => row.transferCode, type: 'text' },
+};
 
 function TransferHistoryPage() {
   const navigate = useNavigate();
@@ -162,9 +172,11 @@ function TransferHistoryPage() {
     };
   });
 
+  const { sortedRows, sort, toggleSort } = useClientSort(rows, SORT_COLUMNS, { onChange: () => setCurrentPage(1) });
+
   const handleExport = () => {
     const headers = ['Ngày ghi nhận', 'Số phiếu', 'Từ kho', 'Đến kho', 'Số lượng', 'Trạng thái'];
-    const data = rows.map(item => [
+    const data = sortedRows.map(item => [
       item.date,
       item.transferCode,
       item.fromWarehouse,
@@ -176,10 +188,10 @@ function TransferHistoryPage() {
     showToast('success', 'Xuất Excel thành công!');
   };
 
-  const totalItems = rows.length;
+  const totalItems = sortedRows.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
+  const paginatedRows = sortedRows.slice(startIndex, startIndex + pageSize);
 
   const handlePrintSlip = (slip) => {
     printTransferSlip(slip, {
@@ -262,8 +274,8 @@ function TransferHistoryPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  {columns.date && <th style={{ width: '130px' }}>Ngày Ghi Nhận</th>}
-                  {columns.transferCode && <th style={{ width: '160px' }}>Số Phiếu</th>}
+                  {columns.date && <th style={{ width: '130px' }} aria-sort={ariaSortOf(sort, 'date')}><SortableHeader label="Ngày Ghi Nhận" sortKey="date" sort={sort} onSort={toggleSort} /></th>}
+                  {columns.transferCode && <th style={{ width: '160px' }} aria-sort={ariaSortOf(sort, 'transferCode')}><SortableHeader label="Số Phiếu" sortKey="transferCode" sort={sort} onSort={toggleSort} /></th>}
                   {columns.fromWarehouse && <th style={{ width: '150px' }}>Kho Xuất</th>}
                   {columns.toWarehouse && <th style={{ width: '150px' }}>Kho Nhập</th>}
                   {columns.quantity && <th className={styles.textCenter} style={{ width: '120px' }}>Số Lượng</th>}

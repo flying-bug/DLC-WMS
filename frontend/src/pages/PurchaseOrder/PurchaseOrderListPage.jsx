@@ -17,6 +17,7 @@ import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import useSessionState from '../../hooks/useSessionState';
+import useClientSort from '../../hooks/useClientSort';
 
 
 const STATUS_LABELS = {
@@ -146,6 +147,13 @@ function renderDeliveryDateBadge(po) {
   );
 }
 
+// Cột bấm được để sắp xếp: lấy giá trị GỐC (ngày ISO, mã) chứ không phải chuỗi đã định dạng để hiển thị.
+// Trùng ngày thì đơn tạo sau đứng trước khi giảm dần.
+const SORT_COLUMNS = {
+  poCode: { get: (row) => row.poCode, type: 'text' },
+  poDate: { get: (row) => row.poDate, type: 'date' },
+};
+
 function PurchaseOrderListPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -202,13 +210,15 @@ function PurchaseOrderListPage() {
   }, [filters]);
   useRealtimeRefresh(['PURCHASE_ORDER'], loadOrders);
 
+  const { sortedRows: sortedOrders, sort, toggleSort } = useClientSort(orders, SORT_COLUMNS, { onChange: () => setCurrentPage(1) });
+
   const handleExport = () => {
     if (!orders || orders.length === 0) {
       showToast('warning', 'Không có dữ liệu để xuất Excel');
       return;
     }
     const headers = ['Mã đơn', 'Ngày lập', 'Nhà cung cấp', 'Hạn công nợ', 'Ngày giao DK', 'Tổng tiền', 'Trạng thái'];
-    const data = orders.map(po => [
+    const data = sortedOrders.map(po => [
       po.poCode,
       fmtDate(po.poDate),
       po.partnerName || `#${po.partnerId}`,
@@ -265,7 +275,7 @@ function PurchaseOrderListPage() {
   // Pagination
   const totalItems = orders.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedOrders = sortedOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const showPaymentDueDate = orders.some(order => Boolean(order.paymentDueDate));
   const showExpectedDeliveryDate = orders.some(order => Boolean(order.expectedDeliveryDate));
 
@@ -278,6 +288,7 @@ function PurchaseOrderListPage() {
     {
       title: 'Mã đơn',
       dataIndex: 'poCode',
+      sortKey: 'poCode',
       width: 110,
       render: (val, po) => (
         <a className={styles.link} onClick={e => { e.stopPropagation(); navigate(`/purchase-orders/${po.id}`); }}>
@@ -288,6 +299,7 @@ function PurchaseOrderListPage() {
     {
       title: 'Ngày lập',
       dataIndex: 'poDate',
+      sortKey: 'poDate',
       width: 115,
       render: (val) => <span className={styles.dateOnlyCell}>{fmtDate(val)}</span>
     },
@@ -469,6 +481,8 @@ function PurchaseOrderListPage() {
             data={paginatedOrders}
             loading={loading}
             emptyMessage="Không tìm thấy đơn mua hàng nào"
+            sort={sort}
+            onSort={toggleSort}
             onRowClick={(po) => navigate(`/purchase-orders/${po.id}`)}
             actions={renderActions}
           />

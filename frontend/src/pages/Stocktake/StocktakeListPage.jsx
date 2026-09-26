@@ -16,6 +16,7 @@ import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import DateInput from '../../components/ui/DateInput/DateInput';
 import useSessionState from '../../hooks/useSessionState';
+import useClientSort from '../../hooks/useClientSort';
 
 
 const STATUS_LABELS = {
@@ -32,6 +33,13 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const ALL_RECORDS_SIZE = 10000;
 const formatDate = (value) => value ? formatDateOnly(value) : '';
+
+// Cột bấm được để sắp xếp: lấy giá trị GỐC (ngày ISO, mã) chứ không phải chuỗi đã định dạng để hiển thị.
+// Trùng ngày thì phiếu tạo sau đứng trước khi giảm dần.
+const SORT_COLUMNS = {
+  date: { get: (row) => row.stocktakeDate, type: 'date' },
+  stocktakeCode: { get: (row) => row.stocktakeCode, type: 'text' },
+};
 
 function StocktakeListPage() {
   const navigate = useNavigate();
@@ -137,12 +145,14 @@ function StocktakeListPage() {
     };
   });
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const paginatedRows = rows.slice(page * pageSize, (page + 1) * pageSize);
+  const { sortedRows, sort, toggleSort } = useClientSort(rows, SORT_COLUMNS, { onChange: () => setPage(0) });
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const paginatedRows = sortedRows.slice(page * pageSize, (page + 1) * pageSize);
 
   const handleExport = () => {
     const headers = ['Ngày', 'Số', 'Kiểm kê kho', 'Mục đích', 'Kết luận', 'Trạng thái'];
-    const data = rows.map(item => [
+    const data = sortedRows.map(item => [
       item.date,
       item.stocktakeCode,
       item.warehouse,
@@ -183,9 +193,10 @@ function StocktakeListPage() {
         </div>
       )
     },
-    { title: 'NGÀY', dataIndex: 'date' },
+    { title: 'NGÀY', dataIndex: 'date', sortKey: 'date' },
     {
       title: 'SỐ',
+      sortKey: 'stocktakeCode',
       render: (_, st) => (
         <a
           href="#"
@@ -341,6 +352,8 @@ function StocktakeListPage() {
             data={paginatedRows}
             loading={loading}
             emptyMessage="Không có dữ liệu"
+            sort={sort}
+            onSort={toggleSort}
             onRowClick={(st) => navigate(`/stocktakes/${st.id}`)}
             actions={renderActions}
           />

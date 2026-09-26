@@ -17,6 +17,7 @@ import Pagination from '../../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import useSessionState from '../../hooks/useSessionState';
+import useClientSort from '../../hooks/useClientSort';
 
 
 const STATUS_LABELS = {
@@ -50,6 +51,13 @@ const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
 const fmtDate = (v) => (v ? formatDateOnly(v) : '');
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
+
+// Cột bấm được để sắp xếp: lấy giá trị GỐC (ngày ISO, mã) chứ không phải chuỗi đã định dạng để hiển thị.
+// Trùng ngày thì đơn tạo sau đứng trước khi giảm dần.
+const SORT_COLUMNS = {
+  soCode: { get: (row) => row.soCode, type: 'text' },
+  soDate: { get: (row) => row.soDate, type: 'date' },
+};
 
 function SalesOrderListPage() {
   const navigate = useNavigate();
@@ -122,13 +130,15 @@ function SalesOrderListPage() {
   }, [filters]);
   useRealtimeRefresh(['SALES_ORDER'], loadOrders);
 
+  const { sortedRows: sortedOrders, sort, toggleSort } = useClientSort(orders, SORT_COLUMNS, { onChange: () => setCurrentPage(1) });
+
   const handleExport = () => {
     if (!orders || orders.length === 0) {
       showToast('warning', 'Không có dữ liệu để xuất Excel');
       return;
     }
     const headers = ['Mã đơn', 'Ngày lập', 'Khách hàng', 'Tổng tiền', 'Trạng thái'];
-    const data = orders.map(so => [
+    const data = sortedOrders.map(so => [
       so.soCode,
       fmtDate(so.soDate),
       so.customerName || `#${so.customerId}`,
@@ -215,7 +225,7 @@ function SalesOrderListPage() {
   // Pagination
   const totalItems = orders.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedOrders = sortedOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columns = [
     {
@@ -226,6 +236,7 @@ function SalesOrderListPage() {
     {
       title: 'Mã đơn',
       dataIndex: 'soCode',
+      sortKey: 'soCode',
       width: 130,
       render: (val, so) => (
         <a className={styles.link} onClick={e => { e.stopPropagation(); navigate(`/sales-orders/${so.id}`); }}>
@@ -236,6 +247,7 @@ function SalesOrderListPage() {
     {
       title: 'Ngày lập',
       dataIndex: 'soDate',
+      sortKey: 'soDate',
       width: 110,
       render: (val) => fmtDate(val)
     },
@@ -433,6 +445,8 @@ function SalesOrderListPage() {
             data={paginatedOrders}
             loading={loading}
             emptyMessage="Không tìm thấy đơn bán hàng nào"
+            sort={sort}
+            onSort={toggleSort}
             onRowClick={(so) => navigate(`/sales-orders/${so.id}`)}
             actions={renderActions}
           />
