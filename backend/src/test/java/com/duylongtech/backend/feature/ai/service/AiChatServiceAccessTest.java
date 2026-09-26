@@ -167,7 +167,7 @@ class AiChatServiceAccessTest {
 
         AiChatResponse response = service.chat("Phiếu nhập kho gần nhất", List.of());
 
-        assertTrue(response.getAnswer().contains("Tìm thấy 0 phiếu"));
+        assertTrue(response.getAnswer().contains("Tìm thấy 0 phiếu gần nhất"));
         verifyNoInteractions(inventoryDocumentRepository);
     }
 

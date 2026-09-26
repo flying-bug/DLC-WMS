@@ -368,13 +368,7 @@ function AiChatPage() {
                             </button>
                         </div>
 
-                        <div className={styles.statusBox}>
-                            <span className={styles.statusDot} />
-                            <div>
-                                <strong>Hệ thống AI sẵn sàng</strong>
-                                <p>Đọc dữ liệu thời gian thực & mô hình RAG</p>
-                            </div>
-                        </div>
+
 
                         <div className={styles.promptGroup}>
                             <h3><i className="bi bi-lightbulb-fill" style={{ color: '#eab308', marginRight: '6px' }} /> GỢI Ý CÂU HỎI</h3>
