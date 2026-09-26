@@ -13,6 +13,9 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
 
     boolean existsByPoCode(String poCode);
 
+    /** Tra theo mã cho Trợ lý AI (getDocumentDetail). */
+    Optional<PurchaseOrder> findFirstByPoCode(String poCode);
+
     @Query("""
         SELECT po FROM PurchaseOrder po
         LEFT JOIN FETCH po.partner p

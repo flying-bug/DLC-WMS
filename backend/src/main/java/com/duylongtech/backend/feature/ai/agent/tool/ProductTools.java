@@ -7,6 +7,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 /** Công cụ tra cứu sản phẩm / SKU (chỉ đọc). Cần quyền product:view; giá chỉ hiện với vai trò được xem giá. */
 @Component
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class ProductTools {
 

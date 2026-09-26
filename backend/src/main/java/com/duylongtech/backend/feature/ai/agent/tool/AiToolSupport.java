@@ -22,6 +22,11 @@ import java.util.Optional;
  * Phần dùng chung của các công cụ (tool) cho AI Agent. Mọi kiểm tra quyền dựa trên người đang đăng nhập
  * (SecurityContext), KHÔNG lấy danh tính hay quyền từ tham số mô hình truyền vào. Mô hình chỉ nhận lại văn bản lỗi
  * khi bị từ chối, để nó giải thích cho người dùng thay vì đoán số liệu.
+ *
+ * Mỗi lớp công cụ mang {@code @Transactional(readOnly = true)}: mỗi lần gọi công cụ có transaction ngắn riêng (đọc được
+ * quan hệ LAZY) và trả kết nối DB về pool ngay khi công cụ xong, không giữ kết nối trong lúc chờ mô hình. Spring AI gọi
+ * công cụ qua proxy của bean nên annotation có hiệu lực. Kết quả trả về chỉ được chứa giá trị thường (chuỗi, số, ngày đã
+ * định dạng), không chứa entity: nó được chuyển thành JSON sau khi transaction đã đóng.
  */
 @Component
 @RequiredArgsConstructor
@@ -45,6 +50,10 @@ public class AiToolSupport {
      */
     public Map<String, Object> begin(String tool, String args, String label, String... permissions) {
         AiAgentRun run = AiAgentRun.current();
+        if (run != null && run.isExpired()) {
+            log.warn("[AI-AGENT] time budget exceeded tool={} user={} elapsedMs={}", tool, currentUser(), run.elapsedMillis());
+            return error("Đã hết thời gian xử lý câu hỏi này. Không gọi thêm công cụ nào nữa: hãy trả lời ngay bằng dữ liệu đã có và nói rõ phần còn thiếu.");
+        }
         if (run != null && !run.tryRecord(tool)) {
             log.warn("[AI-AGENT] tool budget exceeded tool={} user={}", tool, currentUser());
             return error("Đã vượt số lần gọi công cụ cho một câu hỏi. Hãy trả lời dựa trên dữ liệu đã có và nói rõ phần còn thiếu.");
@@ -109,6 +118,15 @@ public class AiToolSupport {
         List<Long> allowed = accessPolicy.allowedWarehouseIds();
         List<Warehouse> all = warehouseRepository.findAll();
         return allowed == null ? all : all.stream().filter(w -> allowed.contains(w.getId())).toList();
+    }
+
+    /** Nhãn "mã - tên" của mọi kho theo id, để hiển thị kho trên chứng từ (chứng từ chỉ lưu warehouseId). */
+    public Map<Long, String> warehouseLabels() {
+        Map<Long, String> labels = new LinkedHashMap<>();
+        for (Warehouse warehouse : warehouseRepository.findAll()) {
+            labels.put(warehouse.getId(), warehouse.getCode() + " - " + warehouse.getName());
+        }
+        return labels;
     }
 
     /** Tìm kho theo mã hoặc tên (bỏ dấu, không phân biệt hoa thường) trong TẤT CẢ kho, để phân biệt "không có" và "không được xem". */

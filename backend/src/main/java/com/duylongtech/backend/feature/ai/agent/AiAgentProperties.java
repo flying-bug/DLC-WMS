@@ -21,4 +21,9 @@ public class AiAgentProperties {
     private int maxRows = 10;
     /** Số lượt hội thoại gần nhất đưa vào ngữ cảnh. */
     private int historyTurns = 6;
+    /**
+     * Thời gian tối đa cho MỘT câu hỏi (giây). Quá hạn thì công cụ từ chối chạy để mô hình trả lời ngay; đồng thời là
+     * timeout của mỗi lời gọi HTTP tới nhà cung cấp (xem AiAgentModelConfig và spring.ai.openai.timeout).
+     */
+    private int timeoutSeconds = 30;
 }
