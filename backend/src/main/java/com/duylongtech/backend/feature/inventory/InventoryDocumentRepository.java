@@ -69,6 +69,10 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
 
     boolean existsByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
 
+    /** Các phiếu cùng loại tham chiếu tới một chứng từ (vd phiếu điều chỉnh của một lần kiểm kê), mới nhất trước. */
+    List<InventoryDocument> findByReferenceTypeInAndReferenceIdAndDocTypeOrderByIdDesc(
+            java.util.Collection<String> referenceTypes, Long referenceId, String docType);
+
     /**
      * Chống tạo trùng phiếu nhập kho từ PO cho CÙNG kho đích khi phiếu trước còn đang mở
      * (DRAFT/SUBMITTED); mỗi kho trong luồng nhập đa kho có phiếu riêng

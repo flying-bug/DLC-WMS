@@ -19,6 +19,8 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import DateInput from '../../components/ui/DateInput/DateInput';
 
+const ADJUSTMENT_STATUS_LABELS = { DRAFT: 'nháp', POSTED: 'đã ghi sổ', UNPOSTED: 'đã bỏ ghi sổ' };
+
 function StocktakeDetailPage() {
   const navigate = useNavigate();
   const goBack = useGoBack('/stocktakes');
@@ -105,6 +107,13 @@ function StocktakeDetailPage() {
           needsExportAdjustment: Boolean(data.needsExportAdjustment),
           importAdjustmentPosted: Boolean(data.importAdjustmentPosted),
           exportAdjustmentPosted: Boolean(data.exportAdjustmentPosted),
+          // Phiếu điều chỉnh đã lập (chưa hủy) của lần kiểm kê: mở phiếu này thay vì lập phiếu mới
+          importAdjustmentId: data.importAdjustmentId || null,
+          importAdjustmentCode: data.importAdjustmentCode || '',
+          importAdjustmentStatus: data.importAdjustmentStatus || '',
+          exportAdjustmentId: data.exportAdjustmentId || null,
+          exportAdjustmentCode: data.exportAdjustmentCode || '',
+          exportAdjustmentStatus: data.exportAdjustmentStatus || '',
           createdByCurrentUser: Boolean(data.createdBy) && String(data.createdBy) === String(getAuthUserId())
         });
 
@@ -593,7 +602,27 @@ function StocktakeDetailPage() {
     isApprover ? 'Đã bắt đầu kiểm kê, kho đang bị khóa' : 'Đã gửi yêu cầu kiểm kê, chờ quản lý duyệt');
 
 
+  // Mỗi lần kiểm kê chỉ có một phiếu nhập và một phiếu xuất điều chỉnh (backend cũng chặn lập / ghi sổ phiếu thứ hai)
+  const adjustmentSlip = (kind) => kind === 'import'
+    ? { id: formData.importAdjustmentId, code: formData.importAdjustmentCode, status: formData.importAdjustmentStatus }
+    : { id: formData.exportAdjustmentId, code: formData.exportAdjustmentCode, status: formData.exportAdjustmentStatus };
+
+  const adjustmentSlipLabel = (kind) => {
+    const slip = adjustmentSlip(kind);
+    const status = ADJUSTMENT_STATUS_LABELS[slip.status] || slip.status;
+    return `${kind === 'import' ? 'Phiếu nhập' : 'Phiếu xuất'} ${slip.code}${status ? ` (${status})` : ''}`;
+  };
+
+  const openAdjustmentSlip = (kind) => {
+    const slip = adjustmentSlip(kind);
+    if (slip.id) navigate(kind === 'import' ? `/import-slips/${slip.id}/edit` : `/export-slips/${slip.id}/edit`);
+  };
+
   const handleCreateExportSlip = () => {
+    if (formData.exportAdjustmentId) {
+      openAdjustmentSlip('export');
+      return;
+    }
     const diffLackLines = lines.filter(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) < 0
       || (l.serials || []).some(s => s.scanStatus === 'MISSING')));
     if (diffLackLines.length === 0) {
@@ -633,6 +662,10 @@ function StocktakeDetailPage() {
   };
 
   const handleCreateImportSlip = () => {
+    if (formData.importAdjustmentId) {
+      openAdjustmentSlip('import');
+      return;
+    }
     const diffSurplusLines = lines.filter(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) > 0
       || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED')));
     if (diffSurplusLines.length === 0) {
@@ -1139,13 +1172,21 @@ function StocktakeDetailPage() {
                     <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
                       <i className="bi bi-pencil"></i> Sửa
                     </button>
-                    {lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) < 0
+                    {formData.exportAdjustmentId ? (
+                      <button className={styles.btnViewOutline} onClick={() => openAdjustmentSlip('export')} title="Lần kiểm kê này đã có phiếu xuất điều chỉnh - mở phiếu đó">
+                        <i className="bi bi-box-arrow-up"></i> {adjustmentSlipLabel('export')}
+                      </button>
+                    ) : lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) < 0
                       || (l.serials || []).some(s => s.scanStatus === 'MISSING'))) && (
                       <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
                         <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
                       </button>
                     )}
-                    {lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) > 0
+                    {formData.importAdjustmentId ? (
+                      <button className={styles.btnViewOutline} onClick={() => openAdjustmentSlip('import')} title="Lần kiểm kê này đã có phiếu nhập điều chỉnh - mở phiếu đó">
+                        <i className="bi bi-box-arrow-in-down"></i> {adjustmentSlipLabel('import')}
+                      </button>
+                    ) : lines.some(l => !isSkippedDiff(l) && (Number(l.diffQty || 0) > 0
                       || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED'))) && (
                       <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
                         <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
@@ -1537,8 +1578,12 @@ function StocktakeDetailPage() {
               ))}
               {actions(
                 btnClose,
-                importPending && btnSecondary('Lập phiếu nhập', () => { close(); handleCreateImportSlip(); }),
-                exportPending && btnSecondary('Lập phiếu xuất', () => { close(); handleCreateExportSlip(); })
+                importPending && btnSecondary(
+                  formData.importAdjustmentId ? `Mở ${adjustmentSlipLabel('import')}` : 'Lập phiếu nhập',
+                  () => { close(); handleCreateImportSlip(); }),
+                exportPending && btnSecondary(
+                  formData.exportAdjustmentId ? `Mở ${adjustmentSlipLabel('export')}` : 'Lập phiếu xuất',
+                  () => { close(); handleCreateExportSlip(); })
               )}
             </>
           );

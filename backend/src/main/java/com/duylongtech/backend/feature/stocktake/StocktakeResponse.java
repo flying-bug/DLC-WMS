@@ -42,6 +42,13 @@ public class StocktakeResponse {
     private boolean needsExportAdjustment;
     private boolean importAdjustmentPosted;
     private boolean exportAdjustmentPosted;
+    /** Phiếu nhập / xuất điều chỉnh còn hiệu lực (chưa hủy) của lần kiểm kê: màn chi tiết mở phiếu này thay vì lập phiếu mới. */
+    private Long importAdjustmentId;
+    private String importAdjustmentCode;
+    private String importAdjustmentStatus;
+    private Long exportAdjustmentId;
+    private String exportAdjustmentCode;
+    private String exportAdjustmentStatus;
     private LocalDateTime waiverConfirmedAt;
     /** Số dòng lệch được chọn bỏ qua. */
     private int skippedDiffCount;
