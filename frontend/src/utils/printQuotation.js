@@ -1,5 +1,6 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
 import { formatDateOnly } from './dateFormat';
+import { companyHtml, companyPrintHeaderHtml } from './companyProfile';
 
 export function printQuotation(orderOrOrders, options = {}) {
   const {
@@ -93,23 +94,10 @@ export function printQuotation(orderOrOrders, options = {}) {
 
     return `
       <div style="position: relative;">
-        <div class="watermark-dl">DL</div>
+        <div class="watermark-dl">${companyHtml().initials}</div>
 
         <!-- HEADER -->
-        <table class="header-table">
-          <tr>
-            <td style="width: 35%; vertical-align: middle;">
-              <div class="header-logo">DL</div>
-              <div style="font-size: 13px; font-weight: 800; text-transform: uppercase;">DUYLONG computer</div>
-              <div class="header-subtitle">Since 2003</div>
-            </td>
-            <td style="width: 65%; text-align: right;" class="company-info">
-              Tầng 1, số 42 Lê Thanh Nghị, Phường Bách Khoa, Quận Hai Bà Trưng, TP. Hà Nội<br/>
-              Điện thoại: <strong>0914.89.8889 - 0912.01.1102 - 039.271.8888 - 07.8865.8865</strong><br/>
-              Email: duylongcomputer@gmail.com | Website: <strong>maytinhduylong.vn</strong>
-            </td>
-          </tr>
-        </table>
+        ${companyPrintHeaderHtml()}
 
         <!-- TITLE -->
         <div class="title-container">
@@ -185,7 +173,7 @@ export function printQuotation(orderOrOrders, options = {}) {
             <li><strong>Hiệu lực báo giá:</strong> Báo giá có hiệu lực trong vòng 07 ngày kể từ ngày lập.</li>
             <li><strong>Thời gian giao hàng:</strong> Giao hàng tận nơi theo thỏa thuận giữa hai bên.</li>
             <li><strong>Phương thức thanh toán:</strong> Tiền mặt hoặc Chuyển khoản ngân hàng.</li>
-            <li><strong>Ghi chú:</strong> Giá trên đã bao gồm các hỗ trợ kỹ thuật và cài đặt theo quy định của Duy Long Computer.</li>
+            <li><strong>Ghi chú:</strong> Giá trên đã bao gồm các hỗ trợ kỹ thuật và cài đặt theo quy định của ${companyHtml().shortName}.</li>
           </ul>
         </div>
 
@@ -205,7 +193,7 @@ export function printQuotation(orderOrOrders, options = {}) {
               <div>${escapeHtml(salesperson !== 'Chưa rõ' ? salesperson : '')}</div>
             </td>
             <td style="width: 34%;">
-              <div class="sign-role">Đại diện Duy Long Computer</div>
+              <div class="sign-role">Đại diện ${companyHtml().shortName}</div>
               <div class="sign-note">(Ký, đóng dấu)</div>
               <div class="sign-space"></div>
               <div></div>

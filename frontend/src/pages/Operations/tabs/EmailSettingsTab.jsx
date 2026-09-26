@@ -4,8 +4,10 @@ import { getGmailStatus, sendTestEmail, disconnectGmail, getGmailConnectUrl } fr
 import { useToast } from '../../../contexts/ToastContext';
 import styles from './EmailSettingsTab.module.css';
 import { formatDateTime } from '../../../utils/dateFormat';
+import { useCompanyProfile } from '../../../hooks/useCompanyProfile';
 
 function EmailSettingsTab() {
+    const company = useCompanyProfile();
     const [searchParams, setSearchParams] = useSearchParams();
     const [loading, setLoading] = useState(true);
     const [status, setStatus] = useState({ connected: false, connectedEmail: null, connectedAt: null });
@@ -136,7 +138,7 @@ function EmailSettingsTab() {
                         <i className="bi bi-envelope-at-fill" /> Cấu hình Email hệ thống
                     </h1>
                     <p className={styles.pageSubtitle}>
-                        Quản lý xác thực Google Gmail OAuth và cơ chế gửi email tự động cho toàn hệ thống Duy Long Computer
+                        Quản lý xác thực Google Gmail OAuth và cơ chế gửi email tự động cho toàn hệ thống {company.shortName}
                     </p>
                 </div>
             </div>

@@ -24,6 +24,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { canViewPricing, getAuthRoles, hasPermission } from '../../auth/session';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 const REPORT_DOMAINS = [
     { id: 'ALL', label: 'Tất cả báo cáo', icon: 'bi bi-grid-3x3-gap' },
@@ -138,6 +139,7 @@ const TRANSFER_STATUS_LABELS = {
 };
 
 const ReportListPage = () => {
+    const company = useCompanyProfile();
     const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
     const isSuperAdminOrAccountant = roles.some(r =>
         ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'MANAGER', 'ROLE_MANAGER', 'ACCOUNTANT', 'ROLE_ACCOUNTANT'].includes(r)
@@ -830,7 +832,7 @@ const ReportListPage = () => {
                             {/* Report Results Content */}
                             <div className="report-results-view" style={{ background: 'var(--color-surface)', padding: '24px', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border-soft)' }}>
                                 <div className={styles.reportMetadataHeader}>
-                                    <h4>Duy Long Computer Warehouse</h4>
+                                    <h4>{company.name}</h4>
                                     <p><strong>Kỳ báo cáo:</strong> {activeReport.id === 'inventory-balance'
                                         ? 'Tính đến thời điểm hiện tại'
                                         : (!filters.startDate && !filters.endDate

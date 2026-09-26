@@ -369,6 +369,13 @@ public enum SystemMessage {
     // System Settings
     SYS_SET_ERR_001("SYS_SET_001", "Đổi mã Google OAuth2 thất bại."),
 
+    // Business Settings (Thông tin doanh nghiệp & thuế)
+    BIZ_SET_ERR_001("BIZ_SET_001", "Mức thuế VAT chỉ được là số nguyên từ 0 đến 10 (%)."),
+    BIZ_SET_ERR_002("BIZ_SET_002", "Phải có ít nhất một mức thuế VAT cho phép."),
+    BIZ_SET_ERR_003("BIZ_SET_003", "Mức thuế VAT mặc định phải nằm trong danh sách mức thuế cho phép."),
+    BIZ_SET_ERR_004("BIZ_SET_004", "Tên doanh nghiệp không được để trống."),
+    BIZ_SET_ERR_005("BIZ_SET_005", "Email doanh nghiệp không hợp lệ."),
+
     // Voice Command
     VOICE_ERR_001("VOICE_001", "Gemini chưa được bật hoặc chưa cấu hình API key."),
     VOICE_ERR_002("VOICE_002", "OpenAI chưa được bật hoặc chưa cấu hình API key."),

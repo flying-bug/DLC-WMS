@@ -70,6 +70,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/login-google",
                                 "/api/v1/auth/forgot-password/**",
+                                // Chỉ tên hiển thị doanh nghiệp, cho màn đăng nhập / quên mật khẩu
+                                "/api/v1/business-settings/branding",
                                 "/api/v1/imports/ocr-session/**",
                                 "/api/v1/einvoices/preview/**",
                                 "/api/v1/email/google/callback",

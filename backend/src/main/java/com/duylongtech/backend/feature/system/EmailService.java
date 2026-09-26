@@ -40,6 +40,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final GmailOAuthService gmailOAuthService;
+    private final SystemSettingsService settingsService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${spring.mail.username:computerduylong@gmail.com}")
@@ -206,15 +207,38 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    /** Tên hiển thị doanh nghiệp (Thông tin doanh nghiệp), đã escape để chèn vào email HTML. */
+    private String brandName() {
+        return HtmlUtils.htmlEscape(settingsService.getCompanyProfile().getShortName(), "UTF-8");
+    }
+
+    /** Khối thông tin liên hệ doanh nghiệp cuối email gửi khách hàng. */
+    private static String companyContactHtml(CompanyProfileDto company) {
+        StringBuilder html = new StringBuilder();
+        if (company.getAddress() != null && !company.getAddress().isBlank()) {
+            html.append("<div>Địa chỉ: ").append(HtmlUtils.htmlEscape(company.getAddress(), "UTF-8")).append("</div>");
+        }
+        String contact = java.util.stream.Stream.of(
+                        company.getPhone() == null || company.getPhone().isBlank() ? null : "Điện thoại: " + HtmlUtils.htmlEscape(company.getPhone(), "UTF-8"),
+                        company.getEmail() == null || company.getEmail().isBlank() ? null : "Email: " + HtmlUtils.htmlEscape(company.getEmail(), "UTF-8"),
+                        company.getWebsite() == null || company.getWebsite().isBlank() ? null : "Website: " + HtmlUtils.htmlEscape(company.getWebsite(), "UTF-8"))
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.joining(" | "));
+        if (!contact.isEmpty()) {
+            html.append("<div>").append(contact).append("</div>");
+        }
+        return html.toString();
+    }
+
     @Async
     public void sendResetPasswordEmail(String toEmail, String newPassword) {
         String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
                 + "<h2 style='color: #007bff; text-align: center;'>Khôi phục mật khẩu</h2>"
                 + "<p>Chào bạn,</p>"
-                + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản hệ thống Duy Long Computer Warehouse Management của bạn.</p>"
+                + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản hệ thống " + brandName() + " Warehouse Management của bạn.</p>"
                 + "<p>Mã OTP của bạn là: <strong style='font-size: 24px; letter-spacing: 4px; color: #d9534f; display: block; text-align: center; margin: 20px 0;'>" + newPassword + "</strong></p>"
                 + "<p>Mã OTP này có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>"
-                + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ Duy Long Computer Warehouse Management</p>"
+                + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ " + brandName() + " Warehouse Management</p>"
                 + "</div>";
 
         sendEmail(toEmail, "Yêu cầu khôi phục mật khẩu - DLC-WMS", htmlMsg, "DLC-WMS System");
@@ -226,13 +250,13 @@ public class EmailService {
         String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
                 + "<h2 style='color: #007bff; text-align: center;'>Tài khoản DLC-WMS của bạn</h2>"
                 + "<p>Chào " + HtmlUtils.htmlEscape(displayName) + ",</p>"
-                + "<p>Tài khoản của bạn đã được tạo trên hệ thống Duy Long Computer Warehouse Management.</p>"
+                + "<p>Tài khoản của bạn đã được tạo trên hệ thống " + brandName() + " Warehouse Management.</p>"
                 + "<div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;'>"
                 + "<p><strong>Tên đăng nhập:</strong> " + HtmlUtils.htmlEscape(username) + "</p>"
                 + "<p><strong>Mật khẩu tạm thời:</strong> <span style='font-size: 18px; letter-spacing: 2px; color: #d9534f; font-weight: bold;'>" + HtmlUtils.htmlEscape(password) + "</span></p>"
                 + "</div>"
                 + "<p>Vui lòng đăng nhập và đổi mật khẩu sau khi nhận được email này.</p>"
-                + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ Duy Long Computer Warehouse Management</p>"
+                + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ " + brandName() + " Warehouse Management</p>"
                 + "</div>";
 
         sendEmail(toEmail, "Thông tin tài khoản DLC-WMS", htmlMsg, "DLC-WMS System");
@@ -258,7 +282,7 @@ public class EmailService {
                     + "<li><strong>Thời gian:</strong> " + timeNow + "</li>"
                     + (isSuccess ? "" : "<li><strong>Chi tiết lỗi:</strong> " + errorDetails + "</li>")
                     + "</ul>"
-                    + "<p style='margin-top: 20px;'>Trân trọng,<br/>Đội ngũ Quản trị Duy Long Computer Warehouse Management</p>"
+                    + "<p style='margin-top: 20px;'>Trân trọng,<br/>Đội ngũ Quản trị " + brandName() + " Warehouse Management</p>"
                     + "</div>";
 
             sendEmail(toEmail, "[DLC-WMS] Báo cáo Sao lưu Cơ sở dữ liệu - " + statusText, htmlMsg, "DLC-WMS Backup System");
@@ -274,6 +298,7 @@ public class EmailService {
         }
 
         String typeName = com.duylongtech.backend.enums.DocumentStatus.POSTED.name().equals(so.getStatus()) ? "Hóa Đơn" : "Báo Giá";
+        CompanyProfileDto company = settingsService.getCompanyProfile();
         java.text.NumberFormat nf = java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN"));
 
         StringBuilder tableRows = new StringBuilder();
@@ -342,11 +367,12 @@ public class EmailService {
 
                 + "<div style='border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 13px; color: #64748b; line-height: 1.5;'>"
                 + "<p>Nếu Quý khách có bất kỳ thắc mắc nào, xin vui lòng liên hệ với chúng tôi để được hỗ trợ tốt nhất.</p>"
-                + "<p>Trân trọng,<br/><strong>Hệ thống Quản lý Bán hàng Duy Long Computer Warehouse Management</strong></p>"
+                + "<p>Trân trọng,<br/><strong>" + HtmlUtils.htmlEscape(company.getName(), "UTF-8") + "</strong></p>"
+                + companyContactHtml(company)
                 + "</div>"
                 + "</div>";
 
-        sendEmail(toEmail, "[" + typeName.toUpperCase() + "] Đơn hàng " + (so.getSoCode() != null ? so.getSoCode() : "") + " - DLC WMS", htmlMsg, "DLC-WMS " + typeName);
+        sendEmail(toEmail, "[" + typeName.toUpperCase() + "] Đơn hàng " + (so.getSoCode() != null ? so.getSoCode() : "") + " - " + company.getShortName(), htmlMsg, company.getShortName());
     }
 
     @Async
@@ -387,7 +413,7 @@ public class EmailService {
                     + "</div>"
                     + "<p style='font-size: 13px; color: #64748b; line-height: 1.6;'>Dữ liệu snapshot được lưu trữ để tăng tốc truy vấn báo cáo Nhập - Xuất - Tồn và lưu lại lịch sử biến động số dư kho theo ngày.</p>"
                     + "<div style='border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 15px; font-size: 13px; color: #94a3b8; text-align: center;'>"
-                    + "<p style='margin: 0;'>Hệ thống Quản lý Kho Hàng Duy Long Computer (DLC-WMS)</p>"
+                    + "<p style='margin: 0;'>Hệ thống Quản lý Kho Hàng " + brandName() + " (DLC-WMS)</p>"
                     + "</div>"
                     + "</div>";
 

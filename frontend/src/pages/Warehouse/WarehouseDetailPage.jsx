@@ -11,6 +11,7 @@ import WarehouseStaffList from './components/WarehouseStaffList';
 import styles from './WarehouseDetailPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 const formatCurrency = (value) => {
     if (value === undefined || value === null) return '0 ₫';
@@ -82,6 +83,7 @@ const renderLogChanges = (log) => {
 };
 
 const WarehouseDetailPage = () => {
+    const company = useCompanyProfile();
     const navigate = useNavigate();
     const { id } = useParams();
     const guard = usePermissionGuard();
@@ -410,7 +412,7 @@ const WarehouseDetailPage = () => {
 
                 {/* Footer */}
                 <div className={styles.pageFooter}>
-                    © 2026 Duy Long Computer - Hệ thống quản lý kho v2.4.1
+                    © 2026 {company.shortName} - Hệ thống quản lý kho v2.4.1
                 </div>
 
                 <WarehouseFormModal

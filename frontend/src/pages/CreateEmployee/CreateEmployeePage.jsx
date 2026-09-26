@@ -9,6 +9,7 @@ import { useToast } from '../../contexts/ToastContext';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { ROLE_OPTIONS } from '../../utils/roleOptions';
 import DateInput from '../../components/ui/DateInput/DateInput';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 const WAREHOUSE_SCOPED_ROLES = ['ROLE_WAREHOUSE_CONTROLLER', 'ROLE_TECHNICIAN'];
 
@@ -34,6 +35,7 @@ const parseDisplayDateToIso = (value) => {
 };
 
 function CreateEmployeePage() {
+    const company = useCompanyProfile();
     const navigate = useNavigate();
     const goBack = useGoBack('/users');
     const { showToast } = useToast();
@@ -428,7 +430,7 @@ function CreateEmployeePage() {
                     )}
 
                     <div className={styles.securityNote}>
-                        <i className="bi bi-lock"></i> Mọi dữ liệu cá nhân được lưu trữ theo giao thức bảo mật và quy định hiện hành của Duy Long Computer.
+                        <i className="bi bi-lock"></i> Mọi dữ liệu cá nhân được lưu trữ theo giao thức bảo mật và quy định hiện hành của {company.shortName}.
                     </div>
                 </form>
 

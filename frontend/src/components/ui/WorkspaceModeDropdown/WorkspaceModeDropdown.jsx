@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useWorkspaceMode, WORKSPACE_MODES } from '../../../contexts/WorkspaceModeContext';
 import { ROUTES } from '../../../constants';
 import styles from './WorkspaceModeDropdown.module.css';
+import { useCompanyProfile } from '../../../hooks/useCompanyProfile';
 
 export default function WorkspaceModeDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const company = useCompanyProfile();
 
   const { workspaceMode, setWorkspaceMode, currentModeConfig, MODE_CONFIGS, allowedModes } = useWorkspaceMode();
   const selectableModes = Object.values(MODE_CONFIGS).filter(item => allowedModes.includes(item.id));
@@ -44,7 +46,7 @@ export default function WorkspaceModeDropdown() {
   const triggerContent = (
     <>
       <i className={`fas fa-store ${styles.shopIcon}`}></i>
-      <span className={styles.brandName}>Duy Long Computer</span>
+      <span className={styles.brandName}>{company.shortName}</span>
       <span className={styles.divider}>|</span>
       <span className={styles.modeBadge}>
         <i className={currentModeConfig.icon}></i>

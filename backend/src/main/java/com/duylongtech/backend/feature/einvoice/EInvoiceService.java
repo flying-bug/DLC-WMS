@@ -49,6 +49,9 @@ import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
+import com.duylongtech.backend.feature.system.CompanyProfileDto;
+import com.duylongtech.backend.feature.system.SystemSettingsService;
+import org.springframework.web.util.HtmlUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -62,6 +65,7 @@ public class EInvoiceService {
     private final PartnerRepository partnerRepository;
     private final EInvoiceProviderFactory providerFactory;
     private final AuditLogService auditLogService;
+    private final SystemSettingsService settingsService;
 
     // ─── Query List ─────────────────────────────────────────────────────────────
     @Transactional(readOnly = true)
@@ -331,6 +335,7 @@ public class EInvoiceService {
         BigDecimal grandTotal = calculatedSubTotal.add(calculatedVat);
         String amountInWords = convertMoneyToWords(grandTotal);
 
+        CompanyProfileDto seller = settingsService.getCompanyProfile();
         EInvoiceProviderData providerData = EInvoiceProviderData.builder()
                 .transactionUuid(txUuid)
                 .invoiceType(request.getInvoiceType() != null ? request.getInvoiceType() : "1")
@@ -340,9 +345,11 @@ public class EInvoiceService {
                 .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "TM/CK")
                 .currencyCode("VND")
                 .exchangeRate(BigDecimal.ONE)
-                .sellerTaxCode("0100109106")
-                .sellerLegalName("CÔNG TY TNHH CÔNG NGHỆ DUY LONG")
-                .sellerAddress("Hà Nội, Việt Nam")
+                .sellerTaxCode(seller.getTaxCode())
+                .sellerLegalName(seller.getName())
+                .sellerAddress(seller.getAddress())
+                .sellerPhone(seller.getPhone())
+                .sellerEmail(seller.getEmail())
                 .buyerName(buyerName)
                 .buyerLegalName(buyerLegalName)
                 .buyerTaxCode(buyerTaxCode)
@@ -380,6 +387,7 @@ public class EInvoiceService {
         einvoice.setBuyerAddress(buyerAddress);
         einvoice.setBuyerPhone(buyerPhone);
         einvoice.setBuyerEmail(buyerEmail);
+        applySeller(einvoice, seller);
         einvoice.setCurrencyCode("VND");
         einvoice.setExchangeRate(BigDecimal.ONE);
         einvoice.setPaymentMethod(providerData.getPaymentMethod());
@@ -479,6 +487,7 @@ public class EInvoiceService {
 
         String txUuid = "RPL-" + original.getInvoiceNumber() + "-" + UUID.randomUUID().toString().substring(0, 8);
 
+        CompanyProfileDto seller = settingsService.getCompanyProfile();
         EInvoiceProviderData providerData = EInvoiceProviderData.builder()
                 .transactionUuid(txUuid)
                 .invoiceType(original.getInvoiceType())
@@ -488,9 +497,11 @@ public class EInvoiceService {
                 .paymentMethod(original.getPaymentMethod())
                 .currencyCode(original.getCurrencyCode())
                 .exchangeRate(original.getExchangeRate())
-                .sellerTaxCode("0100109106")
-                .sellerLegalName("CÔNG TY TNHH CÔNG NGHỆ DUY LONG")
-                .sellerAddress("Hà Nội, Việt Nam")
+                .sellerTaxCode(seller.getTaxCode())
+                .sellerLegalName(seller.getName())
+                .sellerAddress(seller.getAddress())
+                .sellerPhone(seller.getPhone())
+                .sellerEmail(seller.getEmail())
                 .buyerName(buyerName)
                 .buyerLegalName(buyerLegalName)
                 .buyerTaxCode(buyerTaxCode)
@@ -525,6 +536,7 @@ public class EInvoiceService {
         replacement.setBuyerAddress(buyerAddress);
         replacement.setBuyerPhone(buyerPhone);
         replacement.setBuyerEmail(buyerEmail);
+        applySeller(replacement, seller);
         replacement.setCurrencyCode(original.getCurrencyCode());
         replacement.setExchangeRate(original.getExchangeRate());
         replacement.setPaymentMethod(original.getPaymentMethod());
@@ -608,6 +620,7 @@ public class EInvoiceService {
 
         String txUuid = "ADJ-" + original.getInvoiceNumber() + "-" + UUID.randomUUID().toString().substring(0, 8);
 
+        CompanyProfileDto seller = settingsService.getCompanyProfile();
         EInvoiceProviderData providerData = EInvoiceProviderData.builder()
                 .transactionUuid(txUuid)
                 .invoiceType(original.getInvoiceType())
@@ -617,9 +630,11 @@ public class EInvoiceService {
                 .paymentMethod(original.getPaymentMethod())
                 .currencyCode(original.getCurrencyCode())
                 .exchangeRate(original.getExchangeRate())
-                .sellerTaxCode("0100109106")
-                .sellerLegalName("CÔNG TY TNHH CÔNG NGHỆ DUY LONG")
-                .sellerAddress("Hà Nội, Việt Nam")
+                .sellerTaxCode(seller.getTaxCode())
+                .sellerLegalName(seller.getName())
+                .sellerAddress(seller.getAddress())
+                .sellerPhone(seller.getPhone())
+                .sellerEmail(seller.getEmail())
                 .buyerName(buyerName)
                 .buyerLegalName(buyerLegalName)
                 .buyerTaxCode(buyerTaxCode)
@@ -654,6 +669,7 @@ public class EInvoiceService {
         adjustment.setBuyerAddress(buyerAddress);
         adjustment.setBuyerPhone(buyerPhone);
         adjustment.setBuyerEmail(buyerEmail);
+        applySeller(adjustment, seller);
         adjustment.setCurrencyCode(original.getCurrencyCode());
         adjustment.setExchangeRate(original.getExchangeRate());
         adjustment.setPaymentMethod(original.getPaymentMethod());
@@ -815,7 +831,39 @@ public class EInvoiceService {
         return str;
     }
 
+    private static void applySeller(EInvoice invoice, CompanyProfileDto seller) {
+        invoice.setSellerLegalName(seller.getName());
+        invoice.setSellerTaxCode(seller.getTaxCode());
+        invoice.setSellerAddress(seller.getAddress());
+        invoice.setSellerPhone(seller.getPhone());
+        invoice.setSellerEmail(seller.getEmail());
+    }
+
+    /** Người bán in trên hóa đơn: thông tin đã chốt lúc phát hành; hóa đơn phát hành trước khi có chốt thì lấy thông tin hiện tại. */
+    private CompanyProfileDto sellerOf(EInvoice inv) {
+        if (inv.getSellerLegalName() == null || inv.getSellerLegalName().isBlank()) {
+            return settingsService.getCompanyProfile();
+        }
+        return CompanyProfileDto.builder()
+                .name(inv.getSellerLegalName())
+                .taxCode(inv.getSellerTaxCode())
+                .address(inv.getSellerAddress())
+                .phone(inv.getSellerPhone())
+                .email(inv.getSellerEmail())
+                .build();
+    }
+
+    private static String escapeOrEmpty(String value) {
+        return value == null ? "" : HtmlUtils.htmlEscape(value, "UTF-8");
+    }
+
     private String renderInvoiceHtml(EInvoice inv) {
+        CompanyProfileDto seller = sellerOf(inv);
+        String sellerContact = java.util.stream.Stream.of(
+                        seller.getPhone() == null || seller.getPhone().isBlank() ? null : "Điện thoại: " + escapeOrEmpty(seller.getPhone()),
+                        seller.getEmail() == null || seller.getEmail().isBlank() ? null : "Email: " + escapeOrEmpty(seller.getEmail()))
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.joining(" - "));
         StringBuilder itemsHtml = new StringBuilder();
         int idx = 1;
 
@@ -909,6 +957,10 @@ public class EInvoiceService {
         return String.format(com.duylongtech.backend.constant.EInvoiceTemplate.MAIN_TEMPLATE,
             inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : inv.getTransactionUuid(),
             DocumentStatus.CANCELED.name().equals(inv.getStatus()) ? "<div class=\"watermark\">HÓA ĐƠN ĐÃ HỦY</div>" : "",
+            escapeOrEmpty(seller.getName()),
+            escapeOrEmpty(seller.getTaxCode()),
+            escapeOrEmpty(seller.getAddress()),
+            sellerContact,
             inv.getTemplateCode(),
             inv.getInvoiceSeries(),
             inv.getInvoiceNumber() != null ? inv.getInvoiceNumber() : "Chưa cấp số",
@@ -928,6 +980,7 @@ public class EInvoiceService {
             inv.getVatAmount(),
             inv.getTotalAmount(),
             inv.getTotalAmountInWords() != null ? inv.getTotalAmountInWords() : "",
+            escapeOrEmpty(seller.getName()),
             inv.getIssuedAt() != null ? inv.getIssuedAt().toString() : "2026-08-18"
         );
     }

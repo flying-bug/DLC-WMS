@@ -5,7 +5,8 @@ import StepVerifyOTP from './components/StepVerifyOTP';
 import StepResetPassword from './components/StepResetPassword';
 import Toast from '../../components/ui/Toast';
 import styles from './ForgotPasswordPage.module.css';
-import { ROUTES, APP_NAME, COPYRIGHT_YEAR, COMPANY_NAME } from '../../constants';
+import { ROUTES, APP_NAME, COPYRIGHT_YEAR } from '../../constants';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 /**
  * Flow quên mật khẩu — 3 bước:
@@ -23,6 +24,7 @@ const STEP_META = [
 
 function ForgotPasswordPage() {
     const navigate = useNavigate();
+    const company = useCompanyProfile({ publicOnly: true });
     const [step, setStep] = useState(STEPS.REQUEST_EMAIL);
     const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
@@ -70,7 +72,7 @@ function ForgotPasswordPage() {
                         </svg>
                     </div>
                     <div className={styles.logoText}>
-                        <span className={styles.logoName}>DUY LONG</span>
+                        <span className={styles.logoName}>{company.shortName.toLocaleUpperCase('vi-VN')}</span>
                         <span className={styles.logoSub}>WAREHOUSE MANAGEMENT</span>
                     </div>
                 </Link>
@@ -100,7 +102,7 @@ function ForgotPasswordPage() {
 
                 {/* Footer */}
                 <p className={styles.footer}>
-                    © {COPYRIGHT_YEAR} {COMPANY_NAME.toUpperCase()}. ALL RIGHTS RESERVED.
+                    © {COPYRIGHT_YEAR} {company.shortName.toLocaleUpperCase('vi-VN')}. ALL RIGHTS RESERVED.
                 </p>
             </div>
 

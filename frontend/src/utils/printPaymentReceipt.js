@@ -1,5 +1,6 @@
 import { formatDateTime } from './dateFormat';
 import { numberToVietnameseWords } from './numberToVietnameseWords';
+import { companyHtml } from './companyProfile';
 
 export function printPaymentReceipt(paymentOrPayments, options = {}) {
   const {
@@ -58,9 +59,8 @@ export function printPaymentReceipt(paymentOrPayments, options = {}) {
         <table style="width: 100%; margin-bottom: 20px;">
           <tr>
             <td style="width: 35%; vertical-align: top; font-weight: bold; font-size: 14px;">
-              Đơn vị: DLC COMPUTER<br/>
-              Địa chỉ: .................................<br/>
-              ................................................
+              Đơn vị: ${companyHtml().name}<br/>
+              Địa chỉ: ${companyHtml().address || '.................................'}
             </td>
             <td style="width: 65%; vertical-align: top; text-align: center;">
               <strong style="font-size: 16px;">Mẫu số ${isReceipt ? '01' : '02'} - TT</strong><br/>

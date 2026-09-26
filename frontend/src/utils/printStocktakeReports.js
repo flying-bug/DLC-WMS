@@ -1,5 +1,6 @@
 import { formatDateOnly } from './dateFormat';
 import { printStocktakeReport } from './printStocktakeReport';
+import { companyHtml } from './companyProfile';
 
 const escapeHtml = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')
@@ -54,7 +55,7 @@ const renderReportPage = (stocktake) => {
   return `
     <section class="report-page">
       <header>
-        <div><strong>CÔNG TY TNHH VẬT TƯ THIẾT BỊ DUY LONG</strong><small>Hệ thống Quản lý Kho Hàng (DLC-WMS)</small></div>
+        <div><strong>${companyHtml().nameUpper}</strong><small>Hệ thống Quản lý Kho Hàng (DLC-WMS)</small></div>
         <div class="print-date">Mẫu số: 05-VT<br>Ngày in: ${formatDateOnly(new Date())}</div>
       </header>
       <div class="title">

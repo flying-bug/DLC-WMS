@@ -85,6 +85,23 @@ public class EInvoice {
     @Column(name = "buyer_email", length = 150)
     private String buyerEmail;
 
+    // Người bán tại thời điểm phát hành (từ Thông tin doanh nghiệp). Đổi thông tin doanh nghiệp sau này
+    // không làm thay đổi hóa đơn đã phát hành.
+    @Column(name = "seller_legal_name", length = 255)
+    private String sellerLegalName;
+
+    @Column(name = "seller_tax_code", length = 50)
+    private String sellerTaxCode;
+
+    @Column(name = "seller_address", columnDefinition = "TEXT")
+    private String sellerAddress;
+
+    @Column(name = "seller_phone", length = 150)
+    private String sellerPhone;
+
+    @Column(name = "seller_email", length = 150)
+    private String sellerEmail;
+
     // Currency & Amounts
     @Column(name = "currency_code", nullable = false, length = 10)
     private String currencyCode = "VND";
