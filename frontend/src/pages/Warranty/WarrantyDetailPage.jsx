@@ -212,7 +212,7 @@ function WarrantyDetailPage() {
                     <label>Kèm theo chứng từ</label>
                     <p>
                       {warranty.exportSlipId ? (
-                        <span style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/export-slips/${warranty.exportSlipId}/edit`)}>
+                        <span style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/export-slips/${warranty.exportSlipId}`)}>
                           {warranty.exportSlipCode || 'Phiếu xuất kho'}
                         </span>
                       ) : warranty.salesOrderId ? (

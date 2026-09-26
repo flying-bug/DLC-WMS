@@ -257,7 +257,7 @@ function PurchaseOrderDetailPage() {
   );
 
   const importSlipsColumns = [
-    { title: 'Mã phiếu nhập', render: (_, slip) => <span style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }} onClick={() => navigate(`/import-slips/${slip.id}/edit`)}>{slip.docCode}</span> },
+    { title: 'Mã phiếu nhập', render: (_, slip) => <span style={{ fontWeight: 600, color: 'var(--wms-primary)', cursor: 'pointer' }} onClick={() => navigate(`/import-slips/${slip.id}`)}>{slip.docCode}</span> },
     { title: 'Ngày nhập', render: (_, slip) => fmtDateTime(slip.createdAt) },
     { title: 'Kho', render: (_, slip) => slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '' },
     { title: 'Người tạo', render: (_, slip) => slip.createdByName || userById.get(slip.createdBy)?.fullName || userById.get(slip.createdBy)?.username || `#${slip.createdBy}` },

@@ -26,6 +26,7 @@ import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
 import Badge from '../../components/ui/Badge/Badge';
 import DateInput from '../../components/ui/DateInput/DateInput';
+import { isSlipEditable } from '../../utils/inventorySlipStatus';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -247,6 +248,11 @@ function UpdateExportSlipPage() {
         ]);
 
         const detail = slipRes.status === 'fulfilled' ? unwrap(slipRes.value) : null;
+        // Phiếu đã ghi sổ / đã hủy không sửa được: mọi link cũ tới /edit đều mở màn xem (có cả HĐĐT)
+        if (detail && !isSlipEditable(detail.status)) {
+          navigate(`/export-slips/${id}`, { replace: true });
+          return;
+        }
         if (vatRes.status === 'fulfilled') {
           const vConf = vatRes.value?.data?.data || vatRes.value?.data;
           if (vConf?.allowedVatRates) setVatConfig(vConf);
@@ -1335,7 +1341,7 @@ function UpdateExportSlipPage() {
                             type="outline"
                             style={{ cursor: 'pointer' }}
                             title={ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc trước khi bỏ ghi sổ (đã hủy)' : ref.referenceType}
-                            onClick={() => navigate(`/export-slips/${ref.referenceDocId}/edit`)}
+                            onClick={() => navigate(`/export-slips/${ref.referenceDocId}`)}
                           >
                             <i className="bi bi-arrow-90deg-up" style={{ marginRight: '4px' }}></i>
                             {ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc: ' : ''}{ref.referenceDocCode || `#${ref.referenceDocId}`}

@@ -19,6 +19,7 @@ import UpdateExportSlipPage from '../pages/ExportSlip/UpdateExportSlipPage';
 import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import CreateImportSlipPage from '../pages/CreateImportSlip/CreateImportSlipPage';
 import UpdateImportSlipPage from '../pages/UpdateImportSlip/UpdateImportSlipPage';
+import InventorySlipViewPage from '../pages/InventorySlipView/InventorySlipViewPage';
 import TransferHistoryPage from '../pages/TransferHistory/TransferHistoryPage';
 import CreateTransferSlipPage from '../pages/CreateTransferSlip/CreateTransferSlipPage';
 import UpdateTransferSlipPage from '../pages/CreateTransferSlip/UpdateTransferSlipPage';
@@ -214,11 +215,13 @@ function AppRoutes() {
                         <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
                         <Route path="/export-slips/usage" element={<CreateExportSlipPage mode="USAGE" />} />
                         <Route path="/export-slips/assembly" element={<CreateExportSlipPage mode="ASSEMBLY" />} />
+                        <Route path="/export-slips/:id" element={<InventorySlipViewPage kind="export" />} />
                         <Route path="/export-slips/:id/edit" element={<UpdateExportSlipPage />} />
                     </Route>
                     <Route element={<ProtectedRoute requiredPermission="import:view" />}>
                         <Route path="/import-history" element={<ImportHistoryPage />} />
                         <Route path="/import-history/create" element={<CreateImportSlipPage />} />
+                        <Route path="/import-slips/:id" element={<InventorySlipViewPage kind="import" />} />
                         <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
                     </Route>
                     <Route element={<ProtectedRoute requiredPermission="transfer:view" />}>

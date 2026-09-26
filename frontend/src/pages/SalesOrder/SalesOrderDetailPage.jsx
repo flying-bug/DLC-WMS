@@ -413,7 +413,7 @@ function SalesOrderDetailPage() {
 
   const exportDocsColumns = [
     { title: '#', width: '40px', align: 'center', render: (_, __, idx) => <span style={{ color: 'var(--wms-text-subtle)' }}>{idx + 1}</span> },
-    { title: 'Mã phiếu xuất', render: (_, doc) => <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/export-slips/${doc.id}/edit`)}>{doc.docCode}</strong> },
+    { title: 'Mã phiếu xuất', render: (_, doc) => <strong style={{ color: 'var(--color-info-hover)', cursor: 'pointer' }} onClick={() => navigate(`/export-slips/${doc.id}`)}>{doc.docCode}</strong> },
     { title: 'Ngày xuất', render: (_, doc) => doc.docDate || fmtDateTime(doc.createdAt) },
     { title: 'Kho xuất', render: (_, doc) => resolveExportWarehouseName(doc) },
     { title: 'Số lượng', align: 'center', render: (_, doc) => {
@@ -466,7 +466,7 @@ function SalesOrderDetailPage() {
       }
     },
     { title: 'Thao tác', align: 'center', render: (_, doc) => (
-        <button type="button" className={styles.btnSecondary} onClick={() => navigate(`/export-slips/${doc.id}/edit`)} style={{ fontSize: 12, padding: '3px 8px' }}>Xem phiếu</button>
+        <button type="button" className={styles.btnSecondary} onClick={() => navigate(`/export-slips/${doc.id}`)} style={{ fontSize: 12, padding: '3px 8px' }}>Xem phiếu</button>
       )
     }
   ];

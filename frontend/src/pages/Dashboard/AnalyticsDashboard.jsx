@@ -194,10 +194,10 @@ function AnalyticsDashboard() {
         if (!transaction.entityId) return;
         switch (transaction.entityType) {
             case 'IMPORT_DOCUMENT':
-                navigate(`/import-slips/${transaction.entityId}/edit`);
+                navigate(`/import-slips/${transaction.entityId}`);
                 break;
             case 'EXPORT_DOCUMENT':
-                navigate(`/export-slips/${transaction.entityId}/edit`);
+                navigate(`/export-slips/${transaction.entityId}`);
                 break;
             case 'PURCHASE_ORDER':
                 navigate(`/purchase-orders/${transaction.entityId}`);

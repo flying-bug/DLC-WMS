@@ -27,6 +27,7 @@ import { focusField } from '../../utils/focusField';
 import { canViewPricing, hasPermission } from '../../auth/session';
 import Badge from '../../components/ui/Badge/Badge';
 import DateInput from '../../components/ui/DateInput/DateInput';
+import { isSlipEditable } from '../../utils/inventorySlipStatus';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -301,6 +302,11 @@ function UpdateImportSlipPage() {
 
         const detail = detailRes.status === 'fulfilled' ? unwrap(detailRes.value) : null;
         if (!detail) throw new Error('Cannot load slip details');
+        // Phiếu đã ghi sổ / đã hủy không sửa được: mọi link cũ tới /edit đều mở màn xem
+        if (!isSlipEditable(detail.status)) {
+          navigate(`/import-slips/${id}`, { replace: true });
+          return;
+        }
 
         const loadedImportType = detail.referenceType === 'STOCKTAKE'
           ? 'STOCKTAKE_ADD'
@@ -1319,7 +1325,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                           type="outline"
                           style={{ cursor: 'pointer' }}
                           title={ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc trước khi bỏ ghi sổ (đã hủy)' : ref.referenceType}
-                          onClick={() => navigate(`/import-slips/${ref.referenceDocId}/edit`)}
+                          onClick={() => navigate(`/import-slips/${ref.referenceDocId}`)}
                         >
                           <i className="bi bi-arrow-90deg-up" style={{ marginRight: '4px' }}></i>
                           {ref.referenceType === 'UNPOST_SOURCE' ? 'Phiếu gốc: ' : ''}{ref.referenceDocCode || `#${ref.referenceDocId}`}
