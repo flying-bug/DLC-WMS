@@ -61,7 +61,6 @@
 }
 
 .assistantHeader p,
-.statusBox p,
 .chatHeader p {
     margin: 4px 0 0;
     color: var(--color-text-muted);
@@ -84,31 +83,8 @@
     background: var(--color-danger-soft, #fef2f2);
 }
 
-.statusBox {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 12px;
-    border: 1px solid var(--status-info-border);
-    border-radius: 8px;
-    background: var(--status-info-bg);
-    color: var(--status-info-text);
-}
 
-.statusBox strong {
-    display: block;
-    color: var(--color-text-strong);
-    font-size: 13px;
-}
 
-.statusDot {
-    width: 9px;
-    height: 9px;
-    margin-top: 5px;
-    border-radius: 999px;
-    background: var(--color-success);
-    box-shadow: 0 0 0 4px var(--color-success-bg);
-}
 
 .promptGroup {
     display: flex;

@@ -343,8 +343,6 @@ function AiChatPage() {
                             </button>
                         </div>
 
-
-
                         <div className={styles.promptGroup}>
                             <h3><i className="bi bi-lightbulb-fill" style={{ color: '#eab308', marginRight: '6px' }} /> GỢI Ý CÂU HỎI</h3>
                             {prompts.map((prompt, index) => (

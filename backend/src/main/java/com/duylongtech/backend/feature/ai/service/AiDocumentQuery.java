@@ -1,5 +1,6 @@
 package com.duylongtech.backend.feature.ai.service;
 
+import java.text.Normalizer;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Locale;
@@ -11,7 +12,6 @@ import java.util.Set;
  * "đã hủy"...) và khoảng thời gian ("hôm nay", "tháng này"...). Trước đây các cụm này bị coi là từ khóa tìm kiếm nên
  * "phiếu xuất kho đã ghi sổ" hay "phiếu xuất kho hôm nay" luôn ra 0 phiếu.
  *
- * @param normalized câu hỏi đã bỏ dấu, chữ thường (dùng cho mọi cụm trừ "nháp")
  */
 record AiDocumentQuery(StatusFilter status, LocalDate fromDate, LocalDate toDate, String periodLabel) {
 
@@ -31,12 +31,14 @@ record AiDocumentQuery(StatusFilter status, LocalDate fromDate, LocalDate toDate
     }
 
     /**
-     * @param rawLower   câu hỏi gốc viết thường (còn dấu): "nháp" và "nhập" chỉ phân biệt được khi còn dấu
-     * @param normalized câu hỏi đã bỏ dấu
+     * @param raw        câu hỏi gốc (còn dấu): "nháp" và "nhập" chỉ phân biệt được khi còn dấu
+     * @param normalized câu hỏi đã bỏ dấu, chữ thường
      */
-    static AiDocumentQuery parse(String rawLower, String normalized, LocalDate today) {
-        return new AiDocumentQuery(parseStatus(rawLower, normalized), rangeStart(normalized, today), rangeEnd(normalized, today),
-                periodLabel(normalized));
+    static AiDocumentQuery parse(String raw, String normalized, LocalDate today) {
+        String rawLower = raw == null ? ""
+                : Normalizer.normalize(raw, Normalizer.Form.NFC).toLowerCase(Locale.forLanguageTag("vi"));
+        String n = normalized == null ? "" : normalized;
+        return new AiDocumentQuery(parseStatus(rawLower, n), rangeStart(n, today), rangeEnd(n, today), periodLabel(n));
     }
 
     boolean hasFilter() {

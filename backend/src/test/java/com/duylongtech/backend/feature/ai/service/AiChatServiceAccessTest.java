@@ -26,6 +26,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -52,6 +53,7 @@ class AiChatServiceAccessTest {
     private AiAgentService agent;
     private AiModelClient aiModelClient;
     private WarehouseAccessGuard warehouseAccessGuard;
+    private WarehouseRepository warehouseRepository;
     private AiChatService service;
 
     @BeforeEach
@@ -66,9 +68,10 @@ class AiChatServiceAccessTest {
         aiModelClient = mock(AiModelClient.class);
         agent = mock(AiAgentService.class);
         warehouseAccessGuard = mock(WarehouseAccessGuard.class);
+        warehouseRepository = mock(WarehouseRepository.class);
         when(aiModelClient.enhanceAnswer(any(), any(), any())).thenAnswer(invocation -> invocation.getArgument(2));
 
-        service = new AiChatService(mock(WarehouseRepository.class), inventoryBalanceRepository, productRepository,
+        service = new AiChatService(warehouseRepository, inventoryBalanceRepository, productRepository,
                 productVariantRepository, partnerRepository, mock(WarrantyRepository.class),
                 mock(RepairRepository.class), mock(StockTransferRepository.class), mock(AssemblyOrderRepository.class),
                 purchaseOrderRepository, salesOrderRepository, inventoryDocumentRepository, aiModelClient,
@@ -233,5 +236,81 @@ class AiChatServiceAccessTest {
         service.chat("Đơn mua hàng PO0001 đang ở trạng thái nào?");
 
         org.mockito.Mockito.verify(agent, org.mockito.Mockito.never()).answer(any(), any());
+    }
+
+    private static com.duylongtech.backend.feature.inventory.InventoryDocument exportDoc(long id, String code, String status,
+                                                                                       LocalDate date) {
+        com.duylongtech.backend.feature.inventory.InventoryDocument doc =
+                mock(com.duylongtech.backend.feature.inventory.InventoryDocument.class);
+        when(doc.getId()).thenReturn(id);
+        when(doc.getDocCode()).thenReturn(code);
+        when(doc.getStatus()).thenReturn(status);
+        when(doc.getDocDate()).thenReturn(date);
+        when(doc.getWarehouseId()).thenReturn(1L);
+        when(doc.getIssuePurpose()).thenReturn("SALES");
+        return doc;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String exportKeywordFor(String question) {
+        org.mockito.Mockito.clearInvocations(inventoryDocumentRepository);
+        service.chat(question, List.of());
+        ArgumentCaptor<String> keyword = ArgumentCaptor.forClass(String.class);
+        verify(inventoryDocumentRepository).searchExports(keyword.capture(), any(), any(), any(), any(), any(), any(),
+                any(), any(), any(), any());
+        return keyword.getValue();
+    }
+
+    @Test
+    void genericWordsInTheQuestionAreNotUsedAsASearchKeyword() {
+        // Trước đây "phiếu xuất kho gần nhất" tìm theo từ khóa "kho" (khớp nhầm tên hàng có chữ "không"),
+        // "gần đây" / "đã ghi sổ" / "hôm nay" cũng bị coi là từ khóa -> ra 0 phiếu hoặc sai phiếu.
+        loginWith("ROLE_MANAGER", "ai_chat:view", "export:view");
+        when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(null);
+        when(inventoryDocumentRepository.searchExports(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(List.of());
+
+        org.junit.jupiter.api.Assertions.assertNull(exportKeywordFor("Phiếu xuất kho gần nhất"));
+        org.junit.jupiter.api.Assertions.assertNull(exportKeywordFor("phiếu xuất kho gần đây"));
+        org.junit.jupiter.api.Assertions.assertNull(exportKeywordFor("Các phiếu xuất kho đã ghi sổ hôm nay"));
+        org.junit.jupiter.api.Assertions.assertNull(exportKeywordFor("Tôi đã xuất những phiếu nào"));
+        assertEquals("xk00031", exportKeywordFor("Tìm phiếu xuất kho XK00031"));
+    }
+
+    @Test
+    void exportAnswerFiltersByStatusAndPeriodAndShowsReadableValues() {
+        loginWith("ROLE_MANAGER", "ai_chat:view", "export:view");
+        when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(null);
+        com.duylongtech.backend.feature.warehouse.Warehouse hanoi = mock(com.duylongtech.backend.feature.warehouse.Warehouse.class);
+        when(hanoi.getId()).thenReturn(1L);
+        when(hanoi.getName()).thenReturn("Kho Hà Nội");
+        when(warehouseRepository.findAll()).thenReturn(List.of(hanoi));
+        LocalDate today = LocalDate.now();
+        List<com.duylongtech.backend.feature.inventory.InventoryDocument> docs = List.of(
+                exportDoc(3, "XK00003", "DRAFT", today),
+                exportDoc(2, "XK00002", "POSTED", today),
+                exportDoc(1, "XK00001", "POSTED", today.minusYears(1)));
+        when(inventoryDocumentRepository.searchExports(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(docs);
+
+        String answer = service.chat("Phiếu xuất kho đã ghi sổ tháng này", List.of()).getAnswer();
+
+        assertTrue(answer.contains("XK00002"), answer);
+        assertFalse(answer.contains("XK00003"), "phiếu nháp bị loại");
+        assertFalse(answer.contains("XK00001"), "phiếu năm ngoái bị loại");
+        assertTrue(answer.contains("Kho Hà Nội") && answer.contains("Đã ghi sổ") && answer.contains("Bán hàng"), answer);
+        assertFalse(answer.contains("POSTED") || answer.contains("#1"), answer);
+    }
+
+    @Test
+    void purchaseOrdersWaitingForApprovalAreNotSearchedByTheWordDuyet() {
+        loginWith("ROLE_ACCOUNTANT", "ai_chat:view", "purchase_order:view");
+        when(purchaseOrderRepository.findAllWithFilters(any(), any(), any(), any(), any())).thenReturn(List.of());
+
+        service.chat("Đơn mua hàng chờ duyệt", List.of());
+
+        ArgumentCaptor<String> keyword = ArgumentCaptor.forClass(String.class);
+        verify(purchaseOrderRepository).findAllWithFilters(keyword.capture(), any(), any(), any(), any());
+        org.junit.jupiter.api.Assertions.assertNull(keyword.getValue());
     }
 }

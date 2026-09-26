@@ -108,15 +108,8 @@ public class AiChatService {
         String message = rawMessage == null ? "" : rawMessage.trim();
         String normalized = normalize(message);
 
+        // 1-3. Bảo mật / ngoài phạm vi / chào hỏi: xét trên CÂU HIỆN TẠI, trước mọi truy vấn dữ liệu.
         AiIntent intent = AiIntentRouter.route(normalized);
-        if (intent == AiIntent.GENERAL) {
-            String classified = aiAgentService.classifyIntent(message);
-            try {
-                intent = AiIntent.valueOf(classified);
-            } catch (Exception ignored) {
-                // Keep GENERAL if parsing fails
-            }
-        }
         if (intent == AiIntent.SECURITY) {
             return answerSecurityAlert();
         }
@@ -351,6 +344,21 @@ public class AiChatService {
     }
 
     /** Kho người hỏi được phép xem (Thủ kho chỉ thấy kho được giao). */
+    /** Tên kho theo id để hiển thị trong câu trả lời (đọc một lần, không truy vấn từng dòng). */
+    private java.util.Map<Long, String> warehouseNames() {
+        java.util.Map<Long, String> names = new java.util.HashMap<>();
+        warehouseRepository.findAll().forEach(warehouse -> names.put(warehouse.getId(), warehouse.getName()));
+        return names;
+    }
+
+    private static String warehouseName(java.util.Map<Long, String> names, Long id) {
+        if (id == null) {
+            return "-";
+        }
+        String name = names.get(id);
+        return name == null || name.isBlank() ? "#" + id : name;
+    }
+
     private List<Warehouse> scopedWarehouses() {
         List<Long> allowed = accessPolicy.allowedWarehouseIds();
         List<Warehouse> all = warehouseRepository.findAll();
@@ -551,9 +559,10 @@ public class AiChatService {
         answer.append(q.describe());
         answer.append(". Hiển thị ").append(transfers.size()).append(" phiếu gần nhất/phù hợp.");
 
+        java.util.Map<Long, String> warehouseNames = warehouseNames();
         transfers.forEach(transfer -> {
-            String fromWarehouse = warehouseRepository.findById(transfer.getFromWarehouseId()).map(Warehouse::getName).orElse("#" + transfer.getFromWarehouseId());
-            String toWarehouse = warehouseRepository.findById(transfer.getToWarehouseId()).map(Warehouse::getName).orElse("#" + transfer.getToWarehouseId());
+            String fromWarehouse = warehouseName(warehouseNames, transfer.getFromWarehouseId());
+            String toWarehouse = warehouseName(warehouseNames, transfer.getToWarehouseId());
             answer.append("\n- ")
                 .append(transfer.getTransferCode())
                 .append(": ")
@@ -711,7 +720,8 @@ public class AiChatService {
         String keyword = extractSearchKeyword(message);
         List<InventoryDocument> imports = scopedImports(keyword).stream()
                 .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
-                .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder())))
+                .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(InventoryDocument::getId, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(8)
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu nhập kho (IN_PO)");
@@ -719,8 +729,9 @@ public class AiChatService {
         answer.append(q.describe());
         answer.append(". Tìm thấy ").append(imports.size()).append(" phiếu gần nhất.");
 
+        java.util.Map<Long, String> warehouseNames = warehouseNames();
         imports.forEach(doc -> {
-            String warehouseName = warehouseRepository.findById(doc.getWarehouseId()).map(Warehouse::getName).orElse("#" + doc.getWarehouseId());
+            String warehouseName = warehouseName(warehouseNames, doc.getWarehouseId());
             answer.append("\n- Mã phiếu: ")
                 .append(doc.getDocCode())
                 .append(", Kho: ")
@@ -761,7 +772,8 @@ public class AiChatService {
         String keyword = extractSearchKeyword(message);
         List<InventoryDocument> exports = scopedExports(keyword).stream()
                 .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
-                .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder())))
+                .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(InventoryDocument::getId, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(8)
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu xuất kho (EX_SO)");
@@ -769,8 +781,9 @@ public class AiChatService {
         answer.append(q.describe());
         answer.append(". Tìm thấy ").append(exports.size()).append(" phiếu gần nhất.");
 
+        java.util.Map<Long, String> warehouseNames = warehouseNames();
         exports.forEach(doc -> {
-            String warehouseName = warehouseRepository.findById(doc.getWarehouseId()).map(Warehouse::getName).orElse("#" + doc.getWarehouseId());
+            String warehouseName = warehouseName(warehouseNames, doc.getWarehouseId());
             answer.append("\n- Mã phiếu: ")
                 .append(doc.getDocCode())
                 .append(", Kho: ")
@@ -922,17 +935,35 @@ public class AiChatService {
         return AiIntentRouter.isCountQuestion(normalized);
     }
 
+    /*
+     * Từ/cụm từ không phải từ khóa tìm kiếm (loại chứng từ, trạng thái, thời gian, từ đệm). Ghép theo thứ tự DÀI TRƯỚC:
+     * regex thử lựa chọn theo thứ tự viết, nên nếu "cho" đứng trước "cho duyet" thì "chờ duyệt" chỉ bị bỏ chữ "cho",
+     * còn sót "duyet" làm từ khóa -> tìm ra 0 phiếu (tương tự "phieu xuat" + sót "kho" từng khớp nhầm tên hàng có
+     * chữ "không"). Ranh giới từ (\\b) giữ nguyên tên thương hiệu/model như UltraSharp, Xprinter, GTX...
+     */
+    private static final List<String> STOPWORDS = List.of(
+            "tim", "kiem", "tra", "cuu", "cho", "toi", "xem", "doc", "du lieu", "co may", "bao nhieu", "so luong",
+            "tong so", "dem", "count", "san pham", "hang hoa", "sku", "barcode", "bien the", "khach hang", "customer",
+            "nha cung cap", "supplier", "doi tac",
+            "phieu nhap kho", "phieu xuat kho", "phieu chuyen kho", "nhap kho", "phieu nhap", "xuat kho", "phieu xuat",
+            "don mua hang", "don ban hang", "don mua", "don ban", "don hang", "phieu", "kho", "hang",
+            "bao hanh", "warranty", "serial", "sua chua", "repair", "phieu sua", "chuyen kho", "transfer", "lap rap",
+            "thao do", "dung may", "dung pc", "build pc", "build may", "rap may", "cau hinh", "assembly", "bom", "theo",
+            "ma", "ten", "so dien thoai", "hien tai", "gan nhat", "gan day", "co", "may", "hien thi", "danh sach",
+            "liet ke", "hay", "giup", "muon", "biet", "gia", "nao", "dau", "khong", "nay", "do", "cua", "va", "cac",
+            "nhung", "moi nhat", "tat ca", "roi",
+            "hom nay", "hom qua", "tuan nay", "tuan truoc", "tuan qua", "thang nay", "thang truoc", "nam nay",
+            "7 ngay qua", "30 ngay qua", "7 ngay", "30 ngay", "ngay",
+            "nhap", "luu tam", "cho duyet", "cho phe duyet", "da duyet", "cho xuat kho", "cho nhap kho", "cho xuat",
+            "trang thai", "da ghi so", "ghi so", "hoan thanh", "hoan tat", "da xuat", "da nhap", "chua ghi so",
+            "chua xuat", "chua nhap kho", "chua hoan thanh", "dang mo", "da huy", "bi huy", "huy bo",
+            "draft", "pending", "approved", "posted", "cancelled", "canceled");
+
     private static final Pattern STOPWORDS_REGEX = Pattern.compile(
-            "\\b(tim|kiem|tra|cuu|cho|toi|xem|doc|du lieu|co may|bao nhieu|so luong|tong so|dem|count|"
-            + "san pham|hang hoa|sku|barcode|bien the|khach hang|customer|nha cung cap|supplier|doi tac|"
-            + "nhap kho|phieu nhap|xuat kho|phieu xuat|don mua|don ban|don hang|phieu|kho|hang|"
-            + "bao hanh|warranty|serial|sua chua|repair|phieu sua|chuyen kho|transfer|lap rap|thao do|"
-            + "dung may|dung pc|build pc|build may|rap may|cau hinh|assembly|bom|theo|ma|ten|so dien thoai|hien tai|gan nhat|co|may|"
-            + "hien thi|danh sach|liet ke|hay|giup|muon|biet|gia|nao|dau|khong|nay|do|cua|va|cac|nhung|moi nhat|"
-            + "hom nay|hom qua|tuan nay|tuan truoc|tuan qua|thang nay|thang truoc|nam nay|ngay|"
-            + "nhap|luu tam|cho duyet|cho phe duyet|da duyet|cho xuat kho|cho nhap kho|cho xuat|"
-            + "da ghi so|ghi so|hoan thanh|hoan tat|da xuat|da nhap|chua ghi so|chua xuat|chua nhap kho|chua hoan thanh|dang mo|"
-            + "da huy|bi huy|huy bo|draft|pending|approved|posted|cancelled|canceled)\\b",
+            "\\b(" + STOPWORDS.stream()
+                    .sorted(Comparator.comparingInt(String::length).reversed())
+                    .map(Pattern::quote)
+                    .collect(java.util.stream.Collectors.joining("|")) + ")\\b",
             Pattern.CASE_INSENSITIVE
     );
 
