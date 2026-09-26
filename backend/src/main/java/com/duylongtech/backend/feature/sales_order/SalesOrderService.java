@@ -105,8 +105,9 @@ public class SalesOrderService {
         return toDetailResponse(so, reservations);
     }
 
-    public String generateNextSoCode() {
-        return codeGeneratorService.generateCode("sales_orders", "so_code", "SO", 4);
+    /** Mã dự kiến cho màn tạo mới: chỉ xem trước, không cấp số (mã thật cấp khi lưu). */
+    public String previewNextSoCode() {
+        return codeGeneratorService.previewNewCode("sales_orders", "so_code", "SO", 4, salesOrderRepository::existsBySoCode);
     }
 
     // =========================================================
@@ -134,13 +135,10 @@ public class SalesOrderService {
             }
         }
 
-        // Tự sinh mã nếu chưa có
-        String soCode = (request.getSoCode() != null && !request.getSoCode().isBlank())
-                ? request.getSoCode() : generateNextSoCode();
-
-        if (salesOrderRepository.existsBySoCode(soCode)) {
-            throw new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), soCode));
-        }
+        // Mã cấp lúc lưu: để trống -> số tiếp theo; tự nhập -> giữ nguyên nếu chưa trùng
+        String soCode = codeGeneratorService.resolveNewCode("sales_orders", "so_code", "SO", 4, request.getSoCode(),
+                salesOrderRepository::existsBySoCode,
+                code -> new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), code)));
 
         // Resolve createdBy từ username
         User actorUser = userRepository.findByUsername(actor)

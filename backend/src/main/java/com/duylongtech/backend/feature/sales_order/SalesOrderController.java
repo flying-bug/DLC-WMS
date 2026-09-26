@@ -67,7 +67,7 @@ public class SalesOrderController {
     @Operation(summary = "Sinh mã đơn bán hàng tự động")
     @PreAuthorize("hasAuthority('sales_order:add')")
     public ApiResponse<String> getNextCode() {
-        return ApiResponse.success(salesOrderService.generateNextSoCode());
+        return ApiResponse.success(salesOrderService.previewNextSoCode());
     }
 
     // ─── GET: Chi tiết đơn bán hàng ────────────────────────────────────

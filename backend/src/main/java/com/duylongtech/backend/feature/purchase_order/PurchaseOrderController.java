@@ -47,10 +47,10 @@ public class PurchaseOrderController {
 
     // ─── GET: Sinh mã PO tự động ────────────────────────────────────────
     @GetMapping("/next-code")
-    @Operation(summary = "Sinh mã đơn mua hàng tự động")
+    @Operation(summary = "Mã đơn mua hàng dự kiến (chỉ xem trước, mã thật cấp khi lưu)")
     @PreAuthorize("hasAuthority('purchase_order:add')")
     public ApiResponse<String> getNextCode() {
-        return ApiResponse.success(purchaseOrderService.generateNextPoCode());
+        return ApiResponse.success(purchaseOrderService.previewNextPoCode());
     }
 
     // ─── GET: Chi tiết đơn mua hàng ────────────────────────────────────

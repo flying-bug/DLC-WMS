@@ -23,7 +23,7 @@ public class StockTransferController {
     @GetMapping("/next-code")
     @PreAuthorize("hasAuthority('transfer:view') or hasAuthority('transfer:add')")
     public ResponseEntity<com.duylongtech.backend.common.ApiResponse<String>> getNextTransferCode() {
-        String nextCode = stockTransferService.generateNextTransferCode();
+        String nextCode = stockTransferService.previewNextTransferCode();
         return ResponseEntity.ok(com.duylongtech.backend.common.ApiResponse.<String>builder()
                 .success(true)
                 .data(nextCode)

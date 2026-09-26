@@ -72,8 +72,9 @@ public class PurchaseOrderService {
         return toDetailResponse(po);
     }
 
-    public String generateNextPoCode() {
-        return codeGeneratorService.generateCode("purchase_orders", "po_code", "PO", 4);
+    /** Mã dự kiến cho màn tạo mới: chỉ xem trước, không cấp số (mã thật cấp khi lưu). */
+    public String previewNextPoCode() {
+        return codeGeneratorService.previewNewCode("purchase_orders", "po_code", "PO", 4, purchaseOrderRepository::existsByPoCode);
     }
 
     // =========================================================
@@ -93,13 +94,10 @@ public class PurchaseOrderService {
             throw new BusinessException(SystemMessage.PO_ERR_003.getMessage());
         }
 
-        // Tự sinh mã nếu chưa có
-        String poCode = (request.getPoCode() != null && !request.getPoCode().isBlank())
-                ? request.getPoCode() : generateNextPoCode();
-
-        if (purchaseOrderRepository.existsByPoCode(poCode)) {
-            throw new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), poCode));
-        }
+        // Mã cấp lúc lưu: để trống -> số tiếp theo; tự nhập -> giữ nguyên nếu chưa trùng
+        String poCode = codeGeneratorService.resolveNewCode("purchase_orders", "po_code", "PO", 4, request.getPoCode(),
+                purchaseOrderRepository::existsByPoCode,
+                code -> new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), code)));
 
         User actorUser = userRepository.findByUsername(actor)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy người dùng hiện tại"));

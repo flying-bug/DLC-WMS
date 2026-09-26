@@ -29,7 +29,7 @@ public class StocktakeController {
     @GetMapping("/next-code")
     @PreAuthorize("hasAuthority('stocktake:view') or hasAuthority('stocktake:add')")
     public ResponseEntity<ApiResponse<String>> getNextStocktakeCode() {
-        String nextCode = stocktakeService.generateNextStocktakeCode();
+        String nextCode = stocktakeService.previewNextStocktakeCode();
         return ResponseEntity.ok(ApiResponse.<String>builder()
                 .success(true)
                 .data(nextCode)

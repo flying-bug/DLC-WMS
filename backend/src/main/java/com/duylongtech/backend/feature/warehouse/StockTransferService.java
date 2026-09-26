@@ -58,9 +58,11 @@ public class StockTransferService {
 
     @Autowired
     private com.duylongtech.backend.feature.system.CodeGeneratorService codeGeneratorService;
+    /** Mã dự kiến cho màn tạo mới: chỉ xem trước, không cấp số (mã thật cấp khi lưu). */
     @Transactional(readOnly = true)
-    public String generateNextTransferCode() {
-        return codeGeneratorService.generateCode("stock_transfers", "transfer_code", "CK-", 5);
+    public String previewNextTransferCode() {
+        return codeGeneratorService.previewNewCode("stock_transfers", "transfer_code", "CK-", 5,
+                code -> stockTransferRepository.findByTransferCode(code).isPresent());
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -115,10 +117,10 @@ public class StockTransferService {
             throw new BusinessException(SystemMessage.INV_DIFF_WAREHOUSE_REQUIRED);
         }
 
-        String transferCode = requestDTO.getTransferCode();
-        if (transferCode == null || transferCode.trim().isEmpty()) {
-            transferCode = generateNextTransferCode();
-        }
+        // Mã cấp lúc lưu: để trống -> số tiếp theo; tự nhập -> giữ nguyên nếu chưa trùng (trước đây không kiểm trùng)
+        String transferCode = codeGeneratorService.resolveNewCode("stock_transfers", "transfer_code", "CK-", 5,
+                requestDTO.getTransferCode(), code -> stockTransferRepository.findByTransferCode(code).isPresent(),
+                code -> new BusinessException(String.format(SystemMessage.TRF_ERR_001.getMessage(), code)));
 
         StockTransfer stockTransfer = new StockTransfer();
         stockTransfer.initDraft(transferCode, requestDTO.getFromWarehouseId(), requestDTO.getToWarehouseId(), requestDTO.getTransferDate());

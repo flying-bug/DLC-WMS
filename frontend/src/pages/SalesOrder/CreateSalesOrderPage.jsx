@@ -6,6 +6,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format, parseISO } from 'date-fns';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { codeForSave } from '../../utils/documentCode';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
@@ -94,6 +95,8 @@ function CreateSalesOrderPage() {
   const [vatConfig, setVatConfig] = useState({ defaultVatRate: 8, allowedVatRates: [0, 5, 8, 10] });
 
 
+  // Mã dự kiến từ /next-code: giữ nguyên thì backend cấp số khi lưu (xem utils/documentCode)
+  const [suggestedSoCode, setSuggestedSoCode] = useState('');
   const [form, setForm] = useState({
     soCode: '',
     soDate: today(),
@@ -176,6 +179,7 @@ function CreateSalesOrderPage() {
         }
         if (codeRes.status === 'fulfilled' && codeRes.value) {
           const code = unwrap(codeRes.value);
+          setSuggestedSoCode(code || '');
           setForm(p => ({ ...p, soCode: code || '' }));
         }
       } finally {
@@ -462,7 +466,7 @@ function CreateSalesOrderPage() {
     const firstWh = lines[0]?.warehouseId || form.warehouseId;
     const combinedNote = serializeNoteWithAttachments(form.note, attachments);
     return {
-      soCode: form.soCode.trim() || undefined,
+      soCode: codeForSave(form.soCode, suggestedSoCode),
       soDate: form.soDate,
       paymentDueDate: form.paymentDueDate || undefined,
       partnerId: Number(form.partnerId),

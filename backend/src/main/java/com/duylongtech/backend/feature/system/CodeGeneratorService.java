@@ -1,11 +1,19 @@
 package com.duylongtech.backend.feature.system;
 
+import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 @Service
 @RequiredArgsConstructor
 public class CodeGeneratorService {
+
+    /** Số lần thử bỏ qua các số đã bị dùng (mã nhập tay từ trước khi có bộ đếm) trước khi báo lỗi. */
+    static final int MAX_ALLOCATION_ATTEMPTS = 100;
 
     private final CodeSequenceAllocator codeSequenceAllocator;
 
@@ -87,6 +95,53 @@ public class CodeGeneratorService {
         long next = codeSequenceAllocator.previewNextValue(sequenceKey, tableName, columnName, prefix);
         String format = "%s%0" + padding + "d";
         return String.format(format, prefix, next);
+    }
+
+    /**
+     * Mã dự kiến hiển thị trên màn tạo mới: xem trước số tiếp theo của bộ đếm, KHÔNG cấp số. Bỏ qua các số đã có người
+     * dùng (mã nhập tay từ trước khi có bộ đếm) để mã hiển thị trùng với mã sẽ được cấp khi lưu.
+     */
+    public String previewNewCode(String tableName, String columnName, String prefix, int padding, Predicate<String> exists) {
+        String sequenceKey = tableName.toLowerCase() + "." + columnName.toLowerCase() + "." + prefix;
+        long next = codeSequenceAllocator.previewNextValue(sequenceKey, tableName, columnName, prefix);
+        String format = "%s%0" + padding + "d";
+        String code = String.format(format, prefix, next);
+        for (int attempt = 1; attempt < MAX_ALLOCATION_ATTEMPTS && exists.test(code); attempt++) {
+            code = String.format(format, prefix, ++next);
+        }
+        return code;
+    }
+
+    /**
+     * Mã cho chứng từ MỚI, chỉ cấp khi LƯU. Màn tạo mới chỉ lấy mã dự kiến bằng {@link #previewCode} nên mở form rồi bỏ
+     * không làm nhảy số.
+     * <ul>
+     *   <li>Không gửi mã (người dùng giữ mã hệ thống gợi ý): lấy số tiếp theo từ bộ đếm. Cấp số là thao tác nguyên tử
+     *       nên hai người lưu cùng lúc không bao giờ nhận trùng số; số đã bị dùng (mã nhập tay cũ) thì bỏ qua.</li>
+     *   <li>Có gửi mã (người dùng tự nhập): giữ nguyên nếu chưa ai dùng, rồi kéo bộ đếm lên ít nhất bằng mã đó để về sau
+     *       không cấp lại; đã có người dùng thì báo lỗi (không đổi mã người dùng tự đặt).</li>
+     * </ul>
+     *
+     * @param exists         kiểm tra mã đã tồn tại
+     * @param duplicateError lỗi trả về khi mã tự nhập đã tồn tại
+     */
+    public String resolveNewCode(String tableName, String columnName, String prefix, int padding, String requestedCode,
+                                 Predicate<String> exists, Function<String, ? extends RuntimeException> duplicateError) {
+        String requested = requestedCode == null ? "" : requestedCode.trim();
+        if (requested.isEmpty()) {
+            for (int attempt = 0; attempt < MAX_ALLOCATION_ATTEMPTS; attempt++) {
+                String code = generateCode(tableName, columnName, prefix, padding);
+                if (!exists.test(code)) {
+                    return code;
+                }
+            }
+            throw new BusinessException(SystemMessage.CODE_ERR_001.getMessage());
+        }
+        if (exists.test(requested)) {
+            throw duplicateError.apply(requested);
+        }
+        syncSequence(tableName, columnName, prefix, requested);
+        return requested;
     }
 
     public void syncSequence(String tableName, String columnName, String prefix, String code) {

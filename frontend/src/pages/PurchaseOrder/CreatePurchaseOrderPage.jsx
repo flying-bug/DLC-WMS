@@ -19,6 +19,7 @@ import * as businessSettingsApi from '../../api/businessSettingsApi';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { codeForSave } from '../../utils/documentCode';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import DateInput from '../../components/ui/DateInput/DateInput';
 
@@ -84,6 +85,8 @@ function CreatePurchaseOrderPage() {
   const [ocrQuickAddCategoryName, setOcrQuickAddCategoryName] = useState('');
   const [ocrQuickAddWarrantyMonths, setOcrQuickAddWarrantyMonths] = useState('');
 
+  // Mã dự kiến từ /next-code: giữ nguyên thì backend cấp số khi lưu (xem utils/documentCode)
+  const [suggestedPoCode, setSuggestedPoCode] = useState('');
   const [form, setForm] = useState({
     poCode: '',
     poDate: today(),
@@ -213,6 +216,7 @@ function CreatePurchaseOrderPage() {
         }
         if (codeRes.status === 'fulfilled' && codeRes.value) {
           const code = unwrap(codeRes.value);
+          setSuggestedPoCode(code || '');
           setForm(p => ({ ...p, poCode: code || '' }));
         }
       } finally {
@@ -387,7 +391,7 @@ function CreatePurchaseOrderPage() {
   const buildPayload = () => {
     const combinedNote = serializeNoteWithAttachments(form.note, attachments);
     return {
-      poCode:               form.poCode.trim() || undefined,
+      poCode:               codeForSave(form.poCode, suggestedPoCode),
       poDate:               form.poDate,
       paymentDueDate:       form.paymentDueDate       || undefined,
       expectedDeliveryDate: form.expectedDeliveryDate || undefined,

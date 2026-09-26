@@ -13,6 +13,7 @@
     "test:direct-sale": "node --test src/pages/SalesOrder/utils/directSaleWarehouse.test.js",
     "test:repair-quote": "node --test src/utils/repairQuotationRows.test.js",
     "test:company-profile": "node --test src/utils/companyProfile.test.js",
+    "test:document-code": "node --test src/utils/documentCode.test.js",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:workflow": "playwright test e2e/complete-procurement-workflow.spec.js",

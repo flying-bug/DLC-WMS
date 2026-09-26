@@ -22,6 +22,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import { findBestMatch } from '../../utils/fuzzyMatch';
 import { canViewPricing } from '../../auth/session';
 import DateInput from '../../components/ui/DateInput/DateInput';
+import { codeForSave } from '../../utils/documentCode';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -113,6 +114,8 @@ function CreateTransferSlipPage() {
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
 
+  // Mã dự kiến từ /next-code: giữ nguyên thì backend cấp số khi lưu (xem utils/documentCode)
+  const [suggestedTransferCode, setSuggestedTransferCode] = useState('');
   const [form, setForm] = useState(() => ({
     transferCode: '',
     fromWarehouseId: '',
@@ -174,7 +177,10 @@ function CreateTransferSlipPage() {
       transferApi.getNextCode()
         .then(res => {
           const code = unwrap(res);
-          if (code) setForm(prev => ({ ...prev, transferCode: prev.transferCode || code }));
+          if (code) {
+            setSuggestedTransferCode(code);
+            setForm(prev => ({ ...prev, transferCode: prev.transferCode || code }));
+          }
         })
         .catch(err => console.error('Failed to load next transferCode', err));
 
@@ -390,7 +396,7 @@ function CreateTransferSlipPage() {
 
   const buildPayload = () => {
     return {
-      transferCode: form.transferCode || undefined,
+      transferCode: codeForSave(form.transferCode, suggestedTransferCode),
       fromWarehouseId: Number(form.fromWarehouseId),
       toWarehouseId: Number(form.toWarehouseId),
       transferDate: form.transferDate,

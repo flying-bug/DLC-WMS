@@ -75,9 +75,10 @@ public class StocktakeService {
     @Autowired(required = false)
     private UserWarehouseRoleRepository userWarehouseRoleRepository;
 
+    /** Mã dự kiến cho màn tạo mới: chỉ xem trước, không cấp số (mã thật cấp khi lưu). */
     @Transactional(readOnly = true)
-    public String generateNextStocktakeCode() {
-        return codeGeneratorService.generateCode("stocktakes", "stocktake_code", "KK", 6);
+    public String previewNextStocktakeCode() {
+        return codeGeneratorService.previewNewCode("stocktakes", "stocktake_code", "KK", 6, stocktakeRepository::existsByStocktakeCode);
     }
 
     @Transactional(readOnly = true)
@@ -445,14 +446,9 @@ public class StocktakeService {
     }
 
     private String resolveDocCode(String requestedCode) {
-        String docCode = requestedCode != null && !requestedCode.trim().isEmpty() ? requestedCode.trim() : null;
-        if (docCode == null) {
-            docCode = codeGeneratorService.generateCode("stocktakes", "stocktake_code", "KK", 6);
-        }
-        if (stocktakeRepository.existsByStocktakeCode(docCode)) {
-            throw new BusinessException(String.format(SystemMessage.STK_ERR_001.getMessage(), docCode));
-        }
-        return docCode;
+        return codeGeneratorService.resolveNewCode("stocktakes", "stocktake_code", "KK", 6, requestedCode,
+                stocktakeRepository::existsByStocktakeCode,
+                code -> new BusinessException(String.format(SystemMessage.STK_ERR_001.getMessage(), code)));
     }
 
     private void mapLinesAndParticipants(Stocktake stocktake, StocktakeRequest req) {

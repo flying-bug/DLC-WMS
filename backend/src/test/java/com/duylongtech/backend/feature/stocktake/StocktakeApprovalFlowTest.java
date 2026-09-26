@@ -67,7 +67,9 @@ class StocktakeApprovalFlowTest {
                 .status(((Stocktake) inv.getArgument(0)).getStatus()).build());
         when(mapper.toLineResponse(any())).thenAnswer(inv -> new StocktakeLineResponse());
         CodeGeneratorService codes = mock(CodeGeneratorService.class);
-        when(codes.generateCode(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyInt())).thenReturn("KK000001");
+        when(codes.resolveNewCode(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn("KK000001");
         when(stocktakeRepository.save(any(Stocktake.class))).thenAnswer(inv -> {
             Stocktake st = inv.getArgument(0);
             if (st.getId() == null) st.setId(100L);

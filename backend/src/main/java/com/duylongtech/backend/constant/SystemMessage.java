@@ -366,6 +366,12 @@ public enum SystemMessage {
     STK_ERR_007("STK_007", "Danh sách kiểm kê không được chứa sản phẩm trùng nhau."),
     STK_ERR_008("STK_008", "Vui lòng chọn sản phẩm cho tất cả các dòng kiểm kê."),
 
+    // Stock Transfer
+    TRF_ERR_001("TRF_001", "Mã phiếu chuyển kho '%s' đã tồn tại"),
+
+    // Mã chứng từ tự sinh
+    CODE_ERR_001("CODE_001", "Không cấp được mã chứng từ mới, vui lòng thử lại."),
+
     // System Settings
     SYS_SET_ERR_001("SYS_SET_001", "Đổi mã Google OAuth2 thất bại."),
 

@@ -9,6 +9,7 @@ import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
+import { codeForSave } from '../../utils/documentCode';
 import { getTodayIsoDate, getCurrentDateTimeInput } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
@@ -25,6 +26,8 @@ function CreateStocktakePage() {
   const [loadingStock, setLoadingStock] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Mã dự kiến từ /next-code: giữ nguyên thì backend cấp số khi lưu (xem utils/documentCode)
+  const [suggestedCode, setSuggestedCode] = useState('');
   const [formData, setFormData] = useState(() => ({
     purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
     code: '',
@@ -99,6 +102,7 @@ function CreateStocktakePage() {
         .then(res => {
           const code = res?.data?.data || res?.data;
           if (code && typeof code === 'string') {
+            setSuggestedCode(code);
             setFormData(prev => ({ ...prev, code: prev.code || code }));
           }
         })
@@ -469,7 +473,7 @@ function CreateStocktakePage() {
   };
 
   const buildPayload = () => ({
-    stocktakeCode: formData.code,
+    stocktakeCode: codeForSave(formData.code, suggestedCode),
     warehouseId: formData.warehouseId === 'all' ? null : Number(formData.warehouseId),
     purpose: formData.purpose,
     stocktakeDate: formData.createdDate ? formData.createdDate.split('T')[0] : null,

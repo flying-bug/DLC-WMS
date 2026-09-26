@@ -276,7 +276,9 @@ public class DirectCheckoutService {
     }
 
     private String generateNextSoCode() {
-        return codeGeneratorService.generateCode("sales_orders", "so_code", "SO", 4);
+        return codeGeneratorService.resolveNewCode("sales_orders", "so_code", "SO", 4, null,
+                salesOrderRepository::existsBySoCode,
+                code -> new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), code)));
     }
 
     private BigDecimal normalizePaymentAmount(BigDecimal amount, BigDecimal total) {
