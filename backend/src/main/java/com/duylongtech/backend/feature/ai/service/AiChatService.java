@@ -108,8 +108,15 @@ public class AiChatService {
         String message = rawMessage == null ? "" : rawMessage.trim();
         String normalized = normalize(message);
 
-        // 1-3. Bảo mật / ngoài phạm vi / chào hỏi: xét trên CÂU HIỆN TẠI, trước mọi truy vấn dữ liệu.
         AiIntent intent = AiIntentRouter.route(normalized);
+        if (intent == AiIntent.GENERAL) {
+            String classified = aiAgentService.classifyIntent(message);
+            try {
+                intent = AiIntent.valueOf(classified);
+            } catch (Exception ignored) {
+                // Keep GENERAL if parsing fails
+            }
+        }
         if (intent == AiIntent.SECURITY) {
             return answerSecurityAlert();
         }
