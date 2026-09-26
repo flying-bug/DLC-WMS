@@ -99,8 +99,30 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
   @Query(value = "SELECT COALESCE(SUM(quantity_layered * unit_cost), 0) FROM inventory_cost_layers WHERE warehouse_id = :warehouseId", nativeQuery = true)
   java.math.BigDecimal sumTotalValueByWarehouseId(@Param("warehouseId") Long warehouseId);
 
-  @Query("SELECT v.product.id, COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b JOIN ProductVariant v ON v.id = b.variantId WHERE v.product.id IN :productIds AND b.serialNumberId IS NULL GROUP BY v.product.id")
-  List<Object[]> sumQuantityOnHandByProductIds(@Param("productIds") List<Long> productIds);
+  /**
+   * Tồn bán được theo sản phẩm, cùng cách tính với cảnh báo sắp hết / hết hàng (ProductRepository.findStockLevels):
+   * chỉ kho bán hàng (STANDARD), hàng GOOD; hàng quản lý serial đếm serial còn sẵn sàng, hàng thường đếm dòng tồn
+   * không serial. Trước đây cộng dòng tồn tổng ở mọi kho nên màn Vật tư hàng hóa lệch với cảnh báo tồn.
+   */
+  @Query(value = """
+      SELECT pv.product_id,
+             COALESCE(SUM(CASE
+                 WHEN COALESCE(p.track_serial, 0) = 1
+                      AND ib.serial_number_id IS NOT NULL
+                      AND sn.status = 'AVAILABLE' THEN ib.quantity_on_hand
+                 WHEN COALESCE(p.track_serial, 0) = 0
+                      AND ib.serial_number_id IS NULL THEN ib.quantity_on_hand
+                 ELSE 0 END), 0)
+      FROM inventory_balances ib
+      JOIN product_variants pv ON pv.id = ib.variant_id
+      JOIN products p ON p.id = pv.product_id
+      LEFT JOIN serial_numbers sn ON sn.id = ib.serial_number_id
+      WHERE pv.product_id IN (:productIds)
+        AND ib.stock_status = 'GOOD'
+        AND ib.warehouse_id IN (SELECT w.id FROM warehouses w WHERE w.type = 'STANDARD')
+      GROUP BY pv.product_id
+      """, nativeQuery = true)
+  List<Object[]> sumSellableQuantityByProductIds(@Param("productIds") List<Long> productIds);
 
   @Query("""
       SELECT

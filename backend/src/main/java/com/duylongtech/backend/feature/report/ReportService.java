@@ -107,9 +107,25 @@ public class ReportService {
         ensureCanViewDashboard();
         log.info("Fetching Dashboard Metrics. inventoryFlowRange={}, categoryScope={}, financeRange={}", inventoryFlowRange, categoryScope, financeRange);
         DashboardResponse dashboard = reportRepository.getDashboardMetrics(inventoryFlowRange, categoryScope, financeRange);
+        // Cảnh báo tồn lấy từ cùng nguồn với màn Vật tư hàng hóa để hai màn luôn khớp nhau
         var stockAlerts = productService.getStockAlertSummary();
         dashboard.setLowStockItemsCount(stockAlerts.getLowStockCount());
         dashboard.setOutOfStockItemsCount(stockAlerts.getOutOfStockCount());
+        List<DashboardResponse.ConfiguredLowStockProductDto> lowStockProducts = stockAlerts.getLowStockItems() == null
+                ? List.of()
+                : stockAlerts.getLowStockItems().stream()
+                        .map(item -> DashboardResponse.ConfiguredLowStockProductDto.builder()
+                                .productId(item.getProductId())
+                                .productCode(item.getSku())
+                                .productName(item.getProductName())
+                                .productType(item.getProductType())
+                                .unitName(item.getUnitName())
+                                .stockQty(item.getStockQty())
+                                .minStockQty(item.getMinStockQty())
+                                .build())
+                        .toList();
+        dashboard.setConfiguredLowStockProducts(lowStockProducts);
+        dashboard.setConfiguredLowStockProductsCount(lowStockProducts.size());
         return dashboard;
     }
     public List<SalesProfitReportResponse> getSalesProfitReport(LocalDateTime startDate, LocalDateTime endDate, String search) {

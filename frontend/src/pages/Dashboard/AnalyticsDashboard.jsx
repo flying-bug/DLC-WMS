@@ -361,7 +361,7 @@ function AnalyticsDashboard() {
             value: `${quantity(dashboard?.configuredLowStockProductsCount || 0)}`,
             icon: 'bi bi-exclamation-triangle',
             color: 'red',
-            trend: `${configuredLowStockProducts.length} sản phẩm hiện đang dưới mức cảnh báo`,
+            trend: `Dưới mức tồn tối thiểu · ${quantity(dashboard?.outOfStockItemsCount || 0)} mã đã hết hàng`,
             data: KPI_SPARKLINES.lowStock
         },
         {
