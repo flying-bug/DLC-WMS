@@ -858,7 +858,7 @@ function CreateSalesOrderPage() {
       }
     },
     {
-      title: 'Tên hàng', minWidth: '180px', render: (_, line, idx) => {
+      title: 'Tên hàng', minWidth: '160px', render: (_, line, idx) => {
         const lineInventoryMap = getWarehouseInventoryMap(lineWarehouseId(line));
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -903,7 +903,7 @@ function CreateSalesOrderPage() {
         />
       )
     }]),
-    { title: 'ĐVT', width: '55px', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12.5 }}>{line.unitName || '—'}</span> },
+    { title: 'ĐVT', width: '70px', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', fontSize: 12.5 }}>{line.unitName || '—'}</span> },
     {
       title: 'SL / Tồn', width: '110px', align: 'center', render: (_, line, idx) => {
         const effectiveWh = lineWarehouseId(line);

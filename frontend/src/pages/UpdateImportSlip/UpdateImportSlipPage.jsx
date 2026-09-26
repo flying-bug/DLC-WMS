@@ -618,7 +618,11 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
         return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
       }
       const product = productById.get(String(item.variantId));
-      if (product?.trackSerial) {
+      // Kế toán chỉ lập phiếu nhập dự kiến (số lượng, đơn giá, VAT theo hóa đơn NCC) - hàng
+      // thường chưa về kho nên chưa có serial thực tế để quét. Việc quét đủ serial là trách
+      // nhiệm của thủ kho khi nhận hàng thực tế, nên chỉ bắt buộc khi ghi sổ ngay tại đây
+      // (thời điểm tồn kho thực sự tăng), không áp dụng khi chỉ lưu tạm (DRAFT).
+      if (product?.trackSerial && shouldPost) {
         const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
         if (serialCount !== qty) {
           setSerialModalItemId(item.localId);
@@ -1470,23 +1474,21 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
             </div>
           </>
         )}
+      </div>
 
-        <div className={styles.stickyFooter}>
-          <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={goBack}>
-              <i className="bi bi-x-circle"></i> Hủy bỏ
+      <div className={styles.bottomBar}>
+        <button className="btn-misa-cancel" onClick={goBack}>
+          <i className="bi bi-x-circle"></i> Hủy bỏ
+        </button>
+        <div className={styles.actionButtons}>
+          <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>
+            <i className="bi bi-save"></i> Lưu tạm
+          </button>
+          {hasPermission('import:post') && (
+            <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
             </button>
-          </div>
-          <div className={styles.footerRight}>
-            <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>
-              <i className="bi bi-save"></i> Lưu tạm
-            </button>
-            {hasPermission('import:post') && (
-              <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}>
-                <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
       <ManageSerialModal

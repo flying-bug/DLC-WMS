@@ -1605,13 +1605,11 @@ function CreateImportSlipPage() {
         </div>
       </div>
 
-      <div className={styles.fixedFooter}>
-        <div className={styles.footerLeft}>
-          <button className="btn-misa-cancel" onClick={goBack}>
-            <i className="bi bi-x-circle"></i> Hủy bỏ
-          </button>
-        </div>
-        <div className={styles.footerRight}>
+      <div className={styles.bottomBar}>
+        <button className="btn-misa-cancel" onClick={goBack}>
+          <i className="bi bi-x-circle"></i> Hủy bỏ
+        </button>
+        <div className={styles.actionButtons}>
           <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
             <i className="bi bi-save"></i> Lưu tạm
           </button>

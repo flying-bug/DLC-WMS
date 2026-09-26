@@ -282,8 +282,9 @@ function PurchaseOrderListPage() {
   const columns = [
     {
       title: '#',
-      width: 45,
-      render: (_, __, idx) => (currentPage - 1) * pageSize + idx + 1
+      width: 50,
+      align: 'center',
+      render: (_, __, idx) => <span style={{ whiteSpace: 'nowrap' }}>{(currentPage - 1) * pageSize + idx + 1}</span>
     },
     {
       title: 'Mã đơn',

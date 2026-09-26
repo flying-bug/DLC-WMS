@@ -435,7 +435,7 @@
   text-decoration: none;
 }
 
-.fixedFooter {
+.bottomBar {
   position: fixed;
   bottom: 0;
   left: var(--sidebar-width, 248px);
@@ -452,7 +452,7 @@
   transition: left 0.3s ease;
 }
 
-.footerLeft, .footerRight {
+.actionButtons {
   display: flex;
   align-items: center;
   gap: 12px;
