@@ -372,6 +372,7 @@ export default function CashierWorkspacePage() {
         key: 'amount',
         label: 'Số tiền (VNĐ)',
         width: '140px',
+        align: 'right',
         render: (v) => (
           <span style={{ fontWeight: '700', color: 'var(--color-text-strong)', textAlign: 'right', display: 'block' }}>
             {formatCurrency(v)}
@@ -494,6 +495,7 @@ export default function CashierWorkspacePage() {
         key: 'amountDebt',
         label: 'Phát sinh Tăng (Nợ)',
         width: '150px',
+        align: 'right',
         render: (v) => (
           <span className={styles.ledgerAmount}>
             {Number(v) > 0 ? formatCurrency(v) : '-'}
@@ -504,6 +506,7 @@ export default function CashierWorkspacePage() {
         key: 'amountReceipt',
         label: 'Phát sinh Giảm (Có)',
         width: '150px',
+        align: 'right',
         render: (v) => (
           <span className={styles.ledgerAmount}>
             {Number(v) > 0 ? formatCurrency(v) : '-'}
@@ -514,6 +517,7 @@ export default function CashierWorkspacePage() {
         key: 'balanceAfter',
         label: 'Dư nợ sau GD',
         width: '150px',
+        align: 'right',
         render: (v) => (
           <span style={{ fontWeight: 700, color: 'var(--color-text-strong)', textAlign: 'right', display: 'block' }}>
             {formatCurrency(v)}
