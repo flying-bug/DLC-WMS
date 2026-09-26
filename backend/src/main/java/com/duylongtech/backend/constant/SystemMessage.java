@@ -33,6 +33,7 @@ public enum SystemMessage {
     TOO_MANY_OTP_ATTEMPTS("AUTH14", "Bạn đã nhập sai OTP quá 5 lần. Mã OTP này đã bị vô hiệu hóa vì lý do bảo mật, vui lòng yêu cầu mã mới."),
     OTP_REQUEST_TOO_FAST("AUTH15", "Vui lòng chờ ít nhất 60 giây trước khi yêu cầu gửi lại mã OTP mới."),
     ROLE_REQUIRED("AUTH16", "Vui lòng chọn ít nhất một vai trò (role) cho nhân viên."),
+    SESSION_REPLACED("AUTH17", "Bạn đã đăng nhập ở một nơi khác."),
 
     // Unit & Product
     UNIT_NOT_FOUND("UNIT01", "Không tìm thấy đơn vị tính."),
@@ -238,6 +239,8 @@ public enum SystemMessage {
     OCR_ERR_001("OCR_001", "Không có AI provider nào được bật. Hãy cấu hình OPENAI_ENABLED hoặc GEMINI_ENABLED."),
     OCR_ERR_002("OCR_002", "Không thể trích xuất dữ liệu từ chứng từ: %s"),
     OCR_ERR_003("OCR_003", "Mã quét không hợp lệ hoặc đã hết hạn."),
+    OCR_ERR_004("OCR_004", "Máy chủ đang bận xử lý ảnh. Vui lòng gửi lại sau ít phút."),
+    OCR_ERR_005("OCR_005", "Đang có quá nhiều phiên quét. Vui lòng thử lại sau ít phút."),
 
     // Inventory
     INV_ERR_001("INV_001", "Đơn bán hàng này đã xuất kho đủ toàn bộ sản phẩm"),
@@ -245,7 +248,7 @@ public enum SystemMessage {
     INV_ERR_003("INV_003", "Trạng thái phiếu kho không hợp lệ"),
     INV_ERR_004("INV_004", "Trạng thái phiếu nhập kho phải là lưu tạm"),
     INV_ERR_005("INV_005", "Trạng thái phiếu xuất kho phải là lưu tạm"),
-    INV_ERR_006("INV_006", "Thuế VAT phải nằm trong khoảng từ 0%% đến 10%%"),
+    INV_ERR_006("INV_006", "Thuế VAT không được âm."),
     INV_ERR_007("INV_007", "Phiếu nhập kho không được có quantityOut"),
     INV_ERR_008("INV_008", "Serial %s đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại"),
     INV_ERR_009("INV_009", "Serial %s không có sẵn trong kho (trạng thái: %s)"),
@@ -365,6 +368,13 @@ public enum SystemMessage {
 
     // System Settings
     SYS_SET_ERR_001("SYS_SET_001", "Đổi mã Google OAuth2 thất bại."),
+
+    // Business Settings (Thông tin doanh nghiệp & thuế)
+    BIZ_SET_ERR_001("BIZ_SET_001", "Mức thuế VAT phải là số nguyên không âm (từ 0 trở lên)."),
+    BIZ_SET_ERR_002("BIZ_SET_002", "Phải có ít nhất một mức thuế VAT cho phép."),
+    BIZ_SET_ERR_003("BIZ_SET_003", "Mức thuế VAT mặc định phải nằm trong danh sách mức thuế cho phép."),
+    BIZ_SET_ERR_004("BIZ_SET_004", "Tên doanh nghiệp không được để trống."),
+    BIZ_SET_ERR_005("BIZ_SET_005", "Email doanh nghiệp không hợp lệ."),
 
     // Voice Command
     VOICE_ERR_001("VOICE_001", "Gemini chưa được bật hoặc chưa cấu hình API key."),

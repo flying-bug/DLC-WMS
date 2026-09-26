@@ -105,6 +105,18 @@ public class SalesOrderService {
         return toDetailResponse(so, reservations);
     }
 
+    /**
+     * Xem trước mã SO tiếp theo mà KHÔNG tăng bộ đếm.
+     * Dùng cho endpoint GET /next-code để hiển thị trên form tạo mới.
+     * Nếu người dùng đóng form mà không lưu, bộ đếm không bị thay đổi.
+     */
+    public String previewNextSoCode() {
+        return codeGeneratorService.previewCode("sales_orders", "so_code", "SO", 4);
+    }
+
+    /**
+     * Sinh mã SO thật sự (tăng bộ đếm). Chỉ được gọi khi thực sự tạo đơn.
+     */
     public String generateNextSoCode() {
         return codeGeneratorService.generateCode("sales_orders", "so_code", "SO", 4);
     }

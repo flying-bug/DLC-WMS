@@ -45,12 +45,12 @@ public class PurchaseOrderController {
         return ApiResponse.success(purchaseOrderService.getPurchaseOrders(keyword, status, partnerId, fromDate, toDate));
     }
 
-    // ─── GET: Sinh mã PO tự động ────────────────────────────────────────
+    // ─── GET: Xem trước mã PO (chỉ đọc, KHÔNG tăng bộ đếm) ─────────────
     @GetMapping("/next-code")
-    @Operation(summary = "Sinh mã đơn mua hàng tự động")
+    @Operation(summary = "Xem trước mã đơn mua hàng tự động (không tăng bộ đếm)")
     @PreAuthorize("hasAuthority('purchase_order:add')")
     public ApiResponse<String> getNextCode() {
-        return ApiResponse.success(purchaseOrderService.generateNextPoCode());
+        return ApiResponse.success(purchaseOrderService.previewNextPoCode());
     }
 
     // ─── GET: Chi tiết đơn mua hàng ────────────────────────────────────

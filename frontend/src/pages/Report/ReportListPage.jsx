@@ -24,6 +24,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { canViewPricing, getAuthRoles, hasPermission } from '../../auth/session';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 const REPORT_DOMAINS = [
     { id: 'ALL', label: 'Tất cả báo cáo', icon: 'bi bi-grid-3x3-gap' },
@@ -92,7 +93,53 @@ const MOCK_CATEGORIES = [
     }
 ];
 
+// Loại nghiệp vụ của sổ chi tiết vật tư (documentType do backend phân loại)
+const LEDGER_TYPE_LABELS = {
+    IN_PO: 'Mua hàng',
+    EX_SO: 'Bán hàng',
+    EX_USAGE: 'Xuất sử dụng nội bộ',
+    IN_TRF: 'Nhận chuyển kho',
+    EX_TRF: 'Xuất chuyển kho',
+    IN_ADJ: 'Nhập kiểm kê',
+    EX_ADJ: 'Xuất kiểm kê',
+    IN_REPAIR: 'Nhập thu hồi sửa chữa',
+    EX_REPAIR: 'Xuất sửa chữa',
+    IN_BUILD: 'Nhập lắp ráp/ tháo dỡ',
+    EX_BUILD: 'Xuất lắp ráp/ tháo dỡ',
+    UNPOST_IN: 'Bỏ ghi sổ phiếu nhập',
+    UNPOST_EX: 'Bỏ ghi sổ phiếu xuất',
+};
+
+// Nhóm lọc "Loại nghiệp vụ" -> các documentType thuộc nhóm
+const LEDGER_TYPE_GROUPS = {
+    PO: ['IN_PO'],
+    SO: ['EX_SO'],
+    USAGE: ['EX_USAGE'],
+    TRF: ['IN_TRF', 'EX_TRF'],
+    ADJ: ['IN_ADJ', 'EX_ADJ'],
+    REPAIR: ['IN_REPAIR', 'EX_REPAIR'],
+    BUILD: ['IN_BUILD', 'EX_BUILD'],
+    UNPOST: ['UNPOST_IN', 'UNPOST_EX'],
+};
+
+// Sổ quỹ chỉ tính phiếu đã ghi sổ: phiếu chờ ghi sổ vẫn hiện trong danh sách nhưng chưa làm thay đổi quỹ
+const sumPostedPayments = (list, predicate) => list.reduce(
+    (acc, p) => (p.status === 'POSTED' && predicate(p) ? acc + Number(p.amount || 0) : acc), 0);
+const netPostedPayments = (list, predicate) =>
+    sumPostedPayments(list, p => predicate(p) && p.type === 'RECEIPT')
+    - sumPostedPayments(list, p => predicate(p) && p.type === 'VOUCHER');
+
+// Trạng thái phiếu chuyển kho: APPROVED (chờ xuất) -> IN_TRANSIT (đã xuất, đang chuyển) -> POSTED (kho nhận đã nhập)
+const TRANSFER_STATUS_LABELS = {
+    APPROVED: 'Chờ xuất kho',
+    IN_TRANSIT: 'Đang chuyển',
+    POSTED: 'Hoàn thành',
+    CANCELLED: 'Đã hủy',
+    DRAFT: 'Nháp',
+};
+
 const ReportListPage = () => {
+    const company = useCompanyProfile();
     const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
     const isSuperAdminOrAccountant = roles.some(r =>
         ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'MANAGER', 'ROLE_MANAGER', 'ACCOUNTANT', 'ROLE_ACCOUNTANT'].includes(r)
@@ -365,19 +412,10 @@ const ReportListPage = () => {
 
             // local filtering for stock-ledger transaction type
             if (activeReport.id === 'stock-ledger' && filters.transactionType && filters.transactionType !== '') {
-                data = data.filter(item => {
-                    const t = item.documentType;
-                    switch (filters.transactionType) {
-                        case 'PO': return t === 'IN_PO';
-                        case 'SO': return t === 'EX_SO';
-                        case 'TRF': return t === 'IN_TRF' || t === 'EX_TRF';
-                        case 'ADJ': return t === 'IN_ADJ' || t === 'EX_ADJ';
-                        case 'REPAIR': return t === 'IN_REPAIR' || t === 'EX_REPAIR';
-                        case 'BUILD': return t === 'IN_BUILD' || t === 'EX_BUILD';
-                        case 'OTHER': return !['IN_PO', 'EX_SO', 'IN_TRF', 'EX_TRF', 'IN_ADJ', 'EX_ADJ', 'IN_REPAIR', 'EX_REPAIR', 'IN_BUILD', 'EX_BUILD'].includes(t);
-                        default: return true;
-                    }
-                });
+                const knownTypes = Object.values(LEDGER_TYPE_GROUPS).flat();
+                data = data.filter(item => (filters.transactionType === 'OTHER'
+                    ? !knownTypes.includes(item.documentType)
+                    : (LEDGER_TYPE_GROUPS[filters.transactionType] || [item.documentType]).includes(item.documentType)));
             }
 
             setReportData(data);
@@ -389,7 +427,7 @@ const ReportListPage = () => {
             if (!silent) setLoading(false);
         }
     };
-  useRealtimeRefresh(['INVENTORY_BALANCE','IMPORT_DOCUMENT','EXPORT_DOCUMENT','STOCK_TRANSFER','PAYMENT','SALES_ORDER','PARTNER','REPAIR'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
+    useRealtimeRefresh(['INVENTORY_BALANCE', 'IMPORT_DOCUMENT', 'EXPORT_DOCUMENT', 'STOCK_TRANSFER', 'PAYMENT', 'SALES_ORDER', 'PARTNER', 'REPAIR'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
 
     // Auto-fetch data on switching to a report or changing filters
     useEffect(() => {
@@ -697,12 +735,14 @@ const ReportListPage = () => {
                                                 partnerType: filters.partnerType
                                             }}
                                             showDateRange={activeReport.id !== 'inventory-balance'}
+                                            maxDate={new Date().toLocaleDateString('en-CA')}
                                             warehouses={activeReport.id !== 'debt' ? warehouses : []}
                                             statusOptions={
                                                 activeReport.id === 'stock-transfers' ? [
-                                                    { value: 'COMPLETED', label: 'Hoàn thành' },
-                                                    { value: 'PENDING', label: 'Chờ duyệt' },
-                                                    { value: 'CANCELLED', label: 'Đã hủy' }
+                                                    { value: 'APPROVED', label: TRANSFER_STATUS_LABELS.APPROVED },
+                                                    { value: 'IN_TRANSIT', label: TRANSFER_STATUS_LABELS.IN_TRANSIT },
+                                                    { value: 'POSTED', label: TRANSFER_STATUS_LABELS.POSTED },
+                                                    { value: 'CANCELLED', label: TRANSFER_STATUS_LABELS.CANCELLED }
                                                 ] : activeReport.id === 'cash-flow' ? [
                                                     { value: 'POSTED', label: 'Đã ghi sổ' },
                                                     { value: 'DRAFT', label: 'Chờ ghi sổ' }
@@ -716,10 +756,12 @@ const ReportListPage = () => {
                                                     options: [
                                                         { value: 'PO', label: 'Mua hàng' },
                                                         { value: 'SO', label: 'Bán hàng' },
+                                                        { value: 'USAGE', label: 'Xuất sử dụng nội bộ' },
                                                         { value: 'TRF', label: 'Chuyển kho' },
                                                         { value: 'ADJ', label: 'Kiểm kê' },
                                                         { value: 'REPAIR', label: 'Sửa chữa' },
                                                         { value: 'BUILD', label: 'Lắp ráp/ Tháo dỡ' },
+                                                        { value: 'UNPOST', label: 'Bỏ ghi sổ' },
                                                         { value: 'OTHER', label: 'Khác' }
                                                     ]
                                                 }] : []),
@@ -744,10 +786,19 @@ const ReportListPage = () => {
                                             ]}
                                             onApply={(newFilters) => {
                                                 if (newFilters.preset) handleDatePresetChange(newFilters.preset);
+                                                // Báo cáo không có số liệu tương lai: ngày sau hôm nay tính tới hôm nay
+                                                const todayStr = new Date().toLocaleDateString('en-CA');
+                                                const cap = (value) => (value && value > todayStr ? todayStr : value);
+                                                let startDate = cap(newFilters.fromDate || filters.startDate);
+                                                const endDate = cap(newFilters.toDate || filters.endDate);
+                                                if (startDate && endDate && startDate > endDate) {
+                                                    showToast('warning', 'Ngày bắt đầu không được sau ngày kết thúc');
+                                                    startDate = endDate;
+                                                }
                                                 setFilters(prev => ({
                                                     ...prev,
-                                                    startDate: newFilters.fromDate || prev.startDate,
-                                                    endDate: newFilters.toDate || prev.endDate,
+                                                    startDate,
+                                                    endDate,
                                                     warehouseId: newFilters.warehouseId || '',
                                                     status: newFilters.status || '',
                                                     transactionType: newFilters.transactionType || '',
@@ -781,8 +832,12 @@ const ReportListPage = () => {
                             {/* Report Results Content */}
                             <div className="report-results-view" style={{ background: 'var(--color-surface)', padding: '24px', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border-soft)' }}>
                                 <div className={styles.reportMetadataHeader}>
-                                    <h4>Duy Long Computer Warehouse</h4>
-                                    <p><strong>Kỳ báo cáo:</strong> {activeReport.id !== 'inventory-balance' ? `Từ ${formatDate(filters.startDate)} đến ${formatDate(filters.endDate)}` : 'Tính đến thời điểm hiện tại'}</p>
+                                    <h4>{company.name}</h4>
+                                    <p><strong>Kỳ báo cáo:</strong> {activeReport.id === 'inventory-balance'
+                                        ? 'Tính đến thời điểm hiện tại'
+                                        : (!filters.startDate && !filters.endDate
+                                            ? 'Toàn bộ thời gian'
+                                            : `Từ ${filters.startDate ? formatDate(filters.startDate) : '...'} đến ${filters.endDate ? formatDate(filters.endDate) : 'nay'}`)}</p>
                                     {filters.warehouseId && <p><strong>Kho:</strong> {warehouses.find(w => w.id === Number(filters.warehouseId))?.name}</p>}
                                 </div>
 
@@ -905,28 +960,14 @@ const ReportListPage = () => {
                                                                             <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.documentDate)}</td>
                                                                             <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.documentNumber}</td>
                                                                             <td>
-                                                                                <span className={`${styles.badge} ${item.documentType?.startsWith('IN') || item.documentType?.includes('NHAP') || item.documentType?.includes('IMPORT') ? styles.badgeImport : styles.badgeExport}`}>
-                                                                                    {item.documentType?.startsWith('IN') || item.documentType?.includes('NHAP') || item.documentType?.includes('IMPORT') ? 'Nhập kho' : 'Xuất kho'}
+                                                                                {/* Theo chiều thực tế của dòng thẻ kho: bỏ ghi sổ phiếu xuất là hàng quay lại kho */}
+                                                                                <span className={`${styles.badge} ${Number(item.quantityIn) > 0 ? styles.badgeImport : styles.badgeExport}`}>
+                                                                                    {Number(item.quantityIn) > 0 ? 'Nhập kho' : 'Xuất kho'}
                                                                                 </span>
                                                                             </td>
                                                                             <td>
                                                                                 <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                                                                                    {(() => {
-                                                                                        const t = item.documentType;
-                                                                                        if (t === 'IN_PO') return 'Mua hàng';
-                                                                                        if (t === 'EX_SO') return 'Bán hàng';
-                                                                                        if (t === 'IN_RET') return 'Khách trả hàng';
-                                                                                        if (t === 'EX_RET') return 'Trả hàng NCC';
-                                                                                        if (t === 'IN_TRF') return 'Nhận chuyển kho';
-                                                                                        if (t === 'EX_TRF') return 'Xuất chuyển kho';
-                                                                                        if (t === 'IN_ADJ') return 'Nhập kiểm kê';
-                                                                                        if (t === 'EX_ADJ') return 'Xuất kiểm kê';
-                                                                                        if (t === 'IN_REPAIR') return 'Nhập sau sửa chữa';
-                                                                                        if (t === 'EX_REPAIR') return 'Xuất sửa chữa';
-                                                                                        if (t === 'IN_BUILD') return 'Nhập lắp ráp';
-                                                                                        if (t === 'EX_BUILD') return 'Xuất lắp ráp/tháo dỡ';
-                                                                                        return t;
-                                                                                    })()}
+                                                                                    {LEDGER_TYPE_LABELS[item.documentType] || item.documentType}
                                                                                 </span>
                                                                             </td>
                                                                             <td className={styles.colProductCode}>{item.productCode}</td>
@@ -975,8 +1016,8 @@ const ReportListPage = () => {
                                                                             {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>}
                                                                             {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.amount)}</td>}
                                                                             <td>
-                                                                                <span className={`${styles.badge} ${item.status === 'COMPLETED' ? styles.badgeSuccess : styles.badgeWarning}`}>
-                                                                                    {item.status === 'COMPLETED' ? 'Hoàn thành' : item.status}
+                                                                                <span className={`${styles.badge} ${item.status === 'POSTED' ? styles.badgeSuccess : styles.badgeWarning}`}>
+                                                                                    {TRANSFER_STATUS_LABELS[item.status] || item.status}
                                                                                 </span>
                                                                             </td>
                                                                         </tr>
@@ -1067,7 +1108,7 @@ const ReportListPage = () => {
                                                                         <th className={styles.textRight}>Doanh thu linh kiện</th>
                                                                         <th className={styles.textRight}>Doanh thu dịch vụ</th>
                                                                         <th className={styles.textRight}>VAT</th>
-                                                                        <th className={styles.textRight}>Giá vốn FIFO</th>
+                                                                        <th className={styles.textRight}>Giá vốn</th>
                                                                         <th className={styles.textRight}>Lãi sau giá vốn linh kiện</th>
                                                                         <th className={styles.textRight}>Tỷ suất LN (%)</th>
                                                                     </tr>
@@ -1102,10 +1143,10 @@ const ReportListPage = () => {
                                                                             <i className="bi bi-arrow-down"></i>
                                                                         </div>
                                                                         <div className={styles.kpiDetails}>
-                                                                            <span>Tổng thu trong kỳ</span>
+                                                                            <span>Tổng thu đã ghi sổ</span>
                                                                             <strong style={{ color: 'var(--wms-success)' }}>
                                                                                 {formatCurrency(
-                                                                                    reportData.reduce((acc, p) => p.type === 'RECEIPT' ? acc + Number(p.amount || 0) : acc, 0)
+                                                                                    sumPostedPayments(reportData, p => p.type === 'RECEIPT')
                                                                                 )}
                                                                             </strong>
                                                                         </div>
@@ -1116,10 +1157,10 @@ const ReportListPage = () => {
                                                                             <i className="bi bi-arrow-up"></i>
                                                                         </div>
                                                                         <div className={styles.kpiDetails}>
-                                                                            <span>Tổng chi trong kỳ</span>
+                                                                            <span>Tổng chi đã ghi sổ</span>
                                                                             <strong style={{ color: 'var(--wms-danger)' }}>
                                                                                 {formatCurrency(
-                                                                                    reportData.reduce((acc, p) => p.type === 'VOUCHER' ? acc + Number(p.amount || 0) : acc, 0)
+                                                                                    sumPostedPayments(reportData, p => p.type === 'VOUCHER')
                                                                                 )}
                                                                             </strong>
                                                                         </div>
@@ -1132,13 +1173,21 @@ const ReportListPage = () => {
                                                                         <div className={styles.kpiDetails}>
                                                                             <span>Dòng tiền ròng (Thu - Chi)</span>
                                                                             {(() => {
-                                                                                const rec = reportData.reduce((acc, p) => p.type === 'RECEIPT' ? acc + Number(p.amount || 0) : acc, 0);
-                                                                                const vou = reportData.reduce((acc, p) => p.type === 'VOUCHER' ? acc + Number(p.amount || 0) : acc, 0);
+                                                                                const rec = sumPostedPayments(reportData, p => p.type === 'RECEIPT');
+                                                                                const vou = sumPostedPayments(reportData, p => p.type === 'VOUCHER');
                                                                                 const net = rec - vou;
+                                                                                const pendingCount = reportData.filter(p => p.status !== 'POSTED').length;
                                                                                 return (
-                                                                                    <strong style={{ color: net >= 0 ? 'var(--wms-success)' : 'var(--wms-danger)' }}>
-                                                                                        {formatCurrency(net)}
-                                                                                    </strong>
+                                                                                    <>
+                                                                                        <strong style={{ color: net >= 0 ? 'var(--wms-success)' : 'var(--wms-danger)' }}>
+                                                                                            {formatCurrency(net)}
+                                                                                        </strong>
+                                                                                        {pendingCount > 0 && (
+                                                                                            <small style={{ color: 'var(--color-text-muted)' }}>
+                                                                                                Chưa tính {pendingCount} phiếu chờ ghi sổ
+                                                                                            </small>
+                                                                                        )}
+                                                                                    </>
                                                                                 );
                                                                             })()}
                                                                         </div>
@@ -1149,11 +1198,11 @@ const ReportListPage = () => {
                                                                             <i className="bi bi-bank"></i>
                                                                         </div>
                                                                         <div className={styles.kpiDetails}>
-                                                                            <span>Tiền mặt & Ngân hàng</span>
+                                                                            <span>Thu - Chi theo hình thức</span>
                                                                             <strong style={{ fontSize: '13px', color: 'var(--color-text-strong)' }}>
-                                                                                Tiền mặt: {formatCurrency(reportData.reduce((acc, p) => p.paymentMethod === 'CASH' ? acc + Number(p.amount || 0) : acc, 0))}
+                                                                                Tiền mặt: {formatCurrency(netPostedPayments(reportData, p => p.paymentMethod === 'CASH'))}
                                                                                 <br />
-                                                                                Ngân hàng: {formatCurrency(reportData.reduce((acc, p) => p.paymentMethod === 'BANK_TRANSFER' ? acc + Number(p.amount || 0) : acc, 0))}
+                                                                                Chuyển khoản: {formatCurrency(netPostedPayments(reportData, p => p.paymentMethod !== 'CASH'))}
                                                                             </strong>
                                                                         </div>
                                                                     </div>

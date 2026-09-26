@@ -62,12 +62,12 @@ public class SalesOrderController {
         );
     }
 
-    // ─── GET: Sinh mã SO tự động ────────────────────────────────────────
+    // ─── GET: Xem trước mã SO (chỉ đọc, KHÔNG tăng bộ đếm) ─────────────
     @GetMapping("/next-code")
-    @Operation(summary = "Sinh mã đơn bán hàng tự động")
+    @Operation(summary = "Xem trước mã đơn bán hàng tự động (không tăng bộ đếm)")
     @PreAuthorize("hasAuthority('sales_order:add')")
     public ApiResponse<String> getNextCode() {
-        return ApiResponse.success(salesOrderService.generateNextSoCode());
+        return ApiResponse.success(salesOrderService.previewNextSoCode());
     }
 
     // ─── GET: Chi tiết đơn bán hàng ────────────────────────────────────

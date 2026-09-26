@@ -204,7 +204,7 @@ public class StocktakeService {
             audit(userPrincipal, "START_STOCKTAKE", saved, "Tạo và bắt đầu kiểm kê " + saved.getStocktakeCode() + " - kho bị khóa nhập/xuất/chuyển");
         } else {
             notifyManagersForApproval(saved);
-            audit(userPrincipal, "CREATE_STOCKTAKE", saved, "Tạo phiếu kiểm kê " + saved.getStocktakeCode() + " - chờ Manager duyệt");
+            audit(userPrincipal, "CREATE_STOCKTAKE", saved, "Tạo phiếu kiểm kê " + saved.getStocktakeCode() + " - chờ quản lý duyệt");
         }
         return toResponse(saved);
     }

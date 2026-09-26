@@ -20,8 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.inventory.InventoryBalance;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentLine;
-import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,7 +61,6 @@ public class RepairService {
     private final AuditLogService auditLogService;
     private final CodeGeneratorService codeGeneratorService;
     private final InventoryBalanceRepository inventoryBalanceRepository;
-    private final InventoryDocumentRepository inventoryDocumentRepository;
     private final com.duylongtech.backend.feature.repair.RepairMapper repairMapper;
 
     // =====================================================================
@@ -121,6 +118,7 @@ public class RepairService {
                 resolveInvoiceMethod(request.getInvoiceMethod()),
                 trimToNull(request.getResponsiblePerson()),
                 trimToNull(request.getNote()),
+                trimToNull(request.getInternalNotes()),
                 currentUserId
         );
 
@@ -193,8 +191,9 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
+        if (com.duylongtech.backend.enums.RepairStatus.CANCELLED.name().equals(repair.getRepairStatus())
+                || com.duylongtech.backend.enums.RepairStatus.DONE.name().equals(repair.getRepairStatus())) {
+            throw new BusinessException("Không thể cập nhật ghi chú lệnh đã hoàn tất hoặc đã hủy");
         }
 
         repair.updateDetails(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, trimToNull(notes), null, null, null, null, null);
@@ -482,7 +481,6 @@ public class RepairService {
         RepairResponse response = repairMapper.toResponse(repair);
 
         List<RepairLineResponse> lineResponses = toLineResponsesBatched(repair);
-        applyFifoCosts(repair.getId(), lineResponses);
 
         List<RepairFeeResponse> feeResponses = repair.getFees().stream()
                 .map(this::toFeeResponse)
@@ -528,27 +526,6 @@ public class RepairService {
         response.setLines(lineResponses);
         response.setFees(feeResponses);
         return response;
-    }
-
-    private void applyFifoCosts(Long repairId, List<RepairLineResponse> lineResponses) {
-        if (repairId == null || lineResponses.isEmpty()) {
-            return;
-        }
-        Map<Long, InventoryDocumentLine> costByRepairLineId = inventoryDocumentRepository
-                .findByReferenceWithLines("REPAIR", repairId).stream()
-                .filter(document -> "EX_SO".equals(document.getDocType()))
-                .filter(document -> !"CANCELLED".equals(document.getStatus()))
-                .flatMap(document -> document.getLines().stream())
-                .filter(line -> line.getRepairLineId() != null)
-                .collect(Collectors.toMap(InventoryDocumentLine::getRepairLineId, line -> line, (first, second) -> second));
-        for (RepairLineResponse response : lineResponses) {
-            InventoryDocumentLine documentLine = costByRepairLineId.get(response.getId());
-            if (documentLine == null || documentLine.getUnitCost() == null) {
-                continue;
-            }
-            response.setFifoUnitCost(documentLine.getUnitCost());
-            response.setFifoCostAmount(documentLine.getUnitCost().multiply(documentLine.getQuantityOut()));
-        }
     }
 
     /**

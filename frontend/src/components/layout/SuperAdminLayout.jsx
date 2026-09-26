@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './SuperAdminLayout.module.css';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 const SuperAdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
+    const company = useCompanyProfile();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
@@ -49,7 +51,7 @@ const SuperAdminLayout = ({ children }) => {
                         <span className={styles.logoWrap}>
                             <img src="/dl-logo.png" alt="" className={styles.logo} />
                         </span>
-                        <span className={styles.brandName}>Duy Long Computer</span>
+                        <span className={styles.brandName}>{company.shortName}</span>
                     </button>
                     <nav id="super-admin-navigation" aria-label="Điều hướng Super Admin" className={`${styles.navLinks} ${isMobileMenuOpen ? styles.navLinksMobileOpen : ''}`}>
                         <button

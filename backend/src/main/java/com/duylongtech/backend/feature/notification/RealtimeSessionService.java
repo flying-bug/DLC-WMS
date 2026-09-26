@@ -1,6 +1,8 @@
 package com.duylongtech.backend.feature.notification;
 
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.feature.auth.UserDto;
+import com.duylongtech.backend.feature.auth.UserRepository;
 import com.duylongtech.backend.feature.notification.RealtimeForceLogoutEvent;
 import com.duylongtech.backend.feature.notification.RealtimeUserEvent;
 import com.duylongtech.backend.feature.system.SystemHealthDto;
@@ -14,6 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,21 +55,50 @@ public class RealtimeSessionService {
 
     private final SystemHealthService systemHealthService;
     private final UserWarehouseRoleRepository userWarehouseRoleRepository;
+    private final UserRepository userRepository;
 
     private final ConcurrentMap<String, ClientConnection> connections = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor();
+    // Ping chạy trên luồng riêng: tác vụ chậm (system-health truy vấn DB, kiểm tra phiên) không làm trễ ping,
+    // nếu không proxy (nginx...) sẽ cắt kết nối "im lặng" và client phải kết nối lại liên tục.
+    private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(
+            daemonThreadFactory("realtime-heartbeat"));
+    private final ScheduledExecutorService maintenanceExecutor = Executors.newSingleThreadScheduledExecutor(
+            daemonThreadFactory("realtime-maintenance"));
 
     @PostConstruct
     void startHeartbeat() {
-        heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeat, 20, 20, TimeUnit.SECONDS);
-        heartbeatExecutor.scheduleAtFixedRate(this::broadcastSystemHealth, 10, 10, TimeUnit.SECONDS);
+        heartbeatExecutor.scheduleWithFixedDelay(safely("heartbeat", this::sendHeartbeat), 20, 20, TimeUnit.SECONDS);
+        maintenanceExecutor.scheduleWithFixedDelay(safely("system-health", this::broadcastSystemHealth), 10, 10, TimeUnit.SECONDS);
+        maintenanceExecutor.scheduleWithFixedDelay(safely("session-check", this::closeRevokedSessions), 30, 30, TimeUnit.SECONDS);
     }
 
     @PreDestroy
     void shutdown() {
         heartbeatExecutor.shutdownNow();
-        connections.values().forEach(connection -> connection.emitter.complete());
-        connections.clear();
+        maintenanceExecutor.shutdownNow();
+        List.copyOf(connections.keySet()).forEach(this::removeConnection);
+    }
+
+    /**
+     * Một lỗi thoát ra khỏi tác vụ định kỳ làm ScheduledExecutorService âm thầm hủy mọi lần chạy sau: heartbeat
+     * dừng hẳn, kết nối đã hỏng không còn được phát hiện và dồn lại trong bộ nhớ. Bắt mọi lỗi để tác vụ luôn chạy tiếp.
+     */
+    private Runnable safely(String taskName, Runnable task) {
+        return () -> {
+            try {
+                task.run();
+            } catch (Throwable ex) {
+                log.warn("Realtime task '{}' failed, will retry on next run: {}", taskName, ex.toString(), ex);
+            }
+        };
+    }
+
+    private static java.util.concurrent.ThreadFactory daemonThreadFactory(String name) {
+        return runnable -> {
+            Thread thread = new Thread(runnable, name);
+            thread.setDaemon(true);
+            return thread;
+        };
     }
 
     @Transactional(readOnly = true)
@@ -77,6 +112,7 @@ public class RealtimeSessionService {
         ClientConnection connection = new ClientConnection(
                 connectionId,
                 userDetails.getId(),
+                userDetails.getSessionId(),
                 userDetails.getAuthorities().stream()
                         .map(authority -> authority.getAuthority())
                         .collect(Collectors.toSet()),
@@ -109,6 +145,51 @@ public class RealtimeSessionService {
                 .message(message)
                 .build();
         sendToMatching(connection -> connection.userId.equals(userId), EVENT_FORCE_LOGOUT, payload);
+    }
+
+    /**
+     * Tài khoản vừa đăng nhập ở nơi khác: đăng xuất các kết nối thuộc phiên cũ (khác {@code currentSessionId})
+     * rồi đóng kết nối, token của chúng đã hết hiệu lực.
+     */
+    public void forceLogoutOtherSessions(Long userId, String currentSessionId, String reason, String message) {
+        connections.values().stream()
+                .filter(connection -> connection.userId.equals(userId)
+                        && !Objects.equals(connection.sessionId, currentSessionId))
+                .toList()
+                .forEach(connection -> forceLogoutAndClose(connection, reason, message));
+    }
+
+    private void forceLogoutAndClose(ClientConnection connection, String reason, String message) {
+        send(connection, EVENT_FORCE_LOGOUT, RealtimeForceLogoutEvent.builder()
+                .reason(reason)
+                .message(message)
+                .build());
+        removeConnection(connection.connectionId);
+    }
+
+    /**
+     * Lưới an toàn cho "mỗi tài khoản một phiên": đóng kết nối của phiên đã bị thay (đăng nhập nơi khác) hoặc bị thu
+     * hồi (đổi mật khẩu) mà sự kiện lúc đó không tới được, ví dụ máy kia đang mất mạng rồi kết nối lại bằng kết nối cũ.
+     */
+    void closeRevokedSessions() {
+        // Chụp danh sách TRƯỚC khi đọc DB: kết nối nào có trong danh sách đã mở trước lần đọc, nên phiên của nó khác
+        // phiên trong DB nghĩa là đã bị thay thật (mã phiên luôn mới, không bao giờ quay lại giá trị cũ).
+        List<ClientConnection> snapshot = List.copyOf(connections.values());
+        if (snapshot.isEmpty()) {
+            return;
+        }
+        Set<Long> userIds = snapshot.stream().map(ClientConnection::userId).collect(Collectors.toSet());
+        Map<Long, String> currentSessionIds = new HashMap<>();
+        for (Object[] row : userRepository.findCurrentSessionIds(userIds)) {
+            currentSessionIds.put((Long) row[0], (String) row[1]);
+        }
+        for (ClientConnection connection : snapshot) {
+            String currentSessionId = currentSessionIds.get(connection.userId);
+            if (!Objects.equals(currentSessionId, connection.sessionId)) {
+                SystemMessage reason = currentSessionId != null ? SystemMessage.SESSION_REPLACED : SystemMessage.SESSION_EXPIRED;
+                forceLogoutAndClose(connection, reason.name(), reason.getMessage());
+            }
+        }
     }
 
     public void publishNotification(AppNotification notification) {
@@ -190,6 +271,6 @@ public class RealtimeSessionService {
         }
     }
 
-    private record ClientConnection(String connectionId, Long userId, Set<String> authorities, Set<Long> warehouseIds, SseEmitter emitter) {
+    private record ClientConnection(String connectionId, Long userId, String sessionId, Set<String> authorities, Set<Long> warehouseIds, SseEmitter emitter) {
     }
 }

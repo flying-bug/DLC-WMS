@@ -1,4 +1,5 @@
 import { formatDateOnly } from './dateFormat';
+import { companyHtml } from './companyProfile';
 
 export function printAssemblyOrder(order, options = {}) {
   const {
@@ -91,7 +92,7 @@ export function printAssemblyOrder(order, options = {}) {
           <table class="header-table">
             <tr>
               <td style="width: 50%;">
-                <strong style="font-size: 16px;">DLC COMPUTER</strong><br/>
+                <strong style="font-size: 16px;">${companyHtml().shortNameUpper}</strong><br/>
                 <span style="font-size: 12px; color: #666;">Hệ thống quản lý kho WMS</span>
               </td>
               <td style="width: 50%; text-align: right; font-size: 13px;">

@@ -35,14 +35,24 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    public String generateJwtToken(String username, String role) {
+    /** Claim chứa mã phiên đăng nhập; phải khớp {@code users.current_session_id} thì token mới được chấp nhận. */
+    public static final String CLAIM_SESSION_ID = "sid";
+
+    public String generateJwtToken(String username, String role, String sessionId) {
         return Jwts.builder()
                 .setSubject((username))
                 .claim("role", role)
+                .claim(CLAIM_SESSION_ID, sessionId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    /** Kiểm chữ ký, hạn dùng và trả về claims; ném {@link JwtException} nếu token không hợp lệ. */
+    public Claims parseClaims(String token) {
+        return Jwts.parserBuilder().setSigningKey(key()).build()
+                .parseClaimsJws(token).getBody();
     }
 
     public String getUserNameFromJwtToken(String token) {

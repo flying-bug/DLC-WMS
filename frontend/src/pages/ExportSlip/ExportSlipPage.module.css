@@ -342,7 +342,7 @@
 
 .table {
   width: 100%;
-  min-width: 1600px;
+  min-width: max-content;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 13px;

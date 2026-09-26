@@ -61,7 +61,6 @@
 }
 
 .assistantHeader p,
-.statusBox p,
 .chatHeader p {
     margin: 4px 0 0;
     color: var(--color-text-muted);
@@ -84,31 +83,8 @@
     background: var(--color-danger-soft, #fef2f2);
 }
 
-.statusBox {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 12px;
-    border: 1px solid var(--status-info-border);
-    border-radius: 8px;
-    background: var(--status-info-bg);
-    color: var(--status-info-text);
-}
 
-.statusBox strong {
-    display: block;
-    color: var(--color-text-strong);
-    font-size: 13px;
-}
 
-.statusDot {
-    width: 9px;
-    height: 9px;
-    margin-top: 5px;
-    border-radius: 999px;
-    background: var(--color-success);
-    box-shadow: 0 0 0 4px var(--color-success-bg);
-}
 
 .promptGroup {
     display: flex;
@@ -177,19 +153,6 @@
     font-weight: 750;
 }
 
-.badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 30px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-    font-size: 12px;
-    font-weight: 800;
-    white-space: nowrap;
-}
 
 .messages {
     flex: 1;
@@ -410,57 +373,10 @@
     margin: 0 4px;
 }
 
-.sourcesContainer {
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--wms-border-base);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
 
-.sourcesHeader {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--wms-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
 
-.sourceBadges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
 
-.sourceTag {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 3px 9px;
-    border-radius: 6px;
-    background: var(--wms-bg-hover);
-    color: var(--wms-text-muted);
-    border: 1px solid var(--wms-border-base);
-}
 
-.modelTag {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 9px;
-    border-radius: 6px;
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-    border: 1px solid var(--color-info-border-soft);
-}
 
 .typingBubble {
     min-width: 76px;

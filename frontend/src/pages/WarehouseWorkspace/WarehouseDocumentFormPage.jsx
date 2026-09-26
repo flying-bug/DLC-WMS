@@ -13,11 +13,14 @@ import * as exportApi from '../../api/inventoryExportApi';
 import styles from './WarehouseDocumentFormPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
-// Phiếu XUẤT tự sinh từ lệnh lắp ráp / sửa chữa: mã hàng và số lượng theo lệnh, thủ kho chỉ chọn serial
-// (backend InventoryDocumentService.updateManagedExportSerials từ chối đổi số lượng). Phiếu nhập tự sinh không
-// áp dụng: phiếu nhập phế liệu sửa chữa cho phép nhập số lượng thực nhận.
-const isManagedExport = (document, isImport) =>
-  !isImport && ['ASSEMBLY_ORDER', 'REPAIR'].includes(String(document?.referenceType || '').trim().toUpperCase());
+// Phiếu tự sinh có mã hàng và số lượng cố định theo lệnh, thủ kho chỉ chọn/nhập serial:
+// - phiếu XUẤT của lệnh lắp ráp / sửa chữa (backend updateManagedExportSerials),
+// - phiếu NHẬP của lệnh lắp ráp / tháo dỡ (backend updateManagedImportSerials; giá vốn thành phẩm đã tính theo lệnh).
+// Phiếu nhập phế liệu sửa chữa không áp dụng: được nhập số lượng thực nhận.
+const isManagedLines = (document, isImport) => {
+  const referenceType = String(document?.referenceType || '').trim().toUpperCase();
+  return isImport ? referenceType === 'ASSEMBLY_ORDER' : ['ASSEMBLY_ORDER', 'REPAIR'].includes(referenceType);
+};
 
 export default function WarehouseDocumentFormPage() {
   const { id } = useParams();
@@ -336,7 +339,7 @@ export default function WarehouseDocumentFormPage() {
   }
 
   const isPosted = doc.status === 'POSTED' || doc.status === 'COMPLETED';
-  const isManagedDoc = isManagedExport(doc, isImport);
+  const isManagedDoc = isManagedLines(doc, isImport);
   const isLinesEditable = !isPosted && !isManagedDoc;
   const isUnposted = doc.status === 'UNPOSTED';
   const isCancelled = doc.status === 'CANCELLED';
@@ -518,7 +521,8 @@ export default function WarehouseDocumentFormPage() {
               <i className="bi bi-info-circle" style={{ color: 'var(--color-primary)', fontSize: '1.25rem' }}></i>
               <span>
                 Phiếu tự động của lệnh {String(doc.referenceType).toUpperCase() === 'REPAIR' ? 'sửa chữa' : 'lắp ráp'}:
-                mã hàng và số lượng theo lệnh. Bấm nút serial ở từng dòng để chọn serial xuất rồi Xác nhận Ghi sổ kho.
+                mã hàng và số lượng theo lệnh. Bấm nút serial ở từng dòng để {isImport ? 'nhập serial cho hàng nhập kho' : 'chọn serial xuất'} rồi
+                Xác nhận Ghi sổ kho.
               </span>
             </div>
           )}
@@ -844,7 +848,7 @@ export default function WarehouseDocumentFormPage() {
                   const next = [...prev];
                   next[selectedLineIdx].serialList = savedSerials;
                   // Phiếu tự sinh giữ số lượng theo lệnh (backend từ chối đổi số lượng), chỉ cập nhật serial.
-                  if (savedSerials.length > 0 && !isManagedExport(doc, isImport)) {
+                  if (savedSerials.length > 0 && !isManagedLines(doc, isImport)) {
                     next[selectedLineIdx].actualQty = savedSerials.length;
                   }
                   return next;

@@ -53,7 +53,7 @@ class ProductServiceReadTest {
         when(conversionUnit.getName()).thenReturn("Thùng");
         when(productRepository.searchProducts(isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1));
-        when(balanceRepository.sumQuantityOnHandByProductIds(List.of(224L)))
+        when(balanceRepository.sumSellableQuantityByProductIds(List.of(224L)))
                 .thenReturn(Collections.singletonList(new Object[]{224L, new BigDecimal("5")}));
         when(conversionRepository.findAllWithUnitByProductIdIn(List.of(224L)))
                 .thenReturn(List.of(conversion));

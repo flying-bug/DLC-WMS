@@ -1,5 +1,6 @@
 import { saveAs } from 'file-saver';
 import { loadExcelJs } from './lazyExcel';
+import { companyNameUpper, getCompanyProfile } from './companyProfile';
 
 export const exportBomToExcel = async (lines, bomCode) => {
     const ExcelJS = await loadExcelJs();
@@ -18,28 +19,29 @@ export const exportBomToExcel = async (lines, bomCode) => {
         { key: 'quantity', width: 12 }
     ];
 
-    // Build Header
+    // Build Header (thông tin doanh nghiệp từ Thiết lập nghiệp vụ)
+    const company = getCompanyProfile();
     worksheet.mergeCells('A1:E1');
     const titleCell1 = worksheet.getCell('A1');
-    titleCell1.value = 'CÔNG TY DUY LONG COMPUTER';
+    titleCell1.value = companyNameUpper(company);
     titleCell1.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFF0000' } };
     titleCell1.alignment = { vertical: 'middle', horizontal: 'right' };
 
     worksheet.mergeCells('A2:E2');
     const titleCell2 = worksheet.getCell('A2');
-    titleCell2.value = 'Showroom: Số 59 Thịnh Liệt - Hoàng Mai - Hà Nội';
+    titleCell2.value = company.address ? `Địa chỉ: ${company.address}` : '';
     titleCell2.font = { name: 'Arial', size: 10 };
     titleCell2.alignment = { vertical: 'middle', horizontal: 'right' };
 
     worksheet.mergeCells('A3:E3');
     const titleCell3 = worksheet.getCell('A3');
-    titleCell3.value = 'Hotline: 0392718888';
+    titleCell3.value = company.phone ? `Hotline: ${company.phone}` : '';
     titleCell3.font = { name: 'Arial', size: 10 };
     titleCell3.alignment = { vertical: 'middle', horizontal: 'right' };
 
     worksheet.mergeCells('A4:E4');
     const titleCell4 = worksheet.getCell('A4');
-    titleCell4.value = 'Email: Duylongcomputer@gmail.com';
+    titleCell4.value = company.email ? `Email: ${company.email}` : '';
     titleCell4.font = { name: 'Arial', size: 10 };
     titleCell4.alignment = { vertical: 'middle', horizontal: 'right' };
 

@@ -82,6 +82,12 @@ public final class AiIntentRouter {
         if (has(n, "xuat kho", "phieu xuat", "export") || EXPORT_CODE.matcher(n).find()) {
             return AiIntent.EXPORT;
         }
+        // "tôi đã xuất những gì", "hàng xuất gần đây": hỏi phiếu xuất kho dù không nói "phiếu xuất"
+        // (trừ xuất hóa đơn / xuất file / xuất báo cáo)
+        if (has(n, "da xuat", "xuat gan day", "xuat hom nay", "xuat hang", "hang xuat")
+                && !has(n, "hoa don", "excel", "file", "bao cao", "pdf")) {
+            return AiIntent.EXPORT;
+        }
 
         boolean mentionsWarehouse = has(n, "kho", "warehouse");
         boolean mentionsStock = has(n, "ton", "hang", "san pham", "sku");

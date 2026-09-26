@@ -64,7 +64,7 @@ const STATUS_LABELS = {
 
 const IMPORT_PURPOSE_LABELS = {
   PURCHASE: 'Mua hàng',
-  STOCKTAKE_ADD: 'Hàng thừa từ kiểm kê',
+  STOCKTAKE_ADD: 'Nhập điều chỉnh kiểm kê',
   RETURN: 'Hàng bán bị trả lại',
   PRODUCTION: 'Nhập kho sản xuất',
   ASSEMBLY: 'Nhập kho lắp ráp / tháo dỡ',
@@ -141,6 +141,19 @@ function ImportHistoryPage() {
     return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
   });
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState(null);
+
+  const handleSort = (key) => {
+    if (sortConfig && sortConfig.key === key) {
+      if (sortConfig.direction === 'asc') {
+        setSortConfig({ key, direction: 'desc' });
+      } else {
+        setSortConfig(null);
+      }
+    } else {
+      setSortConfig({ key, direction: 'asc' });
+    }
+  };
 
   const toggleColumn = (colId) => {
     setColumns(prev => {
@@ -159,6 +172,9 @@ function ImportHistoryPage() {
 
   const isAssemblyImport = (slip) => String(slip?.referenceType || '').toUpperCase() === 'ASSEMBLY_ORDER';
   const getImportPurposeLabel = (slip) => {
+    if (slip.referenceType === 'STOCKTAKE') {
+      return 'Nhập điều chỉnh kiểm kê';
+    }
     if (isAssemblyImport(slip)) {
       const assemblyOrder = assemblyOrderById.get(slip.referenceId)
         || assemblyOrderById.get(Number(slip.referenceId));
@@ -348,10 +364,25 @@ function ImportHistoryPage() {
 
 
 
-  const totalItems = rows.length;
+  const sortedRows = useMemo(() => {
+    if (!sortConfig) return rows;
+    return [...rows].sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      if (sortConfig.key === 'date') {
+        aVal = new Date(a.docDate || 0).getTime();
+        bVal = new Date(b.docDate || 0).getTime();
+      }
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [rows, sortConfig]);
+
+  const totalItems = sortedRows.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
+  const paginatedRows = sortedRows.slice(startIndex, startIndex + pageSize);
 
   const handlePrintSlip = (slip, isImport = true) => {
     const supplier = supplierById.get(slip.partnerId) || supplierById.get(Number(slip.partnerId)) || {};
@@ -474,8 +505,8 @@ function ImportHistoryPage() {
                       onChange={handleSelectAll}
                     />
                   </th>
-                  {columns.date && <th style={{ width: '120px' }}>Ngày Nhập</th>}
-                  {columns.docCode && <th style={{ width: '150px' }}>Số Phiếu</th>}
+                  {columns.date && <th style={{ width: '130px', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('date')}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>Ngày Nhập</span><i className={`bi bi-arrow-${sortConfig?.key === 'date' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`} style={{ color: sortConfig?.key === 'date' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.9rem' }}></i></div></th>}
+                  {columns.docCode && <th style={{ width: '160px', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('docCode')}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>Số Phiếu</span><i className={`bi bi-arrow-${sortConfig?.key === 'docCode' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`} style={{ color: sortConfig?.key === 'docCode' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.9rem' }}></i></div></th>}
                   {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
                   {columns.partner && <th style={{ width: '200px' }}>Đối tác / Tham chiếu</th>}
                   {columns.warehouse && <th style={{ width: '120px' }}>Kho Nhập</th>}

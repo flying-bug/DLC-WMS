@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import LoginForm from './components/LoginForm';
 import styles from './LoginPage.module.css';
-import { COMPANY_NAME, COPYRIGHT_YEAR } from '../../constants';
+import { COPYRIGHT_YEAR } from '../../constants';
 import axiosClient from '../../api/axiosClient';
 import { setAuthSession } from '../../auth/session';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 function LoginPage() {
     const [errorMsg, setErrorMsg] = useState(() => {
@@ -17,6 +18,7 @@ function LoginPage() {
         return '';
     });
     const navigate = useNavigate();
+    const company = useCompanyProfile({ publicOnly: true });
 
     const handleGoogleSuccess = async (credentialResponse) => {
         setErrorMsg('');
@@ -55,7 +57,7 @@ function LoginPage() {
                         </svg>
                     </div>
                     <div className={styles.brandText}>
-                        <span className={styles.brandName}>DUY LONG COMPUTER</span>
+                        <span className={styles.brandName}>{company.shortName.toLocaleUpperCase('vi-VN')}</span>
                         <span className={styles.brandSub}>WAREHOUSE MANAGEMENT</span>
                     </div>
                 </div>
@@ -105,7 +107,7 @@ function LoginPage() {
 
                 {/* Copyright */}
                 <p className={styles.copyright}>
-                    © {COPYRIGHT_YEAR} {COMPANY_NAME.toUpperCase()}. ALL RIGHTS RESERVED.
+                    © {COPYRIGHT_YEAR} {company.shortName.toLocaleUpperCase('vi-VN')}. ALL RIGHTS RESERVED.
                 </p>
             </div>
         </div>

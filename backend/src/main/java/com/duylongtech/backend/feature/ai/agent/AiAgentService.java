@@ -43,6 +43,7 @@ public class AiAgentService {
     private final ProductTools productTools;
     private final StockTools stockTools;
     private final PartnerTools partnerTools;
+    private final com.duylongtech.backend.feature.ai.agent.tool.DocumentTools documentTools;
 
     private volatile ChatClient client;
 
@@ -91,7 +92,7 @@ public class AiAgentService {
                     ChatClient.Builder builder = chatClientBuilder.getObject();
                     local = builder
                             .defaultSystem(systemPrompt())
-                            .defaultTools(productTools, stockTools, partnerTools)
+                            .defaultTools(productTools, stockTools, partnerTools, documentTools)
                             .build();
                     client = local;
                 }

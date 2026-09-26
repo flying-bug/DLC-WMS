@@ -14,6 +14,7 @@ import * as paymentApi from '../../api/paymentApi';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import styles from './CashierWorkspacePage.module.css';
 import useSessionState from '../../hooks/useSessionState';
+import { ledgerEntityTypeLabel } from '../../utils/ledgerEntityType';
 
 
 export default function CashierWorkspacePage() {
@@ -337,20 +338,9 @@ export default function CashierWorkspacePage() {
     return Number(val).toLocaleString('vi-VN') + ' ₫';
   };
 
-  const renderEntityType = (type) => {
-    switch (type) {
-      case 'PAYMENT_RECEIPT':
-        return <span className={styles.operationType}>Phiếu thu tiền</span>;
-      case 'PAYMENT_VOUCHER':
-        return <span className={styles.operationType}>Phiếu chi tiền</span>;
-      case 'SALES_INVOICE':
-        return <span className={styles.operationType}>Hóa đơn bán hàng</span>;
-      case 'IMPORT_INVOICE':
-        return <span className={styles.operationType}>Hóa đơn mua hàng</span>;
-      default:
-        return type || '-';
-    }
-  };
+  const renderEntityType = (type) => (
+    type ? <span className={styles.operationType}>{ledgerEntityTypeLabel(type)}</span> : '-'
+  );
 
   // Master Columns
   const masterColumns = useMemo(
@@ -382,6 +372,7 @@ export default function CashierWorkspacePage() {
         key: 'amount',
         label: 'Số tiền (VNĐ)',
         width: '140px',
+        align: 'right',
         render: (v) => (
           <span style={{ fontWeight: '700', color: 'var(--color-text-strong)', textAlign: 'right', display: 'block' }}>
             {formatCurrency(v)}
@@ -504,6 +495,7 @@ export default function CashierWorkspacePage() {
         key: 'amountDebt',
         label: 'Phát sinh Tăng (Nợ)',
         width: '150px',
+        align: 'right',
         render: (v) => (
           <span className={styles.ledgerAmount}>
             {Number(v) > 0 ? formatCurrency(v) : '-'}
@@ -514,6 +506,7 @@ export default function CashierWorkspacePage() {
         key: 'amountReceipt',
         label: 'Phát sinh Giảm (Có)',
         width: '150px',
+        align: 'right',
         render: (v) => (
           <span className={styles.ledgerAmount}>
             {Number(v) > 0 ? formatCurrency(v) : '-'}
@@ -524,6 +517,7 @@ export default function CashierWorkspacePage() {
         key: 'balanceAfter',
         label: 'Dư nợ sau GD',
         width: '150px',
+        align: 'right',
         render: (v) => (
           <span style={{ fontWeight: 700, color: 'var(--color-text-strong)', textAlign: 'right', display: 'block' }}>
             {formatCurrency(v)}

@@ -1,6 +1,5 @@
 package com.duylongtech.backend.feature.inventory;
 
-import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import lombok.Data;
 
@@ -15,8 +14,7 @@ public class InventoryDocumentLineRequest {
     private BigDecimal unitCost;
     private BigDecimal unitPrice;
 
-    @DecimalMin(value = "0.00", message = "Thuế VAT phải nằm trong khoảng từ 0% đến 10%")
-    @DecimalMax(value = "10.00", message = "Thuế VAT phải nằm trong khoảng từ 0% đến 10%")
+    @DecimalMin(value = "0.00", message = "Thuế VAT không được âm.")
     private BigDecimal vatRate;
 
     private BigDecimal lineAmount;
@@ -30,8 +28,7 @@ public class InventoryDocumentLineRequest {
      */
     private Integer warrantyMonths;
 
-    @DecimalMin(value = "0.00", message = "Thuế VAT phải nằm trong khoảng từ 0% đến 10%")
-    @DecimalMax(value = "10.00", message = "Thuế VAT phải nằm trong khoảng từ 0% đến 10%")
+    @DecimalMin(value = "0.00", message = "Thuế VAT không được âm.")
     private BigDecimal vatPercent;
 
     private Long warehouseId;

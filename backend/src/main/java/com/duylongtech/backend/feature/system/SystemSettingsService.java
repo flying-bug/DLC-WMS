@@ -1,6 +1,8 @@
 package com.duylongtech.backend.feature.system;
 
+import com.duylongtech.backend.utils.HttpTimeouts;
 import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.feature.system.SystemSetting;
 import com.duylongtech.backend.feature.system.SystemSettingRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,8 +11,11 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import com.duylongtech.backend.feature.system.GoogleDriveService;
 import com.duylongtech.backend.feature.system.SystemSetting;
 import com.duylongtech.backend.feature.system.SystemSettingRepository;
@@ -20,6 +25,23 @@ import com.duylongtech.backend.feature.system.SystemSettingsService;
 @RequiredArgsConstructor
 @Slf4j
 public class SystemSettingsService {
+
+    // Mức thuế GTGT chỉ cần không âm (khớp kiểm tra thuế trên dòng phiếu, InventoryDocumentService.validateVatRate);
+    // mức cao bất thường (> 10%) chỉ cảnh báo ở màn thiết lập, không chặn.
+    static final int MIN_VAT_RATE = 0;
+    private static final List<Integer> DEFAULT_ALLOWED_VAT_RATES = List.of(0, 5, 8, 10);
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+
+    // Thông tin doanh nghiệp khi chưa cài đặt (trùng thông tin trước đây in cứng trên các chứng từ)
+    static final String DEFAULT_COMPANY_NAME = "Công ty TNHH Công nghệ Thương mại Duy Long Techcom";
+    static final String DEFAULT_COMPANY_SHORT_NAME = "Duy Long Computer";
+    static final String DEFAULT_COMPANY_SLOGAN = "Since 2003";
+    static final String DEFAULT_COMPANY_TAX_CODE = "0109123456";
+    static final String DEFAULT_COMPANY_ADDRESS = "Tầng 1, số 42 Lê Thanh Nghị, Phường Bách Khoa, Quận Hai Bà Trưng, TP. Hà Nội";
+    static final String DEFAULT_COMPANY_PHONE = "0914.89.8889 - 0912.01.1102 - 039.271.8888 - 07.8865.8865";
+    static final String DEFAULT_COMPANY_EMAIL = "duylongcomputer@gmail.com";
+    static final String DEFAULT_COMPANY_WEBSITE = "maytinhduylong.vn";
+    static final String DEFAULT_COMPANY_BANK_ACCOUNT = "1903666888999 - Techcombank";
 
     private final SystemSettingRepository settingRepo;
     private final GoogleDriveService driveService;
@@ -108,7 +130,8 @@ public class SystemSettingsService {
     public void exchangeOAuthCode(String code, String redirectUri) throws Exception {
         String clientId = env.getProperty("google.client-id");
 
-        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate(
+                HttpTimeouts.requestFactory(HttpTimeouts.SHORT_READ_TIMEOUT));
         org.springframework.util.MultiValueMap<String, String> body = new org.springframework.util.LinkedMultiValueMap<>();
         body.add("code", code);
         body.add("client_id", clientId);
@@ -135,68 +158,143 @@ public class SystemSettingsService {
         }
     }
 
-    public int getDefaultVatRate() {
-        try {
-            return Integer.parseInt(getSetting("tax.default_vat_rate", "8"));
-        } catch (Exception e) {
-            return 8;
-        }
+    static boolean isValidVatRate(Integer rate) {
+        return rate != null && rate >= MIN_VAT_RATE;
     }
 
-    public java.util.List<Integer> getAllowedVatRates() {
+    /** Mức thuế mặc định; giá trị đã lưu không nằm trong danh sách cho phép thì lấy 8% (hoặc mức cao nhất). */
+    public int getDefaultVatRate() {
+        List<Integer> allowed = getAllowedVatRates();
         try {
-            String rates = getSetting("tax.allowed_vat_rates", "0,5,8,10");
-            return java.util.Arrays.stream(rates.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(Integer::parseInt)
-                    .collect(java.util.stream.Collectors.toList());
-        } catch (Exception e) {
-            return java.util.List.of(0, 5, 8, 10);
+            int rate = Integer.parseInt(getSetting("tax.default_vat_rate", "8").trim());
+            if (allowed.contains(rate)) {
+                return rate;
+            }
+        } catch (NumberFormatException ignored) {
+            // dùng mức dự phòng bên dưới
         }
+        return allowed.contains(8) ? 8 : allowed.get(allowed.size() - 1);
+    }
+
+    /** Các mức thuế cho phép, bỏ qua giá trị không hợp lệ đã lưu từ trước (số âm, không phải số). */
+    public List<Integer> getAllowedVatRates() {
+        List<Integer> rates = Arrays.stream(getSetting("tax.allowed_vat_rates", "").split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> {
+                    try {
+                        return Integer.valueOf(s);
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(SystemSettingsService::isValidVatRate)
+                .distinct()
+                .sorted()
+                .toList();
+        return rates.isEmpty() ? DEFAULT_ALLOWED_VAT_RATES : rates;
+    }
+
+    /** Kiểm tra danh sách mức thuế gửi lên: ít nhất một mức, mỗi mức là số nguyên không âm; bỏ trùng, sắp xếp tăng dần. */
+    static List<Integer> normalizeVatRates(List<Integer> rates) {
+        if (rates == null || rates.isEmpty()) {
+            throw new BusinessException(SystemMessage.BIZ_SET_ERR_002);
+        }
+        if (rates.stream().anyMatch(rate -> !isValidVatRate(rate))) {
+            throw new BusinessException(SystemMessage.BIZ_SET_ERR_001);
+        }
+        return rates.stream().distinct().sorted().toList();
+    }
+
+    /** Giá trị doanh nghiệp đã lưu (kể cả để trống có chủ đích); chưa từng lưu thì dùng mặc định. */
+    private String getCompanySetting(String key, String def) {
+        return settingRepo.findBySettingKey(key)
+                .map(setting -> setting.getSettingValue() == null ? "" : setting.getSettingValue().trim())
+                .orElse(def);
+    }
+
+    /** Thông tin doanh nghiệp dùng chung cho mẫu in, xuất file, hóa đơn điện tử, email và giao diện. */
+    public CompanyProfileDto getCompanyProfile() {
+        String name = getCompanySetting("company.name", DEFAULT_COMPANY_NAME);
+        if (name.isBlank()) {
+            name = DEFAULT_COMPANY_NAME;
+        }
+        String shortName = getCompanySetting("company.short_name", DEFAULT_COMPANY_SHORT_NAME);
+        return CompanyProfileDto.builder()
+                .name(name)
+                .shortName(shortName.isBlank() ? name : shortName)
+                .slogan(getCompanySetting("company.slogan", DEFAULT_COMPANY_SLOGAN))
+                .taxCode(getCompanySetting("company.tax_code", DEFAULT_COMPANY_TAX_CODE))
+                .address(getCompanySetting("company.address", DEFAULT_COMPANY_ADDRESS))
+                .phone(getCompanySetting("company.phone", DEFAULT_COMPANY_PHONE))
+                .email(getCompanySetting("company.email", DEFAULT_COMPANY_EMAIL))
+                .website(getCompanySetting("company.website", DEFAULT_COMPANY_WEBSITE))
+                .bankAccount(getCompanySetting("company.bank_account", DEFAULT_COMPANY_BANK_ACCOUNT))
+                .build();
     }
 
     public BusinessSettingsDto getBusinessSettings() {
+        CompanyProfileDto company = getCompanyProfile();
         return BusinessSettingsDto.builder()
                 .defaultVatRate(getDefaultVatRate())
                 .allowedVatRates(getAllowedVatRates())
-                .companyName(getSetting("company.name", "Công ty TNHH Công nghệ Thương mại Duy Long Techcom"))
-                .companyTaxCode(getSetting("company.tax_code", "0109123456"))
-                .companyAddress(getSetting("company.address", "Số 12 ngõ 44 Đỗ Đức Dục, Mễ Trì, Nam Từ Liêm, Hà Nội"))
-                .companyPhone(getSetting("company.phone", "0987654321"))
-                .companyEmail(getSetting("company.email", "duylongcomputer@gmail.com"))
-                .companyBankAccount(getSetting("company.bank_account", "1903666888999 - Techcombank"))
+                .companyName(company.getName())
+                // Hiển thị đúng giá trị đã lưu (có thể để trống = dùng tên doanh nghiệp)
+                .companyShortName(getCompanySetting("company.short_name", DEFAULT_COMPANY_SHORT_NAME))
+                .companySlogan(company.getSlogan())
+                .companyTaxCode(company.getTaxCode())
+                .companyAddress(company.getAddress())
+                .companyPhone(company.getPhone())
+                .companyEmail(company.getEmail())
+                .companyWebsite(company.getWebsite())
+                .companyBankAccount(company.getBankAccount())
                 .build();
     }
 
     @Transactional
     public void saveBusinessSettings(BusinessSettingsDto dto) {
+        List<Integer> allowedRates = dto.getAllowedVatRates() != null
+                ? normalizeVatRates(dto.getAllowedVatRates())
+                : getAllowedVatRates();
+        if (dto.getDefaultVatRate() != null) {
+            if (!isValidVatRate(dto.getDefaultVatRate())) {
+                throw new BusinessException(SystemMessage.BIZ_SET_ERR_001);
+            }
+            if (!allowedRates.contains(dto.getDefaultVatRate())) {
+                throw new BusinessException(SystemMessage.BIZ_SET_ERR_003);
+            }
+        }
+        if (dto.getCompanyName() != null && dto.getCompanyName().isBlank()) {
+            throw new BusinessException(SystemMessage.BIZ_SET_ERR_004);
+        }
+        if (dto.getCompanyEmail() != null && !dto.getCompanyEmail().isBlank()
+                && !EMAIL_PATTERN.matcher(dto.getCompanyEmail().trim()).matches()) {
+            throw new BusinessException(SystemMessage.BIZ_SET_ERR_005);
+        }
+
+        if (dto.getAllowedVatRates() != null) {
+            upsert("tax.allowed_vat_rates", allowedRates.stream()
+                    .map(String::valueOf)
+                    .collect(java.util.stream.Collectors.joining(",")));
+        }
         if (dto.getDefaultVatRate() != null) {
             upsert("tax.default_vat_rate", String.valueOf(dto.getDefaultVatRate()));
         }
-        if (dto.getAllowedVatRates() != null && !dto.getAllowedVatRates().isEmpty()) {
-            String ratesStr = dto.getAllowedVatRates().stream()
-                .map(String::valueOf)
-                .collect(java.util.stream.Collectors.joining(","));
-            upsert("tax.allowed_vat_rates", ratesStr);
-        }
-        if (dto.getCompanyName() != null) {
-            upsert("company.name", dto.getCompanyName().trim());
-        }
-        if (dto.getCompanyTaxCode() != null) {
-            upsert("company.tax_code", dto.getCompanyTaxCode().trim());
-        }
-        if (dto.getCompanyAddress() != null) {
-            upsert("company.address", dto.getCompanyAddress().trim());
-        }
-        if (dto.getCompanyPhone() != null) {
-            upsert("company.phone", dto.getCompanyPhone().trim());
-        }
-        if (dto.getCompanyEmail() != null) {
-            upsert("company.email", dto.getCompanyEmail().trim());
-        }
-        if (dto.getCompanyBankAccount() != null) {
-            upsert("company.bank_account", dto.getCompanyBankAccount().trim());
+        upsertTrimmed("company.name", dto.getCompanyName());
+        upsertTrimmed("company.short_name", dto.getCompanyShortName());
+        upsertTrimmed("company.slogan", dto.getCompanySlogan());
+        upsertTrimmed("company.tax_code", dto.getCompanyTaxCode());
+        upsertTrimmed("company.address", dto.getCompanyAddress());
+        upsertTrimmed("company.phone", dto.getCompanyPhone());
+        upsertTrimmed("company.email", dto.getCompanyEmail());
+        upsertTrimmed("company.website", dto.getCompanyWebsite());
+        upsertTrimmed("company.bank_account", dto.getCompanyBankAccount());
+    }
+
+    /** Trường không gửi lên (null) thì giữ nguyên giá trị cũ. */
+    private void upsertTrimmed(String key, String value) {
+        if (value != null) {
+            upsert(key, value.trim());
         }
     }
 

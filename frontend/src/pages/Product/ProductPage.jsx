@@ -55,8 +55,6 @@ const DEFAULT_COLUMNS = {
     salePrice: true
 };
 
-const LOW_STOCK_MAX_QTY = 5;
-
 const loadProductColumns = () => {
     try {
         const saved = JSON.parse(localStorage.getItem('dlc_product_columns') || '{}');
@@ -111,7 +109,6 @@ const normalizeText = (value) =>
         .toLowerCase();
 
 const isServiceType = (productType) => normalizeText(productType) === 'dich vu';
-const isStockTrackedProduct = (product) => !isServiceType(product?.productType);
 
 let globalSpecIdCounter = 1;
 
@@ -906,12 +903,19 @@ const ProductPage = () => {
             const requestPage = loadAllForStockFilter ? 0 : page;
             const requestSize = loadAllForStockFilter ? 10000 : size;
 
+            // Cảnh báo sắp hết / hết hàng lấy từ backend - cùng nguồn với màn Tổng quan để hai màn luôn khớp
+            // (theo "Tồn tối thiểu" của từng mã hàng, tồn bán được ở kho bán hàng).
             const [productsResult, stockCountsResult] = await Promise.allSettled([
                 axiosClient.get(`/products?page=${requestPage}&size=${requestSize}${searchQuery}${categoryQuery}${typeQuery}${brandQuery}${unitQuery}`),
-                axiosClient.get('/products?page=0&size=10000')
+                axiosClient.get('/products/stock-alert-summary')
             ]);
 
             if (productsResult.status === 'rejected') throw productsResult.reason;
+            const stockSummary = stockCountsResult.status === 'fulfilled'
+                ? (stockCountsResult.value.data?.data ?? stockCountsResult.value.data)
+                : null;
+            const lowStockIds = new Set((stockSummary?.lowStockProductIds || []).map(String));
+            const outOfStockIds = new Set((stockSummary?.outOfStockProductIds || []).map(String));
 
             const res = productsResult.value;
             const payload = res.data?.data ?? res.data;
@@ -926,12 +930,8 @@ const ProductPage = () => {
                 ?? Math.max(1, Math.ceil(responseTotalElements / size));
 
             if (loadAllForStockFilter) {
-                visibleContent = content.filter(product => {
-                    if (!isStockTrackedProduct(product) || product.active === false) return false;
-                    const qty = Number(product.stockQty || 0);
-                    if (stockFilter === 'OUT_OF_STOCK') return qty <= 0;
-                    return qty > 0 && qty <= LOW_STOCK_MAX_QTY;
-                });
+                const flaggedIds = stockFilter === 'OUT_OF_STOCK' ? outOfStockIds : lowStockIds;
+                visibleContent = content.filter(product => flaggedIds.has(String(product.id)));
 
                 responseTotalElements = visibleContent.length;
                 responseTotalPages = Math.max(1, Math.ceil(responseTotalElements / size));
@@ -943,17 +943,9 @@ const ProductPage = () => {
             setTotalPages(responseTotalPages);
             setTotalElements(responseTotalElements);
 
-            if (stockCountsResult.status === 'fulfilled') {
-                const stockPayload = stockCountsResult.value.data?.data ?? stockCountsResult.value.data;
-                const stockProducts = stockPayload?.content || [];
-                const trackedProducts = stockProducts.filter(product =>
-                    isStockTrackedProduct(product) && product.active !== false
-                );
-                setLowStockCount(trackedProducts.filter(product => {
-                    const qty = Number(product.stockQty || 0);
-                    return qty > 0 && qty <= LOW_STOCK_MAX_QTY;
-                }).length);
-                setOutOfStockCount(trackedProducts.filter(product => Number(product.stockQty || 0) <= 0).length);
+            if (stockSummary) {
+                setLowStockCount(Number(stockSummary.lowStockCount || 0));
+                setOutOfStockCount(Number(stockSummary.outOfStockCount || 0));
             } else {
                 console.error('Lỗi lấy dữ liệu tổng hợp tồn kho:', stockCountsResult.reason);
             }

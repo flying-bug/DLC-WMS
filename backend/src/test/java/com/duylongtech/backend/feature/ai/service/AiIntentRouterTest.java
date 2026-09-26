@@ -48,6 +48,14 @@ class AiIntentRouterTest {
     }
 
     @Test
+    void askingWhatWasExportedIsAnExportQuestion() {
+        assertRoute(AiIntent.EXPORT, "toi da xuat nhung phieu nao");
+        assertRoute(AiIntent.EXPORT, "hang xuat gan day");
+        assertRoute(AiIntent.GENERAL, "hoa don da xuat chua");      // xuất hóa đơn, không phải xuất kho
+        assertRoute(AiIntent.GENERAL, "da xuat file excel chua");
+    }
+
+    @Test
     void overviewNeedsAnExplicitOverviewRequest() {
         assertRoute(AiIntent.OVERVIEW, "tong quan he thong");
         assertRoute(AiIntent.OVERVIEW, "he thong co nhung gi");

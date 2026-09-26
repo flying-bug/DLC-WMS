@@ -26,10 +26,13 @@ public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
-    public SecurityConfig(UserDetailsServiceImpl userDetailsService, JwtAuthenticationFilter jwtAuthFilter) {
+    public SecurityConfig(UserDetailsServiceImpl userDetailsService, JwtAuthenticationFilter jwtAuthFilter,
+            RestAuthenticationEntryPoint authenticationEntryPoint) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthFilter = jwtAuthFilter;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Bean
@@ -55,14 +58,20 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC, DispatcherType.FORWARD)
                         .permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Tạo phiên quét OCR phải đăng nhập (Desktop); các bước còn lại của phiên dành cho điện thoại
+                        // quét QR (không đăng nhập) nên vẫn mở, sessionId ngẫu nhiên đóng vai trò khóa truy cập.
+                        .requestMatchers("/api/v1/imports/ocr-session/init").authenticated()
                         .requestMatchers(
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/login-google",
                                 "/api/v1/auth/forgot-password/**",
+                                // Chỉ tên hiển thị doanh nghiệp, cho màn đăng nhập / quên mật khẩu
+                                "/api/v1/business-settings/branding",
                                 "/api/v1/imports/ocr-session/**",
                                 "/api/v1/einvoices/preview/**",
                                 "/api/v1/email/google/callback",

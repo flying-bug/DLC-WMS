@@ -31,10 +31,10 @@ public class EInvoiceTemplate {
         %s
         <div class="header">
             <div>
-                <div class="company-title">CÔNG TY TNHH CÔNG NGHỆ DUY LONG</div>
-                <div>Mã số thuế: <strong>0100109106</strong></div>
-                <div>Địa chỉ: Hà Nội, Việt Nam</div>
-                <div>Điện thoại: 0987.654.321 - Email: contact@duylongtech.com</div>
+                <div class="company-title">%s</div>
+                <div>Mã số thuế: <strong>%s</strong></div>
+                <div>Địa chỉ: %s</div>
+                <div>%s</div>
             </div>
             <div style="text-align: right;">
                 <div>Mẫu số: <strong>%s</strong></div>
@@ -103,7 +103,7 @@ public class EInvoiceTemplate {
                 <strong>NGƯỜI BÁN HÀNG</strong><br>
                 <em>(Chữ ký điện tử)</em>
                 <div class="digital-stamp">
-                    ✔ Ký bởi: CÔNG TY TNHH CÔNG NGHỆ DUY LONG<br>
+                    ✔ Ký bởi: %s<br>
                     Ngày ký: %s<br>
                     Trạng thái: Hợp lệ theo Thông tư 91/2026/TT-BTC
                 </div>

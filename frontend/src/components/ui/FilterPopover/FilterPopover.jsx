@@ -21,6 +21,7 @@ const FilterPopover = ({
   purposeField = 'issuePurpose',
   showDateRange = true,
   customSelects = [],
+  maxDate, // yyyy-MM-dd: không cho chọn ngày sau mốc này (vd. báo cáo không có số liệu tương lai)
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState(filters);
@@ -86,6 +87,8 @@ const FilterPopover = ({
     };
   }, [isOpen, updatePopoverPosition]);
 
+  const capDate = (value) => (maxDate && value && value > maxDate ? maxDate : value);
+
   const handlePresetChange = (presetKey) => {
     if (presetKey === 'CUSTOM') {
       setLocalFilters(prev => ({ ...prev, preset: 'CUSTOM' }));
@@ -96,8 +99,8 @@ const FilterPopover = ({
       setLocalFilters(prev => ({
         ...prev,
         preset: presetKey,
-        fromDate: range.fromDate,
-        toDate: range.toDate,
+        fromDate: capDate(range.fromDate),
+        toDate: capDate(range.toDate),
       }));
     }
   };
@@ -106,7 +109,7 @@ const FilterPopover = ({
     setLocalFilters(prev => ({
       ...prev,
       preset: 'CUSTOM',
-      [field]: value,
+      [field]: capDate(value),
     }));
   };
 
@@ -176,6 +179,7 @@ const FilterPopover = ({
                   <DateInput
                     className={styles.input}
                     value={localFilters.fromDate || ''}
+                    max={maxDate}
                     onChange={(e) => handleDateChange('fromDate', e.target.value)}
                   />
                 </div>
@@ -184,6 +188,7 @@ const FilterPopover = ({
                   <DateInput
                     className={styles.input}
                     value={localFilters.toDate || ''}
+                    max={maxDate}
                     onChange={(e) => handleDateChange('toDate', e.target.value)}
                   />
                 </div>

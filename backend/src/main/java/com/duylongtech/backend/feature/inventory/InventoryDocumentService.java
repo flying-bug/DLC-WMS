@@ -141,6 +141,7 @@ public class InventoryDocumentService {
     private static final String IMPORT_DOC_TYPE = "IN_PO";
     private static final String DEFAULT_STATUS = DocumentStatus.DRAFT.name();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final Set<String> STOCKTAKE_REFERENCE_TYPES = Set.of("STOCKTAKE", "STOCK_TAKE", "STOCKTAKE_ADJUSTMENT");
     private static final Set<String> VALID_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(),
             DocumentStatus.APPROVED.name(), DocumentStatus.POSTED.name(), DocumentStatus.CANCELLED.name(), DocumentStatus.UNPOSTED.name());
     private static final Set<String> EDITABLE_STATUSES = Set.of(DocumentStatus.DRAFT.name(), DocumentStatus.SUBMITTED.name(), DocumentStatus.UNPOSTED.name());
@@ -155,6 +156,7 @@ public class InventoryDocumentService {
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
     public static final String ISSUE_PURPOSE_TRANSFER_IN = "TRANSFER_IMPORT"; // Nhập kho từ chuyển về
     public static final String ISSUE_PURPOSE_INVENTORY_ADJUSTMENT = "INVENTORY_ADJUSTMENT"; // Xử lý chênh lệch kiểm kê
+    public static final String ISSUE_PURPOSE_STOCKTAKE_ADD = "STOCKTAKE_ADD"; // Nhập hàng thừa từ kiểm kê
     public static final String ISSUE_PURPOSE_PURCHASE = "PURCHASE"; // Nhập hàng từ nhà cung cấp / đơn mua hàng
 
     // Các trạng thái coi là "còn mở" khi chống tạo trùng phiếu nhập bù
@@ -260,13 +262,13 @@ public class InventoryDocumentService {
                 }
             } else {
                 if (canRepair && canAssembly) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "MULTI_TECH";
                 } else if (canRepair) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "REPAIR";
                 } else {
-                    issuePurpose = "ASSEMBLY";
+                    // issuePurpose preserved
                     referenceType = "ASSEMBLY_ORDER";
                 }
             }
@@ -367,13 +369,13 @@ public class InventoryDocumentService {
                 }
             } else {
                 if (canRepair && canAssembly) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "MULTI_TECH";
                 } else if (canRepair) {
-                    issuePurpose = null;
+                    // issuePurpose preserved
                     referenceType = "REPAIR";
                 } else {
-                    issuePurpose = "ASSEMBLY";
+                    // issuePurpose preserved
                     referenceType = "ASSEMBLY_ORDER";
                 }
             }
@@ -522,6 +524,11 @@ public class InventoryDocumentService {
         if (isRepairInventoryDocument(doc)) {
             return updateRepairImportReceipt(doc, req);
         }
+        // Phiếu nhập tự sinh của lệnh lắp ráp / tháo dỡ được tạo không kèm serial: thủ kho nhập serial thành phẩm
+        // (hoặc linh kiện thu hồi) trước khi ghi sổ; mã hàng, số lượng, kho và giá vốn giữ theo lệnh.
+        if (isManagedInventoryDocument(doc)) {
+            return updateManagedImportSerials(doc, req);
+        }
         ensureEditable(doc);
         if (req.getWarehouseId() != null && !req.getWarehouseId().equals(doc.getWarehouseId())
                 && doc.getPurchaseOrderId() != null) {
@@ -550,7 +557,8 @@ public class InventoryDocumentService {
     }
 
     private InventoryDocument buildBaseDocument(InventoryDocumentRequest req, String docType, String docCode) {
-        String issuePurpose = normalizeOptionalReference(req.getIssuePurpose());
+        String referenceType = normalizeOptionalReference(req.getReferenceType());
+        String issuePurpose = resolveIssuePurpose(docType, referenceType, req.getIssuePurpose());
         if (issuePurpose != null && EXPORT_DOC_TYPE.equals(docType)) {
             // Kiểm tra issuePurpose có thuộc danh sách hợp lệ toàn bộ không
             // (bao gồm cả TRANSFER_EXPORT được dùng nội bộ bởi module Chuyển kho)
@@ -570,8 +578,8 @@ public class InventoryDocumentService {
         } else {
             doc.initImportDocument(docCode);
         }
-        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
-        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
+        doc.setIssuePurpose(issuePurpose);
+        doc.setReferenceType(referenceType);
         doc.setReferenceId(req.getReferenceId());
         doc.setWarehouseId(req.getWarehouseId());
         doc.setSourceWarehouseId(req.getSourceWarehouseId());
@@ -593,10 +601,21 @@ public class InventoryDocumentService {
     private void updateBaseDocument(Long id, InventoryDocument doc, InventoryDocumentRequest req,
             String duplicateMessage,
             boolean importDocument) {
-        String issuePurpose = normalizeOptionalReference(req.getIssuePurpose());
-        if (issuePurpose != null && !importDocument) {
-            // Khi cập nhật phiếu, cũng chỉ cho phép 2 mục đích thủ công
-            if (!VALID_MANUAL_EXPORT_PURPOSES.contains(issuePurpose)) {
+        String referenceType = normalizeOptionalReference(req.getReferenceType());
+        String issuePurpose = resolveIssuePurpose(importDocument ? IMPORT_DOC_TYPE : EXPORT_DOC_TYPE,
+                referenceType, req.getIssuePurpose());
+        // Phiếu xuất do hệ thống sinh (chuyển kho, xử lý kiểm kê): thủ kho vẫn sửa số lượng/serial trước khi ghi
+        // sổ, nhưng mục đích và chứng từ gốc giữ nguyên - luồng chuyển kho dựa vào chúng để sinh phiếu nhập kho đích.
+        boolean systemExport = !importDocument && doc.getIssuePurpose() != null
+                && !VALID_MANUAL_EXPORT_PURPOSES.contains(doc.getIssuePurpose());
+        if (systemExport) {
+            if (issuePurpose != null && !issuePurpose.equals(doc.getIssuePurpose())) {
+                throw new BusinessException(SystemMessage.INV_ERR_039.getMessage());
+            }
+        } else if (issuePurpose != null && !importDocument) {
+            // Phiếu tạo tay chỉ nhận mục đích thủ công; phiếu điều chỉnh kiểm kê nhận mục đích hệ thống
+            boolean stocktakeAdjustment = isStocktakeReference(referenceType);
+            if (!(stocktakeAdjustment ? VALID_ALL_EXPORT_PURPOSES : VALID_MANUAL_EXPORT_PURPOSES).contains(issuePurpose)) {
                 throw new BusinessException(SystemMessage.INV_ERR_039.getMessage());
             }
         }
@@ -618,9 +637,11 @@ public class InventoryDocumentService {
         doc.setPurchaseOrderId(poId);
         doc.setSalesOrderId(soId);
         doc.setPartnerId(req.getPartnerId());
-        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
-        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
-        doc.setReferenceId(req.getReferenceId());
+        if (!systemExport) {
+            doc.setIssuePurpose(issuePurpose);
+            doc.setReferenceType(referenceType);
+            doc.setReferenceId(req.getReferenceId());
+        }
         doc.setDocDate(req.getDocDate());
         doc.updateStatus(importDocument
                 ? normalizeEditableImportStatus(req.getStatus(), doc.getStatus())
@@ -1075,7 +1096,8 @@ public class InventoryDocumentService {
         if (value == null) {
             return ZERO;
         }
-        if (value.compareTo(ZERO) < 0 || value.compareTo(new BigDecimal("10")) > 0) {
+        // Chỉ chặn thuế âm; mức thuế hợp lệ do Thiết lập nghiệp vụ quản lý (có thể trên 10%)
+        if (value.compareTo(ZERO) < 0) {
             throw new BusinessException(SystemMessage.INV_ERR_006.getMessage());
         }
         return value;
@@ -1115,8 +1137,28 @@ public class InventoryDocumentService {
     }
 
     private String normalizeOptionalReference(String value) {
-        String normalized = trimToNull(value);
-        return normalized != null ? normalized.toUpperCase(Locale.ROOT) : null;
+        return normalizeCode(value);
+    }
+
+    static String resolveIssuePurpose(String docType, String referenceType, String requestedPurpose) {
+        if (isStocktakeReference(referenceType)) {
+            return IMPORT_DOC_TYPE.equals(docType)
+                    ? ISSUE_PURPOSE_STOCKTAKE_ADD
+                    : ISSUE_PURPOSE_INVENTORY_ADJUSTMENT;
+        }
+        return normalizeCode(requestedPurpose);
+    }
+
+    private static boolean isStocktakeReference(String referenceType) {
+        String normalized = normalizeCode(referenceType);
+        return normalized != null && STOCKTAKE_REFERENCE_TYPES.contains(normalized);
+    }
+
+    private static String normalizeCode(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim().toUpperCase(Locale.ROOT);
     }
 
     private String normalizeEditableImportStatus(String status, String fallback) {
@@ -1800,6 +1842,57 @@ public class InventoryDocumentService {
         doc.setRecipientName(req.getRecipientName());
         doc.setRecipientAddress(req.getRecipientAddress());
         doc.setSalespersonId(req.getSalespersonId());
+        doc.setUpdatedAt(LocalDateTime.now());
+        return toResponse(inventoryDocumentRepository.save(doc));
+    }
+
+    /**
+     * Phiếu nhập tự sinh của lệnh lắp ráp / tháo dỡ: giá vốn thành phẩm đã được tính theo phiếu xuất linh kiện của cùng
+     * lệnh (AssemblyOrderWorkflowService.synchronizeReservedCosts), nên chỉ cho ghi serial, ngày, ghi chú; không đổi
+     * mã hàng, số lượng, kho hay đơn giá, không thêm/xóa dòng.
+     */
+    private InventoryDocumentResponse updateManagedImportSerials(InventoryDocument doc, InventoryDocumentRequest req) {
+        String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
+        if (!EDITABLE_STATUSES.contains(status)) {
+            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
+        }
+        if (!java.util.Objects.equals(doc.getWarehouseId(), req.getWarehouseId())) {
+            throw new BusinessException("Không được thay đổi kho của phiếu nhập lắp ráp");
+        }
+        if (req.getLines() == null || req.getLines().size() != doc.getLines().size()) {
+            throw new BusinessException("Không được thêm hoặc xóa dòng trên phiếu nhập lắp ráp");
+        }
+
+        for (int i = 0; i < doc.getLines().size(); i++) {
+            InventoryDocumentLine existing = doc.getLines().get(i);
+            InventoryDocumentLineRequest requested = req.getLines().get(i);
+            BigDecimal requestedQuantity = requested.getBaseQuantity() != null
+                    && requested.getBaseQuantity().compareTo(ZERO) > 0
+                    ? requested.getBaseQuantity()
+                    : requested.getQuantityIn();
+            BigDecimal existingQuantity = existing.getBaseQuantity() != null
+                    && existing.getBaseQuantity().compareTo(ZERO) > 0
+                    ? existing.getBaseQuantity()
+                    : existing.getQuantityIn();
+            Long requestedWarehouseId = requested.getWarehouseId() != null ? requested.getWarehouseId() : req.getWarehouseId();
+            Long existingWarehouseId = existing.getWarehouseId() != null ? existing.getWarehouseId() : doc.getWarehouseId();
+            if (!java.util.Objects.equals(existing.getVariantId(), requested.getVariantId())
+                    || !java.util.Objects.equals(existingWarehouseId, requestedWarehouseId)
+                    || requestedQuantity == null
+                    || existingQuantity == null
+                    || existingQuantity.compareTo(requestedQuantity) != 0) {
+                throw new BusinessException("Không được thay đổi mã hàng, kho hoặc số lượng của phiếu nhập lắp ráp");
+            }
+
+            existing.setSerialNumberId(requested.getSerialNumberId());
+            existing.setSerialNumbersText(formatSerialNumbers(requested.getSerialNumbers()));
+            existing.setNote(requested.getNote());
+        }
+
+        doc.setDocDate(req.getDocDate());
+        doc.setNote(req.getNote());
+        doc.setRecipientName(req.getRecipientName());
+        doc.setRecipientAddress(req.getRecipientAddress());
         doc.setUpdatedAt(LocalDateTime.now());
         return toResponse(inventoryDocumentRepository.save(doc));
     }

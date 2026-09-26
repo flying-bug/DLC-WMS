@@ -6,6 +6,7 @@ import { isPathAllowedForRoles } from './workspaceScope.js';
 const CASHIER = ['ROLE_CASHIER_CONTROLLER'];
 const KEEPER = ['ROLE_WAREHOUSE_CONTROLLER'];
 const ACCOUNTANT = ['ROLE_ACCOUNTANT'];
+const TECHNICIAN = ['ROLE_TECHNICIAN'];
 
 test('cashier cannot open order lists, warehouse pages or accountant payment pages by URL', () => {
     for (const path of ['/sales-orders', '/sales-orders/12', '/purchase-orders', '/einvoices', '/payments', '/payments/receipt', '/payments/expense', '/import-history', '/dashboard', '/main-dashboard', '/warehouse-workspace']) {
@@ -35,6 +36,17 @@ test('accountant works everywhere except the keeper and cashier workspaces', () 
     assert.equal(isPathAllowedForRoles('/warehouse-workspace', ACCOUNTANT), false);
     assert.equal(isPathAllowedForRoles('/warehouse-workspace/imports/1', ACCOUNTANT), false);
     assert.equal(isPathAllowedForRoles('/cashier-workspace', ACCOUNTANT), false);
+});
+
+test('technician cannot open the main dashboard', () => {
+    assert.equal(isPathAllowedForRoles('/main-dashboard', TECHNICIAN), false);
+    assert.equal(isPathAllowedForRoles('/dashboard', TECHNICIAN), true);
+    assert.equal(isPathAllowedForRoles('/repairs', TECHNICIAN), true);
+});
+
+test('a manager who is also a technician still opens the main dashboard', () => {
+    assert.equal(isPathAllowedForRoles('/main-dashboard', ['ROLE_MANAGER', 'ROLE_TECHNICIAN']), true);
+    assert.equal(isPathAllowedForRoles('/main-dashboard', ['ROLE_SUPER_ADMIN', 'ROLE_TECHNICIAN']), true);
 });
 
 test('managers, admins and other roles are not restricted here', () => {

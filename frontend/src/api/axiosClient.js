@@ -46,7 +46,11 @@ axiosClient.interceptors.response.use(
     },
     (error) => {
         const isLoginRequest = error.config?.url?.includes('/auth/login');
-        if (error.response && error.response.status === 401 && !isLoginRequest) {
+        // Request gửi bằng token cũ (tab vừa đăng nhập lại trong lúc request đang chạy) thì bỏ qua,
+        // không để nó đăng xuất phiên mới.
+        const sentAuthorization = error.config?.headers?.Authorization;
+        const isStaleRequest = Boolean(sentAuthorization) && sentAuthorization !== `Bearer ${getAuthToken()}`;
+        if (error.response && error.response.status === 401 && !isLoginRequest && !isStaleRequest) {
             forceLogout(error.response?.data?.userMessage || 'Phiên đăng nhập của bạn đã hết hạn hoặc tài khoản đã bị khóa.');
         }
 

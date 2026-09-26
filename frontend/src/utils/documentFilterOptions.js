@@ -2,7 +2,7 @@
 
 export const IMPORT_PURPOSE_OPTIONS = [
   { value: 'PURCHASE', label: 'Nhập mua hàng' },
-  { value: 'STOCKTAKE_ADD', label: 'Hàng thừa từ kiểm kê' },
+  { value: 'STOCKTAKE_ADD', label: 'Nhập điều chỉnh kiểm kê' },
   { value: 'PRODUCTION', label: 'Lắp ráp / tháo dỡ' },
   { value: 'RETURN', label: 'Hàng bán bị trả lại' },
   { value: 'SCRAP', label: 'Nhập phế liệu (Sửa chữa)' },

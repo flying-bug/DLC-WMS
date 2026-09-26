@@ -266,7 +266,7 @@ function AnalyticsDashboard() {
     const approvedPurchaseOrders = dashboard?.approvedPurchaseOrders || [];
     const approvedSalesOrders = dashboard?.approvedSalesOrders || [];
     const configuredLowStockProducts = dashboard?.configuredLowStockProducts || [];
-    const confirmedWarrantyRepairs = dashboard?.confirmedWarrantyRepairs || [];
+    const pendingApprovalWarrantyRepairs = dashboard?.pendingApprovalWarrantyRepairs || [];
     const recentTransactions = dashboard?.recentTransactions || [];
 
     const rawTrafficData = (dashboard?.inventoryFlow7Days || []).map((item) => ({
@@ -304,11 +304,11 @@ function AnalyticsDashboard() {
                 onClick: () => setActiveDetail('lowStock')
             }
             : null,
-        confirmedWarrantyRepairs[0]
+        pendingApprovalWarrantyRepairs[0]
             ? {
-                id: `repair-${confirmedWarrantyRepairs[0].id}`,
-                title: `${confirmedWarrantyRepairs[0].repairCode} đang chờ xử lý bảo hành`,
-                time: confirmedWarrantyRepairs[0].partnerName || 'Chưa có khách hàng',
+                id: `repair-${pendingApprovalWarrantyRepairs[0].id}`,
+                title: `${pendingApprovalWarrantyRepairs[0].repairCode} đang chờ duyệt bảo hành`,
+                time: pendingApprovalWarrantyRepairs[0].partnerName || 'Chưa có khách hàng',
                 icon: 'bi bi-tools',
                 color: 'purple',
                 onClick: () => setActiveDetail('repairs')
@@ -358,19 +358,19 @@ function AnalyticsDashboard() {
         {
             key: 'lowStock',
             title: 'Sắp hết hàng',
-            value: `${quantity(dashboard?.configuredLowStockProductsCount || 0)} SP`,
+            value: `${quantity(dashboard?.configuredLowStockProductsCount || 0)}`,
             icon: 'bi bi-exclamation-triangle',
             color: 'red',
-            trend: `${configuredLowStockProducts.length} sản phẩm hiện đang dưới mức cảnh báo`,
+            trend: `Dưới mức tồn tối thiểu · ${quantity(dashboard?.outOfStockItemsCount || 0)} mã đã hết hàng`,
             data: KPI_SPARKLINES.lowStock
         },
         {
             key: 'repairs',
             title: 'Sửa chữa bảo hành',
-            value: `${quantity(dashboard?.confirmedWarrantyRepairsCount || 0)} đơn`,
+            value: `${quantity(dashboard?.pendingApprovalWarrantyRepairsCount || 0)}`,
             icon: 'bi bi-tools',
             color: 'purple',
-            trend: 'Các đơn bảo hành đã xác nhận sửa chữa',
+            trend: 'Các đơn bảo hành đang chờ duyệt',
             data: KPI_SPARKLINES.repairs
         }
     ];
@@ -485,8 +485,8 @@ function AnalyticsDashboard() {
                     { key: 'productName', label: 'Thiết bị' },
                     { key: 'repairStatus', label: 'Trạng thái', render: (row) => REPAIR_STATUS_LABELS[row.repairStatus] || row.repairStatus }
                 ],
-                confirmedWarrantyRepairs,
-                'Không có đơn sửa chữa bảo hành ở trạng thái đã xác nhận sửa chữa.',
+                pendingApprovalWarrantyRepairs,
+                'Không có đơn bảo hành nào đang chờ duyệt.',
                 (row) => navigate(`/repairs/${row.id}`)
             );
         }
@@ -499,7 +499,7 @@ function AnalyticsDashboard() {
         purchaseOrders: 'Danh sách đơn mua đã duyệt',
         salesOrders: 'Danh sách đơn bán đã duyệt',
         lowStock: 'Danh sách sản phẩm sắp hết hàng',
-        repairs: 'Danh sách đơn sửa chữa bảo hành đã xác nhận'
+        repairs: 'Danh sách đơn bảo hành đang chờ duyệt'
     };
 
     return (
