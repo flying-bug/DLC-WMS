@@ -552,7 +552,7 @@ public class AiChatService {
         List<StockTransfer> transfers = scopedTransfers(keyword).stream()
                 .filter(doc -> q.matchesDate(doc.getTransferDate()))
                 .sorted(Comparator.comparing(StockTransfer::getTransferDate, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(8)
+                .limit(q.limit())
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu chuyển kho");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
@@ -604,7 +604,7 @@ public class AiChatService {
         List<PurchaseOrder> orders = purchaseOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null).stream()
                 .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getPoDate()))
                 .sorted(Comparator.comparing(PurchaseOrder::getPoDate, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(8)
+                .limit(q.limit())
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Đơn mua hàng (PO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
@@ -650,7 +650,7 @@ public class AiChatService {
         List<SalesOrder> orders = salesOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null, null, null, null).stream()
                 .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getSoDate()))
                 .sorted(Comparator.comparing(SalesOrder::getSoDate, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(8)
+                .limit(q.limit())
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Đơn bán hàng (SO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
@@ -722,7 +722,7 @@ public class AiChatService {
                 .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
                 .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(InventoryDocument::getId, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(8)
+                .limit(q.limit())
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu nhập kho (IN_PO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
@@ -774,7 +774,7 @@ public class AiChatService {
                 .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
                 .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(InventoryDocument::getId, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(8)
+                .limit(q.limit())
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu xuất kho (EX_SO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
@@ -967,12 +967,38 @@ public class AiChatService {
             Pattern.CASE_INSENSITIVE
     );
 
-    private String extractSearchKeyword(String message) {
+    String extractSearchKeyword(String message) {
         String normalized = normalize(message);
-        // Dùng Word Boundary Regex thay vì String.replace() để bảo vệ an toàn các thương hiệu và model sản phẩm
-        String cleaned = STOPWORDS_REGEX.matcher(normalized).replaceAll(" ");
-        String keyword = cleaned.replaceAll("[^a-z0-9_-]+", " ").trim().replaceAll("\\s+", " ");
-        return keyword.length() < 2 ? "" : keyword;
+
+        // 1. Chữ trong ngoặc kép
+        java.util.regex.Matcher mQuote = java.util.regex.Pattern.compile("\"([^\"]+)\"").matcher(message);
+        if (mQuote.find()) {
+            return mQuote.group(1).trim();
+        }
+        mQuote = java.util.regex.Pattern.compile("'([^']+)'").matcher(message);
+        if (mQuote.find()) {
+            return mQuote.group(1).trim();
+        }
+
+        // 2. Mã chứng từ (ví dụ: SO001, NK00079, PO123 - 2 đến 5 chữ cái liền với số)
+        java.util.regex.Matcher mCode = java.util.regex.Pattern.compile("(?i)\\b[a-z]{2,5}\\d{3,}\\b").matcher(message);
+        if (mCode.find()) {
+            return mCode.group().trim();
+        }
+
+        // 3. Đứng sau "khách", "ncc", "của", "tên"
+        java.util.regex.Matcher mAfter = java.util.regex.Pattern.compile("(?i)\\b(?:khách hàng|khách|ncc|nha cung cap|nhà cung cấp|của|tên là|tên)\\s+([\\p{L}0-9_]+(?:\\s+[\\p{L}0-9_]+){0,3})").matcher(message);
+        if (mAfter.find()) {
+            String match = mAfter.group(1).trim();
+            // Bỏ qua nếu từ bắt được là từ hệ thống/từ để hỏi
+            String normalizedMatch = normalize(match);
+            if (AiIntentRouter.has(normalizedMatch, "hom nay", "hom qua", "moi nhat", "la gi", "bao nhieu", "nao", "da", "chua")) {
+                return "";
+            }
+            return match;
+        }
+
+        return "";
     }
 
     private static final java.time.format.DateTimeFormatter DISPLAY_DATE = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");

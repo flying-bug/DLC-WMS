@@ -13,7 +13,7 @@ import java.util.Set;
  * "phiếu xuất kho đã ghi sổ" hay "phiếu xuất kho hôm nay" luôn ra 0 phiếu.
  *
  */
-record AiDocumentQuery(StatusFilter status, LocalDate fromDate, LocalDate toDate, String periodLabel) {
+record AiDocumentQuery(StatusFilter status, LocalDate fromDate, LocalDate toDate, String periodLabel, int limit) {
 
     enum StatusFilter {
         DRAFT("nháp / lưu tạm"),
@@ -38,7 +38,21 @@ record AiDocumentQuery(StatusFilter status, LocalDate fromDate, LocalDate toDate
         String rawLower = raw == null ? ""
                 : Normalizer.normalize(raw, Normalizer.Form.NFC).toLowerCase(Locale.forLanguageTag("vi"));
         String n = normalized == null ? "" : normalized;
-        return new AiDocumentQuery(parseStatus(rawLower, n), rangeStart(n, today), rangeEnd(n, today), periodLabel(n));
+        return new AiDocumentQuery(parseStatus(rawLower, n), rangeStart(n, today), rangeEnd(n, today), periodLabel(n), parseLimit(n));
+    }
+
+    private static int parseLimit(String n) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)\\b(\\d+)\\s+(đơn|phiếu|dòng|kết quả|cái|bản ghi)\\b").matcher(n);
+        if (m.find()) {
+            try {
+                int parsed = Integer.parseInt(m.group(1));
+                if (parsed > 0 && parsed <= 50) return parsed;
+            } catch (Exception ignored) {}
+        }
+        if (AiIntentRouter.has(n, "moi nhat", "gan nhat", "cuoi cung", "vua roi", "gan day nhat")) {
+            return 1;
+        }
+        return 8; // default
     }
 
     boolean hasFilter() {

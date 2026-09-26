@@ -75,4 +75,13 @@ class AiDocumentQueryTest {
         assertEquals("Đã duyệt (chờ xuất kho)", AiDocumentQuery.orderStatusLabel("APPROVED", false));
         assertEquals(" đã ghi sổ trong tháng này", parse("phiếu xuất đã ghi sổ tháng này").describe());
     }
+
+    @Test
+    void limitIsParsed() {
+        assertEquals(5, parse("5 đơn mới nhất").limit());
+        assertEquals(1, parse("phiếu xuất kho gần nhất").limit());
+        assertEquals(1, parse("đơn cuối cùng").limit());
+        assertEquals(10, parse("cho tôi xem 10 kết quả").limit());
+        assertEquals(8, parse("đơn bán hàng chờ duyệt").limit()); // default
+    }
 }
