@@ -66,10 +66,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                     pv.id,
                     COALESCE(pv.min_stock_qty, 0) AS min_stock_qty,
                     COALESCE(SUM(CASE
-                        WHEN pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
+                        WHEN COALESCE(p.track_serial, 0) = 1
                              AND ib.serial_number_id IS NOT NULL
                              AND sn.status = 'AVAILABLE' THEN ib.quantity_on_hand
-                        WHEN pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
+                        WHEN COALESCE(p.track_serial, 0) = 0
                              AND ib.serial_number_id IS NULL THEN ib.quantity_on_hand
                         ELSE 0 END), 0) AS stock_qty
                 FROM product_variants pv

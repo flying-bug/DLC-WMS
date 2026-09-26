@@ -24,6 +24,12 @@ import com.duylongtech.backend.feature.repair.Repair;
 public class ReportRepository {
     private final JdbcTemplate jdbcTemplate;
 
+    /*
+     * Hàng quản lý serial = products.track_serial, đúng như nghiệp vụ ghi sổ kho và màn tồn kho
+     * (InventoryBalanceRepository). Trước đây báo cáo dựa vào product_variants.tracking_mode - cột này để trống
+     * hoặc NONE ở cả những mặt hàng có serial, nên báo cáo đếm dòng tồn tổng thay cho các dòng serial đang còn.
+     */
+
     /**
      * Values inventory from FIFO only when the remaining FIFO quantity agrees with
      * the reportable GOOD balance. Legacy/manual stock can legitimately have no
@@ -43,7 +49,7 @@ public class ReportRepository {
                 SELECT ib.warehouse_id,
                        ib.variant_id,
                        SUM(CASE WHEN (
-                           (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
+                           (COALESCE(p.track_serial, 0) = 1
                                AND ib.serial_number_id IS NOT NULL
                                AND sn.status = 'AVAILABLE'
                                AND NOT EXISTS (
@@ -53,11 +59,11 @@ public class ReportRepository {
                                      AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
                                      AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
                                ))
-                           OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
+                           OR (COALESCE(p.track_serial, 0) = 0
                                AND ib.serial_number_id IS NULL)
                        ) THEN ib.quantity_on_hand ELSE 0 END) AS balance_quantity,
                        SUM(CASE WHEN (
-                           (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
+                           (COALESCE(p.track_serial, 0) = 1
                                AND ib.serial_number_id IS NOT NULL
                                AND sn.status = 'AVAILABLE'
                                AND NOT EXISTS (
@@ -67,11 +73,12 @@ public class ReportRepository {
                                      AND LOWER(dcs.component_serial) = LOWER(sn.serial_number)
                                      AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
                                ))
-                           OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
+                           OR (COALESCE(p.track_serial, 0) = 0
                                AND ib.serial_number_id IS NULL)
                        ) THEN ib.quantity_on_hand * ib.average_cost ELSE 0 END) AS balance_value
                 FROM inventory_balances ib
                 JOIN product_variants pv ON pv.id = ib.variant_id
+                JOIN products p ON p.id = pv.product_id
                 LEFT JOIN serial_numbers sn ON sn.id = ib.serial_number_id
                 WHERE ib.stock_status = 'GOOD'
                 GROUP BY ib.warehouse_id, ib.variant_id
@@ -104,6 +111,40 @@ public class ReportRepository {
     private static final String EXCLUDE_INTERNAL_TRANSFER_SQL =
             " AND COALESCE(idoc.issue_purpose, '') NOT IN ('TRANSFER_EXPORT', 'TRANSFER_IMPORT') ";
 
+    /** Tên hàng theo biến thể (mã SKU là của biến thể); biến thể không đặt tên thì lấy tên sản phẩm. */
+    private static final String VARIANT_NAME_SQL = "COALESCE(NULLIF(TRIM(pv.variant_name), ''), p.product_name)";
+
+    /**
+     * Loại nghiệp vụ của một dòng thẻ kho. Phân loại theo chứng từ gốc (reference_type) trước rồi mới tới mục đích,
+     * vì phiếu kiểm kê, nhập thành phẩm lắp ráp (PRODUCTION) hay nhập thu hồi sửa chữa (SCRAP) không mang mục đích
+     * ASSEMBLY/REPAIR và trước đây bị xếp nhầm thành mua/bán hàng. Dòng bỏ ghi sổ là bút toán đảo, tách riêng.
+     */
+    private static final String LEDGER_DOCUMENT_TYPE_SQL = """
+            CASE
+              WHEN l.movement_type LIKE 'UNPOST%' THEN
+                CASE WHEN doc.doc_type = 'EX_SO' THEN 'UNPOST_EX' ELSE 'UNPOST_IN' END
+              WHEN doc.issue_purpose IN ('TRANSFER_EXPORT', 'TRANSFER_IMPORT') THEN
+                CASE WHEN doc.doc_type = 'EX_SO' THEN 'EX_TRF' ELSE 'IN_TRF' END
+              WHEN doc.issue_purpose = 'INVENTORY_ADJUSTMENT'
+                   OR doc.reference_type IN ('STOCKTAKE', 'STOCK_TAKE', 'STOCKTAKE_ADJUSTMENT') THEN
+                CASE WHEN doc.doc_type = 'EX_SO' THEN 'EX_ADJ' ELSE 'IN_ADJ' END
+              WHEN doc.reference_type = 'REPAIR' OR doc.issue_purpose IN ('REPAIR', 'SCRAP') THEN
+                CASE WHEN doc.doc_type = 'EX_SO' THEN 'EX_REPAIR' ELSE 'IN_REPAIR' END
+              WHEN doc.reference_type = 'ASSEMBLY_ORDER' OR doc.issue_purpose IN ('ASSEMBLY', 'PRODUCTION') THEN
+                CASE WHEN doc.doc_type = 'EX_SO' THEN 'EX_BUILD' ELSE 'IN_BUILD' END
+              WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'USAGE' THEN 'EX_USAGE'
+              ELSE doc.doc_type
+            END""";
+
+    /** Kỳ báo cáo không chọn ngày ("Toàn bộ thời gian"): từ đầu tới hiện tại, thay vì so sánh với NULL ra toàn số 0. */
+    static LocalDateTime periodStart(LocalDateTime startDate) {
+        return startDate != null ? startDate : LocalDateTime.of(1900, 1, 1, 0, 0);
+    }
+
+    static LocalDateTime periodEnd(LocalDateTime endDate) {
+        return endDate != null ? endDate : LocalDateTime.now();
+    }
+
     /**
      * Giới hạn truy vấn theo danh sách kho người dùng được xem. null = không giới hạn; danh sách rỗng
      * phải được chặn trước khi gọi (không có kho nào thì không truy vấn).
@@ -122,6 +163,19 @@ public class ReportRepository {
         sql.append(" AND (").append(String.join(" OR ", conditions)).append(") ");
     }
 
+    /** Tìm theo mã SKU / tên biến thể lẫn mã / tên sản phẩm (truy vấn phải có alias pv và p). */
+    private static void appendItemSearch(StringBuilder sql, List<Object> params, String search) {
+        if (search == null || search.trim().isEmpty()) {
+            return;
+        }
+        String like = "%" + search.trim() + "%";
+        sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ? OR p.product_code LIKE ? OR p.product_name LIKE ?) ");
+        params.add(like);
+        params.add(like);
+        params.add(like);
+        params.add(like);
+    }
+
     // 1. Inventory Balance Report
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, List<Long> warehouseIds) {
         if (warehouseIds != null && warehouseIds.isEmpty()) {
@@ -137,9 +191,9 @@ public class ReportRepository {
                         "w.id AS warehouseId, " +
                         "w.code AS warehouseCode, " +
                         "w.name AS warehouseName, " +
-                        "(pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')) AS trackSerial, " +
+                        "(COALESCE(p.track_serial, 0) = 1) AS trackSerial, " +
                         "SUM(CASE WHEN ( " +
-                        "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT') " +
+                        "  (COALESCE(p.track_serial, 0) = 1 " +
                         "    AND ib.serial_number_id IS NOT NULL " +
                         "    AND sn.status = 'AVAILABLE' " +
                         "    AND NOT EXISTS ( " +
@@ -149,12 +203,12 @@ public class ReportRepository {
                         "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
                         "    ) " +
                         "  ) " +
-                        "  OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
+                        "  OR (COALESCE(p.track_serial, 0) = 0 AND ib.serial_number_id IS NULL) " +
                         ") THEN ib.quantity_on_hand ELSE 0 END) AS totalQuantity, " +
                         "SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) AS totalReserved, " +
                         "( " +
                         "  SUM(CASE WHEN ( " +
-                        "    (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT') " +
+                        "    (COALESCE(p.track_serial, 0) = 1 " +
                         "      AND ib.serial_number_id IS NOT NULL " +
                         "      AND sn.status = 'AVAILABLE' " +
                         "      AND NOT EXISTS ( " +
@@ -164,7 +218,7 @@ public class ReportRepository {
                         "          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
                         "      ) " +
                         "    ) " +
-                        "    OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
+                        "    OR (COALESCE(p.track_serial, 0) = 0 AND ib.serial_number_id IS NULL) " +
                         "  ) THEN ib.quantity_on_hand ELSE 0 END) " +
                         "  - " +
                         "  SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) " +
@@ -180,8 +234,8 @@ public class ReportRepository {
                         "  ON valuation.warehouse_id = ib.warehouse_id AND valuation.variant_id = ib.variant_id " +
                         "WHERE ib.stock_status = 'GOOD' " +
                         "AND ( " +
-                        "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')) " +
-                        "  OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
+                        "  (COALESCE(p.track_serial, 0) = 1) " +
+                        "  OR (COALESCE(p.track_serial, 0) = 0 AND ib.serial_number_id IS NULL) " +
                         ") "
         );
         List<Object> params = new ArrayList<>();
@@ -193,7 +247,7 @@ public class ReportRepository {
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.id, w.code, w.name, pv.tracking_mode ");
+        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.id, w.code, w.name, p.track_serial ");
         sql.append(" ORDER BY w.code, pv.sku ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> InventoryBalanceReportResponse.builder()
@@ -222,26 +276,14 @@ public class ReportRepository {
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
                         "w.name AS warehouseName, " +
-                        "p.product_code AS productCode, " +
-                        "p.product_name AS productName, " +
+                        "pv.sku AS productCode, " +
+                        VARIANT_NAME_SQL + " AS productName, " +
                         "doc.note AS description, " +
                         "l.movement_at AS movementAt, " +
                         "doc.id AS documentId, " +
                         "doc.doc_date AS documentDate, " +
                         "doc.doc_code AS documentNumber, " +
-                        "CASE " +
-                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'ASSEMBLY' THEN 'EX_BUILD' " +
-                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'REPAIR' THEN 'EX_REPAIR' " +
-                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'TRANSFER_EXPORT' THEN 'EX_TRF' " +
-                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'INVENTORY_ADJUSTMENT' THEN 'EX_ADJ' " +
-                        "  WHEN doc.doc_type = 'EX_SO' AND doc.issue_purpose = 'RETURN' THEN 'EX_RET' " +
-                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'ASSEMBLY' THEN 'IN_BUILD' " +
-                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'REPAIR' THEN 'IN_REPAIR' " +
-                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'TRANSFER_IMPORT' THEN 'IN_TRF' " +
-                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'INVENTORY_ADJUSTMENT' THEN 'IN_ADJ' " +
-                        "  WHEN doc.doc_type = 'IN_PO' AND doc.issue_purpose = 'RETURN' THEN 'IN_RET' " +
-                        "  ELSE doc.doc_type " +
-                        "END AS documentType, " +
+                        LEDGER_DOCUMENT_TYPE_SQL + " AS documentType, " +
                         "u.name AS unitName, " +
                         "l.unit_cost AS unitPrice, " +
                         "l.quantity_in AS quantityIn, " +
@@ -266,13 +308,9 @@ public class ReportRepository {
             sql.append(" AND l.movement_at <= ? ");
             params.add(endDate);
         }
-        if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ?) ");
-            params.add("%" + search + "%");
-            params.add("%" + search + "%");
-        }
+        appendItemSearch(sql, params, search);
 
-        sql.append(" ORDER BY l.movement_at DESC ");
+        sql.append(" ORDER BY l.movement_at DESC, l.id DESC ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> StockLedgerReportResponse.builder()
                 .warehouseName(rs.getString("warehouseName"))
@@ -302,8 +340,8 @@ public class ReportRepository {
                 "SELECT " +
                         "st.transfer_date AS documentDate, " +
                         "st.transfer_code AS documentNumber, " +
-                        "p.product_code AS itemCode, " +
-                        "p.product_name AS itemName, " +
+                        "pv.sku AS itemCode, " +
+                        VARIANT_NAME_SQL + " AS itemName, " +
                         "w_from.name AS sourceWarehouse, " +
                         "w_to.name AS destinationWarehouse, " +
                         "u.name AS unitName, " +
@@ -326,8 +364,9 @@ public class ReportRepository {
             sql.append(" AND st.status = ? ");
             params.add(status);
         } else {
-            // Default to not showing DRAFT or CANCELLED unless explicitly requested
-            sql.append(" AND st.status IN ('APPROVED', 'POSTED') ");
+            // Mặc định bỏ phiếu nháp / đã hủy. Phiếu đi APPROVED (chờ xuất) -> IN_TRANSIT (đã xuất, đang chuyển)
+            // -> POSTED (kho nhận đã nhập); trước đây thiếu IN_TRANSIT nên hàng đang trên đường không hiện.
+            sql.append(" AND st.status IN ('APPROVED', 'IN_TRANSIT', 'POSTED') ");
         }
 
         appendWarehouseFilter(sql, params, warehouseIds, "st.from_warehouse_id", "st.to_warehouse_id");
@@ -340,10 +379,12 @@ public class ReportRepository {
             params.add(endDate);
         }
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ? OR st.transfer_code LIKE ?) ");
-            params.add("%" + search + "%");
-            params.add("%" + search + "%");
-            params.add("%" + search + "%");
+            String like = "%" + search.trim() + "%";
+            sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ? OR p.product_name LIKE ? OR st.transfer_code LIKE ?) ");
+            params.add(like);
+            params.add(like);
+            params.add(like);
+            params.add(like);
         }
 
         sql.append(" ORDER BY st.transfer_date DESC, st.transfer_code DESC ");
@@ -380,12 +421,14 @@ public class ReportRepository {
             "WHERE 1=1 "
         );
             
+        LocalDateTime from = periodStart(startDate);
+        LocalDateTime to = periodEnd(endDate);
         List<Object> params = new ArrayList<>();
-        params.add(startDate);
-        params.add(startDate);
-        params.add(endDate);
-        params.add(startDate);
-        params.add(endDate);
+        params.add(from);
+        params.add(from);
+        params.add(to);
+        params.add(from);
+        params.add(to);
 
         if (partnerType != null && !partnerType.trim().isEmpty()) {
             if (partnerType.equalsIgnoreCase("CUSTOMER")) {
@@ -407,7 +450,10 @@ public class ReportRepository {
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY pt.id, pt.code, pt.name, pt.is_customer, pt.is_supplier ORDER BY pt.code");
+        sql.append(" GROUP BY pt.id, pt.code, pt.name, pt.is_customer, pt.is_supplier ");
+        // Chỉ liệt kê đối tác có số dư hoặc có phát sinh trong kỳ
+        sql.append(" HAVING openingBalance <> 0 OR debitIncrease <> 0 OR creditDecrease <> 0 ");
+        sql.append(" ORDER BY pt.code");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
             BigDecimal open = rs.getBigDecimal("openingBalance");
@@ -418,7 +464,9 @@ public class ReportRepository {
             
             boolean isCust = rs.getBoolean("isCustomer");
             boolean isSupp = rs.getBoolean("isSupplier");
-            String type = isCust ? "CUSTOMER" : (isSupp ? "SUPPLIER" : "OTHER");
+            // Đối tác vừa là khách vừa là NCC: khi đang lọc theo NCC thì hiển thị là NCC
+            String type = "SUPPLIER".equalsIgnoreCase(partnerType) && isSupp ? "SUPPLIER"
+                    : isCust ? "CUSTOMER" : (isSupp ? "SUPPLIER" : "OTHER");
             
             return DebtReportResponse.builder()
                 .partnerCode(rs.getString("partnerCode"))
@@ -434,80 +482,71 @@ public class ReportRepository {
     }
 
     // 5. Inventory Summary Report
+    /**
+     * Nhập - xuất - tồn theo (kho, biến thể/SKU), cùng cấp chi tiết với báo cáo tồn kho hiện tại.
+     * <ul>
+     *   <li>Tồn đầu kỳ: snapshot chốt sổ ngày trước kỳ nếu có, không thì cộng thẻ kho trước kỳ.</li>
+     *   <li>Nhập / xuất trong kỳ là số thuần: bút toán bỏ ghi sổ (UNPOST_*) trừ vào đúng cột của chứng từ gốc,
+     *       không cộng sang cột ngược lại - trước đây ghi sổ rồi bỏ ghi sổ làm cả cột nhập lẫn xuất phồng lên.</li>
+     *   <li>Kỳ không chọn ngày = từ đầu tới hiện tại.</li>
+     * </ul>
+     */
     public List<InventorySummaryReportResponse> getInventorySummaryReport(List<Long> warehouseIds, LocalDateTime startDate, LocalDateTime endDate, String search) {
         if (warehouseIds != null && warehouseIds.isEmpty()) {
             return List.of();
         }
-        LocalDate targetDate = (startDate != null ? startDate.toLocalDate() : LocalDate.now()).minusDays(1);
+        LocalDateTime from = periodStart(startDate);
+        LocalDateTime to = periodEnd(endDate);
+        LocalDate snapshotDate = from.toLocalDate().minusDays(1);
 
-        // Snapshot chốt sổ lưu theo (kho, biến thể) nên tồn đầu kỳ phải tính theo từng biến thể trước (bảng con),
-        // rồi mới cộng lên theo sản phẩm. Bản cũ gộp thẳng theo sản phẩm với MAX(snapshot) nên sản phẩm có từ
-        // 2 biến thể trở lên chỉ lấy tồn đầu của biến thể lớn nhất.
+        String inPeriod = "l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME)";
+        String receiptQty = "CASE WHEN l.movement_type LIKE 'UNPOST%' THEN -l.quantity_out ELSE l.quantity_in END";
+        String issueQty = "CASE WHEN l.movement_type LIKE 'UNPOST%' THEN -l.quantity_in ELSE l.quantity_out END";
+
         StringBuilder sql = new StringBuilder(
-            "SELECT " +
-            "COALESCE(MAX(ids.closing_quantity), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in - l.quantity_out ELSE 0 END), 0)) AS openingQuantity, " +
-            "COALESCE(MAX(ids.closing_value), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN (l.quantity_in * l.unit_cost) - (l.quantity_out * l.unit_cost) ELSE 0 END), 0)) AS openingValue, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in ELSE 0 END), 0) AS receiptQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in * l.unit_cost ELSE 0 END), 0) AS receiptValue, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out ELSE 0 END), 0) AS issueQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out * l.unit_cost ELSE 0 END), 0) AS issueValue, " +
-            "l.warehouse_id AS warehouseId, " +
-            "pv.product_id AS productId " +
+            "SELECT w.name AS warehouseName, " +
+            "pv.sku AS productCode, " +
+            VARIANT_NAME_SQL + " AS productName, " +
+            "u.name AS unitName, " +
+            "COALESCE(MAX(ids.closing_quantity), SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in - l.quantity_out ELSE 0 END)) AS openingQuantity, " +
+            "COALESCE(MAX(ids.closing_value), SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN (l.quantity_in - l.quantity_out) * l.unit_cost ELSE 0 END)) AS openingValue, " +
+            "SUM(CASE WHEN " + inPeriod + " THEN " + receiptQty + " ELSE 0 END) AS receiptQuantity, " +
+            "SUM(CASE WHEN " + inPeriod + " THEN (" + receiptQty + ") * l.unit_cost ELSE 0 END) AS receiptValue, " +
+            "SUM(CASE WHEN " + inPeriod + " THEN " + issueQty + " ELSE 0 END) AS issueQuantity, " +
+            "SUM(CASE WHEN " + inPeriod + " THEN (" + issueQty + ") * l.unit_cost ELSE 0 END) AS issueValue " +
             "FROM inventory_ledger l " +
-            "JOIN product_variants pv ON l.variant_id = pv.id " +
-            "JOIN products sp ON pv.product_id = sp.id " +
+            "JOIN warehouses w ON w.id = l.warehouse_id " +
+            "JOIN product_variants pv ON pv.id = l.variant_id " +
+            "JOIN products p ON p.id = pv.product_id " +
+            "JOIN units u ON u.id = p.unit_id " +
             "LEFT JOIN inventory_daily_snapshots ids ON ids.snapshot_date = ? AND ids.warehouse_id = l.warehouse_id AND ids.variant_id = l.variant_id " +
-            "WHERE 1=1 "
+            // Dòng phát sinh sau cuối kỳ không thuộc báo cáo (kể cả tồn đầu kỳ tính từ thẻ kho)
+            "WHERE l.movement_at <= CAST(? AS DATETIME) "
         );
 
         List<Object> params = new ArrayList<>();
-        params.add(startDate);
-        params.add(startDate);
-        params.add(startDate);
-        params.add(endDate);
-        params.add(startDate);
-        params.add(endDate);
-        params.add(startDate);
-        params.add(endDate);
-        params.add(startDate);
-        params.add(endDate);
-        params.add(targetDate);
+        params.add(from);
+        params.add(from);
+        for (int i = 0; i < 4; i++) {
+            params.add(from);
+            params.add(to);
+        }
+        params.add(snapshotDate);
+        params.add(to);
 
         appendWarehouseFilter(sql, params, warehouseIds, "l.warehouse_id");
-        if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (sp.product_code LIKE ? OR sp.product_name LIKE ?) ");
-            params.add("%" + search + "%");
-            params.add("%" + search + "%");
-        }
-        sql.append(" GROUP BY l.warehouse_id, l.variant_id, pv.product_id ");
+        appendItemSearch(sql, params, search);
+        sql.append(" GROUP BY w.id, w.name, pv.id, pv.sku, pv.variant_name, p.product_name, u.name ");
+        sql.append(" ORDER BY w.name, pv.sku ");
 
-        sql.insert(0, "SELECT " +
-            "w.name AS warehouseName, " +
-            "p.product_code AS productCode, " +
-            "p.product_name AS productName, " +
-            "u.name AS unitName, " +
-            "SUM(v.openingQuantity) AS openingQuantity, " +
-            "SUM(v.openingValue) AS openingValue, " +
-            "SUM(v.receiptQuantity) AS receiptQuantity, " +
-            "SUM(v.receiptValue) AS receiptValue, " +
-            "SUM(v.issueQuantity) AS issueQuantity, " +
-            "SUM(v.issueValue) AS issueValue " +
-            "FROM (");
-        sql.append(") v " +
-            "JOIN products p ON v.productId = p.id " +
-            "JOIN units u ON p.unit_id = u.id " +
-            "JOIN warehouses w ON v.warehouseId = w.id ");
-        sql.append(" GROUP BY w.id, w.name, p.id, p.product_code, p.product_name, u.name ");
-        sql.append(" ORDER BY w.name, p.product_code ");
+        List<InventorySummaryReportResponse> rows = jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
+            BigDecimal opQ = zeroIfNull(rs.getBigDecimal("openingQuantity"));
+            BigDecimal opV = zeroIfNull(rs.getBigDecimal("openingValue"));
+            BigDecimal rq = zeroIfNull(rs.getBigDecimal("receiptQuantity"));
+            BigDecimal rv = zeroIfNull(rs.getBigDecimal("receiptValue"));
+            BigDecimal iq = zeroIfNull(rs.getBigDecimal("issueQuantity"));
+            BigDecimal iv = zeroIfNull(rs.getBigDecimal("issueValue"));
 
-        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
-            BigDecimal opQ = rs.getBigDecimal("openingQuantity");
-            BigDecimal opV = rs.getBigDecimal("openingValue");
-            BigDecimal rq = rs.getBigDecimal("receiptQuantity");
-            BigDecimal rv = rs.getBigDecimal("receiptValue");
-            BigDecimal iq = rs.getBigDecimal("issueQuantity");
-            BigDecimal iv = rs.getBigDecimal("issueValue");
-            
             return InventorySummaryReportResponse.builder()
                 .warehouseName(rs.getString("warehouseName"))
                 .productCode(rs.getString("productCode"))
@@ -523,6 +562,11 @@ public class ReportRepository {
                 .endingValue(opV.add(rv).subtract(iv))
                 .build();
         }, params.toArray());
+        // Bỏ các mã không có tồn đầu, không phát sinh và không còn tồn cuối trong kỳ
+        return rows.stream()
+                .filter(r -> r.getOpeningQuantity().signum() != 0 || r.getReceiptQuantity().signum() != 0
+                        || r.getIssueQuantity().signum() != 0 || r.getEndingQuantity().signum() != 0)
+                .toList();
     }
 
     public List<RepairProfitReportResponse> getRepairProfitReport(LocalDate startDate, LocalDate endDate,
@@ -543,18 +587,21 @@ public class ReportRepository {
                 FROM repairs r
                 LEFT JOIN partners p ON p.id = r.partner_id
                 LEFT JOIN (
+                    -- Linh kiện / dịch vụ miễn phí bảo hành không có doanh thu (giống cách màn Lệnh sửa chữa tính tổng),
+                    -- nhưng giá vốn linh kiện xuất ra vẫn tính ở bảng costs bên dưới.
                     SELECT repair_id,
-                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE')
+                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE') AND NOT is_free_warranty
                                     THEN quantity * unit_price ELSE 0 END) AS partsRevenue,
-                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE')
+                           SUM(CASE WHEN action_type IN ('ADD', 'REPLACE') AND NOT is_free_warranty
                                     THEN quantity * unit_price * COALESCE(vat_percent, 0) / 100 ELSE 0 END) AS partsVat
                     FROM repair_lines
                     GROUP BY repair_id
                 ) parts ON parts.repair_id = r.id
                 LEFT JOIN (
                     SELECT repair_id,
-                           SUM(COALESCE(quantity, 1) * fee_amount) AS serviceRevenue,
-                           SUM(COALESCE(quantity, 1) * fee_amount * COALESCE(vat_percent, 0) / 100) AS serviceVat
+                           SUM(CASE WHEN NOT is_free_warranty THEN COALESCE(quantity, 1) * fee_amount ELSE 0 END) AS serviceRevenue,
+                           SUM(CASE WHEN NOT is_free_warranty
+                                    THEN COALESCE(quantity, 1) * fee_amount * COALESCE(vat_percent, 0) / 100 ELSE 0 END) AS serviceVat
                     FROM repair_fees
                     GROUP BY repair_id
                 ) fees ON fees.repair_id = r.id
@@ -1183,10 +1230,10 @@ public class ReportRepository {
                     u.name AS unitName,
                     COALESCE(pv.min_stock_qty, 0) AS minStockQty,
                     COALESCE(SUM(CASE
-                        WHEN pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
+                        WHEN COALESCE(p.track_serial, 0) = 1
                              AND ib.serial_number_id IS NOT NULL
                              AND sn.status = 'AVAILABLE' THEN ib.quantity_on_hand
-                        WHEN pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
+                        WHEN COALESCE(p.track_serial, 0) = 0
                              AND ib.serial_number_id IS NULL THEN ib.quantity_on_hand
                         ELSE 0 END), 0) AS stockQty
                 FROM product_variants pv

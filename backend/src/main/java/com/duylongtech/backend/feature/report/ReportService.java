@@ -163,7 +163,7 @@ public class ReportService {
             
             // Retrieve data based on type
             if ("inventory-summary".equals(reportType)) {
-                reportTitle = "BAO CAO TONG HOP TON KHO (NHAP - XUAT - TON)";
+                reportTitle = "BÁO CÁO TỔNG HỢP TỒN KHO (NHẬP - XUẤT - TỒN)";
                 List<InventorySummaryReportResponse> data = getInventorySummaryReport(warehouseId, startDate, endDate, search);
                 
                 // Inventory Summary uses 2 header rows
@@ -219,7 +219,7 @@ public class ReportService {
                     sheet.autoSizeColumn(i);
                 }
             } else if ("inventory-balance".equals(reportType)) {
-                reportTitle = "BAO CAO TON KHO HIEN TAI";
+                reportTitle = "BÁO CÁO TỒN KHO HIỆN TẠI";
                 List<InventoryBalanceReportResponse> data = getInventoryBalanceReport(search, warehouseId);
                 columns = new String[]{"Mã hàng", "Tên hàng", "Đơn vị tính", "Kho chứa", "Số lượng tồn", "Giá trị tồn"};
                 
@@ -249,9 +249,9 @@ public class ReportService {
                     sheet.autoSizeColumn(i);
                 }
             } else if ("stock-ledger".equals(reportType)) {
-                reportTitle = "SO CHI TIET VAT TU HANG HOA";
+                reportTitle = "SỔ CHI TIẾT VẬT TƯ HÀNG HÓA";
                 List<StockLedgerReportResponse> data = getStockLedgerReport(warehouseId, startDate, endDate, search);
-                columns = new String[]{"Ngày CT", "Số chứng từ", "Loại CT", "Mã hàng", "Tên hàng", "Kho", "ĐVT", "Đơn giá", "Số lượng nhập", "Số lượng xuất", "Tồn sau CT"};
+                columns = new String[]{"Ngày CT", "Số chứng từ", "Loại nghiệp vụ", "Mã hàng", "Tên hàng", "Kho", "ĐVT", "Đơn giá", "Số lượng nhập", "Số lượng xuất", "Tồn sau CT"};
                 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
                 for (int i = 0; i < columns.length; i++) {
@@ -265,7 +265,7 @@ public class ReportService {
                     org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
                     row.createCell(0).setCellValue(item.getDocumentDate() != null ? item.getDocumentDate().toString() : "");
                     row.createCell(1).setCellValue(item.getDocumentNumber());
-                    row.createCell(2).setCellValue(item.getDocumentType());
+                    row.createCell(2).setCellValue(ReportLabels.ledgerDocumentType(item.getDocumentType()));
                     row.createCell(3).setCellValue(item.getProductCode());
                     row.createCell(4).setCellValue(item.getProductName());
                     row.createCell(5).setCellValue(item.getWarehouseName());
@@ -284,7 +284,7 @@ public class ReportService {
                     sheet.autoSizeColumn(i);
                 }
             } else if ("stock-transfers".equals(reportType)) {
-                reportTitle = "BAO CAO CHUYEN KHO NOI BO";
+                reportTitle = "BÁO CÁO CHUYỂN KHO NỘI BỘ";
                 LocalDate startLd = startDate != null ? startDate.toLocalDate() : null;
                 LocalDate endLd = endDate != null ? endDate.toLocalDate() : null;
                 List<StockTransferReportResponse> data = getStockTransferReport(warehouseId, startLd, endLd, search, status);
@@ -310,7 +310,7 @@ public class ReportService {
                     row.createCell(7).setCellValue(item.getQuantity() != null ? item.getQuantity().doubleValue() : 0.0);
                     row.createCell(8).setCellValue(item.getUnitPrice() != null ? item.getUnitPrice().doubleValue() : 0.0);
                     row.createCell(9).setCellValue(item.getAmount() != null ? item.getAmount().doubleValue() : 0.0);
-                    row.createCell(10).setCellValue(item.getStatus());
+                    row.createCell(10).setCellValue(ReportLabels.transferStatus(item.getStatus()));
                     
                     for (int i = 0; i < columns.length; i++) {
                         row.getCell(i).setCellStyle(borderStyle);
@@ -321,7 +321,7 @@ public class ReportService {
                     sheet.autoSizeColumn(i);
                 }
             } else if ("debt".equals(reportType)) {
-                reportTitle = "BAO CAO DOI CHIEU & CONG NO";
+                reportTitle = "BÁO CÁO ĐỐI CHIẾU & CÔNG NỢ";
                 List<DebtReportResponse> data = reportRepository.getDebtReport(startDate, endDate, search, partnerType);
                 columns = new String[]{"Mã đối tác", "Tên đối tác", "Phân loại", "Dư đầu kỳ", "Phát sinh tăng (Nợ)", "Phát sinh giảm (Có)", "Dư cuối kỳ (Nợ cuối)"};
                 
@@ -352,7 +352,7 @@ public class ReportService {
                     sheet.autoSizeColumn(i);
                 }
             } else if ("sales-profit".equals(reportType)) {
-                reportTitle = "BAO CAO DOANH THU & LOI NHUAN GOP";
+                reportTitle = "BÁO CÁO DOANH THU & LỢI NHUẬN GỘP BÁN HÀNG";
                 List<SalesProfitReportResponse> data = getSalesProfitReport(startDate, endDate, search);
                 columns = new String[]{"Mã hàng", "Tên hàng", "ĐVT", "Số lượng bán", "Doanh thu", "Giá vốn", "Lợi nhuận gộp", "Tỷ suất LN (%)"};
                 
@@ -384,10 +384,10 @@ public class ReportService {
                     sheet.autoSizeColumn(i);
                 }
             } else if ("repair-profit".equals(reportType)) {
-                reportTitle = "BAO CAO DOANH THU & LOI NHUAN SUA CHUA";
+                reportTitle = "BÁO CÁO DOANH THU & LỢI NHUẬN SỬA CHỮA";
                 List<RepairProfitReportResponse> data = getRepairProfitReport(startDate, endDate, search, warehouseId);
-                columns = new String[]{"Ma lenh", "Ngay hoan thanh", "Khach hang", "Doanh thu linh kien",
-                        "Doanh thu dich vu", "VAT", "Gia von FIFO", "Lai sau gia von linh kien", "Ty suat LN (%)"};
+                columns = new String[]{"Mã lệnh", "Ngày hoàn thành", "Khách hàng", "Doanh thu linh kiện",
+                        "Doanh thu dịch vụ", "VAT", "Giá vốn FIFO", "Lãi sau giá vốn linh kiện", "Tỷ suất LN (%)"};
 
                 org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
                 for (int i = 0; i < columns.length; i++) {
@@ -422,13 +422,21 @@ public class ReportService {
             
             // Exporter & Timestamp info
             org.apache.poi.ss.usermodel.Row metaRow = sheet.createRow(1);
-            metaRow.createCell(0).setCellValue("Thoi gian lap:");
+            java.time.format.DateTimeFormatter dateFormat = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            metaRow.createCell(0).setCellValue("Thời gian lập:");
             metaRow.createCell(1).setCellValue(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+            if (!"inventory-balance".equals(reportType)) {
+                org.apache.poi.ss.usermodel.Row periodRow = sheet.createRow(2);
+                periodRow.createCell(0).setCellValue("Kỳ báo cáo:");
+                periodRow.createCell(1).setCellValue(startDate == null && endDate == null ? "Toàn bộ thời gian"
+                        : "Từ " + (startDate != null ? startDate.format(dateFormat) : "...")
+                          + " đến " + (endDate != null ? endDate.format(dateFormat) : "nay"));
+            }
             
             workbook.write(out);
             return out.toByteArray();
         } catch (java.io.IOException e) {
-            throw new com.duylongtech.backend.exception.BusinessException("Khong the xuat Excel bao cao.");
+            throw new com.duylongtech.backend.exception.BusinessException("Không thể xuất Excel báo cáo.");
         }
     }
 }
