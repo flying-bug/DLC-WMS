@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -45,13 +46,34 @@ class ReportServiceTest {
     @Test
     void repairProfitUsesOnlyTheSelectedAccessibleWarehouse() {
         when(warehouseAccessGuard.resolveAllowedWarehouseIds()).thenReturn(List.of(3L, 7L));
-        LocalDateTime start = LocalDate.of(2026, 9, 1).atStartOfDay();
-        LocalDateTime end = LocalDate.of(2026, 9, 30).atTime(23, 59, 59);
+        LocalDateTime start = LocalDate.of(2026, 8, 1).atStartOfDay();
+        LocalDateTime end = LocalDate.of(2026, 8, 31).atTime(23, 59, 59);
 
         reportService.getRepairProfitReport(start, end, null, 7L);
 
         verify(reportRepository).getRepairProfitReport(
-                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), null, List.of(7L));
+                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), null, List.of(7L));
+    }
+
+    @Test
+    void reportPeriodEndingInTheFutureIsCountedUpToNow() {
+        LocalDateTime start = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime nextMonth = LocalDate.now().plusMonths(1).atTime(23, 59, 59);
+
+        reportService.getInventorySummaryReport(null, start, nextMonth, null);
+
+        org.mockito.ArgumentCaptor<LocalDateTime> endCaptor = org.mockito.ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(reportRepository).getInventorySummaryReport(any(), org.mockito.ArgumentMatchers.eq(start),
+                endCaptor.capture(), any());
+        org.junit.jupiter.api.Assertions.assertFalse(endCaptor.getValue().isAfter(LocalDateTime.now()));
+    }
+
+    @Test
+    void reportPeriodStartingInTheFutureIsRejected() {
+        LocalDateTime tomorrow = LocalDate.now().plusDays(1).atStartOfDay();
+
+        assertThrows(BusinessException.class,
+                () -> reportService.getDebtReport(tomorrow, tomorrow.plusDays(5), null, null));
     }
 
     @Test

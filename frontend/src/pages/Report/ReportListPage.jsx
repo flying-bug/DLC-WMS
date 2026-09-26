@@ -733,6 +733,7 @@ const ReportListPage = () => {
                                                 partnerType: filters.partnerType
                                             }}
                                             showDateRange={activeReport.id !== 'inventory-balance'}
+                                            maxDate={new Date().toLocaleDateString('en-CA')}
                                             warehouses={activeReport.id !== 'debt' ? warehouses : []}
                                             statusOptions={
                                                 activeReport.id === 'stock-transfers' ? [
@@ -783,10 +784,19 @@ const ReportListPage = () => {
                                             ]}
                                             onApply={(newFilters) => {
                                                 if (newFilters.preset) handleDatePresetChange(newFilters.preset);
+                                                // Báo cáo không có số liệu tương lai: ngày sau hôm nay tính tới hôm nay
+                                                const todayStr = new Date().toLocaleDateString('en-CA');
+                                                const cap = (value) => (value && value > todayStr ? todayStr : value);
+                                                let startDate = cap(newFilters.fromDate || filters.startDate);
+                                                const endDate = cap(newFilters.toDate || filters.endDate);
+                                                if (startDate && endDate && startDate > endDate) {
+                                                    showToast('warning', 'Ngày bắt đầu không được sau ngày kết thúc');
+                                                    startDate = endDate;
+                                                }
                                                 setFilters(prev => ({
                                                     ...prev,
-                                                    startDate: newFilters.fromDate || prev.startDate,
-                                                    endDate: newFilters.toDate || prev.endDate,
+                                                    startDate,
+                                                    endDate,
                                                     warehouseId: newFilters.warehouseId || '',
                                                     status: newFilters.status || '',
                                                     transactionType: newFilters.transactionType || '',
