@@ -318,7 +318,10 @@ class StocktakeApprovalFlowTest {
         st.setReferenceExportId(55L);
         InventoryDocument draftAdjustment = new InventoryDocument();
         draftAdjustment.updateStatus("DRAFT");
-        when(documentRepository.findById(55L)).thenReturn(Optional.of(draftAdjustment));
+        // Phiếu điều chỉnh tìm theo tham chiếu tới lần kiểm kê (không chỉ theo id phiếu lưu trên phiếu kiểm kê)
+        when(documentRepository.findByReferenceTypeInAndReferenceIdAndDocTypeOrderByIdDesc(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(100L), org.mockito.ArgumentMatchers.eq("EX_SO")))
+                .thenReturn(java.util.List.of(draftAdjustment));
         assertThrows(BusinessException.class, () -> service.postStocktake(100L, keeper), "phiếu điều chỉnh còn nháp chưa đủ");
 
         draftAdjustment.updateStatus("POSTED");

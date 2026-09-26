@@ -158,6 +158,7 @@ public class InventoryPostingService {
         if (!doc.isPostable()) {
             throw new BusinessException(SystemMessage.INV_ERR_046.getMessage());
         }
+        new StocktakeAdjustmentGuard(inventoryDocumentRepository, stocktakeRepository).assertCanPost(doc);
 
         List<com.duylongtech.backend.feature.warranty.WarrantyLineRequest> warrantyLines = new java.util.ArrayList<>();
 
@@ -492,6 +493,7 @@ public class InventoryPostingService {
         if (!doc.isPostable()) {
             throw new BusinessException(SystemMessage.INV_ERR_040.getMessage());
         }
+        new StocktakeAdjustmentGuard(inventoryDocumentRepository, stocktakeRepository).assertCanPost(doc);
 
         if ("ASSEMBLY_ORDER".equals(doc.getReferenceType()) && doc.getReferenceId() != null) {
             List<InventoryDocument> relatedDocs = inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", doc.getReferenceId());
@@ -866,8 +868,12 @@ public class InventoryPostingService {
 
                 if (DocumentStatus.POSTED.name().equals(doc.getStatus())) {
                     // Dòng "Không xử lý" không cần phiếu điều chỉnh; nhưng phải được Manager/Kế toán xác nhận trước khi hoàn thành.
-                    boolean importDone = !stocktake.requiresImportAdjustment() || stocktake.getReferenceImportId() != null;
-                    boolean exportDone = !stocktake.requiresExportAdjustment() || stocktake.getReferenceExportId() != null;
+                    // Hoàn thành chỉ khi phiếu điều chỉnh ĐÃ GHI SỔ (trước đây chỉ cần có id phiếu, kể cả phiếu nháp)
+                    StocktakeAdjustmentGuard adjustments = new StocktakeAdjustmentGuard(inventoryDocumentRepository, stocktakeRepository);
+                    boolean importDone = !stocktake.requiresImportAdjustment()
+                            || adjustments.hasPostedAdjustment(stocktake.getId(), IMPORT_DOC_TYPE);
+                    boolean exportDone = !stocktake.requiresExportAdjustment()
+                            || adjustments.hasPostedAdjustment(stocktake.getId(), EXPORT_DOC_TYPE);
 
                     if (importDone && exportDone && !stocktake.hasUnconfirmedWaivers() && stocktake.hasEnoughParticipants()) {
                         stocktake.markAsPosted();

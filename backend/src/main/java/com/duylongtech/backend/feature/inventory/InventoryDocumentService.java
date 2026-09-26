@@ -419,6 +419,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createExport(InventoryDocumentRequest req) {
         validateCreateRequest(req);
+        stocktakeAdjustments().assertCanCreate(req.getReferenceType(), req.getReferenceId(), EXPORT_DOC_TYPE, null);
         inventoryValidationService.validateOrderLineQuantities(req, null);
         inventoryValidationService.validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
                 req.getReferenceId(), req.getLines());
@@ -435,6 +436,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createImport(InventoryDocumentRequest req) {
         validateCreateImportRequest(req);
+        stocktakeAdjustments().assertCanCreate(req.getReferenceType(), req.getReferenceId(), IMPORT_DOC_TYPE, null);
         inventoryValidationService.validateOrderLineQuantities(req, null);
         InventoryDocument doc = buildBaseDocument(req, IMPORT_DOC_TYPE, resolveCreateImportDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
@@ -470,6 +472,20 @@ public class InventoryDocumentService {
         }
     }
 
+    private StocktakeAdjustmentGuard stocktakeAdjustments() {
+        return new StocktakeAdjustmentGuard(inventoryDocumentRepository, stocktakeRepository);
+    }
+
+    /** Sửa phiếu mà đổi tham chiếu sang một lần kiểm kê khác: áp cùng điều kiện như lập phiếu điều chỉnh mới. */
+    private void assertStocktakeReferenceChangeAllowed(InventoryDocument doc, InventoryDocumentRequest req, String docType) {
+        String newType = normalizeOptionalReference(req.getReferenceType());
+        boolean sameReference = java.util.Objects.equals(newType, doc.getReferenceType())
+                && java.util.Objects.equals(req.getReferenceId(), doc.getReferenceId());
+        if (!sameReference) {
+            stocktakeAdjustments().assertCanCreate(newType, req.getReferenceId(), docType, doc.getId());
+        }
+    }
+
     private void syncStocktakeReference(InventoryDocument doc) {
         if ("STOCKTAKE".equals(doc.getReferenceType()) && doc.getReferenceId() != null) {
             stocktakeRepository.findById(doc.getReferenceId()).ifPresent(stocktake -> {
@@ -481,8 +497,11 @@ public class InventoryDocumentService {
 
                 if (DocumentStatus.POSTED.name().equals(doc.getStatus())) {
                     // Dòng "Không xử lý" không cần phiếu điều chỉnh; nhưng phải được Manager/Kế toán xác nhận trước khi hoàn thành.
-                    boolean importDone = !stocktake.requiresImportAdjustment() || stocktake.getReferenceImportId() != null;
-                    boolean exportDone = !stocktake.requiresExportAdjustment() || stocktake.getReferenceExportId() != null;
+                    StocktakeAdjustmentGuard adjustments = stocktakeAdjustments();
+                    boolean importDone = !stocktake.requiresImportAdjustment()
+                            || adjustments.hasPostedAdjustment(stocktake.getId(), IMPORT_DOC_TYPE);
+                    boolean exportDone = !stocktake.requiresExportAdjustment()
+                            || adjustments.hasPostedAdjustment(stocktake.getId(), EXPORT_DOC_TYPE);
 
                     if (importDone && exportDone && !stocktake.hasUnconfirmedWaivers() && stocktake.hasEnoughParticipants()) {
                         stocktake.markAsPosted();
@@ -508,6 +527,7 @@ public class InventoryDocumentService {
         inventoryValidationService.validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(),
                 req.getReferenceId(), req.getLines());
         ensureEditable(doc);
+        assertStocktakeReferenceChangeAllowed(doc, req, EXPORT_DOC_TYPE);
         updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
         doc.clearLines();
         for (int i = 0; i < req.getLines().size(); i++) {
@@ -534,6 +554,7 @@ public class InventoryDocumentService {
                 && doc.getPurchaseOrderId() != null) {
             throw new BusinessException("Không thể thay đổi kho nhận hàng của phiếu nhập được tạo từ đơn mua hàng");
         }
+        assertStocktakeReferenceChangeAllowed(doc, req, IMPORT_DOC_TYPE);
         updateBaseDocument(id, doc, req, "Mã phiếu nhập kho đã tồn tại", true);
         doc.clearLines();
         for (int i = 0; i < req.getLines().size(); i++) {

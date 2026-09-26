@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentService;
+import com.duylongtech.backend.feature.inventory.StocktakeAdjustmentGuard;
 import com.duylongtech.backend.feature.product.Product;
 import com.duylongtech.backend.feature.product.ProductVariant;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
@@ -498,8 +499,19 @@ public class StocktakeService {
             response.setWaiverConfirmed(entity.getWaiverConfirmedAt() != null && !entity.skippedDiffLines().isEmpty());
             response.setNeedsImportAdjustment(entity.requiresImportAdjustment());
             response.setNeedsExportAdjustment(entity.requiresExportAdjustment());
-            response.setImportAdjustmentPosted(isPostedDocument(entity.getReferenceImportId()));
-            response.setExportAdjustmentPosted(isPostedDocument(entity.getReferenceExportId()));
+            StocktakeAdjustmentGuard adjustments = stocktakeAdjustments();
+            response.setImportAdjustmentPosted(adjustments.hasPostedAdjustment(entity.getId(), StocktakeAdjustmentGuard.IMPORT_DOC_TYPE));
+            response.setExportAdjustmentPosted(adjustments.hasPostedAdjustment(entity.getId(), StocktakeAdjustmentGuard.EXPORT_DOC_TYPE));
+            adjustments.activeAdjustment(entity.getId(), StocktakeAdjustmentGuard.IMPORT_DOC_TYPE, null).ifPresent(doc -> {
+                response.setImportAdjustmentId(doc.getId());
+                response.setImportAdjustmentCode(doc.getDocCode());
+                response.setImportAdjustmentStatus(doc.getStatus());
+            });
+            adjustments.activeAdjustment(entity.getId(), StocktakeAdjustmentGuard.EXPORT_DOC_TYPE, null).ifPresent(doc -> {
+                response.setExportAdjustmentId(doc.getId());
+                response.setExportAdjustmentCode(doc.getDocCode());
+                response.setExportAdjustmentStatus(doc.getStatus());
+            });
         }
         
         if (entity.getCreatedBy() != null) {
@@ -624,10 +636,13 @@ public class StocktakeService {
         if (!stocktake.hasEnoughParticipants()) {
             return "Cần ghi nhận ít nhất " + Stocktake.MIN_PARTICIPANTS + " thành viên tham gia kiểm kê (họ tên) trước khi hoàn thành.";
         }
-        if (stocktake.requiresImportAdjustment() && !isPostedDocument(stocktake.getReferenceImportId())) {
+        StocktakeAdjustmentGuard adjustments = stocktakeAdjustments();
+        if (stocktake.requiresImportAdjustment()
+                && !adjustments.hasPostedAdjustment(stocktake.getId(), StocktakeAdjustmentGuard.IMPORT_DOC_TYPE)) {
             return "Còn hàng thừa: cần lập và ghi sổ phiếu nhập điều chỉnh (hoặc chọn \"Không xử lý\" kèm lý do) trước khi hoàn thành kiểm kê.";
         }
-        if (stocktake.requiresExportAdjustment() && !isPostedDocument(stocktake.getReferenceExportId())) {
+        if (stocktake.requiresExportAdjustment()
+                && !adjustments.hasPostedAdjustment(stocktake.getId(), StocktakeAdjustmentGuard.EXPORT_DOC_TYPE)) {
             return "Còn hàng thiếu: cần lập và ghi sổ phiếu xuất điều chỉnh (hoặc chọn \"Không xử lý\" kèm lý do) trước khi hoàn thành kiểm kê.";
         }
         if (stocktake.hasUnconfirmedWaivers()) {
@@ -644,10 +659,9 @@ public class StocktakeService {
         }
     }
 
-    private boolean isPostedDocument(Long documentId) {
-        return documentId != null && inventoryDocumentRepository.findById(documentId)
-                .map(d -> DocumentStatus.POSTED.name().equals(d.getStatus()))
-                .orElse(false);
+    /** Phiếu điều chỉnh tìm theo tham chiếu (không chỉ theo id phiếu mới nhất đã lưu trên phiếu kiểm kê). */
+    private StocktakeAdjustmentGuard stocktakeAdjustments() {
+        return new StocktakeAdjustmentGuard(inventoryDocumentRepository, stocktakeRepository);
     }
 
     /** Dấu vân tay của số đếm/lựa chọn xử lý: chỉ khi nó đổi thì xác nhận bỏ qua chênh lệch cũ mới mất hiệu lực. */

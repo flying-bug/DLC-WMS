@@ -365,6 +365,10 @@ public enum SystemMessage {
     STK_ERR_006("STK_006", "Mã phiếu kiểm kê đã tồn tại"),
     STK_ERR_007("STK_007", "Danh sách kiểm kê không được chứa sản phẩm trùng nhau."),
     STK_ERR_008("STK_008", "Vui lòng chọn sản phẩm cho tất cả các dòng kiểm kê."),
+    STK_ERR_009("STK_009", "Không tìm thấy phiếu kiểm kê được tham chiếu."),
+    STK_ERR_010("STK_010", "Phiếu kiểm kê %s đang ở trạng thái \"%s\", không lập hoặc ghi sổ thêm phiếu điều chỉnh."),
+    STK_ERR_011("STK_011", "Phiếu kiểm kê %s đã có %s %s (%s). Hãy mở phiếu đó để sửa hoặc ghi sổ, không lập phiếu mới."),
+    STK_ERR_012("STK_012", "Phiếu kiểm kê %s đã có %s %s được ghi sổ, không ghi sổ thêm phiếu điều chỉnh."),
 
     // System Settings
     SYS_SET_ERR_001("SYS_SET_001", "Đổi mã Google OAuth2 thất bại."),
