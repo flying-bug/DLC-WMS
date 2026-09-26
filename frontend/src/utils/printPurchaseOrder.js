@@ -1,5 +1,6 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
 import { formatDateOnly } from './dateFormat';
+import { companyHtml, companyPrintHeaderHtml } from './companyProfile';
 
 export function printPurchaseOrder(orderOrOrders, options = {}) {
   const {
@@ -90,23 +91,10 @@ export function printPurchaseOrder(orderOrOrders, options = {}) {
 
     return `
       <div style="position: relative;">
-        <div class="watermark-dl">DL</div>
+        <div class="watermark-dl">${companyHtml().initials}</div>
 
         <!-- HEADER -->
-        <table class="header-table">
-          <tr>
-            <td style="width: 35%; vertical-align: middle;">
-              <div class="header-logo">DL</div>
-              <div style="font-size: 13px; font-weight: 800; text-transform: uppercase;">DUYLONG computer</div>
-              <div class="header-subtitle">Since 2003</div>
-            </td>
-            <td style="width: 65%; text-align: right;" class="company-info">
-              Tầng 1, số 42 Lê Thanh Nghị, Phường Bách Khoa, Quận Hai Bà Trưng, TP. Hà Nội<br/>
-              Điện thoại: <strong>0914.89.8889 - 0912.01.1102 - 039.271.8888 - 07.8865.8865</strong><br/>
-              Email: duylongcomputer@gmail.com | Website: <strong>maytinhduylong.vn</strong>
-            </td>
-          </tr>
-        </table>
+        ${companyPrintHeaderHtml()}
 
         <!-- TITLE -->
         <div class="title-container">
@@ -203,7 +191,7 @@ export function printPurchaseOrder(orderOrOrders, options = {}) {
               <div>${escapeHtml(creatorName !== 'Chưa rõ' ? creatorName : '')}</div>
             </td>
             <td style="width: 34%;">
-              <div class="sign-role">Đại diện Duy Long Computer</div>
+              <div class="sign-role">Đại diện ${companyHtml().shortName}</div>
               <div class="sign-note">(Ký, đóng dấu)</div>
               <div class="sign-space"></div>
               <div></div>

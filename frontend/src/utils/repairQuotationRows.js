@@ -19,6 +19,7 @@ export function buildRepairQuotationRows(repair, resolveUnitName = () => '') {
       unitPrice: Number(line.unitPrice || 0),
       vatPercent: Number(line.vatPercent || 0),
       isFree: Boolean(line.isFreeWarranty),
+      note: line.note || '',
     });
   });
   (repair?.fees || []).forEach((fee) => {
@@ -31,6 +32,7 @@ export function buildRepairQuotationRows(repair, resolveUnitName = () => '') {
       unitPrice: Number(fee.feeAmount || 0),
       vatPercent: Number(fee.vatPercent || 0),
       isFree: Boolean(fee.isFreeWarranty),
+      note: fee.note || '',
     });
   });
 

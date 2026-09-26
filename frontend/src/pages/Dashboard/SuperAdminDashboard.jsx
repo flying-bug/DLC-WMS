@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import styles from './SuperAdminDashboard.module.css';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import { formatDateOnly, formatTime } from '../../utils/dateFormat';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 function SuperAdminDashboard() {
     const navigate = useNavigate();
+    const company = useCompanyProfile();
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -60,7 +62,7 @@ function SuperAdminDashboard() {
                     <div className={styles.headerLogoBox} aria-hidden="true">
                         <img src="/dl-logo.png" alt="" className={styles.headerLogo} />
                     </div>
-                    <span className={styles.headerBrandName}>Duy Long Computer</span>
+                    <span className={styles.headerBrandName}>{company.shortName}</span>
                 </button>
 
                 {/* Controls */}
@@ -78,7 +80,7 @@ function SuperAdminDashboard() {
                         Chào mừng Super Admin
                     </h1>
                     <p className={styles.welcomeSubtitle}>
-                        Hệ thống quản trị kho Duy Long Computer. Vui lòng chọn một trong các tác vụ
+                        Hệ thống quản trị kho {company.shortName}. Vui lòng chọn một trong các tác vụ
                         quản trị trọng tâm dưới đây để tiếp tục.
                     </p>
                 </section>
@@ -112,7 +114,7 @@ function SuperAdminDashboard() {
                     </span>
                 </div>
                 <div className={styles.footerRight}>
-                    © 2026 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v1.0
+                    © 2026 {company.shortName} &nbsp;·&nbsp; Warehouse Management System v1.0
                 </div>
             </footer>
 

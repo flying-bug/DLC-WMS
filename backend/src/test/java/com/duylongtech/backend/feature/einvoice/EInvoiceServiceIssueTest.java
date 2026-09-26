@@ -10,6 +10,8 @@ import com.duylongtech.backend.feature.partner.PartnerRepository;
 import com.duylongtech.backend.feature.product.ProductVariantRepository;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
+import com.duylongtech.backend.feature.system.CompanyProfileDto;
+import com.duylongtech.backend.feature.system.SystemSettingsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -39,12 +41,16 @@ class EInvoiceServiceIssueTest {
     private final PartnerRepository partnerRepository = mock(PartnerRepository.class);
     private final EInvoiceProviderFactory providerFactory = mock(EInvoiceProviderFactory.class);
     private final EInvoiceProvider provider = mock(EInvoiceProvider.class);
+    private final SystemSettingsService settingsService = mock(SystemSettingsService.class);
     private EInvoiceService service;
 
     @BeforeEach
     void setUp() {
         service = new EInvoiceService(einvoiceRepository, salesOrderRepository, inventoryDocumentRepository,
-                mock(ProductVariantRepository.class), partnerRepository, providerFactory, mock(AuditLogService.class));
+                mock(ProductVariantRepository.class), partnerRepository, providerFactory, mock(AuditLogService.class),
+                settingsService);
+        when(settingsService.getCompanyProfile()).thenReturn(CompanyProfileDto.builder()
+                .name("Công ty Test").taxCode("0100000000").address("Hà Nội").build());
         when(providerFactory.getActiveProvider()).thenReturn(provider);
         when(partnerRepository.findById(9L)).thenReturn(Optional.of(mock(Partner.class)));
         // Provider trả lỗi để dừng ngay sau khi dựng dữ liệu hóa đơn; test chỉ cần dữ liệu gửi đi.
@@ -116,5 +122,37 @@ class EInvoiceServiceIssueTest {
         assertEquals(0, new BigDecimal("2000000").compareTo(sent.getValue().getSubTotalAmount()));
         assertEquals(0, new BigDecimal("160000").compareTo(sent.getValue().getVatAmount()));
         assertEquals(0, new BigDecimal("2160000").compareTo(sent.getValue().getTotalAmount()));
+    }
+
+    @Test
+    void sellerInfoOnTheInvoiceComesFromTheBusinessSettings() {
+        SalesOrder so = salesOrder("POSTED");
+        when(salesOrderRepository.findById(50L)).thenReturn(Optional.of(so));
+
+        assertThrows(BusinessException.class, () -> service.issueInvoiceFromSalesOrder(wholeOrderRequest(), 1L));
+
+        ArgumentCaptor<EInvoiceProviderData> sent = ArgumentCaptor.forClass(EInvoiceProviderData.class);
+        verify(provider).issueInvoice(sent.capture());
+        assertEquals("Công ty Test", sent.getValue().getSellerLegalName());
+        assertEquals("0100000000", sent.getValue().getSellerTaxCode());
+        assertEquals("Hà Nội", sent.getValue().getSellerAddress());
+    }
+
+    @Test
+    void issuedInvoiceKeepsTheSellerItWasIssuedWithAfterTheSettingsChange() {
+        EInvoice issued = new EInvoice();
+        issued.setTransactionUuid("tx-1");
+        issued.setStatus("ISSUED");
+        issued.setSellerLegalName("Công ty Cũ <A&B>");
+        issued.setSellerTaxCode("0109999999");
+        issued.setSellerAddress("Địa chỉ cũ");
+        when(einvoiceRepository.findByTransactionUuid("tx-1")).thenReturn(Optional.of(issued));
+        // Thông tin doanh nghiệp hiện tại (setUp) là "Công ty Test": hóa đơn đã phát hành không được đổi theo.
+
+        String html = service.renderPreviewHtml("tx-1");
+
+        assertTrue(html.contains("Công ty Cũ &lt;A&amp;B&gt;"));
+        assertTrue(html.contains("0109999999"));
+        assertTrue(!html.contains("Công ty Test"));
     }
 }

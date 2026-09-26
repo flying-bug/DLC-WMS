@@ -6,8 +6,10 @@ import { forceLogout, getAuthRole } from '../../auth/session';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import styles from './ChangePasswordPage.module.css';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 function ChangePasswordPage() {
+    const company = useCompanyProfile();
     const navigate = useNavigate();
     const goBack = useGoBack('/profile');
     
@@ -189,7 +191,7 @@ function ChangePasswordPage() {
                     {/* Security Badge */}
                     <div className={styles.securityBadge}>
                         <i className="bi bi-shield-check" />
-                        <span>Hệ thống bảo mật Duy Long v2.0 - Đã được mã hóa 256-bit</span>
+                        <span>Hệ thống bảo mật {company.shortName} - Đã được mã hóa 256-bit</span>
                     </div>
                 </div>
             </div>

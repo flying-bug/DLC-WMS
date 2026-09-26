@@ -1,4 +1,5 @@
 import { formatDateOnly, formatDateTime } from './dateFormat';
+import { companyHtml } from './companyProfile';
 
 export function printStocktakeReport(options = {}) {
   const {
@@ -234,7 +235,7 @@ export function printStocktakeReport(options = {}) {
     <body>
       <div class="header">
         <div class="company-info">
-          <h2>CÔNG TY TNHH VẬT TƯ THIẾT BỊ DUY LONG</h2>
+          <h2>${companyHtml().nameUpper}</h2>
           <p>Hệ thống Quản lý Kho Hàng (DLC-WMS)</p>
         </div>
         <div style="text-align: right; font-size: 12px; color: var(--wms-text-muted);">

@@ -75,13 +75,7 @@ public class ProductService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<Product> productPage = productRepository.searchProducts(search, categoryId, productType, brandId, unitId, pageable);
         List<Long> productIds = productPage.getContent().stream().map(Product::getId).toList();
-        java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
-        if (!productIds.isEmpty()) {
-            List<Object[]> stockResults = inventoryBalanceRepository.sumQuantityOnHandByProductIds(productIds);
-            for (Object[] result : stockResults) {
-                stockMap.put((Long) result[0], (BigDecimal) result[1]);
-            }
-        }
+        java.util.Map<Long, BigDecimal> stockMap = loadSellableStock(productIds);
         Map<Long, List<ProductUnitConversion>> conversionsByProductId = loadUnitConversionsByProductId(productIds);
         return productPage.map(product -> convertToDtoWithStock(
                 product,
@@ -89,18 +83,52 @@ public class ProductService {
                 conversionsByProductId.getOrDefault(product.getId(), List.of())));
     }
 
+    /** Sắp hết hàng: có cài "Tồn tối thiểu" và tồn bán được từ 1 tới mức đó (hết hàng tính riêng). */
+    static boolean isLowStock(BigDecimal stockQty, BigDecimal minStockQty) {
+        BigDecimal stock = stockQty != null ? stockQty : BigDecimal.ZERO;
+        BigDecimal min = minStockQty != null ? minStockQty : BigDecimal.ZERO;
+        return min.signum() > 0 && stock.signum() > 0 && stock.compareTo(min) <= 0;
+    }
+
+    static boolean isOutOfStock(BigDecimal stockQty) {
+        return stockQty == null || stockQty.signum() <= 0;
+    }
+
+    /**
+     * Cảnh báo tồn kho dùng chung cho màn Tổng quan và Vật tư hàng hóa, để hai màn luôn ra cùng một con số.
+     * Đếm theo mã hàng (biến thể); danh sách sản phẩm dùng để lọc là các sản phẩm có ít nhất một mã bị cảnh báo.
+     */
+    @Transactional(readOnly = true)
     public StockAlertSummaryResponse getStockAlertSummary() {
-        ProductRepository.StockAlertSummaryProjection summary = productRepository.getStockAlertSummary();
-        int lowStockCount = summary != null && summary.getLowStockCount() != null
-                ? summary.getLowStockCount()
-                : 0;
-        int outOfStockCount = summary != null && summary.getOutOfStockCount() != null
-                ? summary.getOutOfStockCount()
-                : 0;
+        List<ProductRepository.StockLevelProjection> levels = productRepository.findStockLevels();
+        List<ProductRepository.StockLevelProjection> low = levels.stream()
+                .filter(level -> isLowStock(level.getStockQty(), level.getMinStockQty()))
+                .sorted(java.util.Comparator
+                        .comparing((ProductRepository.StockLevelProjection level) -> level.getStockQty())
+                        .thenComparing(level -> level.getProductName(), java.util.Comparator.nullsLast(String::compareTo)))
+                .toList();
+        List<ProductRepository.StockLevelProjection> out = levels.stream()
+                .filter(level -> isOutOfStock(level.getStockQty()))
+                .toList();
 
         return StockAlertSummaryResponse.builder()
-                .lowStockCount(lowStockCount)
-                .outOfStockCount(outOfStockCount)
+                .lowStockCount(low.size())
+                .outOfStockCount(out.size())
+                .lowStockProductIds(low.stream().map(ProductRepository.StockLevelProjection::getProductId).distinct().toList())
+                .outOfStockProductIds(out.stream().map(ProductRepository.StockLevelProjection::getProductId).distinct().toList())
+                .lowStockItems(low.stream().map(level -> StockAlertSummaryResponse.StockAlertItem.builder()
+                        .productId(level.getProductId())
+                        .variantId(level.getVariantId())
+                        .sku(level.getSku())
+                        .productName(level.getVariantName() != null && !level.getVariantName().isBlank()
+                                && !level.getVariantName().equals(level.getProductName())
+                                ? level.getProductName() + " - " + level.getVariantName()
+                                : level.getProductName())
+                        .productType(level.getProductType())
+                        .unitName(level.getUnitName())
+                        .stockQty(level.getStockQty())
+                        .minStockQty(level.getMinStockQty())
+                        .build()).toList())
                 .build();
     }
 
@@ -114,8 +142,19 @@ public class ProductService {
     }
 
     private BigDecimal getActualStock(Long productId) {
-        List<Object[]> stockResults = inventoryBalanceRepository.sumQuantityOnHandByProductIds(List.of(productId));
-        return stockResults.isEmpty() ? BigDecimal.ZERO : (BigDecimal) stockResults.get(0)[1];
+        return loadSellableStock(List.of(productId)).getOrDefault(productId, BigDecimal.ZERO);
+    }
+
+    /** Tồn bán được theo sản phẩm (cùng cách tính với cảnh báo tồn), sản phẩm không có tồn thì không có trong map. */
+    private java.util.Map<Long, BigDecimal> loadSellableStock(List<Long> productIds) {
+        java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
+        if (productIds == null || productIds.isEmpty()) {
+            return stockMap;
+        }
+        for (Object[] result : inventoryBalanceRepository.sumSellableQuantityByProductIds(productIds)) {
+            stockMap.put(((Number) result[0]).longValue(), new BigDecimal(result[1].toString()));
+        }
+        return stockMap;
     }
 
     public String getNextProductCode() {
@@ -234,13 +273,7 @@ public class ProductService {
     public byte[] exportProductsToExcel(String search, Long categoryId, String productType, Long brandId, Long unitId, String exporterName) {
         List<Product> products = productRepository.searchProducts(search, categoryId, productType, brandId, unitId, Pageable.unpaged()).getContent();
         List<Long> productIds = products.stream().map(Product::getId).toList();
-        java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
-        if (!productIds.isEmpty()) {
-            List<Object[]> stockResults = inventoryBalanceRepository.sumQuantityOnHandByProductIds(productIds);
-            for (Object[] result : stockResults) {
-                stockMap.put((Long) result[0], (BigDecimal) result[1]);
-            }
-        }
+        java.util.Map<Long, BigDecimal> stockMap = loadSellableStock(productIds);
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Danh Sach San Pham");

@@ -108,15 +108,8 @@ public class AiChatService {
         String message = rawMessage == null ? "" : rawMessage.trim();
         String normalized = normalize(message);
 
+        // 1-3. Bảo mật / ngoài phạm vi / chào hỏi: xét trên CÂU HIỆN TẠI, trước mọi truy vấn dữ liệu.
         AiIntent intent = AiIntentRouter.route(normalized);
-        if (intent == AiIntent.GENERAL) {
-            String classified = aiAgentService.classifyIntent(message);
-            try {
-                intent = AiIntent.valueOf(classified);
-            } catch (Exception ignored) {
-                // Keep GENERAL if parsing fails
-            }
-        }
         if (intent == AiIntent.SECURITY) {
             return answerSecurityAlert();
         }
@@ -537,34 +530,24 @@ public class AiChatService {
     }
 
     private AiChatResponse answerTransferSearch(String message) {
-        String normalized = normalize(message);
-        AiDocumentQuery q = AiDocumentQuery.parse(message, normalized, java.time.LocalDate.now());
-
         String keyword = extractSearchKeyword(message);
         List<StockTransfer> transfers = scopedTransfers(keyword).stream()
-                .filter(doc -> q.matchesDate(doc.getTransferDate()))
-                .sorted(Comparator.comparing(StockTransfer::getTransferDate, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(8)
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu chuyển kho");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
-        answer.append(q.describe());
         answer.append(". Hiển thị ").append(transfers.size()).append(" phiếu gần nhất/phù hợp.");
 
-        transfers.forEach(transfer -> {
-            String fromWarehouse = warehouseRepository.findById(transfer.getFromWarehouseId()).map(Warehouse::getName).orElse("#" + transfer.getFromWarehouseId());
-            String toWarehouse = warehouseRepository.findById(transfer.getToWarehouseId()).map(Warehouse::getName).orElse("#" + transfer.getToWarehouseId());
-            answer.append("\n- ")
+        transfers.forEach(transfer -> answer.append("\n- ")
                 .append(transfer.getTransferCode())
                 .append(": ")
-                .append(AiDocumentQuery.transferStatusLabel(transfer.getStatus()))
+                .append(transfer.getStatus())
                 .append(", ngày ")
                 .append(displayDate(transfer.getTransferDate()))
-                .append(", từ kho ")
-                .append(fromWarehouse)
-                .append(" sang kho ")
-                .append(toWarehouse);
-        });
+                .append(", từ kho ID ")
+                .append(transfer.getFromWarehouseId())
+                .append(" sang kho ID ")
+                .append(transfer.getToWarehouseId()));
 
         return AiChatResponse.builder()
                 .intent("TRANSFER_SEARCH")
@@ -575,16 +558,11 @@ public class AiChatService {
     }
 
     private AiChatResponse answerPurchaseOrderSearch(String message) {
-        String normalized = normalize(message);
-        AiDocumentQuery q = AiDocumentQuery.parse(message, normalized, java.time.LocalDate.now());
-
-        if (isCountQuestion(normalized)) {
-            List<PurchaseOrder> allOrders = purchaseOrderRepository.findAllWithFilters(null, null, null, null, null).stream()
-                    .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getPoDate()))
-                    .toList();
+        if (isCountQuestion(normalize(message))) {
+            long count = purchaseOrderRepository.count();
             return AiChatResponse.builder()
                     .intent("PURCHASE_ORDER_COUNT")
-                    .answer("Hệ thống hiện tại có tổng cộng " + allOrders.size() + " đơn mua hàng (PO)" + q.describe() + ".")
+                    .answer("Hệ thống hiện tại có tổng cộng " + count + " đơn mua hàng (PO).")
                     .sources(List.of(source("database", "PURCHASE_ORDERS", "Đếm tổng số đơn mua hàng trong hệ thống")))
                     .suggestions(List.of("Đơn mua hàng gần nhất", "Tìm PO theo mã", "Nhà cung cấp uy tín"))
                     .build();
@@ -593,13 +571,10 @@ public class AiChatService {
         String keyword = extractSearchKeyword(message);
         boolean canSeePrice = accessPolicy.canViewPricing();
         List<PurchaseOrder> orders = purchaseOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null).stream()
-                .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getPoDate()))
-                .sorted(Comparator.comparing(PurchaseOrder::getPoDate, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(8)
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Đơn mua hàng (PO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
-        answer.append(q.describe());
         answer.append(". Tìm thấy ").append(orders.size()).append(" đơn gần nhất.");
 
         orders.forEach(order -> answer.append("\n- Mã PO: ")
@@ -607,7 +582,7 @@ public class AiChatService {
                 .append(", Nhà cung cấp: ")
                 .append(order.getPartner() != null ? order.getPartner().getName() : "-")
                 .append(", Trạng thái: ")
-                .append(AiDocumentQuery.orderStatusLabel(order.getStatus(), true))
+                .append(order.getStatus())
                 .append(canSeePrice ? ", Tổng tiền: " + formatMoney(order.getTotalAmount()) : "")
                 .append(", Ngày đặt: ")
                 .append(displayDate(order.getPoDate())));
@@ -621,16 +596,11 @@ public class AiChatService {
     }
 
     private AiChatResponse answerSalesOrderSearch(String message) {
-        String normalized = normalize(message);
-        AiDocumentQuery q = AiDocumentQuery.parse(message, normalized, java.time.LocalDate.now());
-
-        if (isCountQuestion(normalized)) {
-            List<SalesOrder> allOrders = salesOrderRepository.findAllWithFilters(null, null, null, null, null, null, null, null).stream()
-                    .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getSoDate()))
-                    .toList();
+        if (isCountQuestion(normalize(message))) {
+            long count = salesOrderRepository.count();
             return AiChatResponse.builder()
                     .intent("SALES_ORDER_COUNT")
-                    .answer("Hệ thống hiện tại có tổng cộng " + allOrders.size() + " đơn bán hàng (SO)" + q.describe() + ".")
+                    .answer("Hệ thống hiện tại có tổng cộng " + count + " đơn bán hàng (SO).")
                     .sources(List.of(source("database", "SALES_ORDERS", "Đếm tổng số đơn bán hàng trong hệ thống")))
                     .suggestions(List.of("Đơn bán hàng chờ xuất kho", "Tìm SO theo mã", "Doanh thu hôm nay"))
                     .build();
@@ -639,13 +609,10 @@ public class AiChatService {
         String keyword = extractSearchKeyword(message);
         boolean canSeePrice = accessPolicy.canViewPricing();
         List<SalesOrder> orders = salesOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null, null, null, null).stream()
-                .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getSoDate()))
-                .sorted(Comparator.comparing(SalesOrder::getSoDate, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(8)
                 .toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Đơn bán hàng (SO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
-        answer.append(q.describe());
         answer.append(". Tìm thấy ").append(orders.size()).append(" đơn gần nhất.");
 
         orders.forEach(order -> answer.append("\n- Mã SO: ")
@@ -653,7 +620,7 @@ public class AiChatService {
                 .append(", Khách hàng: ")
                 .append(order.getPartner() != null ? order.getPartner().getName() : "Khách lẻ")
                 .append(", Trạng thái: ")
-                .append(AiDocumentQuery.orderStatusLabel(order.getStatus(), false))
+                .append(order.getStatus())
                 .append(canSeePrice ? ", Tổng tiền: " + formatMoney(order.getTotalAmount()) : "")
                 .append(", Ngày tạo: ")
                 .append(displayDate(order.getSoDate())));
@@ -693,46 +660,32 @@ public class AiChatService {
     }
 
     private AiChatResponse answerImportSearch(String message) {
-        String normalized = normalize(message);
-        AiDocumentQuery q = AiDocumentQuery.parse(message, normalized, java.time.LocalDate.now());
-
-        if (isCountQuestion(normalized)) {
-            List<InventoryDocument> allImports = scopedImports(null).stream()
-                    .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
-                    .toList();
+        if (isCountQuestion(normalize(message))) {
+            List<InventoryDocument> allImports = scopedImports(null);
             return AiChatResponse.builder()
                     .intent("IMPORT_COUNT")
-                    .answer("Hệ thống hiện tại có tổng cộng " + allImports.size() + " phiếu nhập kho (IN_PO)" + q.describe() + ".")
+                    .answer("Hệ thống hiện tại có tổng cộng " + allImports.size() + " phiếu nhập kho (IN_PO).")
                     .sources(List.of(source("database", "INVENTORY_DOCUMENTS", "Đếm tổng số phiếu nhập kho trong hệ thống")))
                     .suggestions(List.of("Phiếu nhập kho gần nhất", "Tìm phiếu nhập theo mã", "Hướng dẫn tạo phiếu nhập kho"))
                     .build();
         }
 
         String keyword = extractSearchKeyword(message);
-        List<InventoryDocument> imports = scopedImports(keyword).stream()
-                .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
-                .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(8)
-                .toList();
+        List<InventoryDocument> imports = scopedImports(keyword).stream().limit(8).toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu nhập kho (IN_PO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
-        answer.append(q.describe());
         answer.append(". Tìm thấy ").append(imports.size()).append(" phiếu gần nhất.");
 
-        imports.forEach(doc -> {
-            String warehouseName = warehouseRepository.findById(doc.getWarehouseId()).map(Warehouse::getName).orElse("#" + doc.getWarehouseId());
-            answer.append("\n- Mã phiếu: ")
+        imports.forEach(doc -> answer.append("\n- Mã phiếu: ")
                 .append(doc.getDocCode())
-                .append(", Kho: ")
-                .append(warehouseName)
+                .append(", Kho: #")
+                .append(doc.getWarehouseId())
                 .append(", Trạng thái: ")
-                .append(AiDocumentQuery.inventoryStatusLabel(doc.getStatus()))
-                .append(doc.getIssuePurpose() != null ? ", Mục đích: " + AiDocumentQuery.purposeLabel(doc.getIssuePurpose()) : "")
+                .append(doc.getStatus())
                 .append(", Số mặt hàng: ")
                 .append(doc.getLines() != null ? doc.getLines().size() : 0)
                 .append(", Ngày nhập: ")
-                .append(displayDate(doc.getDocDate()));
-        });
+                .append(displayDate(doc.getDocDate())));
 
         return AiChatResponse.builder()
                 .intent("IMPORT_SEARCH")
@@ -743,46 +696,32 @@ public class AiChatService {
     }
 
     private AiChatResponse answerExportSearch(String message) {
-        String normalized = normalize(message);
-        AiDocumentQuery q = AiDocumentQuery.parse(message, normalized, java.time.LocalDate.now());
-
-        if (isCountQuestion(normalized)) {
-            List<InventoryDocument> allExports = scopedExports(null).stream()
-                    .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
-                    .toList();
+        if (isCountQuestion(normalize(message))) {
+            List<InventoryDocument> allExports = scopedExports(null);
             return AiChatResponse.builder()
                     .intent("EXPORT_COUNT")
-                    .answer("Hệ thống hiện tại có tổng cộng " + allExports.size() + " phiếu xuất kho (EX_SO)" + q.describe() + ".")
+                    .answer("Hệ thống hiện tại có tổng cộng " + allExports.size() + " phiếu xuất kho (EX_SO).")
                     .sources(List.of(source("database", "INVENTORY_DOCUMENTS", "Đếm tổng số phiếu xuất kho trong hệ thống")))
                     .suggestions(List.of("Phiếu xuất kho gần nhất", "Tìm phiếu xuất theo mã", "Hướng dẫn tạo phiếu xuất kho"))
                     .build();
         }
 
         String keyword = extractSearchKeyword(message);
-        List<InventoryDocument> exports = scopedExports(keyword).stream()
-                .filter(doc -> q.matchesInventoryStatus(doc.getStatus()) && q.matchesDate(doc.getDocDate()))
-                .sorted(Comparator.comparing(InventoryDocument::getDocDate, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(8)
-                .toList();
+        List<InventoryDocument> exports = scopedExports(keyword).stream().limit(8).toList();
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu Phiếu xuất kho (EX_SO)");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
-        answer.append(q.describe());
         answer.append(". Tìm thấy ").append(exports.size()).append(" phiếu gần nhất.");
 
-        exports.forEach(doc -> {
-            String warehouseName = warehouseRepository.findById(doc.getWarehouseId()).map(Warehouse::getName).orElse("#" + doc.getWarehouseId());
-            answer.append("\n- Mã phiếu: ")
+        exports.forEach(doc -> answer.append("\n- Mã phiếu: ")
                 .append(doc.getDocCode())
-                .append(", Kho: ")
-                .append(warehouseName)
+                .append(", Kho: #")
+                .append(doc.getWarehouseId())
                 .append(", Trạng thái: ")
-                .append(AiDocumentQuery.inventoryStatusLabel(doc.getStatus()))
-                .append(doc.getIssuePurpose() != null ? ", Mục đích: " + AiDocumentQuery.purposeLabel(doc.getIssuePurpose()) : "")
+                .append(doc.getStatus())
                 .append(", Số mặt hàng: ")
                 .append(doc.getLines() != null ? doc.getLines().size() : 0)
                 .append(", Ngày xuất: ")
-                .append(displayDate(doc.getDocDate()));
-        });
+                .append(displayDate(doc.getDocDate())));
 
         return AiChatResponse.builder()
                 .intent("EXPORT_SEARCH")
@@ -846,7 +785,7 @@ public class AiChatService {
                             1. Tạo Đơn bán hàng (SO): Chọn Khách hàng, sản phẩm và số lượng. Hệ thống tự động kiểm tra và Giữ chỗ tồn kho (Stock Reservation).
                             2. Lập Phiếu xuất kho: Hệ thống tự động chọn các mã Serial sẵn có trong kho theo nguyên tắc FIFO.
                             3. Quét Serial kiểm tra: Đối chiếu mã Serial thực tế tại quầy xuất hàng.
-                            4. Ghi sổ xuất kho (Post): Hệ thống khóa Serial sang SOLD (chống race condition), trừ tồn kho On-hand, trừ lớp giá vốn FIFO, tự động KÍCH HOẠT BẢO HÀNH ĐIỆN TỬ và ghi nhận công nợ khách hàng.
+                            4. Ghi sổ xuất kho (Post): Hệ thống khóa Serial sang SOLD (chống race condition), trừ tồn kho On-hand, trừ lớp giá vốn, tự động KÍCH HOẠT BẢO HÀNH ĐIỆN TỬ và ghi nhận công nợ khách hàng.
                             5. In phiếu xuất kho & Phiếu bảo hành giao cho khách hàng.
                             """.trim())
                     .sources(List.of(source("process", "SALES_ORDERS, INVENTORY_DOCUMENTS, WARRANTIES", "Quy trình xuất kho và kích hoạt bảo hành điện tử")))
@@ -922,17 +861,14 @@ public class AiChatService {
         return AiIntentRouter.isCountQuestion(normalized);
     }
 
+    // Pattern ranh giới từ nguyên vẹn (\b...\b) chống lỗi cắt nhầm/nuốt chữ con của các sản phẩm như UltraSharp, Xprinter, GTX...
     private static final Pattern STOPWORDS_REGEX = Pattern.compile(
             "\\b(tim|kiem|tra|cuu|cho|toi|xem|doc|du lieu|co may|bao nhieu|so luong|tong so|dem|count|"
             + "san pham|hang hoa|sku|barcode|bien the|khach hang|customer|nha cung cap|supplier|doi tac|"
-            + "nhap kho|phieu nhap|xuat kho|phieu xuat|don mua|don ban|don hang|phieu|kho|hang|"
+            + "nhap kho|phieu nhap|xuat kho|phieu xuat|don mua|don ban|don hang|phieu|"
             + "bao hanh|warranty|serial|sua chua|repair|phieu sua|chuyen kho|transfer|lap rap|thao do|"
             + "dung may|dung pc|build pc|build may|rap may|cau hinh|assembly|bom|theo|ma|ten|so dien thoai|hien tai|gan nhat|co|may|"
-            + "hien thi|danh sach|liet ke|hay|giup|muon|biet|gia|nao|dau|khong|nay|do|cua|va|cac|nhung|moi nhat|"
-            + "hom nay|hom qua|tuan nay|tuan truoc|tuan qua|thang nay|thang truoc|nam nay|ngay|"
-            + "nhap|luu tam|cho duyet|cho phe duyet|da duyet|cho xuat kho|cho nhap kho|cho xuat|"
-            + "da ghi so|ghi so|hoan thanh|hoan tat|da xuat|da nhap|chua ghi so|chua xuat|chua nhap kho|chua hoan thanh|dang mo|"
-            + "da huy|bi huy|huy bo|draft|pending|approved|posted|cancelled|canceled)\\b",
+            + "hien thi|danh sach|liet ke|hay|giup|muon|biet|gia|nao|dau|khong|nay|do|cua|va|cac|nhung|moi nhat)\\b",
             Pattern.CASE_INSENSITIVE
     );
 

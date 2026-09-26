@@ -172,7 +172,7 @@ public class Repair {
     @JoinColumn(name = "warranty_id", insertable = false, updatable = false)
     private Warranty warranty;
 
-    public void initOrder(String repairCode, Long partnerId, Long productId, Long productVariantId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, Boolean underWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note, Long createdBy) {
+    public void initOrder(String repairCode, Long partnerId, Long productId, Long productVariantId, Integer productQuantity, String productUnit, Long warehouseId, Long serialNumberId, Long warrantyId, String referenceType, Long referenceId, String referenceCode, LocalDate receivedDate, LocalDate expectedDate, String issueDescription, String diagnosisNote, Boolean underWarranty, LocalDate repairWarrantyEndDate, String invoiceMethod, String responsiblePerson, String note, String internalNotes, Long createdBy) {
         this.repairCode = repairCode;
         this.partnerId = partnerId;
         this.productId = productId;
@@ -190,6 +190,7 @@ public class Repair {
         this.repairStatus = RepairStatus.DRAFT.name();
         this.issueDescription = issueDescription;
         this.diagnosisNote = diagnosisNote;
+        this.internalNotes = internalNotes;
         this.underWarranty = underWarranty != null ? underWarranty : false;
         this.repairWarrantyEndDate = repairWarrantyEndDate;
         this.invoiceMethod = invoiceMethod != null ? invoiceMethod : "after_repair";

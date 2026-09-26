@@ -97,7 +97,7 @@ public class StocktakeController {
         return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
                 .success(true)
                 .data(response)
-                .userMessage(pending ? "Đã gửi yêu cầu kiểm kê, chờ Manager duyệt" : "Tạo phiếu kiểm kê thành công, kho đã được khóa để kiểm kê")
+                .userMessage(pending ? "Đã gửi yêu cầu kiểm kê, chờ quản lý duyệt" : "Tạo phiếu kiểm kê thành công, kho đã được khóa để kiểm kê")
                 .build());
     }
 
@@ -202,7 +202,7 @@ public class StocktakeController {
         return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
                 .success(true)
                 .data(response)
-                .userMessage(pending ? "Đã gửi yêu cầu kiểm kê, chờ Manager duyệt" : "Kho đã được khóa để kiểm kê")
+                .userMessage(pending ? "Đã gửi yêu cầu kiểm kê, chờ quản lý duyệt" : "Kho đã được khóa để kiểm kê")
                 .build());
     }
 }

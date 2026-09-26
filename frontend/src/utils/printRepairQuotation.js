@@ -1,6 +1,7 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
 import { formatDateOnly } from './dateFormat';
 import { buildRepairQuotationRows } from './repairQuotationRows';
+import { companyHtml, companyPrintHeaderHtml } from './companyProfile';
 
 const escapeHtml = (unsafe) => {
   if (unsafe === null || unsafe === undefined) return '';
@@ -48,6 +49,7 @@ export function printRepairQuotation(repair, options = {}) {
             <strong>${escapeHtml(row.name)}</strong>
             ${row.code ? `<span class="muted"> (${escapeHtml(row.code)})</span>` : ''}
             ${row.isFree ? '<div class="free-tag">Miễn phí - trong bảo hành</div>' : ''}
+            ${row.note ? `<div class="line-note">${escapeHtml(row.note)}</div>` : ''}
           </td>
           <td style="text-align: center;">${escapeHtml(row.kind)}</td>
           <td style="text-align: center;">${escapeHtml(row.unit)}</td>
@@ -97,6 +99,7 @@ export function printRepairQuotation(repair, options = {}) {
           .main-table td { border: 1px solid #000; padding: 6px 8px; font-size: 12px; }
           .summary-row td { font-weight: 600; }
           .free-tag { font-size: 11px; font-style: italic; color: #047857; }
+          .line-note { font-size: 11px; font-style: italic; color: #4b5563; }
           .words-row { margin-top: 6px; font-style: italic; font-weight: 600; font-size: 12.5px; }
           .terms-section { margin-top: 18px; padding-top: 10px; border-top: 1px dashed #9ca3af; font-size: 11.5px; line-height: 1.45; }
           .terms-title { font-weight: 700; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; color: #0f172a; }
@@ -110,20 +113,7 @@ export function printRepairQuotation(repair, options = {}) {
         </style>
       </head>
       <body>
-        <table class="header-table">
-          <tr>
-            <td style="width: 35%; vertical-align: middle;">
-              <div class="header-logo">DL</div>
-              <div style="font-size: 13px; font-weight: 800; text-transform: uppercase;">DUYLONG computer</div>
-              <div class="header-subtitle">Since 2003</div>
-            </td>
-            <td style="width: 65%; text-align: right;" class="company-info">
-              Tầng 1, số 42 Lê Thanh Nghị, Phường Bách Khoa, Quận Hai Bà Trưng, TP. Hà Nội<br/>
-              Điện thoại: <strong>0914.89.8889 - 0912.01.1102 - 039.271.8888 - 07.8865.8865</strong><br/>
-              Email: duylongcomputer@gmail.com | Website: <strong>maytinhduylong.vn</strong>
-            </td>
-          </tr>
-        </table>
+        ${companyPrintHeaderHtml()}
 
         <div class="title-container">
           <div class="doc-title">Bảng báo giá sửa chữa</div>
@@ -190,10 +180,10 @@ export function printRepairQuotation(repair, options = {}) {
           <div class="terms-title">Điều khoản & ghi chú:</div>
           <ul class="terms-list">
             <li><strong>Hiệu lực báo giá:</strong> 07 ngày kể từ ngày lập.</li>
-            <li><strong>Xác nhận:</strong> Duy Long Computer chỉ tiến hành sửa chữa sau khi Quý khách đồng ý báo giá.</li>
+            <li><strong>Xác nhận:</strong> ${companyHtml().shortName} chỉ tiến hành sửa chữa sau khi Quý khách đồng ý báo giá.</li>
             <li><strong>Phát sinh:</strong> Nếu trong quá trình sửa chữa phát hiện thêm lỗi, chúng tôi sẽ báo lại để Quý khách quyết định trước khi làm.</li>
             <li><strong>Thanh toán:</strong> Tiền mặt hoặc chuyển khoản khi nhận lại thiết bị.</li>
-            <li><strong>Bảo hành:</strong> Linh kiện thay thế và dịch vụ được bảo hành theo chính sách sửa chữa của Duy Long Computer.</li>
+            <li><strong>Bảo hành:</strong> Linh kiện thay thế và dịch vụ được bảo hành theo chính sách sửa chữa của ${companyHtml().shortName}.</li>
           </ul>
         </div>
 
@@ -212,7 +202,7 @@ export function printRepairQuotation(repair, options = {}) {
               <div>${escapeHtml(technician)}</div>
             </td>
             <td style="width: 34%;">
-              <div class="sign-role">Đại diện Duy Long Computer</div>
+              <div class="sign-role">Đại diện ${companyHtml().shortName}</div>
               <div class="sign-note">(Ký, đóng dấu)</div>
               <div class="sign-space"></div>
             </td>

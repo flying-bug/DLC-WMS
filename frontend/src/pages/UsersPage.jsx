@@ -11,6 +11,7 @@ import Pagination from '../components/ui/Pagination/Pagination';
 import ResponsiveTable from '../components/ui/Table/ResponsiveTable';
 import { USER_EVENT } from '../auth/session';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { useCompanyProfile } from '../hooks/useCompanyProfile';
 
 
 const GENDER_LABELS = {
@@ -30,6 +31,7 @@ const toVietnameseGender = (value) => {
 };
 
 function UsersPage() {
+    const company = useCompanyProfile();
     const navigate = useNavigate();
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
@@ -412,7 +414,7 @@ function UsersPage() {
                 <div className={styles.pageHeader}>
                     <div>
                         <h1 className={styles.pageTitle}>Quản lý tài khoản & Phân quyền</h1>
-                        <p className={styles.pageSubtitle}>Quản lý vai trò, quyền hạn và trạng thái của nhân viên Duy Long Computer.</p>
+                        <p className={styles.pageSubtitle}>Quản lý vai trò, quyền hạn và trạng thái của nhân viên {company.shortName}.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <button type="button" className="btnDefault" onClick={() => navigate('/roles/permissions')}>

@@ -675,8 +675,7 @@ public class ReportRepository {
         List<DashboardResponse.OrderSummaryDto> approvedPurchaseOrders = getApprovedPurchaseOrders();
         List<DashboardResponse.OrderSummaryDto> approvedSalesOrders = getApprovedSalesOrders();
         List<DashboardResponse.OrderSummaryDto> backorderedSalesOrders = getBackorderedSalesOrders();
-        List<DashboardResponse.ConfiguredLowStockProductDto> configuredLowStockProducts = getConfiguredLowStockProducts();
-        List<DashboardResponse.RepairSummaryDto> confirmedWarrantyRepairs = getConfirmedWarrantyRepairs();
+        List<DashboardResponse.RepairSummaryDto> pendingApprovalWarrantyRepairs = getPendingApprovalWarrantyRepairs();
         Map<String, Object> importExportMap = getImportExportMetrics(startOfMonth, endOfMonth);
         Map<String, Object> debtMap = getDebtMetrics();
 
@@ -695,13 +694,11 @@ public class ReportRepository {
                 .approvedPurchaseOrders(approvedPurchaseOrders)
                 .approvedSalesOrders(approvedSalesOrders)
                 .backorderedSalesOrders(backorderedSalesOrders)
-                .configuredLowStockProducts(configuredLowStockProducts)
-                .confirmedWarrantyRepairs(confirmedWarrantyRepairs)
+                .pendingApprovalWarrantyRepairs(pendingApprovalWarrantyRepairs)
                 .approvedPurchaseOrdersCount(approvedPurchaseOrders.size())
                 .approvedSalesOrdersCount(approvedSalesOrders.size())
                 .backorderedSalesOrdersCount(backorderedSalesOrders.size())
-                .configuredLowStockProductsCount(getConfiguredLowStockProductsCount())
-                .confirmedWarrantyRepairsCount(confirmedWarrantyRepairs.size())
+                .pendingApprovalWarrantyRepairsCount(pendingApprovalWarrantyRepairs.size())
                 .inventoryFlow7Days(getInventoryFlowData(inventoryFlowRange))
                 .categoryInventoryBreakdown(getCategoryInventoryBreakdown(categoryScope))
                 .financeOverview(getFinanceOverview(financeRange))
@@ -1205,64 +1202,7 @@ public class ReportRepository {
     }
 
 
-    private int getConfiguredLowStockProductsCount() {
-        String sql = """
-                SELECT COUNT(1)
-                FROM product_variants pv
-                JOIN products p ON p.id = pv.product_id
-                WHERE p.active = TRUE
-                  AND pv.active = TRUE
-                  AND COALESCE(pv.min_stock_qty, 0) > 0
-                  AND LOWER(TRIM(p.product_type)) NOT IN ('dịch vụ', 'dich vu', 'service')
-                """;
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class);
-        return count != null ? count : 0;
-    }
-
-    // Chỉ tính tồn ở kho bán hàng (STANDARD): hàng nằm trong kho phế liệu không làm mất cảnh báo tồn thấp.
-    private List<DashboardResponse.ConfiguredLowStockProductDto> getConfiguredLowStockProducts() {
-        String sql = """
-                SELECT
-                    p.id AS productId,
-                    pv.sku AS productCode,
-                    CONCAT(p.product_name, ' - ', pv.variant_name) AS productName,
-                    p.product_type AS productType,
-                    u.name AS unitName,
-                    COALESCE(pv.min_stock_qty, 0) AS minStockQty,
-                    COALESCE(SUM(CASE
-                        WHEN COALESCE(p.track_serial, 0) = 1
-                             AND ib.serial_number_id IS NOT NULL
-                             AND sn.status = 'AVAILABLE' THEN ib.quantity_on_hand
-                        WHEN COALESCE(p.track_serial, 0) = 0
-                             AND ib.serial_number_id IS NULL THEN ib.quantity_on_hand
-                        ELSE 0 END), 0) AS stockQty
-                FROM product_variants pv
-                JOIN products p ON p.id = pv.product_id
-                LEFT JOIN units u ON p.unit_id = u.id
-                LEFT JOIN inventory_balances ib
-                    ON ib.variant_id = pv.id
-                    AND ib.warehouse_id IN (SELECT w.id FROM warehouses w WHERE w.type = 'STANDARD')
-                LEFT JOIN serial_numbers sn ON sn.id = ib.serial_number_id
-                WHERE p.active = TRUE
-                  AND pv.active = TRUE
-                  AND COALESCE(pv.min_stock_qty, 0) > 0
-                  AND LOWER(TRIM(p.product_type)) NOT IN ('dịch vụ', 'dich vu', 'service')
-                GROUP BY p.id, pv.id, pv.sku, p.product_name, pv.variant_name, p.product_type, u.name, pv.min_stock_qty
-                HAVING stockQty <= COALESCE(pv.min_stock_qty, 0)
-                ORDER BY stockQty ASC, p.product_name ASC
-                """;
-        return jdbcTemplate.query(sql, (rs, rowNum) -> DashboardResponse.ConfiguredLowStockProductDto.builder()
-                .productId(rs.getLong("productId"))
-                .productCode(rs.getString("productCode"))
-                .productName(rs.getString("productName"))
-                .productType(rs.getString("productType"))
-                .unitName(rs.getString("unitName"))
-                .stockQty(rs.getBigDecimal("stockQty"))
-                .minStockQty(rs.getBigDecimal("minStockQty"))
-                .build());
-    }
-
-    private List<DashboardResponse.RepairSummaryDto> getConfirmedWarrantyRepairs() {
+    private List<DashboardResponse.RepairSummaryDto> getPendingApprovalWarrantyRepairs() {
         String sql = """
                 SELECT
                     r.id,
@@ -1275,7 +1215,7 @@ public class ReportRepository {
                 FROM repairs r
                 LEFT JOIN partners pt ON r.partner_id = pt.id
                 LEFT JOIN products p ON r.product_id = p.id
-                WHERE r.repair_status = 'CONFIRMED'
+                WHERE r.repair_status = 'WAITING_FOR_APPROVAL'
                   AND (COALESCE(r.under_warranty, FALSE) = TRUE OR r.warranty_id IS NOT NULL)
                 ORDER BY r.received_date DESC, r.id DESC
                 """;
@@ -1331,7 +1271,7 @@ public class ReportRepository {
     }
 
     private Integer getNewWarrantyTickets(LocalDate startOfMonth, LocalDate endOfMonth) {
-        // Chỉ đếm lệnh sửa chữa bảo hành (cùng điều kiện với getConfirmedWarrantyRepairs), không đếm mọi lệnh sửa.
+        // Chỉ đếm lệnh sửa chữa bảo hành, không đếm mọi lệnh sửa.
         String sql = "SELECT COUNT(id) FROM repairs WHERE received_date >= ? AND received_date <= ? "
                 + "AND (COALESCE(under_warranty, FALSE) = TRUE OR warranty_id IS NOT NULL)";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, startOfMonth, endOfMonth);

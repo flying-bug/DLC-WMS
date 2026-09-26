@@ -24,6 +24,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 import Pagination from '../../components/ui/Pagination/Pagination';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { canViewPricing, getAuthRoles, hasPermission } from '../../auth/session';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 const REPORT_DOMAINS = [
     { id: 'ALL', label: 'Tất cả báo cáo', icon: 'bi bi-grid-3x3-gap' },
@@ -138,6 +139,7 @@ const TRANSFER_STATUS_LABELS = {
 };
 
 const ReportListPage = () => {
+    const company = useCompanyProfile();
     const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
     const isSuperAdminOrAccountant = roles.some(r =>
         ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'MANAGER', 'ROLE_MANAGER', 'ACCOUNTANT', 'ROLE_ACCOUNTANT'].includes(r)
@@ -425,7 +427,7 @@ const ReportListPage = () => {
             if (!silent) setLoading(false);
         }
     };
-  useRealtimeRefresh(['INVENTORY_BALANCE','IMPORT_DOCUMENT','EXPORT_DOCUMENT','STOCK_TRANSFER','PAYMENT','SALES_ORDER','PARTNER','REPAIR'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
+    useRealtimeRefresh(['INVENTORY_BALANCE', 'IMPORT_DOCUMENT', 'EXPORT_DOCUMENT', 'STOCK_TRANSFER', 'PAYMENT', 'SALES_ORDER', 'PARTNER', 'REPAIR'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
 
     // Auto-fetch data on switching to a report or changing filters
     useEffect(() => {
@@ -733,6 +735,7 @@ const ReportListPage = () => {
                                                 partnerType: filters.partnerType
                                             }}
                                             showDateRange={activeReport.id !== 'inventory-balance'}
+                                            maxDate={new Date().toLocaleDateString('en-CA')}
                                             warehouses={activeReport.id !== 'debt' ? warehouses : []}
                                             statusOptions={
                                                 activeReport.id === 'stock-transfers' ? [
@@ -783,10 +786,19 @@ const ReportListPage = () => {
                                             ]}
                                             onApply={(newFilters) => {
                                                 if (newFilters.preset) handleDatePresetChange(newFilters.preset);
+                                                // Báo cáo không có số liệu tương lai: ngày sau hôm nay tính tới hôm nay
+                                                const todayStr = new Date().toLocaleDateString('en-CA');
+                                                const cap = (value) => (value && value > todayStr ? todayStr : value);
+                                                let startDate = cap(newFilters.fromDate || filters.startDate);
+                                                const endDate = cap(newFilters.toDate || filters.endDate);
+                                                if (startDate && endDate && startDate > endDate) {
+                                                    showToast('warning', 'Ngày bắt đầu không được sau ngày kết thúc');
+                                                    startDate = endDate;
+                                                }
                                                 setFilters(prev => ({
                                                     ...prev,
-                                                    startDate: newFilters.fromDate || prev.startDate,
-                                                    endDate: newFilters.toDate || prev.endDate,
+                                                    startDate,
+                                                    endDate,
                                                     warehouseId: newFilters.warehouseId || '',
                                                     status: newFilters.status || '',
                                                     transactionType: newFilters.transactionType || '',
@@ -820,7 +832,7 @@ const ReportListPage = () => {
                             {/* Report Results Content */}
                             <div className="report-results-view" style={{ background: 'var(--color-surface)', padding: '24px', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border-soft)' }}>
                                 <div className={styles.reportMetadataHeader}>
-                                    <h4>Duy Long Computer Warehouse</h4>
+                                    <h4>{company.name}</h4>
                                     <p><strong>Kỳ báo cáo:</strong> {activeReport.id === 'inventory-balance'
                                         ? 'Tính đến thời điểm hiện tại'
                                         : (!filters.startDate && !filters.endDate
@@ -1096,7 +1108,7 @@ const ReportListPage = () => {
                                                                         <th className={styles.textRight}>Doanh thu linh kiện</th>
                                                                         <th className={styles.textRight}>Doanh thu dịch vụ</th>
                                                                         <th className={styles.textRight}>VAT</th>
-                                                                        <th className={styles.textRight}>Giá vốn FIFO</th>
+                                                                        <th className={styles.textRight}>Giá vốn</th>
                                                                         <th className={styles.textRight}>Lãi sau giá vốn linh kiện</th>
                                                                         <th className={styles.textRight}>Tỷ suất LN (%)</th>
                                                                     </tr>

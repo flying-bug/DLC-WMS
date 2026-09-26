@@ -566,7 +566,7 @@ function RepairFormPage() {
       repairApi.getRepairById(id).then((res) => {
         const data = res.data?.data;
         if (data) setRepair(data);
-      }).catch(() => {});
+      }).catch(() => { });
       showToast('info', notif.message || 'Trạng thái lệnh sửa chữa vừa được cập nhật.');
     };
     window.addEventListener(NOTIFICATION_EVENT, handleRealtimeNotification);
@@ -632,7 +632,8 @@ function RepairFormPage() {
         expectedDate: formData.expectedDate || null,
         responsiblePerson: formData.responsiblePerson || null,
         // Ghi chú chẩn đoán không còn trên UI, truyền null hoặc giữ nguyên
-        diagnosisNote: null
+        diagnosisNote: null,
+        internalNotes: formData.internalNotes || null
       };
 
       if (isNew) {
@@ -682,9 +683,9 @@ function RepairFormPage() {
     if (isNew) return;
     try {
       await axiosClient.patch(`/repairs/${id}/internal-notes`, { notes: formData.internalNotes });
-      showToast('success', 'Đã lưu ghi chú nội bộ');
-    } catch (e) {
-      showToast('error', 'Không thể lưu ghi chú');
+    } catch {
+      // Không chặn thao tác khác, nhưng phải báo để người dùng biết ghi chú chưa được lưu
+      showToast('error', 'Không lưu được ghi chú nội bộ, vui lòng thử lại');
     }
   };
 
@@ -1619,8 +1620,10 @@ function RepairFormPage() {
               <label className="misa-label" style={{ fontSize: '14px', marginBottom: '8px' }}>Ghi chú nội bộ</label>
               <textarea
                 className="misa-textarea"
-                style={{ width: '100%', minHeight: '110px', fontSize: '14px', padding: '12px', lineHeight: '1.6', borderRadius: '6px' }}
+                style={{ width: '100%', minHeight: '110px', fontSize: '14px', padding: '12px', lineHeight: '1.6', borderRadius: '6px',
+                  ...((['DONE', 'CANCELLED'].includes(currentStatus)) && { backgroundColor: 'var(--wms-bg-soft)', cursor: 'default', color: 'var(--wms-text-muted)' }) }}
                 placeholder="Ghi chú dành riêng cho nội bộ cửa hàng..."
+                disabled={['DONE', 'CANCELLED'].includes(currentStatus)}
                 value={formData.internalNotes || ''}
                 onChange={(e) => handleFormChange('internalNotes', e.target.value)}
                 onBlur={() => handleUpdateInternalNotes()}

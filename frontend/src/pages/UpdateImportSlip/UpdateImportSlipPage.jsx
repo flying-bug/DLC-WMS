@@ -49,6 +49,14 @@ const isWarehouseProduct = (item) => {
 };
 
 const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
+const BASE_IMPORT_TYPE_OPTIONS = [
+  { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
+  { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+  { value: 'ASSEMBLY', label: 'Nhập kho lắp ráp / tháo dỡ' },
+  { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+  { value: 'OTHER', label: 'Khác' }
+];
+const STOCKTAKE_IMPORT_OPTION = { value: 'STOCKTAKE_ADD', label: 'Nhập điều chỉnh kiểm kê' };
 
 const customSelectStyles = {
   control: (base, state) => ({
@@ -294,7 +302,9 @@ function UpdateImportSlipPage() {
         const detail = detailRes.status === 'fulfilled' ? unwrap(detailRes.value) : null;
         if (!detail) throw new Error('Cannot load slip details');
 
-        const loadedImportType = detail.issuePurpose || 'PURCHASE';
+        const loadedImportType = detail.referenceType === 'STOCKTAKE'
+          ? 'STOCKTAKE_ADD'
+          : (detail.issuePurpose || 'PURCHASE');
         setImportType(loadedImportType);
 
         const purchaserUser = userList.find(u => String(u.id) === String(detail.salespersonId));
@@ -544,7 +554,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
           note: item.note,
         };
       }),
-      issuePurpose: importType,
+      issuePurpose: form.referenceType === 'STOCKTAKE' ? 'STOCKTAKE_ADD' : importType,
       recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
       salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
       referenceType: importType === 'PRODUCTION' && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
@@ -973,20 +983,12 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
             <span style={{ color: 'var(--color-border-muted)', fontSize: '20px' }}>|</span>
             <div style={{ width: '280px' }}>
               <Select
-                value={[
-                  { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
-                  { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
-                  { value: 'ASSEMBLY', label: 'Nhập kho lắp ráp / tháo dỡ' },
-                  { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
-                  { value: 'OTHER', label: 'Khác' }
-                ].find(o => o.value === importType)}
-                options={[
-                  { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
-                  { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
-                  { value: 'ASSEMBLY', label: 'Nhập kho lắp ráp / tháo dỡ' },
-                  { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
-                  { value: 'OTHER', label: 'Khác' }
-                ]}
+                value={(form.referenceType === 'STOCKTAKE'
+                  ? [...BASE_IMPORT_TYPE_OPTIONS, STOCKTAKE_IMPORT_OPTION]
+                  : BASE_IMPORT_TYPE_OPTIONS).find(o => o.value === importType)}
+                options={form.referenceType === 'STOCKTAKE'
+                  ? [...BASE_IMPORT_TYPE_OPTIONS, STOCKTAKE_IMPORT_OPTION]
+                  : BASE_IMPORT_TYPE_OPTIONS}
                 onChange={(option) => {
                   setImportType(option.value);
                   setForm(prev => ({
@@ -1002,6 +1004,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                   control: (base, state) => ({ ...customSelectStyles.control(base, state), fontWeight: 'bold' })
                 }}
                 isSearchable={false}
+                isDisabled={form.referenceType === 'STOCKTAKE'}
               />
             </div>
           </div>
@@ -1229,7 +1232,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                         {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
                         {(importType === 'PRODUCTION' || importType === 'ASSEMBLY') && 'Nhân viên phụ trách'}
                         {importType === 'RETURN' && 'Nhân viên nhận hàng'}
-                        {importType === 'OTHER' && 'Nhân viên nhận hàng'}
+                        {(importType === 'OTHER' || importType === 'STOCKTAKE_ADD') && 'Nhân viên nhận hàng'}
                       </label>
                       <Select
                         inputId="import-purchaser"
@@ -1250,7 +1253,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                     </div>
                   </div>
 
-                  {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') && (
+                  {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER' || importType === 'STOCKTAKE_ADD') && (
                     <div className="misa-form-row" style={{ marginTop: '12px' }}>
                       <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                         <label className="misa-label">Người giao hàng</label>

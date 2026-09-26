@@ -1,3 +1,4 @@
+import { companyContactLine, companyNameUpper, getCompanyProfile } from './companyProfile';
 /**
  * Export data to CSV/Excel format with professional company header & footer metadata.
  * Opens seamlessly in Microsoft Excel & Google Sheets with UTF-8 BOM encoding.
@@ -12,10 +13,11 @@ export const exportToExcel = (headers, data, fileName, customTitle) => {
   const now = new Date();
   const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
+  const company = getCompanyProfile();
   const headerBlock = [
-    ['CÔNG TY TNHH DUY LONG COMPUTER'],
-    ['Địa chỉ: Số 59 Thịnh Liệt - Hoàng Mai - Hà Nội'],
-    ['Điện thoại: 0392718888 - Email: Duylongcomputer@gmail.com'],
+    [companyNameUpper(company)],
+    [company.address ? `Địa chỉ: ${company.address}` : ''],
+    [companyContactLine(company)],
     [''],
     [displayTitle],
     [`Ngày xuất báo cáo: ${dateStr}`],

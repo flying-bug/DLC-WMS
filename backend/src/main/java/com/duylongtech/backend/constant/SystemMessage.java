@@ -248,7 +248,7 @@ public enum SystemMessage {
     INV_ERR_003("INV_003", "Trạng thái phiếu kho không hợp lệ"),
     INV_ERR_004("INV_004", "Trạng thái phiếu nhập kho phải là lưu tạm"),
     INV_ERR_005("INV_005", "Trạng thái phiếu xuất kho phải là lưu tạm"),
-    INV_ERR_006("INV_006", "Thuế VAT phải nằm trong khoảng từ 0%% đến 10%%"),
+    INV_ERR_006("INV_006", "Thuế VAT không được âm."),
     INV_ERR_007("INV_007", "Phiếu nhập kho không được có quantityOut"),
     INV_ERR_008("INV_008", "Serial %s đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại"),
     INV_ERR_009("INV_009", "Serial %s không có sẵn trong kho (trạng thái: %s)"),
@@ -368,6 +368,13 @@ public enum SystemMessage {
 
     // System Settings
     SYS_SET_ERR_001("SYS_SET_001", "Đổi mã Google OAuth2 thất bại."),
+
+    // Business Settings (Thông tin doanh nghiệp & thuế)
+    BIZ_SET_ERR_001("BIZ_SET_001", "Mức thuế VAT phải là số nguyên không âm (từ 0 trở lên)."),
+    BIZ_SET_ERR_002("BIZ_SET_002", "Phải có ít nhất một mức thuế VAT cho phép."),
+    BIZ_SET_ERR_003("BIZ_SET_003", "Mức thuế VAT mặc định phải nằm trong danh sách mức thuế cho phép."),
+    BIZ_SET_ERR_004("BIZ_SET_004", "Tên doanh nghiệp không được để trống."),
+    BIZ_SET_ERR_005("BIZ_SET_005", "Email doanh nghiệp không hợp lệ."),
 
     // Voice Command
     VOICE_ERR_001("VOICE_001", "Gemini chưa được bật hoặc chưa cấu hình API key."),

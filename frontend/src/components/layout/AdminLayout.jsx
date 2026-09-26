@@ -10,8 +10,10 @@ import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeC
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
 import ErrorBoundary from '../ErrorBoundary';
 import { ROUTES } from '../../constants';
+import { isPathAllowedForRoles } from '../../auth/workspaceScope';
 
 import styles from './AdminLayout.module.css';
+import { useCompanyProfile } from '../../hooks/useCompanyProfile';
 
 const MENU_CONFIG = [
     {
@@ -65,6 +67,11 @@ const AdminLayout = ({ children }) => {
     const isManager = userRoles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
     const { aiEnabled } = useAiFeature();
     const { workspaceMode } = useWorkspaceMode();
+    const company = useCompanyProfile();
+
+    useEffect(() => {
+        document.title = company.shortName;
+    }, [company.shortName]);
     
     // Configuration for top header tabs based on active module
     const TABS_CONFIG = {
@@ -214,6 +221,8 @@ const AdminLayout = ({ children }) => {
     });
 
     const checkItemPermission = (item) => {
+        if (!isPathAllowedForRoles(item.path, userRoles)) return false;
+
         // Lọc menu sidebar theo Chế độ làm việc (Persona / Workspace Mode)
         if (workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
             const allowedWarehouseModules = ['warehouse', 'catalog'];
@@ -307,9 +316,9 @@ const AdminLayout = ({ children }) => {
                         className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''}`}
                     >
                         <div className={styles.logoArea}>
-                            <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
+                            <img src="/dl-logo.png" alt={company.shortName} className={styles.brandLogo} />
                             <div className={styles.brandText}>
-                                <span className={styles.brandTitle}>Duy Long Computer</span>
+                                <span className={styles.brandTitle}>{company.shortName}</span>
                                 <span className={styles.brandSubtitle}>Warehouse Management</span>
                             </div>
                             <button
@@ -370,9 +379,9 @@ const AdminLayout = ({ children }) => {
                 <header className={styles.header}>
                     {isWorkspace ? (
                         <div className={styles.workspaceBrand}>
-                            <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.workspaceLogo} />
+                            <img src="/dl-logo.png" alt={company.shortName} className={styles.workspaceLogo} />
                             <div className={styles.workspaceBrandInfo}>
-                                <span className={styles.workspaceBrandTitle}>Duy Long Computer</span>
+                                <span className={styles.workspaceBrandTitle}>{company.shortName}</span>
                                 <span className={styles.workspaceBrandMode}>
                                     <i className={workspaceMode === WORKSPACE_MODES.CASHIER ? 'bi bi-cash-stack' : 'bi bi-boxes'}></i>
                                     {workspaceMode === WORKSPACE_MODES.CASHIER ? 'Bàn làm việc Thủ quỹ' : 'Bàn làm việc Thủ kho'}

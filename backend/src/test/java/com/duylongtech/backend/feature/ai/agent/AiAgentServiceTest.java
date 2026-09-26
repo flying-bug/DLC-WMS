@@ -140,8 +140,7 @@ class AiAgentServiceTest {
         service = new AiAgentService(properties, modelProvider, provider,
                 new ProductTools(variantRepository, support),
                 new StockTools(mock(InventoryBalanceRepository.class), support),
-                new PartnerTools(mock(PartnerRepository.class), support),
-                mock(com.duylongtech.backend.feature.ai.agent.tool.DocumentTools.class));
+                new PartnerTools(mock(PartnerRepository.class), support));
     }
 
     private static void loginAs(String... authorities) {
@@ -237,7 +236,7 @@ class AiAgentServiceTest {
         when(noModel.getIfAvailable()).thenReturn(null);
         // Builder có sẵn (Spring AI luôn tạo) nhưng không có ChatModel -> vẫn phải coi là không khả dụng
         when(none.getIfAvailable()).thenAnswer(inv -> ChatClient.builder(model));
-        AiAgentService withoutModel = new AiAgentService(properties, noModel, none, null, null, null, null);
+        AiAgentService withoutModel = new AiAgentService(properties, noModel, none, null, null, null);
         assertFalse(withoutModel.isAvailable());
     }
 }

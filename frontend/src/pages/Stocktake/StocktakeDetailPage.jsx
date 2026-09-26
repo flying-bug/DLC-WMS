@@ -590,7 +590,7 @@ function StocktakeDetailPage() {
 
   const handleSubmitStocktake = () => runStocktakeAction(
     () => stocktakeApi.submitStocktake(id),
-    isApprover ? 'Đã bắt đầu kiểm kê, kho đang bị khóa' : 'Đã gửi yêu cầu kiểm kê, chờ Manager duyệt');
+    isApprover ? 'Đã bắt đầu kiểm kê, kho đang bị khóa' : 'Đã gửi yêu cầu kiểm kê, chờ quản lý duyệt');
 
 
   const handleCreateExportSlip = () => {
@@ -639,7 +639,7 @@ function StocktakeDetailPage() {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
     }
-    navigate('/import-history/create?type=OTHER', {
+    navigate('/import-history/create?type=STOCKTAKE_ADD', {
       state: {
         returnUrl: `/stocktakes/${id}`,
         stocktakeData: {
@@ -886,7 +886,7 @@ function StocktakeDetailPage() {
             {formData.isProcessed ? (
               <div className={styles.processedStamp}>Đã xử lý chênh lệch</div>
             ) : isPendingApproval ? (
-              <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}>Chờ Manager duyệt</div>
+              <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}>Chờ duyệt</div>
             ) : isCounting ? (
               <div className={styles.processedStamp} style={{ backgroundColor: 'var(--color-warning)', borderColor: '#d97706' }}><i className="bi bi-lock-fill"></i> Đang kiểm kê - kho đang bị khóa</div>
             ) : stocktakeStatus === 'REJECTED' ? (
@@ -911,7 +911,7 @@ function StocktakeDetailPage() {
         )}
         {isPendingApproval && (
           <div className={`${styles.noteBox} ${styles.noteWarning}`}>
-            Yêu cầu kiểm kê đang chờ Manager duyệt. Kho chỉ bị khóa và thủ kho chỉ nhập được số đếm sau khi được duyệt.
+            Yêu cầu kiểm kê đang chờ quản lý duyệt. Kho chỉ bị khóa và thủ kho chỉ nhập được số đếm sau khi được duyệt.
           </div>
         )}
         {isCounting && formData.skippedDiffCount > 0 && (

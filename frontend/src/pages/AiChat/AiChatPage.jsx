@@ -40,29 +40,7 @@ function buildErrorReply(error) {
     return `Backend đang lỗi ${error.response.status}. Hãy xem log Spring Boot để biết chi tiết.`;
 }
 
-function formatSource(source) {
-    if (!source?.name) return null;
-
-    if (source.type === 'model_status' && source.description) {
-        return `${source.name} (${source.description})`;
-    }
-
-    return source.name;
-}
-
-function getMessageSources(message) {
-    if (Array.isArray(message.sources) && message.sources.length > 0) {
-        return message.sources;
-    }
-    if (typeof message.content === 'string' && message.content.includes('Nguồn dữ liệu:')) {
-        const match = message.content.match(/Nguồn dữ liệu:\s*([^\n]+)/);
-        if (match && match[1]) {
-            return match[1].split(',').map(s => s.trim()).filter(Boolean);
-        }
-    }
-    return [];
-}
-
+// Câu trả lời không hiển thị nguồn dữ liệu / tên model; nếu backend có chèn dòng "Nguồn dữ liệu:" vào nội dung thì cắt đi.
 function cleanMessageContent(content) {
     if (!content) return '';
     return content.replace(/\n*Nguồn dữ liệu:\s*[\s\S]*$/i, '').trim();
@@ -248,8 +226,6 @@ function AiChatPage() {
         axiosClient.post('/ai/chat', { message: question, history: historyPayload })
             .then((response) => {
                 const data = response.data?.data;
-                const sources = Array.isArray(data?.sources) ? data.sources : [];
-                const sourceNames = sources.map(formatSource).filter(Boolean);
 
                 setMessages((prev) => [
                     ...prev,
@@ -257,7 +233,6 @@ function AiChatPage() {
                         id: Date.now() + 1,
                         role: 'assistant',
                         content: data?.answer || 'Backend đã phản hồi nhưng không có nội dung trả lời.',
-                        sources: sourceNames,
                         time: formatTime()
                     }
                 ]);
@@ -368,7 +343,13 @@ function AiChatPage() {
                             </button>
                         </div>
 
-
+                        <div className={styles.statusBox}>
+                            <span className={styles.statusDot} />
+                            <div>
+                                <strong>Hệ thống AI sẵn sàng</strong>
+                                <p>Đọc dữ liệu thời gian thực & mô hình RAG</p>
+                            </div>
+                        </div>
 
                         <div className={styles.promptGroup}>
                             <h3><i className="bi bi-lightbulb-fill" style={{ color: '#eab308', marginRight: '6px' }} /> GỢI Ý CÂU HỎI</h3>
@@ -393,14 +374,10 @@ function AiChatPage() {
                                 <h1>Trợ lý hỏi đáp AI</h1>
                                 <p>Hỏi nhanh về tồn kho, sản phẩm, bảo hành và quy trình nghiệp vụ kho.</p>
                             </div>
-                            <span className={styles.badge}>
-                                <i className="bi bi-cpu-fill" style={{ marginRight: '6px' }} /> RAG Powered
-                            </span>
                         </div>
 
                         <div className={styles.messages} aria-live="polite">
                             {messages.map((message) => {
-                                const sources = getMessageSources(message);
                                 const isAssistant = message.role !== 'user';
 
                                 return (
@@ -424,26 +401,6 @@ function AiChatPage() {
                                                     <FormattedMessage content={message.content} />
                                                 ) : (
                                                     <p>{message.content}</p>
-                                                )}
-
-                                                {isAssistant && sources.length > 0 && (
-                                                    <div className={styles.sourcesContainer}>
-                                                        <div className={styles.sourcesHeader}>
-                                                            <i className="bi bi-diagram-3-fill" />
-                                                            <span>Nguồn dữ liệu tham chiếu:</span>
-                                                        </div>
-                                                        <div className={styles.sourceBadges}>
-                                                            {sources.map((src, idx) => {
-                                                                const isModel = src.toLowerCase().includes('gemini') || src.toLowerCase().includes('gpt');
-                                                                return (
-                                                                    <span key={idx} className={isModel ? styles.modelTag : styles.sourceTag}>
-                                                                        <i className={isModel ? "bi bi-cpu-fill" : "bi bi-database-check"} />
-                                                                        {src}
-                                                                    </span>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
                                                 )}
                                             </div>
                                         </div>

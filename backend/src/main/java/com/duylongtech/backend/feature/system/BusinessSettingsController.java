@@ -33,6 +33,20 @@ public class BusinessSettingsController {
         return ApiResponse.success(Map.of("message", "Cấu hình nghiệp vụ đã được lưu thành công."));
     }
 
+    @GetMapping("/company")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Thông tin doanh nghiệp dùng cho mẫu in, xuất file và giao diện")
+    public ApiResponse<CompanyProfileDto> getCompanyProfile() {
+        return ApiResponse.success(settingsService.getCompanyProfile());
+    }
+
+    @GetMapping("/branding")
+    @Operation(summary = "Tên hiển thị của doanh nghiệp cho màn đăng nhập (không cần đăng nhập)")
+    public ApiResponse<Map<String, String>> getBranding() {
+        CompanyProfileDto company = settingsService.getCompanyProfile();
+        return ApiResponse.success(Map.of("shortName", company.getShortName(), "name", company.getName()));
+    }
+
     @GetMapping("/vat")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Lấy mức thuế VAT mặc định hệ thống cho các màn hình nghiệp vụ")

@@ -43,7 +43,6 @@ public class AiAgentService {
     private final ProductTools productTools;
     private final StockTools stockTools;
     private final PartnerTools partnerTools;
-    private final com.duylongtech.backend.feature.ai.agent.tool.DocumentTools documentTools;
 
     private volatile ChatClient client;
 
@@ -83,30 +82,6 @@ public class AiAgentService {
         }
     }
 
-    public String classifyIntent(String message) {
-        if (!isAvailable() || message == null || message.isBlank()) {
-            return "GENERAL";
-        }
-        try {
-            String prompt = "Bạn là bộ phân loại ý định. Người dùng hỏi: '" + message + "'.\n"
-                          + "Hãy trả về 1 trong các từ khóa sau: IMPORT, EXPORT, PURCHASE_ORDER, SALES_ORDER, GENERAL, OUT_OF_SCOPE.\n"
-                          + "Không giải thích gì thêm, chỉ in ra từ khóa.";
-            String content = client().prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
-            if (content != null && !content.isBlank()) {
-                String intent = content.trim().toUpperCase(java.util.Locale.ROOT);
-                if (intent.matches("IMPORT|EXPORT|PURCHASE_ORDER|SALES_ORDER|GENERAL|OUT_OF_SCOPE")) {
-                    return intent;
-                }
-            }
-        } catch (Exception ex) {
-            log.warn("[AI-CLASSIFIER] failed, falling back to GENERAL: {}", ex.toString());
-        }
-        return "GENERAL";
-    }
-
     private ChatClient client() {
         ChatClient local = client;
         if (local == null) {
@@ -116,7 +91,7 @@ public class AiAgentService {
                     ChatClient.Builder builder = chatClientBuilder.getObject();
                     local = builder
                             .defaultSystem(systemPrompt())
-                            .defaultTools(productTools, stockTools, partnerTools, documentTools)
+                            .defaultTools(productTools, stockTools, partnerTools)
                             .build();
                     client = local;
                 }

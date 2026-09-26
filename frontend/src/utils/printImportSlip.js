@@ -1,6 +1,7 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
 import { formatDateOnly } from './dateFormat';
 import { canViewPricing } from '../auth/session';
+import { companyHtml } from './companyProfile';
 
 export function printImportSlip(slipOrSlips, options = {}) {
   const {
@@ -155,7 +156,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
         <table class="header-table">
           <tr>
             <td style="width: 40%; vertical-align: middle;">
-              <strong style="font-size: 18px; letter-spacing: 0.5px;">DLC COMPUTER</strong><br/>
+              <strong style="font-size: 18px; letter-spacing: 0.5px;">${companyHtml().shortNameUpper}</strong><br/>
               <span style="font-size: 12px; color: var(--wms-text-muted);">Hệ thống quản lý kho WMS</span>
             </td>
             <td style="width: 60%; text-align: right; font-size: 13px; line-height: 1.5;">

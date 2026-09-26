@@ -1,4 +1,5 @@
 import { formatDateOnly } from './dateFormat';
+import { companyContactHtml, companyHtml } from './companyProfile';
 
 export function printWarrantyCard(warrantyOrWarranties, options = {}) {
   const warranties = Array.isArray(warrantyOrWarranties) ? warrantyOrWarranties : [warrantyOrWarranties];
@@ -74,9 +75,9 @@ export function printWarrantyCard(warrantyOrWarranties, options = {}) {
         <table class="header-table">
           <tr>
             <td style="width: 50%;">
-              <strong style="font-size: 18px; color: var(--color-primary-navy);">DLC COMPUTER</strong><br/>
-              <span style="font-size: 12px; color: var(--wms-text-muted);">Địa chỉ: Số 59 Thịnh Liệt - Hoàng Mai - Hà Nội</span><br/>
-              <span style="font-size: 12px; color: var(--wms-text-muted);">Hotline: 0392718888 - Website: duylongcomputer.com</span>
+              <strong style="font-size: 18px; color: var(--color-primary-navy);">${companyHtml().shortNameUpper}</strong><br/>
+              <span style="font-size: 12px; color: var(--wms-text-muted);">Địa chỉ: ${companyHtml().address}</span><br/>
+              <span style="font-size: 12px; color: var(--wms-text-muted);">${companyContactHtml(undefined, { phoneLabel: 'Hotline', email: false, website: true })}</span>
             </td>
             <td style="width: 50%; text-align: right; font-size: 13px;">
               Mã bảo hành: <strong style="font-size: 15px; color: var(--wms-primary);">${escapeHtml(w.warrantyCode || `WRT#${w.id}`)}</strong><br/>

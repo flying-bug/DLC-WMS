@@ -39,24 +39,45 @@ public class ReportService {
         return List.of(warehouseId);
     }
 
+    /**
+     * Kỳ báo cáo không có số liệu tương lai: ngày kết thúc sau hiện tại được tính tới hiện tại (tồn cuối kỳ = tồn
+     * thực tế), ngày bắt đầu ở tương lai hoặc sau ngày kết thúc thì báo lỗi thay vì trả về kỳ rỗng.
+     */
+    static LocalDateTime capPeriodEnd(LocalDateTime startDate, LocalDateTime endDate) {
+        LocalDateTime now = LocalDateTime.now();
+        if (startDate != null && startDate.isAfter(now)) {
+            throw new BusinessException("Ngày bắt đầu kỳ báo cáo không được ở tương lai");
+        }
+        LocalDateTime cappedEnd = endDate != null && endDate.isAfter(now) ? now : endDate;
+        if (startDate != null && cappedEnd != null && startDate.isAfter(cappedEnd)) {
+            throw new BusinessException("Ngày bắt đầu không được sau ngày kết thúc");
+        }
+        return cappedEnd;
+    }
+
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
         return reportRepository.getInventoryBalanceReport(search, resolveWarehouseScope(warehouseId));
     }
     public List<StockLedgerReportResponse> getStockLedgerReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Stock Ledger Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
-        return reportRepository.getStockLedgerReport(resolveWarehouseScope(warehouseId), startDate, endDate, search);
+        return reportRepository.getStockLedgerReport(resolveWarehouseScope(warehouseId), startDate,
+                capPeriodEnd(startDate, endDate), search);
     }
     public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status) {
         log.info("Fetching Stock Transfer Report. warehouseId={}, startDate={}, endDate={}, search={}, status={}", warehouseId, startDate, endDate, search, status);
-        return reportRepository.getStockTransferReport(resolveWarehouseScope(warehouseId), startDate, endDate, search, status);
+        LocalDateTime cappedEnd = capPeriodEnd(startDate != null ? startDate.atStartOfDay() : null,
+                endDate != null ? endDate.atTime(23, 59, 59) : null);
+        return reportRepository.getStockTransferReport(resolveWarehouseScope(warehouseId), startDate,
+                cappedEnd != null ? cappedEnd.toLocalDate() : null, search, status);
     }
     public List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType) {
         log.info("Fetching Debt Report. startDate={}, endDate={}, search={}, partnerType={}", startDate, endDate, search, partnerType);
-        return reportRepository.getDebtReport(startDate, endDate, search, partnerType);
+        return reportRepository.getDebtReport(startDate, capPeriodEnd(startDate, endDate), search, partnerType);
     }
     public List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Inventory Summary Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
-        return reportRepository.getInventorySummaryReport(resolveWarehouseScope(warehouseId), startDate, endDate, search);
+        return reportRepository.getInventorySummaryReport(resolveWarehouseScope(warehouseId), startDate,
+                capPeriodEnd(startDate, endDate), search);
     }
     /**
      * Màn tổng quan chứa dòng tiền, công nợ và giá trị tồn toàn công ty. Frontend (workspaceScope.js) đã chặn Thủ kho
@@ -86,17 +107,34 @@ public class ReportService {
         ensureCanViewDashboard();
         log.info("Fetching Dashboard Metrics. inventoryFlowRange={}, categoryScope={}, financeRange={}", inventoryFlowRange, categoryScope, financeRange);
         DashboardResponse dashboard = reportRepository.getDashboardMetrics(inventoryFlowRange, categoryScope, financeRange);
+        // Cảnh báo tồn lấy từ cùng nguồn với màn Vật tư hàng hóa để hai màn luôn khớp nhau
         var stockAlerts = productService.getStockAlertSummary();
         dashboard.setLowStockItemsCount(stockAlerts.getLowStockCount());
         dashboard.setOutOfStockItemsCount(stockAlerts.getOutOfStockCount());
+        List<DashboardResponse.ConfiguredLowStockProductDto> lowStockProducts = stockAlerts.getLowStockItems() == null
+                ? List.of()
+                : stockAlerts.getLowStockItems().stream()
+                        .map(item -> DashboardResponse.ConfiguredLowStockProductDto.builder()
+                                .productId(item.getProductId())
+                                .productCode(item.getSku())
+                                .productName(item.getProductName())
+                                .productType(item.getProductType())
+                                .unitName(item.getUnitName())
+                                .stockQty(item.getStockQty())
+                                .minStockQty(item.getMinStockQty())
+                                .build())
+                        .toList();
+        dashboard.setConfiguredLowStockProducts(lowStockProducts);
+        dashboard.setConfiguredLowStockProductsCount(lowStockProducts.size());
         return dashboard;
     }
     public List<SalesProfitReportResponse> getSalesProfitReport(LocalDateTime startDate, LocalDateTime endDate, String search) {
         log.info("Fetching Sales Profit Report. startDate={}, endDate={}, search={}", startDate, endDate, search);
         
+        LocalDateTime cappedEnd = capPeriodEnd(startDate, endDate);
         LocalDate start = startDate != null ? startDate.toLocalDate() : null;
-        LocalDate end = endDate != null ? endDate.toLocalDate() : null;
-        
+        LocalDate end = cappedEnd != null ? cappedEnd.toLocalDate() : null;
+
         List<SalesProfitReportResponse> results = salesOrderRepository.findSalesProfitReport(search, start, end);
         
         // Calculate profitMarginPercent safely in Java to avoid JPQL casting issues
@@ -115,11 +153,9 @@ public class ReportService {
     }
     public List<RepairProfitReportResponse> getRepairProfitReport(LocalDateTime startDate, LocalDateTime endDate,
                                                                   String search, Long warehouseId) {
+        LocalDateTime cappedEnd = capPeriodEnd(startDate, endDate);
         LocalDate start = startDate != null ? startDate.toLocalDate() : null;
-        LocalDate end = endDate != null ? endDate.toLocalDate() : null;
-        if (start != null && end != null && start.isAfter(end)) {
-            throw new BusinessException("Ngày bắt đầu không được sau ngày kết thúc");
-        }
+        LocalDate end = cappedEnd != null ? cappedEnd.toLocalDate() : null;
 
         return reportRepository.getRepairProfitReport(
                 start, end, search, resolveWarehouseScope(warehouseId));
@@ -428,9 +464,10 @@ public class ReportService {
             if (!"inventory-balance".equals(reportType)) {
                 org.apache.poi.ss.usermodel.Row periodRow = sheet.createRow(2);
                 periodRow.createCell(0).setCellValue("Kỳ báo cáo:");
+                LocalDateTime shownEnd = capPeriodEnd(startDate, endDate);
                 periodRow.createCell(1).setCellValue(startDate == null && endDate == null ? "Toàn bộ thời gian"
                         : "Từ " + (startDate != null ? startDate.format(dateFormat) : "...")
-                          + " đến " + (endDate != null ? endDate.format(dateFormat) : "nay"));
+                          + " đến " + (shownEnd != null ? shownEnd.format(dateFormat) : "nay"));
             }
             
             workbook.write(out);
