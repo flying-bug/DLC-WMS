@@ -48,6 +48,7 @@ export function printRepairQuotation(repair, options = {}) {
             <strong>${escapeHtml(row.name)}</strong>
             ${row.code ? `<span class="muted"> (${escapeHtml(row.code)})</span>` : ''}
             ${row.isFree ? '<div class="free-tag">Miễn phí - trong bảo hành</div>' : ''}
+            ${row.note ? `<div class="line-note">${escapeHtml(row.note)}</div>` : ''}
           </td>
           <td style="text-align: center;">${escapeHtml(row.kind)}</td>
           <td style="text-align: center;">${escapeHtml(row.unit)}</td>
@@ -97,6 +98,7 @@ export function printRepairQuotation(repair, options = {}) {
           .main-table td { border: 1px solid #000; padding: 6px 8px; font-size: 12px; }
           .summary-row td { font-weight: 600; }
           .free-tag { font-size: 11px; font-style: italic; color: #047857; }
+          .line-note { font-size: 11px; font-style: italic; color: #4b5563; }
           .words-row { margin-top: 6px; font-style: italic; font-weight: 600; font-size: 12.5px; }
           .terms-section { margin-top: 18px; padding-top: 10px; border-top: 1px dashed #9ca3af; font-size: 11.5px; line-height: 1.45; }
           .terms-title { font-weight: 700; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; color: #0f172a; }

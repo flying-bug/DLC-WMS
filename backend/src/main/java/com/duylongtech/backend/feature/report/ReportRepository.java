@@ -676,7 +676,7 @@ public class ReportRepository {
         List<DashboardResponse.OrderSummaryDto> approvedSalesOrders = getApprovedSalesOrders();
         List<DashboardResponse.OrderSummaryDto> backorderedSalesOrders = getBackorderedSalesOrders();
         List<DashboardResponse.ConfiguredLowStockProductDto> configuredLowStockProducts = getConfiguredLowStockProducts();
-        List<DashboardResponse.RepairSummaryDto> confirmedWarrantyRepairs = getConfirmedWarrantyRepairs();
+        List<DashboardResponse.RepairSummaryDto> pendingApprovalWarrantyRepairs = getPendingApprovalWarrantyRepairs();
         Map<String, Object> importExportMap = getImportExportMetrics(startOfMonth, endOfMonth);
         Map<String, Object> debtMap = getDebtMetrics();
 
@@ -696,12 +696,12 @@ public class ReportRepository {
                 .approvedSalesOrders(approvedSalesOrders)
                 .backorderedSalesOrders(backorderedSalesOrders)
                 .configuredLowStockProducts(configuredLowStockProducts)
-                .confirmedWarrantyRepairs(confirmedWarrantyRepairs)
+                .pendingApprovalWarrantyRepairs(pendingApprovalWarrantyRepairs)
                 .approvedPurchaseOrdersCount(approvedPurchaseOrders.size())
                 .approvedSalesOrdersCount(approvedSalesOrders.size())
                 .backorderedSalesOrdersCount(backorderedSalesOrders.size())
                 .configuredLowStockProductsCount(getConfiguredLowStockProductsCount())
-                .confirmedWarrantyRepairsCount(confirmedWarrantyRepairs.size())
+                .pendingApprovalWarrantyRepairsCount(pendingApprovalWarrantyRepairs.size())
                 .inventoryFlow7Days(getInventoryFlowData(inventoryFlowRange))
                 .categoryInventoryBreakdown(getCategoryInventoryBreakdown(categoryScope))
                 .financeOverview(getFinanceOverview(financeRange))
@@ -1262,7 +1262,7 @@ public class ReportRepository {
                 .build());
     }
 
-    private List<DashboardResponse.RepairSummaryDto> getConfirmedWarrantyRepairs() {
+    private List<DashboardResponse.RepairSummaryDto> getPendingApprovalWarrantyRepairs() {
         String sql = """
                 SELECT
                     r.id,
@@ -1275,7 +1275,7 @@ public class ReportRepository {
                 FROM repairs r
                 LEFT JOIN partners pt ON r.partner_id = pt.id
                 LEFT JOIN products p ON r.product_id = p.id
-                WHERE r.repair_status = 'CONFIRMED'
+                WHERE r.repair_status = 'WAITING_FOR_APPROVAL'
                   AND (COALESCE(r.under_warranty, FALSE) = TRUE OR r.warranty_id IS NOT NULL)
                 ORDER BY r.received_date DESC, r.id DESC
                 """;
@@ -1331,7 +1331,7 @@ public class ReportRepository {
     }
 
     private Integer getNewWarrantyTickets(LocalDate startOfMonth, LocalDate endOfMonth) {
-        // Chỉ đếm lệnh sửa chữa bảo hành (cùng điều kiện với getConfirmedWarrantyRepairs), không đếm mọi lệnh sửa.
+        // Chỉ đếm lệnh sửa chữa bảo hành, không đếm mọi lệnh sửa.
         String sql = "SELECT COUNT(id) FROM repairs WHERE received_date >= ? AND received_date <= ? "
                 + "AND (COALESCE(under_warranty, FALSE) = TRUE OR warranty_id IS NOT NULL)";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, startOfMonth, endOfMonth);

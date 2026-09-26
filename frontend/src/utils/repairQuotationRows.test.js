@@ -48,6 +48,7 @@ test('uses the unit resolver for parts and sensible defaults otherwise', () => {
   );
 
   assert.deepEqual(rows.map((row) => row.unit), ['Tuýp', 'Cái', 'Lần']);
+  assert.deepEqual(rows.map((row) => row.note), ['', '', '']);
   assert.equal(rows[2].quantity, 1);
 });
 

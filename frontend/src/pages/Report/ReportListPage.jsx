@@ -425,7 +425,7 @@ const ReportListPage = () => {
             if (!silent) setLoading(false);
         }
     };
-  useRealtimeRefresh(['INVENTORY_BALANCE','IMPORT_DOCUMENT','EXPORT_DOCUMENT','STOCK_TRANSFER','PAYMENT','SALES_ORDER','PARTNER','REPAIR'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
+    useRealtimeRefresh(['INVENTORY_BALANCE', 'IMPORT_DOCUMENT', 'EXPORT_DOCUMENT', 'STOCK_TRANSFER', 'PAYMENT', 'SALES_ORDER', 'PARTNER', 'REPAIR'], handleViewReport, { enabled: viewMode === 'detail' && !!activeReport });
 
     // Auto-fetch data on switching to a report or changing filters
     useEffect(() => {
@@ -1096,7 +1096,7 @@ const ReportListPage = () => {
                                                                         <th className={styles.textRight}>Doanh thu linh kiện</th>
                                                                         <th className={styles.textRight}>Doanh thu dịch vụ</th>
                                                                         <th className={styles.textRight}>VAT</th>
-                                                                        <th className={styles.textRight}>Giá vốn FIFO</th>
+                                                                        <th className={styles.textRight}>Giá vốn</th>
                                                                         <th className={styles.textRight}>Lãi sau giá vốn linh kiện</th>
                                                                         <th className={styles.textRight}>Tỷ suất LN (%)</th>
                                                                     </tr>

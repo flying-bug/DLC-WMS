@@ -605,7 +605,7 @@ function CreateStocktakePage() {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
     }
-    navigate('/import-history/create?type=OTHER', {
+    navigate('/import-history/create?type=STOCKTAKE_ADD', {
       state: {
         returnUrl: '/stocktakes',
         stocktakeData: {

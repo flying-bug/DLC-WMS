@@ -68,7 +68,7 @@ class RepairApprovalNotificationTest {
 
         repair = new Repair();
         repair.initOrder("SC00013", 3L, null, null, 1, null, null, null, null, null, null, null,
-                null, null, "Đề nghị sửa SSD", null, false, null, null, null, null, TECHNICIAN_ID);
+                null, null, "Đề nghị sửa SSD", null, false, null, null, null, null, null, TECHNICIAN_ID);
         repair.setId(REPAIR_ID);
         repair.moveToQuotation();
         repair.sendForApproval(); // KTV gửi báo giá chờ Kế toán duyệt

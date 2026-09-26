@@ -118,6 +118,7 @@ public class RepairService {
                 resolveInvoiceMethod(request.getInvoiceMethod()),
                 trimToNull(request.getResponsiblePerson()),
                 trimToNull(request.getNote()),
+                trimToNull(request.getInternalNotes()),
                 currentUserId
         );
 
@@ -190,8 +191,9 @@ public class RepairService {
         Repair repair = repairRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
 
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
-            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
+        if (com.duylongtech.backend.enums.RepairStatus.CANCELLED.name().equals(repair.getRepairStatus())
+                || com.duylongtech.backend.enums.RepairStatus.DONE.name().equals(repair.getRepairStatus())) {
+            throw new BusinessException("Không thể cập nhật ghi chú lệnh đã hoàn tất hoặc đã hủy");
         }
 
         repair.updateDetails(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, trimToNull(notes), null, null, null, null, null);
