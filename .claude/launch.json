@@ -8,6 +8,12 @@
       "port": 8080
     },
     {
+      "name": "backend-local",
+      "runtimeExecutable": "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+      "runtimeArgs": ["C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\claude\\D--SEP490-G94-DLC-WMS\\c299cd09-4970-4a04-aae4-0e2ef5bde466\\scratchpad\\run-backend-local.sh"],
+      "port": 8090
+    },
+    {
       "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "D:\\SEP490_G94\\DLC-WMS\\frontend"],

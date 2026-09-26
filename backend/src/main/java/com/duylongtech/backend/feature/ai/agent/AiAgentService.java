@@ -88,7 +88,13 @@ public class AiAgentService {
                             "Đơn bán hàng gần nhất gồm những mặt hàng gì?"))
                     .build());
         } catch (Exception ex) {
-            log.warn("[AI-AGENT] failed after {} ms, falling back to the classic answer: {}", run.elapsedMillis(), ex.toString());
+            // Spring AI bọc lỗi của nhà cung cấp trong "Retry policy ... exhausted": ghi cả nguyên nhân gốc để còn sửa được.
+            Throwable root = ex;
+            while (root.getCause() != null && root.getCause() != root) {
+                root = root.getCause();
+            }
+            log.warn("[AI-AGENT] failed after {} ms, falling back to the classic answer: {} (root cause: {})",
+                    run.elapsedMillis(), ex.toString(), root.toString(), ex);
             return Optional.empty();
         } finally {
             AiAgentRun.end();

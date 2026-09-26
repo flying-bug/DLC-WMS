@@ -32,6 +32,14 @@
     </properties>
     <dependencyManagement>
         <dependencies>
+            <!-- google-auth-library (Gmail) kéo guava bản -android; Maven chọn bản đó vì gần hơn, nhưng google-genai
+                 (Gemini của AI Agent) cần bản -jre: thiếu nó mọi lời gọi Gemini lỗi NoSuchMethodError
+                 ImmutableList.toImmutableList() và chatbot luôn rơi về cách trả lời cũ. -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>33.4.0-jre</version>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
