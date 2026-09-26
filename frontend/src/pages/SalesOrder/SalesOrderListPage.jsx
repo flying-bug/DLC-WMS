@@ -81,6 +81,19 @@ function SalesOrderListPage() {
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmCancel, setConfirmCancel] = useState(null); // SO to cancel
   const [confirmApprove, setConfirmApprove] = useState(null); // SO to approve
+  const [sortConfig, setSortConfig] = useState(null);
+
+  const handleSort = (key) => {
+    if (sortConfig && sortConfig.key === key) {
+      if (sortConfig.direction === 'asc') {
+        setSortConfig({ key, direction: 'desc' });
+      } else {
+        setSortConfig(null);
+      }
+    } else {
+      setSortConfig({ key, direction: 'asc' });
+    }
+  };
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -212,10 +225,20 @@ function SalesOrderListPage() {
     }
   };
 
-  // Pagination
-  const totalItems = orders.length;
+  // Sort + Pagination
+  const sortedOrders = useMemo(() => {
+    if (!sortConfig) return orders;
+    return [...orders].sort((a, b) => {
+      let aVal = sortConfig.key === 'soDate' ? new Date(a.soDate || 0).getTime() : (a[sortConfig.key] || '');
+      let bVal = sortConfig.key === 'soDate' ? new Date(b.soDate || 0).getTime() : (b[sortConfig.key] || '');
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [orders, sortConfig]);
+  const totalItems = sortedOrders.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedOrders = sortedOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columns = [
     {
@@ -224,9 +247,16 @@ function SalesOrderListPage() {
       render: (_, __, idx) => (currentPage - 1) * pageSize + idx + 1
     },
     {
-      title: 'Mã đơn',
+      title: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none', gap: 4 }}
+          onClick={() => handleSort('soCode')}>
+          <span>Mã đơn</span>
+          <i className={`bi bi-arrow-${sortConfig?.key === 'soCode' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`}
+            style={{ color: sortConfig?.key === 'soCode' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.85rem' }} />
+        </div>
+      ),
       dataIndex: 'soCode',
-      width: 130,
+      width: 140,
       render: (val, so) => (
         <a className={styles.link} onClick={e => { e.stopPropagation(); navigate(`/sales-orders/${so.id}`); }}>
           {val}
@@ -234,9 +264,16 @@ function SalesOrderListPage() {
       )
     },
     {
-      title: 'Ngày lập',
+      title: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none', gap: 4 }}
+          onClick={() => handleSort('soDate')}>
+          <span>Ngày lập</span>
+          <i className={`bi bi-arrow-${sortConfig?.key === 'soDate' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`}
+            style={{ color: sortConfig?.key === 'soDate' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.85rem' }} />
+        </div>
+      ),
       dataIndex: 'soDate',
-      width: 110,
+      width: 120,
       render: (val) => fmtDate(val)
     },
     {

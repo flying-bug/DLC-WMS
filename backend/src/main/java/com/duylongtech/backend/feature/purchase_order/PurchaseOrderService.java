@@ -72,6 +72,18 @@ public class PurchaseOrderService {
         return toDetailResponse(po);
     }
 
+    /**
+     * Xem trước mã PO tiếp theo mà KHÔNG tăng bộ đếm.
+     * Dùng cho endpoint GET /next-code để hiển thị trên form tạo mới.
+     * Nếu người dùng đóng form mà không lưu, bộ đếm không bị thay đổi.
+     */
+    public String previewNextPoCode() {
+        return codeGeneratorService.previewCode("purchase_orders", "po_code", "PO", 4);
+    }
+
+    /**
+     * Sinh mã PO thật sự (tăng bộ đếm). Chỉ được gọi khi thực sự tạo đơn.
+     */
     public String generateNextPoCode() {
         return codeGeneratorService.generateCode("purchase_orders", "po_code", "PO", 4);
     }

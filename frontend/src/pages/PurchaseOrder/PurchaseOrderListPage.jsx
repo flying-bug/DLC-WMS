@@ -171,6 +171,19 @@ function PurchaseOrderListPage() {
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmCancel, setConfirmCancel]   = useState(null);
   const [confirmApprove, setConfirmApprove] = useState(null);
+  const [sortConfig, setSortConfig] = useState(null);
+
+  const handleSort = (key) => {
+    if (sortConfig && sortConfig.key === key) {
+      if (sortConfig.direction === 'asc') {
+        setSortConfig({ key, direction: 'desc' });
+      } else {
+        setSortConfig(null);
+      }
+    } else {
+      setSortConfig({ key, direction: 'asc' });
+    }
+  };
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -262,10 +275,20 @@ function PurchaseOrderListPage() {
     }
   };
 
-  // Pagination
-  const totalItems = orders.length;
+  // Sort + Pagination
+  const sortedOrders = useMemo(() => {
+    if (!sortConfig) return orders;
+    return [...orders].sort((a, b) => {
+      let aVal = sortConfig.key === 'poDate' ? new Date(a.poDate || 0).getTime() : (a[sortConfig.key] || '');
+      let bVal = sortConfig.key === 'poDate' ? new Date(b.poDate || 0).getTime() : (b[sortConfig.key] || '');
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [orders, sortConfig]);
+  const totalItems = sortedOrders.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedOrders = sortedOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const showPaymentDueDate = orders.some(order => Boolean(order.paymentDueDate));
   const showExpectedDeliveryDate = orders.some(order => Boolean(order.expectedDeliveryDate));
 
@@ -276,9 +299,16 @@ function PurchaseOrderListPage() {
       render: (_, __, idx) => (currentPage - 1) * pageSize + idx + 1
     },
     {
-      title: 'Mã đơn',
+      title: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none', gap: 4 }}
+          onClick={() => handleSort('poCode')}>
+          <span>Mã đơn</span>
+          <i className={`bi bi-arrow-${sortConfig?.key === 'poCode' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`}
+            style={{ color: sortConfig?.key === 'poCode' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.85rem' }} />
+        </div>
+      ),
       dataIndex: 'poCode',
-      width: 110,
+      width: 120,
       render: (val, po) => (
         <a className={styles.link} onClick={e => { e.stopPropagation(); navigate(`/purchase-orders/${po.id}`); }}>
           {val}
@@ -286,9 +316,16 @@ function PurchaseOrderListPage() {
       )
     },
     {
-      title: 'Ngày lập',
+      title: (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none', gap: 4 }}
+          onClick={() => handleSort('poDate')}>
+          <span>Ngày lập</span>
+          <i className={`bi bi-arrow-${sortConfig?.key === 'poDate' ? (sortConfig.direction === 'asc' ? 'up' : 'down') : 'down-up'}`}
+            style={{ color: sortConfig?.key === 'poDate' ? 'var(--wms-primary, #3b82f6)' : '#cbd5e1', fontSize: '0.85rem' }} />
+        </div>
+      ),
       dataIndex: 'poDate',
-      width: 115,
+      width: 125,
       render: (val) => <span className={styles.dateOnlyCell}>{fmtDate(val)}</span>
     },
     {
