@@ -28,7 +28,7 @@ import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
 import styles from './CreateImportSlipPage.module.css';
-import { getTodayIsoDate } from '../../utils/dateFormat';
+import { formatDateOnly, getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
@@ -222,11 +222,18 @@ function CreateImportSlipPage() {
   const confirmOcrPreview = (previewData) => {
     if (!previewData) return;
 
-    if (previewData.docCode && !form.docCode) {
-      setForm(prev => ({ ...prev, docCode: previewData.docCode }));
-    }
-    if (previewData.docDate) {
-      setForm(prev => ({ ...prev, docDate: previewData.docDate }));
+    // Số/ngày hóa đơn NCC ghi vào Ghi chú: phiếu nhập không có trường riêng, ô "Kèm theo chứng từ" không được lưu
+    // (và bị ẩn khi đã gắn tham chiếu). Quét lại cùng hóa đơn thì không ghi trùng.
+    const invoiceText = [
+      previewData.invoiceCode && `số ${previewData.invoiceCode}`,
+      previewData.invoiceDate && `ngày ${formatDateOnly(previewData.invoiceDate)}`,
+    ].filter(Boolean).join(' ');
+    if (invoiceText) {
+      const invoiceNote = `Hóa đơn NCC ${invoiceText}`;
+      setForm(prev => ({
+        ...prev,
+        note: prev.note?.includes(invoiceNote) ? prev.note : [prev.note, invoiceNote].filter(Boolean).join('\n'),
+      }));
     }
 
     if (previewData.matchedSupplierId && !form.partnerId) {
@@ -237,16 +244,28 @@ function CreateImportSlipPage() {
       }));
     }
 
+    // Thuế đọc từ hóa đơn không nằm trong các mức thuế cho phép thì đặt về mức mặc định và báo người dùng kiểm tra,
+    // tránh ô chọn thuế hiển thị một mức nhưng phiếu lưu mức khác.
+    const vatAdjustedLines = [];
     if (previewData.items && previewData.items.length > 0) {
-      const newItems = previewData.items.map(item => {
+      const newItems = previewData.items.map((item, index) => {
         const line = emptyLine(form.warehouseId);
         line.variantId = item.matchedVariantId ? String(item.matchedVariantId) : '';
         line.quantity = item.quantity || 1;
         line.price = item.unitPrice || 0;
-        line.vatPercent = item.vatRate !== null && item.vatRate !== undefined ? item.vatRate : 0;
+        const ocrVat = item.vatPercent !== null && item.vatPercent !== undefined ? Number(item.vatPercent) : 0;
+        if (vatConfig.allowedVatRates.includes(ocrVat)) {
+          line.vatPercent = ocrVat;
+        } else {
+          line.vatPercent = vatConfig.defaultVatRate;
+          vatAdjustedLines.push(`dòng ${index + 1} (${ocrVat}%)`);
+        }
         line.warrantyMonths = item.warrantyMonths || 0;
         line.note = item.note || '';
-        line._ocrRawName = item.productNameRaw;
+        line._ocrRawName = item.rawProductName;
+        if (item.serialNumbers && item.serialNumbers.length === line.quantity) {
+          line.serialNumbers = item.serialNumbers;
+        }
         line.isNew = false;
         return line;
       });
@@ -260,7 +279,16 @@ function CreateImportSlipPage() {
     setOcrPreviewData(null);
     setOcrReturnToScan(false);
     setOcrModalKey((k) => k + 1);
-    showToast('success', 'Đã điền thông tin hóa đơn nhận diện thành công!');
+    if (vatAdjustedLines.length > 0) {
+      showToast('warning', `Thuế trên hóa đơn không có trong các mức thuế cho phép: ${vatAdjustedLines.join(', ')}. Đã đặt về ${vatConfig.defaultVatRate}%, vui lòng kiểm tra lại.`);
+    } else {
+      showToast('success', 'Đã điền thông tin hóa đơn nhận diện thành công!');
+    }
+
+    // Nhập mua hàng phải gắn đơn mua (công nợ NCC ghi nhận khi duyệt đơn mua): mở sẵn hộp chọn nếu chưa gắn
+    if (importType === 'PURCHASE' && !form.referenceId) {
+      setTimeout(() => setShowReferenceModal(true), 150);
+    }
   };
 
   const [form, setForm] = useState(() => ({
@@ -526,7 +554,7 @@ function CreateImportSlipPage() {
     const quantity = Number(item.quantity || 0);
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
-    return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
+    return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && hasValidSerials;
   };
   const isFormValid = Boolean(
     form.warehouseId &&
@@ -1690,6 +1718,10 @@ function CreateImportSlipPage() {
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
+        // Nhập mua hàng: mở thẳng danh sách đơn mua đã duyệt của nhà cung cấp đang chọn
+        initialDocType={importType === 'PURCHASE' ? 'PURCHASE_ORDER' : undefined}
+        purchaseOrderPartnerId={importType === 'PURCHASE' ? form.partnerId : undefined}
+        purchaseOrderStatus={importType === 'PURCHASE' ? 'APPROVED' : undefined}
         onSelect={async (data) => {
           setForm(prev => ({
             ...prev,

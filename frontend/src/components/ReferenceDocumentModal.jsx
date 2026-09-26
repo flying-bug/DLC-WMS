@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { formatDateOnly } from '../utils/dateFormat';
 import * as importApi from '../api/inventoryImportApi';
@@ -23,15 +23,30 @@ const DOC_TYPES = [
   { value: 'WARRANTY', label: 'Phiếu bảo hành' },
 ];
 
-const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
-  const [docType, setDocType] = useState('IMPORT_SLIP');
+/**
+ * @param initialDocType          loại chứng từ chọn sẵn mỗi lần mở (mặc định Phiếu nhập kho)
+ * @param purchaseOrderPartnerId  lọc đơn mua theo nhà cung cấp (VD phiếu nhập mua hàng)
+ * @param purchaseOrderStatus     lọc đơn mua theo trạng thái (VD APPROVED = đã duyệt, đang chờ nhập kho)
+ */
+const ReferenceDocumentModal = ({ isOpen, onClose, onSelect, initialDocType, purchaseOrderPartnerId, purchaseOrderStatus }) => {
+  const [docType, setDocType] = useState(initialDocType || 'IMPORT_SLIP');
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  // Đổi loại chứng từ khi đang tải: chỉ nhận kết quả của lần tải mới nhất
+  const requestSeq = useRef(0);
+
+  useEffect(() => {
+    if (isOpen && initialDocType) {
+      setDocType(initialDocType);
+      setPage(1);
+    }
+  }, [isOpen, initialDocType]);
 
   const fetchDocuments = useCallback(async () => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     try {
       let res;
@@ -45,7 +60,13 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
           res = await exportApi.getExportHistory(params).catch(() => null);
           break;
         case 'PURCHASE_ORDER':
-          res = await purchaseOrderApi.getPurchaseOrders(params).catch(() => null);
+          // API đơn mua nhận tham số "keyword" (không phải keywordSearch)
+          res = await purchaseOrderApi.getPurchaseOrders({
+            ...params,
+            keyword,
+            partnerId: purchaseOrderPartnerId || undefined,
+            status: purchaseOrderStatus || undefined,
+          }).catch(() => null);
           break;
         case 'SALES_ORDER':
           res = await salesOrderApi.getSalesOrders(params).catch(() => null);
@@ -66,6 +87,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
           break;
       }
 
+      if (seq !== requestSeq.current) return;
       if (res) {
         const responseData = res.data?.data || res.data || {};
         const content = responseData.content || (Array.isArray(responseData) ? responseData : []);
@@ -75,12 +97,13 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
         setData([]);
       }
     } catch (error) {
+      if (seq !== requestSeq.current) return;
       console.error('Error fetching reference docs:', error);
       setData([]);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, [page, keyword, docType]);
+  }, [page, keyword, docType, purchaseOrderPartnerId, purchaseOrderStatus]);
 
   useEffect(() => {
     if (isOpen) {

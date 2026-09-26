@@ -105,7 +105,7 @@ export default function OcrResultPreviewModal({ open, data, onConfirm, onCancel,
             Hủy bỏ
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => onConfirm(data)}
             style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--brand-gradient, var(--color-primary, var(--wms-success)))', color: '#fff', cursor: 'pointer', fontWeight: 500, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
           >
             Tiếp tục điền vào form

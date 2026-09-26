@@ -197,7 +197,16 @@ public class ImportDocumentController {
                 .collect(java.util.stream.Collectors.toList());
         return ApiResponse.success(logs);
     }
+
+    @PostMapping("/ocr-confirm-mapping")
+    @Operation(summary = "Confirm OCR mapping for AI learning")
+    @PreAuthorize("hasAuthority('import:add')")
+    public ApiResponse<Void> confirmOcrMapping(
+            @RequestParam Long partnerId,
+            @RequestParam String vendorProductName,
+            @RequestParam Long variantId
+    ) {
+        importOcrService.confirmMapping(partnerId, vendorProductName, variantId);
+        return ApiResponse.success(null);
+    }
 }
-
-
-
