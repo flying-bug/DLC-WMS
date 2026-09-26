@@ -26,9 +26,9 @@ import com.duylongtech.backend.feature.system.SystemSettingsService;
 @Slf4j
 public class SystemSettingsService {
 
-    // Mức thuế GTGT hợp lệ 0% - 10%, khớp kiểm tra thuế trên dòng phiếu (InventoryDocumentService.validateVatRate)
+    // Mức thuế GTGT chỉ cần không âm (khớp kiểm tra thuế trên dòng phiếu, InventoryDocumentService.validateVatRate);
+    // mức cao bất thường (> 10%) chỉ cảnh báo ở màn thiết lập, không chặn.
     static final int MIN_VAT_RATE = 0;
-    static final int MAX_VAT_RATE = 10;
     private static final List<Integer> DEFAULT_ALLOWED_VAT_RATES = List.of(0, 5, 8, 10);
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
@@ -159,7 +159,7 @@ public class SystemSettingsService {
     }
 
     static boolean isValidVatRate(Integer rate) {
-        return rate != null && rate >= MIN_VAT_RATE && rate <= MAX_VAT_RATE;
+        return rate != null && rate >= MIN_VAT_RATE;
     }
 
     /** Mức thuế mặc định; giá trị đã lưu không nằm trong danh sách cho phép thì lấy 8% (hoặc mức cao nhất). */
@@ -176,7 +176,7 @@ public class SystemSettingsService {
         return allowed.contains(8) ? 8 : allowed.get(allowed.size() - 1);
     }
 
-    /** Các mức thuế cho phép, bỏ qua giá trị không hợp lệ đã lưu từ trước (số âm, trên 10%, không phải số). */
+    /** Các mức thuế cho phép, bỏ qua giá trị không hợp lệ đã lưu từ trước (số âm, không phải số). */
     public List<Integer> getAllowedVatRates() {
         List<Integer> rates = Arrays.stream(getSetting("tax.allowed_vat_rates", "").split(","))
                 .map(String::trim)
@@ -195,7 +195,7 @@ public class SystemSettingsService {
         return rates.isEmpty() ? DEFAULT_ALLOWED_VAT_RATES : rates;
     }
 
-    /** Kiểm tra danh sách mức thuế gửi lên: ít nhất một mức, mỗi mức là số nguyên 0-10; bỏ trùng, sắp xếp tăng dần. */
+    /** Kiểm tra danh sách mức thuế gửi lên: ít nhất một mức, mỗi mức là số nguyên không âm; bỏ trùng, sắp xếp tăng dần. */
     static List<Integer> normalizeVatRates(List<Integer> rates) {
         if (rates == null || rates.isEmpty()) {
             throw new BusinessException(SystemMessage.BIZ_SET_ERR_002);

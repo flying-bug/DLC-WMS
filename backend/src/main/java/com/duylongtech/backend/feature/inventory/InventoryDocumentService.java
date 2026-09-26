@@ -1096,7 +1096,8 @@ public class InventoryDocumentService {
         if (value == null) {
             return ZERO;
         }
-        if (value.compareTo(ZERO) < 0 || value.compareTo(new BigDecimal("10")) > 0) {
+        // Chỉ chặn thuế âm; mức thuế hợp lệ do Thiết lập nghiệp vụ quản lý (có thể trên 10%)
+        if (value.compareTo(ZERO) < 0) {
             throw new BusinessException(SystemMessage.INV_ERR_006.getMessage());
         }
         return value;

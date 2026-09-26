@@ -21,7 +21,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Thiết lập nghiệp vụ: mức thuế VAT không được âm / quá 10% (trước đây nhập -10 vẫn lưu được), và thông tin
+ * Thiết lập nghiệp vụ: mức thuế VAT không được âm (trước đây nhập -10 vẫn lưu được; trên 10% chỉ cảnh báo ở màn
+ * thiết lập, không chặn), và thông tin
  * doanh nghiệp là nguồn chung cho mẫu in, hóa đơn, email.
  */
 class BusinessSettingsServiceTest {
@@ -65,8 +66,11 @@ class BusinessSettingsServiceTest {
     }
 
     @Test
-    void vatRateAboveTenPercentIsRejected() {
-        assertRejected(vat(List.of(0, 8, 13), 8), SystemMessage.BIZ_SET_ERR_001);
+    void vatRateAboveTenPercentIsAllowed() {
+        service.saveBusinessSettings(vat(List.of(0, 8, 15), 15));
+
+        assertEquals(List.of(0, 8, 15), service.getAllowedVatRates());
+        assertEquals(15, service.getDefaultVatRate());
     }
 
     @Test
@@ -105,7 +109,7 @@ class BusinessSettingsServiceTest {
         stored.put("tax.allowed_vat_rates", "-10,5,8,13,abc");
         stored.put("tax.default_vat_rate", "-10");
 
-        assertEquals(List.of(5, 8), service.getAllowedVatRates());
+        assertEquals(List.of(5, 8, 13), service.getAllowedVatRates());
         assertEquals(8, service.getDefaultVatRate());
     }
 

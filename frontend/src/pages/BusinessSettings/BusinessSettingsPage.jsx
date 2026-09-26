@@ -5,18 +5,22 @@ import { getBusinessSettings, saveBusinessSettings } from '../../api/businessSet
 import { loadCompanyProfile } from '../../hooks/useCompanyProfile';
 import styles from './BusinessSettingsPage.module.css';
 
-// Mức thuế GTGT hợp lệ 0% - 10% (backend kiểm tra cùng khoảng này cho thiết lập và cho từng dòng phiếu)
-const MIN_VAT_RATE = 0;
-const MAX_VAT_RATE = 10;
+// Mức thuế chỉ cần không âm (backend kiểm tra cùng quy tắc). Trên mức GTGT thông thường (10%) chỉ cảnh báo, không chặn.
+const USUAL_MAX_VAT_RATE = 10;
 const DEFAULT_VAT_RATES_TEXT = '0, 5, 8, 10';
 
-/** Tách chuỗi "0, 5, 8, 10": chỉ nhận số nguyên 0-10, trả về các mức hợp lệ (bỏ trùng, tăng dần) và các giá trị sai. */
+/**
+ * Tách chuỗi "0, 5, 8, 10": nhận số nguyên không âm; trả về các mức hợp lệ (bỏ trùng, tăng dần),
+ * các mức âm và các giá trị sai định dạng (số lẻ, chữ...).
+ */
 function parseVatRates(text) {
   const tokens = String(text || '').split(',').map(s => s.trim()).filter(Boolean);
-  const isValid = (token) => /^\d+$/.test(token) && Number(token) >= MIN_VAT_RATE && Number(token) <= MAX_VAT_RATE;
+  const isValid = (token) => /^\d+$/.test(token);
+  const isNegative = (token) => /^-\s*\d/.test(token);
   return {
     rates: Array.from(new Set(tokens.filter(isValid).map(Number))).sort((a, b) => a - b),
-    invalid: tokens.filter(token => !isValid(token)),
+    negative: tokens.filter(isNegative),
+    invalid: tokens.filter(token => !isValid(token) && !isNegative(token)),
   };
 }
 
@@ -43,15 +47,17 @@ function BusinessSettingsPage() {
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
   const setField = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
 
-  const { rates: vatRates, invalid: invalidVatRates } = useMemo(
+  const { rates: vatRates, negative: negativeVatRates, invalid: invalidVatRates } = useMemo(
     () => parseVatRates(form.allowedVatRatesStr),
     [form.allowedVatRatesStr]
   );
 
   const errors = useMemo(() => {
     const result = {};
-    if (invalidVatRates.length > 0) {
-      result.allowedVatRates = `Mức thuế không hợp lệ: ${invalidVatRates.join(', ')}. Chỉ nhập số nguyên từ ${MIN_VAT_RATE} đến ${MAX_VAT_RATE}.`;
+    if (negativeVatRates.length > 0) {
+      result.allowedVatRates = `Thuế không được âm: ${negativeVatRates.join(', ')}.`;
+    } else if (invalidVatRates.length > 0) {
+      result.allowedVatRates = `Mức thuế không hợp lệ: ${invalidVatRates.join(', ')}. Chỉ nhập số nguyên từ 0 trở lên, cách nhau bằng dấu phẩy.`;
     } else if (vatRates.length === 0) {
       result.allowedVatRates = 'Nhập ít nhất một mức thuế.';
     }
@@ -65,7 +71,7 @@ function BusinessSettingsPage() {
       result.companyEmail = 'Email doanh nghiệp không hợp lệ.';
     }
     return result;
-  }, [invalidVatRates, vatRates, form.defaultVatRate, form.companyName, form.companyEmail]);
+  }, [negativeVatRates, invalidVatRates, vatRates, form.defaultVatRate, form.companyName, form.companyEmail]);
 
   const fetchSettings = async () => {
     try {
@@ -117,6 +123,10 @@ function BusinessSettingsPage() {
   // Lỗi thuế hiện ngay khi gõ; lỗi bỏ trống tên chỉ hiện sau khi bấm lưu
   const vatRatesError = errors.allowedVatRates;
   const defaultVatError = !vatRatesError && errors.defaultVatRate;
+  // Cảnh báo (không chặn lưu): mức cao hơn thuế GTGT thông thường, dễ là gõ nhầm
+  const unusualVatRates = vatRates.filter(rate => rate > USUAL_MAX_VAT_RATE);
+  const vatRatesWarning = !vatRatesError && unusualVatRates.length > 0
+    && `Mức ${unusualVatRates.map(rate => `${rate}%`).join(', ')} cao hơn thuế GTGT thông thường (0%, 5%, 8%, 10%). Vẫn lưu được, nhưng hãy kiểm tra lại nếu nhập nhầm.`;
   const companyNameError = submitted && errors.companyName;
   const companyEmailError = submitted && errors.companyEmail;
 
@@ -168,17 +178,20 @@ function BusinessSettingsPage() {
                       id="allowedVatRates"
                       type="text"
                       inputMode="numeric"
-                      className={`${styles.input} ${vatRatesError ? styles.inputInvalid : ''}`}
+                      className={`${styles.input} ${vatRatesError ? styles.inputInvalid : (vatRatesWarning ? styles.inputWarning : '')}`}
                       value={form.allowedVatRatesStr}
-                      // Chỉ cho gõ chữ số, dấu phẩy và khoảng trắng: không nhập được số âm hay số lẻ
-                      onChange={(e) => setForm(prev => ({ ...prev, allowedVatRatesStr: e.target.value.replace(/[^\d,\s]/g, '') }))}
+                      onChange={setField('allowedVatRatesStr')}
                       placeholder="VD: 0, 5, 8, 10"
                       aria-invalid={Boolean(vatRatesError)}
                     />
                     {vatRatesError ? (
                       <small className={styles.errorText}>{vatRatesError}</small>
+                    ) : vatRatesWarning ? (
+                      <small className={styles.warningText}>
+                        <i className="bi bi-exclamation-triangle-fill" /> {vatRatesWarning}
+                      </small>
                     ) : (
-                      <small style={hintStyle}>Số nguyên từ {MIN_VAT_RATE} đến {MAX_VAT_RATE}, cách nhau bằng dấu phẩy.</small>
+                      <small style={hintStyle}>Số nguyên từ 0 trở lên, cách nhau bằng dấu phẩy.</small>
                     )}
                   </div>
                   <div className={styles.formGroup}>

@@ -211,6 +211,25 @@
   color: var(--wms-danger);
 }
 
+/* Cảnh báo vàng: không chặn lưu */
+.inputWarning,
+.inputWarning:focus {
+  border-color: var(--color-warning, #f59e0b);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+.warningText {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-warning-dark, #b45309);
+  background: var(--color-warning-bg, #fff7ed);
+  border: 1px solid var(--wms-warning-border, #fde68a);
+  border-radius: 6px;
+}
+
 .textarea {
   width: 100%;
   padding: 8px 12px;
