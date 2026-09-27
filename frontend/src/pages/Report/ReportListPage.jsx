@@ -822,10 +822,6 @@ const ReportListPage = () => {
                                     <button className={styles.iconBtn} onClick={handleExport} title="Xuất file Excel">
                                         <i className="bi bi-file-earmark-excel"></i>
                                     </button>
-
-                                    <button className={styles.iconBtn} onClick={() => window.print()} title="In ấn báo cáo">
-                                        <i className="bi bi-printer"></i>
-                                    </button>
                                 </div>
                             </div>
 
