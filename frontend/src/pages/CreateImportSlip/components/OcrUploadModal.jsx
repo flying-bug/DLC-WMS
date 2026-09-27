@@ -248,7 +248,7 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
                 <div className={styles.loadingWrap}>
                   <div className={styles.spinner} />
                   <p>⚡ AI đang quét & trích xuất dữ liệu...</p>
-                  <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>Thời gian phản hồi ~2–3 giây</span>
+                  <span style={{ fontSize: '12px', color: 'var(--wms-text-muted)' }}>uống cà phê và chờ xíu nhé!</span>
                 </div>
               ) : preview ? (
                 <img src={preview} alt="Preview" className={styles.previewImg} />
