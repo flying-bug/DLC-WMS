@@ -125,6 +125,17 @@ public class GoogleDriveService {
                     .setFields("id, webViewLink")
                     .execute();
 
+            try {
+                com.google.api.services.drive.model.Permission perm = new com.google.api.services.drive.model.Permission()
+                        .setType("anyone")
+                        .setRole("reader");
+                drive.permissions().create(uploaded.getId(), perm)
+                        .setSupportsAllDrives(true)
+                        .execute();
+            } catch (Exception permEx) {
+                log.warn("Không thể cấp quyền public reader cho file {}: {}", uploaded.getId(), permEx.getMessage());
+            }
+
             log.info("Uploaded backup to Drive directly: {} (id={})", localFile.getName(), uploaded.getId());
             return uploaded.getId();
         } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
@@ -203,6 +214,17 @@ public class GoogleDriveService {
                     .setSupportsAllDrives(true)
                     .setFields("id, webViewLink")
                     .execute();
+
+            try {
+                com.google.api.services.drive.model.Permission perm = new com.google.api.services.drive.model.Permission()
+                        .setType("anyone")
+                        .setRole("reader");
+                drive.permissions().create(finalFile.getId(), perm)
+                        .setSupportsAllDrives(true)
+                        .execute();
+            } catch (Exception permEx) {
+                log.warn("Không thể cấp quyền public reader cho file {}: {}", finalFile.getId(), permEx.getMessage());
+            }
 
             log.info("Uploaded backup to Drive via owner transfer: {} (id={})", localFile.getName(), finalFile.getId());
             return finalFile.getId();
