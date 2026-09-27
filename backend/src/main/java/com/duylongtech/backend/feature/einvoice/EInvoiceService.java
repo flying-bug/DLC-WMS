@@ -970,7 +970,7 @@ public class EInvoiceService {
             inv.getInventoryDocument() != null ? ("PXK: " + inv.getInventoryDocument().getDocCode() + (inv.getSalesOrder() != null ? " (Đơn: " + inv.getSalesOrder().getSoCode() + ")" : ""))
                  : (inv.getSalesOrder() != null ? inv.getSalesOrder().getSoCode() : (inv.getTransactionUuid() != null ? inv.getTransactionUuid() : "—")),
             inv.getBuyerLegalName() != null ? inv.getBuyerLegalName() : (inv.getBuyerName() != null ? inv.getBuyerName() : "Khách lẻ"),
-            inv.getBuyerTaxCode() != null && !inv.getBuyerTaxCode().isBlank() ? inv.getBuyerTaxCode() : "—",
+            inv.getBuyerTaxCode() != null && !inv.getBuyerTaxCode().isBlank() ? inv.getBuyerTaxCode() : "",
             inv.getBuyerPhone() != null ? inv.getBuyerPhone() : "—",
             inv.getBuyerAddress() != null ? inv.getBuyerAddress() : "—",
             inv.getPaymentMethod(),

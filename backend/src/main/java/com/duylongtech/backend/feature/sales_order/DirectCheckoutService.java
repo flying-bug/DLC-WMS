@@ -68,6 +68,7 @@ public class DirectCheckoutService {
     private final PartnerLedgerService partnerLedgerService;
     private final PaymentService paymentService;
     private final com.duylongtech.backend.feature.stocktake.StocktakeLockGuard stocktakeLockGuard;
+    private final SalesOrderService salesOrderService;
 
     @Transactional(rollbackFor = Exception.class)
     public SalesOrderResponse directCheckout(DirectCheckoutRequest request, String actor) {
@@ -180,11 +181,17 @@ public class DirectCheckoutService {
         BigDecimal paidAmount = normalizePaymentAmount(request.getPaymentAmount(), total);
         ensureDebtAllowedForCustomer(customer, paidAmount, total);
 
-        order.approve();
+        SalesOrder savedDraft = salesOrderRepository.save(order);
+        salesOrderService.approveSalesOrder(savedDraft.getId(), actorUser.getUsername());
+
+        SalesOrder approvedOrder = salesOrderRepository.findByIdWithDetails(savedDraft.getId())
+                .orElseThrow(() -> new BusinessException("Lỗi tải lại đơn hàng"));
+
         if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
-            order.recordPayment(paidAmount);
+            approvedOrder.recordPayment(paidAmount);
+            return salesOrderRepository.save(approvedOrder);
         }
-        return salesOrderRepository.save(order);
+        return approvedOrder;
     }
 
     private InventoryDocumentResponse createDraftExport(DirectCheckoutRequest request, SalesOrder order,

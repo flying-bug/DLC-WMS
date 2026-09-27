@@ -151,38 +151,74 @@ public class GoogleDriveService {
         String fileId = emptyFile.getId();
 
         // Step 2: Try to transfer ownership to the folder owner
+        boolean ownershipTransferred = false;
+        String folderOwnerEmail = null;
         try {
             com.google.api.services.drive.model.File folderMeta = drive.files().get(folderId)
                     .setSupportsAllDrives(true)
                     .setFields("owners")
                     .execute();
             if (folderMeta.getOwners() != null && !folderMeta.getOwners().isEmpty()) {
-                String ownerEmail = folderMeta.getOwners().get(0).getEmailAddress();
-                if (ownerEmail != null && !ownerEmail.isBlank()) {
+                folderOwnerEmail = folderMeta.getOwners().get(0).getEmailAddress();
+                if (folderOwnerEmail != null && !folderOwnerEmail.isBlank()) {
                     com.google.api.services.drive.model.Permission perm = new com.google.api.services.drive.model.Permission()
                             .setType("user")
                             .setRole("owner")
-                            .setEmailAddress(ownerEmail);
+                            .setEmailAddress(folderOwnerEmail);
                     drive.permissions().create(fileId, perm)
                             .setTransferOwnership(true)
                             .setSupportsAllDrives(true)
                             .execute();
+                    ownershipTransferred = true;
                 }
             }
         } catch (Exception ex) {
-            log.warn("Ownership transfer step notice: {}", ex.getMessage());
+            if (ex.getMessage() != null && ex.getMessage().contains("ownershipChangeAcrossDomainNotPermitted")) {
+                log.warn("Không thể chuyển quyền sở hữu file cho tài khoản ngoài tổ chức (khác tên miền). Dung lượng file vẫn sẽ tính vào Service Account.");
+                // Cấp quyền Writer để người dùng vẫn có thể xem/tải file
+                if (folderOwnerEmail != null && !folderOwnerEmail.isBlank()) {
+                    try {
+                        com.google.api.services.drive.model.Permission fallbackPerm = new com.google.api.services.drive.model.Permission()
+                                .setType("user")
+                                .setRole("writer")
+                                .setEmailAddress(folderOwnerEmail);
+                        drive.permissions().create(fileId, fallbackPerm)
+                                .setSupportsAllDrives(true)
+                                .execute();
+                        log.info("Đã cấp quyền Writer cho {} thay vì Owner", folderOwnerEmail);
+                    } catch (Exception eFallback) {
+                        log.warn("Không thể cấp quyền Writer fallback: {}", eFallback.getMessage());
+                    }
+                }
+            } else {
+                log.warn("Ownership transfer step notice: {}", ex.getMessage());
+            }
         }
 
         // Step 3: Update file with binary content
         FileContent content = new FileContent(mimeType, localFile);
-        com.google.api.services.drive.model.File finalFile = drive.files()
-                .update(fileId, new com.google.api.services.drive.model.File(), content)
-                .setSupportsAllDrives(true)
-                .setFields("id, webViewLink")
-                .execute();
+        try {
+            com.google.api.services.drive.model.File finalFile = drive.files()
+                    .update(fileId, new com.google.api.services.drive.model.File(), content)
+                    .setSupportsAllDrives(true)
+                    .setFields("id, webViewLink")
+                    .execute();
 
-        log.info("Uploaded backup to Drive via owner transfer: {} (id={})", localFile.getName(), finalFile.getId());
-        return finalFile.getId();
+            log.info("Uploaded backup to Drive via owner transfer: {} (id={})", localFile.getName(), finalFile.getId());
+            return finalFile.getId();
+        } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
+            // Delete the empty file to avoid clutter if update fails
+            try {
+                drive.files().delete(fileId).execute();
+            } catch (Exception ignored) {}
+
+            if (e.getMessage() != null && e.getMessage().contains("storageQuotaExceeded") && !ownershipTransferred) {
+                throw new IllegalStateException("Service Account đã hết 15GB dung lượng miễn phí và Google không cho phép chuyển quyền sở hữu sang tài khoản " + 
+                    "Workspace/khác tên miền để dùng ké dung lượng. Vui lòng thiết lập Xác thực OAuth (Refresh Token) " + 
+                    "với tài khoản Gmail/Workspace chính của bạn thay vì dùng Service Account, hoặc xóa bớt file cũ.");
+            }
+            throw e;
+        }
     }
 
     /**

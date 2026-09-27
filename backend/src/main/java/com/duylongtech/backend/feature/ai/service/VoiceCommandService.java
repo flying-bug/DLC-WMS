@@ -38,7 +38,7 @@ public class VoiceCommandService {
             .requestFactory(HttpTimeouts.requestFactory(HttpTimeouts.LONG_READ_TIMEOUT))
             .build();
 
-    @Value("${ai.provider:openai}")
+    @Value("${ai.provider:gemini}")
     private String provider;
 
     @Value("${ai.openai.enabled:false}")
@@ -59,7 +59,7 @@ public class VoiceCommandService {
     @Value("${ai.gemini.api-key:}")
     private String geminiApiKey;
 
-    @Value("${ai.gemini.model:gemini-2.0-flash}")
+    @Value("${ai.gemini.model:gemini-2.5-flash}")
     private String geminiModel;
 
     @Value("${ai.gemini.thinking-budget:0}")
