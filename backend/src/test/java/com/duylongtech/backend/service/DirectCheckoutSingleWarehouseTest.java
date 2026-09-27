@@ -18,6 +18,7 @@ import com.duylongtech.backend.feature.sales_order.DirectCheckoutService;
 import com.duylongtech.backend.feature.sales_order.SalesOrder;
 import com.duylongtech.backend.feature.sales_order.SalesOrderLine;
 import com.duylongtech.backend.feature.sales_order.SalesOrderRepository;
+import com.duylongtech.backend.feature.sales_order.SalesOrderService;
 import com.duylongtech.backend.feature.stocktake.StocktakeLockGuard;
 import com.duylongtech.backend.feature.system.CodeGeneratorService;
 import com.duylongtech.backend.feature.warehouse.Warehouse;
@@ -70,7 +71,8 @@ class DirectCheckoutSingleWarehouseTest {
                 inventoryDocumentService,
                 mock(PartnerLedgerService.class),
                 mock(PaymentService.class),
-                mock(StocktakeLockGuard.class));
+                mock(StocktakeLockGuard.class),
+                mock(SalesOrderService.class));
 
         when(warehouseRepository.findById(SALES_WAREHOUSE_ID)).thenReturn(Optional.of(mock(Warehouse.class)));
         when(productVariantRepository.findById(any())).thenReturn(Optional.of(mock(ProductVariant.class)));
