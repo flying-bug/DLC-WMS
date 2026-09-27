@@ -25,6 +25,7 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
         WHERE (:keyword IS NULL OR LOWER(so.soCode) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%'))
             OR LOWER(p.name) LIKE LOWER(CONCAT('%', TRIM(:keyword), '%')))
         AND (:status IS NULL OR so.status = :status)
+        AND (:paymentStatus IS NULL OR so.paymentStatus = :paymentStatus)
         AND (:reservationStatus IS NULL OR EXISTS (
             SELECT 1 FROM StockReservation sr
             WHERE sr.salesOrderId = so.id AND sr.status = :reservationStatus
@@ -53,6 +54,7 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     List<SalesOrder> findAllWithFilters(
         @Param("keyword") String keyword,
         @Param("status") String status,
+        @Param("paymentStatus") String paymentStatus,
         @Param("reservationStatus") String reservationStatus,
         @Param("exportDocumentStatus") String exportDocumentStatus,
         @Param("partnerId") Long partnerId,

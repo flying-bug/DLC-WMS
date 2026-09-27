@@ -82,11 +82,12 @@ public class SalesOrderService {
 
     @Transactional(readOnly = true)
     public List<SalesOrderResponse> getSalesOrders(
-            String keyword, String status, String reservationStatus, String exportDocumentStatus, Long partnerId,
+            String keyword, String status, String paymentStatus, String reservationStatus, String exportDocumentStatus, Long partnerId,
             Long warehouseId, LocalDate fromDate, LocalDate toDate) {
         return salesOrderRepository.findAllWithFilters(
                         keyword,
                         status,
+                        paymentStatus,
                         reservationStatus,
                         exportDocumentStatus,
                         partnerId,

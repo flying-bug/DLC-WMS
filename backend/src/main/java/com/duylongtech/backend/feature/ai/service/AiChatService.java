@@ -634,7 +634,7 @@ public class AiChatService {
         AiDocumentQuery q = AiDocumentQuery.parse(message, normalized, java.time.LocalDate.now());
 
         if (isCountQuestion(normalized)) {
-            List<SalesOrder> allOrders = salesOrderRepository.findAllWithFilters(null, null, null, null, null, null, null, null).stream()
+            List<SalesOrder> allOrders = salesOrderRepository.findAllWithFilters(null, null, null, null, null, null, null, null, null).stream()
                     .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getSoDate()))
                     .toList();
             return AiChatResponse.builder()
@@ -647,7 +647,7 @@ public class AiChatService {
 
         String keyword = extractSearchKeyword(message);
         boolean canSeePrice = accessPolicy.canViewPricing();
-        List<SalesOrder> orders = salesOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null, null, null, null).stream()
+        List<SalesOrder> orders = salesOrderRepository.findAllWithFilters(blankToNull(keyword), null, null, null, null, null, null, null, null).stream()
                 .filter(doc -> q.matchesOrderStatus(doc.getStatus()) && q.matchesDate(doc.getSoDate()))
                 .sorted(Comparator.comparing(SalesOrder::getSoDate, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(8)

@@ -18,6 +18,7 @@ import ResponsiveTable from '../../components/ui/Table/ResponsiveTable';
 import usePermissionGuard from '../../hooks/usePermissionGuard';
 import useSessionState from '../../hooks/useSessionState';
 import useClientSort from '../../hooks/useClientSort';
+import { getAuthRoles } from '../../auth/session';
 
 
 const STATUS_LABELS = {
@@ -47,6 +48,12 @@ const RESERVATION_STATUS_OPTIONS = [
   { value: 'RELEASED',     label: 'Đã giải phóng'  },
 ];
 
+const PAYMENT_STATUS_OPTIONS = [
+  { value: 'UNPAID', label: 'Chưa thanh toán' },
+  { value: 'PARTIAL', label: 'Trả một phần' },
+  { value: 'PAID', label: 'Đã thanh toán' },
+];
+
 const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
 const fmtDate = (v) => (v ? formatDateOnly(v) : '');
 const unwrap = (res) => res?.data?.data ?? res?.data;
@@ -71,9 +78,30 @@ function SalesOrderListPage() {
   const DEFAULT_FILTERS = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
     const range = getDateRangePreset('THIS_YEAR');
+
+    let defaultStatus = '';
+    let defaultPaymentStatus = '';
+
+    if (!location.search) {
+      const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
+      const isWarehouse = roles.includes('WAREHOUSE_CONTROLLER') || roles.includes('ROLE_WAREHOUSE_CONTROLLER');
+      const isCashier = roles.includes('CASHIER_CONTROLLER') || roles.includes('ROLE_CASHIER_CONTROLLER');
+      const isManager = roles.includes('MANAGER') || roles.includes('ROLE_MANAGER') || roles.includes('SUPER_ADMIN') || roles.includes('ROLE_SUPER_ADMIN');
+
+      if (!isManager) {
+        if (isWarehouse) {
+          defaultStatus = 'APPROVED';
+        }
+        if (isCashier) {
+          defaultPaymentStatus = 'UNPAID';
+        }
+      }
+    }
+
     return {
       keyword: '',
-      status: searchParams.get('status') || '',
+      status: searchParams.get('status') || defaultStatus,
+      paymentStatus: searchParams.get('paymentStatus') || defaultPaymentStatus,
       reservationStatus: searchParams.get('backordered') === 'true' ? 'BACKORDERED' : '',
       partnerId: '',
       warehouseId: '',
@@ -115,6 +143,7 @@ function SalesOrderListPage() {
       const res = await soApi.getSalesOrders({
         keyword: filters.keyword || undefined,
         status: filters.status || undefined,
+        paymentStatus: filters.paymentStatus || undefined,
         reservationStatus: filters.reservationStatus || undefined,
         partnerId: filters.partnerId || undefined,
         warehouseId: filters.warehouseId || undefined,
@@ -421,6 +450,11 @@ function SalesOrderListPage() {
               partnerLabel="Khách hàng"
               statusOptions={STATUS_OPTIONS}
               customSelects={[
+                {
+                  key: 'paymentStatus',
+                  label: 'Trạng thái thanh toán',
+                  options: PAYMENT_STATUS_OPTIONS,
+                },
                 {
                   key: 'reservationStatus',
                   label: 'Tình trạng giữ hàng',

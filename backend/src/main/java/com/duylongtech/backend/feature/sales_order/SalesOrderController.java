@@ -41,6 +41,7 @@ public class SalesOrderController {
     public ApiResponse<List<SalesOrderResponse>> getSalesOrders(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String paymentStatus,
             @RequestParam(required = false) String reservationStatus,
             @RequestParam(required = false) String exportDocumentStatus,
             @RequestParam(required = false) Long partnerId,
@@ -52,6 +53,7 @@ public class SalesOrderController {
                 salesOrderService.getSalesOrders(
                         keyword,
                         status,
+                        paymentStatus,
                         reservationStatus,
                         exportDocumentStatus,
                         partnerId,

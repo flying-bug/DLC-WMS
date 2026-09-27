@@ -133,7 +133,7 @@ public class DocumentTools {
 
         String cleaned = support.keyword(keyword);
         List<SalesOrder> docs = salesOrderRepository.findAllWithFilters(
-                cleaned.isBlank() ? null : cleaned, null, null, null, null, null, null, null);
+                cleaned.isBlank() ? null : cleaned, null, null, null, null, null, null, null, null);
         
         boolean canSeePrice = support.canViewPricing();
         List<Map<String, Object>> rows = new ArrayList<>();
