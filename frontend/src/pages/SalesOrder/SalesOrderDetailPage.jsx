@@ -342,17 +342,17 @@ function SalesOrderDetailPage() {
   };
 
   const linesColumns = [
-    { title: '#', width: '50px', render: (_, __, idx) => idx + 1 },
-    { title: 'SKU', render: (_, line) => <span className={styles.skuBadge}>{line.sku || `#${line.variantId}`}</span> },
-    { title: 'Tên sản phẩm', render: (_, line) => line.variantName || '' },
-    { title: 'Kho xuất', width: '140px', render: (_, line) => <span style={{ color: 'var(--color-primary-link)', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? `Kho #${line.warehouseId}` : '')}</span> },
-    { title: 'ĐVT', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.unitName || ''}</span> },
-    { title: 'Số lượng', align: 'center', render: (_, line) => Number(line.quantity).toLocaleString('vi-VN') },
-    { title: 'BH (T)', align: 'center', render: (_, line) => line.warrantyMonths || 0 },
-    { title: 'Đơn giá', align: 'right', render: (_, line) => money(line.unitPrice) },
-    { title: 'Thành tiền', align: 'right', render: (_, line) => <span style={{ fontWeight: 600, color: 'var(--wms-primary-hover)' }}>{money(line.lineAmount)}</span> },
-    { title: '% VAT', align: 'center', render: (_, line) => line.vatRate || 0 },
-    { title: 'Ghi chú', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.note || ''}</span> },
+    { title: '#', width: '40px', render: (_, __, idx) => idx + 1 },
+    { title: 'SKU', width: '100px', render: (_, line) => <span className={styles.skuBadge} style={{ whiteSpace: 'nowrap' }}>{line.sku || `#${line.variantId}`}</span> },
+    { title: 'Tên sản phẩm', render: (_, line) => <div style={{ minWidth: '150px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{line.variantName || ''}</div> },
+    { title: 'Kho xuất', width: '120px', render: (_, line) => <span style={{ color: 'var(--color-primary-link)', fontWeight: 500, whiteSpace: 'nowrap' }}>{line.warehouseName || (line.warehouseId ? `Kho #${line.warehouseId}` : '')}</span> },
+    { title: 'ĐVT', width: '60px', align: 'center', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)', whiteSpace: 'nowrap' }}>{line.unitName || ''}</span> },
+    { title: 'Số lượng', width: '80px', align: 'center', render: (_, line) => <span style={{ whiteSpace: 'nowrap' }}>{Number(line.quantity).toLocaleString('vi-VN')}</span> },
+    { title: 'BH (T)', width: '60px', align: 'center', render: (_, line) => <span style={{ whiteSpace: 'nowrap' }}>{line.warrantyMonths || 0}</span> },
+    { title: 'Đơn giá', width: '110px', align: 'right', render: (_, line) => <span style={{ whiteSpace: 'nowrap' }}>{money(line.unitPrice)}</span> },
+    { title: 'Thành tiền', width: '120px', align: 'right', render: (_, line) => <span style={{ fontWeight: 600, color: 'var(--wms-primary-hover)', whiteSpace: 'nowrap' }}>{money(line.lineAmount)}</span> },
+    { title: '% VAT', width: '60px', align: 'center', render: (_, line) => line.vatRate || 0 },
+    { title: 'Ghi chú', minWidth: '120px', render: (_, line) => <span style={{ color: 'var(--wms-text-muted)' }}>{line.note || ''}</span> },
   ];
 
   const renderLinesSummaryDesktop = () => (
