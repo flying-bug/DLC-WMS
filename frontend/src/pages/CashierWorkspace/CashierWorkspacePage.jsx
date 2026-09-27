@@ -33,9 +33,9 @@ export default function CashierWorkspacePage() {
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(true);
   const [searchTerm, setSearchTerm] = useSessionState('searchTerm', '');
-  const [periodPreset, setPeriodPreset] = useSessionState('periodPreset', 'THIS_MONTH');
-  const [fromDate, setFromDate] = useSessionState('fromDate', () => getDateRangePreset('THIS_MONTH')?.fromDate || '');
-  const [toDate, setToDate] = useSessionState('toDate', () => getDateRangePreset('THIS_MONTH')?.toDate || '');
+  const [periodPreset, setPeriodPreset] = useSessionState('periodPreset', 'THIS_YEAR');
+  const [fromDate, setFromDate] = useSessionState('fromDate', () => getDateRangePreset('THIS_YEAR')?.fromDate || '');
+  const [toDate, setToDate] = useSessionState('toDate', () => getDateRangePreset('THIS_YEAR')?.toDate || '');
 
   const handlePeriodPresetChange = (val) => {
     setPeriodPreset(val);
@@ -57,9 +57,10 @@ export default function CashierWorkspacePage() {
     setStatusFilter('');
     setMethodFilter('');
     setPartnerFilter('');
-    setPeriodPreset('ALL');
-    setFromDate('');
-    setToDate('');
+    setPeriodPreset('THIS_YEAR');
+    const range = getDateRangePreset('THIS_YEAR');
+    setFromDate(range?.fromDate || '');
+    setToDate(range?.toDate || '');
     setPage(1);
 
     if (rawList.length === 0) {

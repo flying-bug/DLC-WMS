@@ -58,9 +58,9 @@ export default function WarehouseWorkspacePage() {
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [loadingMaster, setLoadingMaster] = useState(false);
   const [searchTerm, setSearchTerm] = useSessionState('searchTerm', '');
-  const [periodPreset, setPeriodPreset] = useSessionState('periodPreset', 'ALL');
-  const [fromDate, setFromDate] = useSessionState('fromDate', '');
-  const [toDate, setToDate] = useSessionState('toDate', '');
+  const [periodPreset, setPeriodPreset] = useSessionState('periodPreset', 'THIS_YEAR');
+  const [fromDate, setFromDate] = useSessionState('fromDate', () => getDateRangePreset('THIS_YEAR')?.fromDate || '');
+  const [toDate, setToDate] = useSessionState('toDate', () => getDateRangePreset('THIS_YEAR')?.toDate || '');
   const [warehouses, setWarehouses] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useSessionState('selectedWarehouseId', '');
   // Bộ lọc riêng theo từng tab (trạng thái / loại phiếu / đối tác) - mỗi tab có bộ tùy chọn khác nhau.
@@ -828,9 +828,10 @@ export default function WarehouseWorkspacePage() {
                 }));
               }}
               onReset={() => {
-                setPeriodPreset('ALL');
-                setFromDate('');
-                setToDate('');
+                setPeriodPreset('THIS_YEAR');
+                const range = getDateRangePreset('THIS_YEAR');
+                setFromDate(range?.fromDate || '');
+                setToDate(range?.toDate || '');
                 setSelectedWarehouseId(warehouses.length === 1 ? String(warehouses[0].id) : '');
                 setTabFilters((prev) => ({ ...prev, [activeTab]: {} }));
               }}

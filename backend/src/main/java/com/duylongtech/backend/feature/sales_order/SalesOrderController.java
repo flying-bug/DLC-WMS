@@ -2,14 +2,8 @@ package com.duylongtech.backend.feature.sales_order;
 
 import com.duylongtech.backend.annotation.Auditable;
 import com.duylongtech.backend.enums.AuditAction;
-import com.duylongtech.backend.feature.sales_order.DirectCheckoutRequest;
-import com.duylongtech.backend.feature.sales_order.SalesOrderRequest;
 import com.duylongtech.backend.common.ApiResponse;
-import com.duylongtech.backend.feature.sales_order.SalesOrderResponse;
-import com.duylongtech.backend.feature.sales_order.DirectCheckoutService;
-import com.duylongtech.backend.feature.sales_order.SalesOrderService;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import com.duylongtech.backend.feature.payment.PaymentRequest;
 
 @RestController
 @RequestMapping("/api/v1/sales-orders")

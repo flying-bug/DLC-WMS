@@ -47,8 +47,6 @@ import java.util.regex.Pattern;
 import com.duylongtech.backend.feature.ai.dto.AiChatMessageDto;
 import com.duylongtech.backend.feature.assembly.AssemblyOrder;
 import com.duylongtech.backend.feature.assembly.AssemblyOrderRepository;
-import com.duylongtech.backend.feature.assembly.DeviceComponentSerial;
-import com.duylongtech.backend.feature.auth.User;
 import com.duylongtech.backend.feature.inventory.InventoryBalanceRepository;
 import com.duylongtech.backend.feature.inventory.InventoryDocument;
 import com.duylongtech.backend.feature.inventory.InventoryDocumentRepository;
