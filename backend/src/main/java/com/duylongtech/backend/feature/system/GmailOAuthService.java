@@ -74,7 +74,7 @@ public class GmailOAuthService {
     @Value("${google.oauth.redirect-uri:${GOOGLE_OAUTH_REDIRECT_URI:http://localhost:8080/api/v1/email/google/callback}}")
     private String redirectUri;
 
-    @Value("${google.oauth.scopes:https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/userinfo.email}")
+    @Value("${google.oauth.scopes:https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/drive}")
     private String scopes;
 
     // ── Keys trong system_settings ──

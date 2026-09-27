@@ -129,12 +129,14 @@ public class SystemSettingsService {
     @Transactional
     public void exchangeOAuthCode(String code, String redirectUri) throws Exception {
         String clientId = env.getProperty("google.client-id");
+        String clientSecret = env.getProperty("google.client-secret");
 
         org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate(
                 HttpTimeouts.requestFactory(HttpTimeouts.SHORT_READ_TIMEOUT));
         org.springframework.util.MultiValueMap<String, String> body = new org.springframework.util.LinkedMultiValueMap<>();
         body.add("code", code);
         body.add("client_id", clientId);
+        body.add("client_secret", clientSecret);
         body.add("grant_type", "authorization_code");
         body.add("redirect_uri", redirectUri);
 

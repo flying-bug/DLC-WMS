@@ -79,7 +79,7 @@ google:
   refresh-token: ${GMAIL_REFRESH_TOKEN:}
   oauth:
     redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI:http://localhost:8080/api/v1/email/google/callback}
-    scopes: ${GOOGLE_OAUTH_SCOPES:https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/userinfo.email}
+    scopes: ${GOOGLE_OAUTH_SCOPES:https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/drive}
   encryption-key: ${TOKEN_ENCRYPTION_KEY:}
 
 cloudinary:
