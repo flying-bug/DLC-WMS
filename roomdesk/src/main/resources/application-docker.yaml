@@ -1,0 +1,9 @@
+# Used by compose.yaml. All values come from the container environment.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://db:5432/roomdesk}
+    username: ${DB_USERNAME:roomdesk}
+
+logging:
+  level:
+    root: INFO
